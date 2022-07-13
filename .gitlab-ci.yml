@@ -1,0 +1,62 @@
+stages:
+  - build
+  - test
+  - package
+
+default:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.6.0
+
+build:
+  stage: build
+  artifacts:
+    paths:
+      - dist/
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - pip wheel . --no-deps --wheel-dir dist/
+    - python setup.py sdist
+
+test_wheel_base_image:2022.6.0:
+  stage: test
+  timeout: 30m
+  variables:
+    MAPCHETE_IO_RETRY_DELAY: 2
+    MAPCHETE_IO_RETRY_TRIES: 7
+    GDAL_HTTP_MAX_RETRY: 5
+    GDAL_HTTP_TIMEOUT: 30
+    GDAL_HTTP_RETRY_DELAY: 5
+  script:
+    - pip install --upgrade pip
+    - pip install
+      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
+      --upgrade
+      `ls dist/mapchete_eo*.tar.gz -1 | head -1`[complete]
+    - pytest -v --cov=mapchete_eo tests/
+
+test_tar_base_image:2022.6.0:
+  stage: test
+  timeout: 30m
+  variables:
+    MAPCHETE_IO_RETRY_DELAY: 2
+    MAPCHETE_IO_RETRY_TRIES: 7
+    GDAL_HTTP_MAX_RETRY: 5
+    GDAL_HTTP_TIMEOUT: 30
+    GDAL_HTTP_RETRY_DELAY: 5
+  script:
+    - pip install --upgrade pip
+    - pip install
+      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
+      --upgrade
+      `ls dist/mapchete_eo*.whl -1 | head -1`[complete]
+    - pytest -v --cov=mapchete_eo tests/
+
+package:
+  stage: package
+  before_script:
+    - pip install --upgrade pip
+  script:
+    - pip install twine
+    - python -m twine upload --repository-url https://gitlab.eox.at/api/v4/projects/255/packages/pypi dist/mapchete_eo*
+  only:
+    - tags

@@ -1,0 +1,13 @@
+.eggs
+*.egg-info
+*.pyc
+.cache
+htmlcov
+.coverage*
+build/
+dist/
+.pytest*
+*.gfs
+.vscode/
+__pycache__
+*.aux.xml

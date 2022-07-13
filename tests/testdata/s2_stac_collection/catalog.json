@@ -1,0 +1,17 @@
+{
+    "id": "catalog",
+    "stac_version": "0.8.1",
+    "description": "staged catalog",
+    "links": [
+        {
+            "rel": "root",
+            "href": "./catalog.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "child",
+            "href": "./collection/collection.json",
+            "type": "application/json"
+        }
+    ]
+}

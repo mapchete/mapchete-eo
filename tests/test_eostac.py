@@ -1,5 +1,5 @@
-from mapchete.formats import available_input_formats
 import xarray as xr
+from mapchete.formats import available_input_formats
 
 
 def test_format_available():

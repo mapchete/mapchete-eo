@@ -1,6 +1,7 @@
 """Setup script for mapchete plugin."""
 from itertools import chain
-from setuptools import setup, find_namespace_packages
+
+from setuptools import find_namespace_packages, setup
 
 # get version number
 # from https://github.com/mapbox/rasterio/blob/master/setup.py#L55

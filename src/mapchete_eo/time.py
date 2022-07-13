@@ -1,6 +1,6 @@
 import datetime
-import dateutil.parser
 
+import dateutil.parser
 
 _time = {"min": datetime.datetime.min.time(), "max": datetime.datetime.max.time()}
 

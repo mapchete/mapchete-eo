@@ -2,13 +2,14 @@
 Contains all classes required to use the driver as mapchete input.
 """
 import datetime
+
+import xarray as xr
 from mapchete.formats import base
 from mapchete.io import absolute_path
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
-import xarray as xr
 
 from mapchete_eo.discovery.stac_static import StaticSTACCatalog
 
@@ -57,7 +58,7 @@ class InputTile(base.InputTile):
         -------
         data : xarray.Dataset
         """
-        assets = self._get_assets(indexes)
+        # assets = self._get_assets(indexes)
         # TODO: iterate through items, filter by time and read assets to window
         # generate an array with the following axes:
         # (time/product_id, band, x, y)
@@ -80,7 +81,7 @@ class InputTile(base.InputTile):
         is empty : bool
         """
         raise NotImplementedError()
-    
+
     def _get_assets(self, indexes=None):
         if indexes is None:
             return list(range(len(self.eo_bands)))
@@ -96,9 +97,10 @@ class InputTile(base.InputTile):
             elif isinstance(idx, int):
                 out.append(self.eo_bands[idx].get("name"))
             else:
-                raise TypeError(f"band index must either be an integer or a string: {idx}")
+                raise TypeError(
+                    f"band index must either be an integer or a string: {idx}"
+                )
         return out
-
 
 
 class InputData(base.InputData):

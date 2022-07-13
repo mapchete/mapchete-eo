@@ -1,15 +1,15 @@
 import datetime
-from functools import cached_property
 import logging
+from functools import cached_property
+
+import pystac
 from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
-import pystac
 from pystac.stac_io import DefaultStacIO, StacIO
 from tilematrix import Bounds
 
 from mapchete_eo.discovery.base import Catalog
 from mapchete_eo.time import time_ranges_intersect
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +57,9 @@ class StaticSTACCatalog(Catalog):
                 yield from _all_intersecting_items(
                     collection, bounds=process_bounds, timespan=process_timespan
                 )
+
         return IndexedFeatures(_gen_items())
 
-    
     @cached_property
     def eo_bands(self) -> list:
         for collection in self.cat.get_children():
@@ -68,6 +68,7 @@ class StaticSTACCatalog(Catalog):
                 return eo_bands
         else:
             raise ValueError("cannot find eo:bands definition from collections")
+
 
 def _all_intersecting_items(collection, **kwargs):
     # collection items

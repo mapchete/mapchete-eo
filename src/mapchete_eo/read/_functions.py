@@ -20,7 +20,6 @@ def read_items(
     """
     Read tile window of STAC Items and merge into a 4D xarray.
     """
-    # arr = ds.to_stacked_array(new_dim="bands", sample_dims=("x", "y"), name="herbert")
     coords = {}
     return xr.Dataset(
         data_vars={

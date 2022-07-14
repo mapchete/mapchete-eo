@@ -6,30 +6,16 @@ from functools import cached_property
 import pystac
 from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
-from pystac.stac_io import DefaultStacIO, StacIO
+from pystac.stac_io import StacIO
 from tilematrix import Bounds
 
-from mapchete_eo.discovery.base import Catalog
+from mapchete_eo.discovery.base import Catalog, FSSpecStacIO
 from mapchete_eo.time import time_ranges_intersect
 
 logger = logging.getLogger(__name__)
 
 
-class CustomStacIO(DefaultStacIO):
-    """Custom class which allows I/O operations on object storage."""
-
-    def read_text(self, source: str, *args, **kwargs) -> str:
-        fs = fs_from_path(source)
-        with fs.open(source) as src:
-            return src.read()
-
-    def write_text(self, dest: str, txt: str, *args, **kwargs) -> None:
-        fs = fs_from_path(dest)
-        with fs.open(dest, "w") as dst:
-            return dst.write(txt)
-
-
-StacIO.set_default(CustomStacIO)
+StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCatalog(Catalog):

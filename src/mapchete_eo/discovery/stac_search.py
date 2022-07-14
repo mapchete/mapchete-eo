@@ -21,18 +21,24 @@ class STACSearchCatalog(Catalog):
     def __init__(
         self,
         endpoint: str = None,
-        collection: str = None,
+        collections: str = None,
         bounds: Bounds = None,
         start_time: datetime.datetime = None,
         end_time: datetime.datetime = None,
         config: dict = None,
         **kwargs,
     ) -> None:
+        self._collection_items = {}
         self.bounds = bounds
         self.start_time = start_time
         self.end_time = end_time
         self.client = Client.open(endpoint or self.ENDPOINT)
-        self.collection = collection or self.COLLECTION
+        if collections is None:
+            self.collections = [self.COLLECTION]
+        else:
+            self.collections = (
+                collections if isinstance(collections, list) else [collections]
+            )
         self.config = dict(
             max_cloud_percent=100.0,
             stac_catalog_chunk_threshold=10000,
@@ -65,22 +71,19 @@ class STACSearchCatalog(Catalog):
 
     @cached_property
     def eo_bands(self) -> list:
-        collection = self.client.get_collection(self.collection)
-        item_assets = collection.extra_fields.get("item_assets")
-        out = []
-        for v in item_assets.values():
-            if "eo:bands" in v and "data" in v.get("roles", []):
-                out.append(v["eo:bands"])
-        if len(out) == 0:
-            raise ValueError(
-                f"cannot find eo:bands definition from collection {self.collection}"
-            )
-        return out
+        for collection_name in self.collections:
+            collection = self.client.get_collection(collection_name)
+            item_assets = collection.extra_fields.get("item_assets")
+            for v in item_assets.values():
+                if "eo:bands" in v and "data" in v.get("roles", []):
+                    return ["eo:bands"]
+        else:
+            raise ValueError("cannot find eo:bands definition from collections")
 
     @cached_property
     def default_search_params(self):
         return {
-            "collections": [self.collection],
+            "collections": self.collections,
             "bbox": ",".join(map(str, self.bounds)),
             "datetime": f"{self.start_time}/{self.end_time}",
             "query": [f"eo:cloud_cover<{self.config['max_cloud_percent']}"],

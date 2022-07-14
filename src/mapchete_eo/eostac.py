@@ -11,7 +11,8 @@ from mapchete.tile import BufferedTile
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.discovery.stac_static import StaticSTACCatalog
+from mapchete_eo.discovery.stac_static import STACStaticCatalog
+from mapchete_eo.read import read_items
 
 METADATA = {
     "driver_name": "EOSTAC",
@@ -49,7 +50,16 @@ class InputTile(base.InputTile):
         self.end_time = end_time
 
     def read(
-        self, indexes=None, start_time=None, end_time=None, timestamps=None, **kwargs
+        self,
+        assets=None,
+        resampling="nearest",
+        start_time=None,
+        end_time=None,
+        timestamps=None,
+        x_axis_name="x",
+        y_axis_name="y",
+        merge_items_by=None,
+        **kwargs,
     ) -> xr.Dataset:
         """
         Read reprojected & resampled input data.
@@ -58,19 +68,19 @@ class InputTile(base.InputTile):
         -------
         data : xarray.Dataset
         """
-        # assets = self._get_assets(indexes)
         # TODO: iterate through items, filter by time and read assets to window
-        # generate an array with the following axes:
-        # (time/product_id, band, x, y)
-        # coords = {self.time_axis_name: input_data_tiles[0][1].time.values}
-        # return xr.Dataset(
-        #     data_vars={
-        #         band_name: (self.axis_names, band)
-        #         for band_name, band in zip(self.band_names, arr)
-        #     },
-        #     coords=coords,
-        # )
-        raise NotImplementedError()
+        if any([start_time, end_time, timestamps]):
+            raise NotImplementedError("time subsets are not yet implemented")
+        if merge_items_by is not None:
+            raise NotImplementedError("merging items is not yet implemented")
+        return read_items(
+            items=self.items,
+            assets=assets,
+            tile=self.tile,
+            resampling=resampling,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+        )
 
     def is_empty(self) -> bool:
         """
@@ -95,7 +105,7 @@ class InputTile(base.InputTile):
                 else:
                     raise ValueError(f"cannot find eo:band asset name {idx}")
             elif isinstance(idx, int):
-                out.append(self.eo_bands[idx].get("name"))
+                out.append(self.eo_bands[idx - 1].get("name"))
             else:
                 raise TypeError(
                     f"band index must either be an integer or a string: {idx}"
@@ -115,7 +125,7 @@ class InputData(base.InputData):
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = format_params["start_time"]
         self.end_time = format_params["end_time"]
-        self.catalog = StaticSTACCatalog(
+        self.catalog = STACStaticCatalog(
             baseurl=absolute_path(
                 path=format_params["cat_baseurl"], base_dir=input_params["conf_dir"]
             ),

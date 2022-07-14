@@ -1,0 +1,75 @@
+{
+  "type": "Collection",
+  "id": "23E-223N",
+  "stac_version": "1.0.0",
+  "description": "Planet FUsion products over Planet Tile 23E-223N",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-10/33N-23E-223N-PF-SR-2020-08-10.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-11/33N-23E-223N-PF-SR-2020-08-11.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-12/33N-23E-223N-PF-SR-2020-08-12.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-08/33N-23E-223N-PF-SR-2020-08-08.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-14/33N-23E-223N-PF-SR-2020-08-14.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-09/33N-23E-223N-PF-SR-2020-08-09.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./33N-23E-223N-PF-SR-2020-08-13/33N-23E-223N-PF-SR-2020-08-13.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "stac_extensions": [],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          16.025079017845474,
+          48.46169359733482,
+          16.028075784830612,
+          48.46344706207994
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2020-08-08T00:00:00Z",
+          "2020-08-14T00:00:00Z"
+        ]
+      ]
+    }
+  },
+  "license": "proprietary"
+}

@@ -39,6 +39,9 @@ setup(
     install_requires=install_requires,
     extras_require=extras_require,
     entry_points={
+        "mapchete.cli.commands": [
+            "eo=mapchete_eo.cli.main:eo",
+        ],
         "mapchete.formats.drivers": [
             "eostac=mapchete_eo.eostac",
         ],

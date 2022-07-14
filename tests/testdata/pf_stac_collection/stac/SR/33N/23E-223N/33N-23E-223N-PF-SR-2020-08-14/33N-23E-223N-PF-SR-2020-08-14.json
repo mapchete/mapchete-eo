@@ -1,0 +1,123 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "33N-23E-223N-PF-SR-2020-08-14",
+  "properties": {
+    "eo:productType": "PF-SR",
+    "eo:cloud_cover": 0,
+    "eo:gsd": [
+      3
+    ],
+    "eo:bands": [
+      {
+        "name": "B01",
+        "common_name": "blue",
+        "center_wavelength": 0.48,
+        "full_width_half_max": 0.03
+      },
+      {
+        "name": "B02",
+        "common_name": "green",
+        "center_wavelength": 0.56,
+        "full_width_half_max": 0.03
+      },
+      {
+        "name": "B03",
+        "common_name": "red",
+        "center_wavelength": 0.655,
+        "full_width_half_max": 0.015
+      },
+      {
+        "name": "B04",
+        "common_name": "NIR",
+        "center_wavelength": 0.865,
+        "full_width_half_max": 0.03
+      }
+    ],
+    "crs": "EPSG:32633",
+    "path": "../../../../../UTM-24000/33N/23E-223N/PF-SR/2020-08-14.tif",
+    "product_key": "PF-SR",
+    "tile": "23E-223N",
+    "timestamp": "2020-08-14 00:00:00",
+    "zone": "33N",
+    "datetime": "2020-08-14T00:00:00Z"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          16.028040904594402,
+          48.46169359733482
+        ],
+        [
+          16.028075784830612,
+          48.463420639224836
+        ],
+        [
+          16.025113797631256,
+          48.46344706207994
+        ],
+        [
+          16.025079017845474,
+          48.46172001859598
+        ],
+        [
+          16.028040904594402,
+          48.46169359733482
+        ]
+      ]
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "bands": {
+      "href": "../../../../../UTM-24000/33N/23E-223N/PF-SR/2020-08-14.tif",
+      "type": "image/tiff; application=geotiff",
+      "eo:bands": [
+        {
+          "name": "B3",
+          "common_name": "red"
+        },
+        {
+          "name": "B2",
+          "common_name": "green"
+        },
+        {
+          "name": "B1",
+          "common_name": "blue"
+        },
+        {
+          "name": "B4",
+          "common_name": "nir"
+        }
+      ]
+    }
+  },
+  "bbox": [
+    16.025079017845474,
+    48.46169359733482,
+    16.028075784830612,
+    48.46344706207994
+  ],
+  "stac_extensions": [
+    "eo"
+  ],
+  "collection": "23E-223N"
+}

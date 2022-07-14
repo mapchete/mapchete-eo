@@ -1,0 +1,155 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "33N-24E-223N-PF-QA-2020-08-10",
+  "properties": {
+    "eo:productType": "PF-QA",
+    "eo:cloud_cover": 0,
+    "eo:gsd": [
+      3
+    ],
+    "eo:bands": [
+      {
+        "name": "Layer 1",
+        "common_name": "Layer 1"
+      },
+      {
+        "name": "Layer 2",
+        "common_name": "Layer 2"
+      },
+      {
+        "name": "Layer 3",
+        "common_name": "Layer 3"
+      },
+      {
+        "name": "Layer 4",
+        "common_name": "Layer 4"
+      },
+      {
+        "name": "Layer 5",
+        "common_name": "Layer 5"
+      },
+      {
+        "name": "Layer 6",
+        "common_name": "Layer 6"
+      },
+      {
+        "name": "Layer 7",
+        "common_name": "Layer 7"
+      },
+      {
+        "name": "Layer 8",
+        "common_name": "Layer 8"
+      },
+      {
+        "name": "Layer 9",
+        "common_name": "Layer 9"
+      }
+    ],
+    "crs": "EPSG:32633",
+    "path": "../../../../../UTM-24000/33N/24E-223N/PF-QA/2020-08-10.tif",
+    "product_key": "PF-QA",
+    "tile": "24E-223N",
+    "timestamp": "2020-08-10 00:00:00",
+    "zone": "33N",
+    "datetime": "2020-08-10T00:00:00Z"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          16.03027246027049,
+          48.4616736405636
+        ],
+        [
+          16.030307416188183,
+          48.463400681249674
+        ],
+        [
+          16.028075784830612,
+          48.463420639224836
+        ],
+        [
+          16.028040904594402,
+          48.46169359733482
+        ],
+        [
+          16.03027246027049,
+          48.4616736405636
+        ]
+      ]
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "bands": {
+      "href": "../../../../../UTM-24000/33N/24E-223N/PF-QA/2020-08-10.tif",
+      "type": "image/tiff; application=geotiff",
+      "eo:bands": [
+        {
+          "name": "Layer 1",
+          "common_name": "Layer 1"
+        },
+        {
+          "name": "Layer 2",
+          "common_name": "Layer 2"
+        },
+        {
+          "name": "Layer 3",
+          "common_name": "Layer 3"
+        },
+        {
+          "name": "Layer 4",
+          "common_name": "Layer 4"
+        },
+        {
+          "name": "Layer 5",
+          "common_name": "Layer 5"
+        },
+        {
+          "name": "Layer 6",
+          "common_name": "Layer 6"
+        },
+        {
+          "name": "Layer 7",
+          "common_name": "Layer 7"
+        },
+        {
+          "name": "Layer 8",
+          "common_name": "Layer 8"
+        },
+        {
+          "name": "Layer 9",
+          "common_name": "Layer 9"
+        }
+      ]
+    }
+  },
+  "bbox": [
+    16.028040904594402,
+    48.4616736405636,
+    16.030307416188183,
+    48.463420639224836
+  ],
+  "stac_extensions": [
+    "eo"
+  ],
+  "collection": "24E-223N"
+}

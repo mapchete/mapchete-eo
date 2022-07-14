@@ -5,6 +5,7 @@ import pytest
 from mapchete.testing import ProcessFixture
 
 from mapchete_eo.discovery import STACSearchCatalog
+from mapchete_eo.known_catalogs import E84Sentinel2COGs
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
@@ -60,5 +61,14 @@ def stac_search_catalog():
         start_time="2022-06-01",
         end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
-        baseurl="https://earth-search.aws.element84.com/v0/",
+        endpoint="https://earth-search.aws.element84.com/v0/",
+    )
+
+
+@pytest.fixture(scope="session")
+def e84_cog_catalog():
+    return E84Sentinel2COGs(
+        start_time="2022-06-01",
+        end_time="2022-06-06",
+        bounds=[16, 46, 17, 47],
     )

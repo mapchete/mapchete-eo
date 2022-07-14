@@ -15,9 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class STACSearchCatalog(Catalog):
+    ENDPOINT = None
+    COLLECTION = None
+
     def __init__(
         self,
-        baseurl: str = None,
+        endpoint: str = None,
         collection: str = None,
         bounds: Bounds = None,
         start_time: datetime.datetime = None,
@@ -28,8 +31,8 @@ class STACSearchCatalog(Catalog):
         self.bounds = bounds
         self.start_time = start_time
         self.end_time = end_time
-        self.client = Client.open(baseurl)
-        self.collection = collection
+        self.client = Client.open(endpoint or self.ENDPOINT)
+        self.collection = collection or self.COLLECTION
         self.config = dict(
             max_cloud_percent=100.0,
             stac_catalog_chunk_threshold=10000,

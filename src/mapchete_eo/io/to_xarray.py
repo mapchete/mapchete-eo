@@ -6,7 +6,7 @@ from mapchete.tile import BufferedTile
 from mapchete_eo.array.convert import masked_to_xarr
 
 
-def read_items(
+def items_to_xarray(
     items: list = None,
     assets: list = None,
     tile: BufferedTile = None,
@@ -23,7 +23,7 @@ def read_items(
     coords = {}
     return xr.Dataset(
         data_vars={
-            item.id: read_item(
+            item.id: item_to_xarray(
                 item=item,
                 assets=assets,
                 tile=tile,
@@ -42,7 +42,7 @@ def read_items(
     ).transpose(band_axis_name, x_axis_name, y_axis_name)
 
 
-def read_item(
+def item_to_xarray(
     item: pystac.Item = None,
     assets: list = None,
     tile: BufferedTile = None,
@@ -71,7 +71,7 @@ def read_item(
     coords = {}
     return xr.Dataset(
         data_vars={
-            asset: read_asset(
+            asset: asset_to_xarray(
                 item=item,
                 asset=asset,
                 tile=tile,
@@ -87,7 +87,7 @@ def read_item(
     )
 
 
-def read_asset(
+def asset_to_xarray(
     item: pystac.Item = None,
     asset: str = None,
     tile: BufferedTile = None,

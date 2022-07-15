@@ -69,6 +69,6 @@ def stac_search_catalog():
 def e84_cog_catalog():
     return E84Sentinel2COGs(
         start_time="2022-06-01",
-        end_time="2022-06-06",
+        end_time="2022-06-02",
         bounds=[16, 46, 17, 47],
     )

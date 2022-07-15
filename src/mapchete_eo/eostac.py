@@ -12,7 +12,7 @@ from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.discovery.stac_static import STACStaticCatalog
-from mapchete_eo.read import read_items
+from mapchete_eo.io import items_to_xarray
 
 METADATA = {
     "driver_name": "EOSTAC",
@@ -73,7 +73,7 @@ class InputTile(base.InputTile):
             raise NotImplementedError("time subsets are not yet implemented")
         if merge_items_by is not None:
             raise NotImplementedError("merging items is not yet implemented")
-        return read_items(
+        return items_to_xarray(
             items=self.items,
             assets=assets,
             tile=self.tile,

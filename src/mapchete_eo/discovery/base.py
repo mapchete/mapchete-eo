@@ -1,11 +1,12 @@
 import os
-from typing import Iterator
 
 import pystac
 from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
+
+from mapchete_eo.io.convert import copy_asset
 
 
 class FSSpecStacIO(DefaultStacIO):
@@ -33,7 +34,11 @@ class Catalog:
         raise NotImplementedError("catalog class has not implemented this property")
 
     def write_static_catalog(
-        self, output_path: str, name: str = None, description: str = None
+        self,
+        output_path: str,
+        name: str = None,
+        description: str = None,
+        copy_assets: list = None,
     ):
         """Dump static version of current items."""
         if len(self.collections) > 1:
@@ -57,20 +62,25 @@ class Catalog:
             extra_fields=collection.extra_fields,
         )
         for item in self.items:
+            if copy_assets:
+                for asset in copy_assets:
+                    item = copy_asset(
+                        item, asset, os.path.join(output_path, collection.id, item.id)
+                    )
             new_collection.add_item(item)
         new_collection.update_extent_from_items()
 
         # initialize catalog
         catalog_json = os.path.join(output_path, "catalog.json")
-        new_catalog = pystac.Catalog(
+        catalog = pystac.Catalog(
             name or f"{self.client.id}",
             description or f"Subset of {self.client.description}",
             stac_extensions=self.client.stac_extensions,
             href=catalog_json,
         )
 
-        new_catalog.add_child(new_collection)
-        new_catalog.normalize_and_save(
+        catalog.add_child(new_collection)
+        catalog.normalize_and_save(
             output_path, catalog_type=pystac.CatalogType.SELF_CONTAINED
         )
 

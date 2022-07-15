@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pystac
@@ -7,6 +8,8 @@ from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
 
 from mapchete_eo.io.assets import convert_assets, copy_assets
+
+logger = logging.getLogger(__name__)
 
 
 class FSSpecStacIO(DefaultStacIO):
@@ -65,6 +68,7 @@ class Catalog:
         )
         for item in self.items:
             if assets:
+                logger.debug("get assets %s", assets)
                 if assets_dst_resolution:
                     item = convert_assets(
                         item,
@@ -93,6 +97,8 @@ class Catalog:
         )
 
         catalog.add_child(new_collection)
+
+        logger.debug("write catalog to %s", output_path)
         catalog.normalize_and_save(
             output_path, catalog_type=pystac.CatalogType.SELF_CONTAINED
         )

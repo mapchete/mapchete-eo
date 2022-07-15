@@ -6,7 +6,7 @@ from mapchete.io.vector import IndexedFeatures
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
 
-from mapchete_eo.io.convert import copy_asset
+from mapchete_eo.io.assets import convert_assets, copy_assets
 
 
 class FSSpecStacIO(DefaultStacIO):
@@ -38,7 +38,9 @@ class Catalog:
         output_path: str,
         name: str = None,
         description: str = None,
-        copy_assets: list = None,
+        assets: list = None,
+        assets_dst_resolution: int = None,
+        overwrite: bool = False,
     ):
         """Dump static version of current items."""
         if len(self.collections) > 1:
@@ -62,10 +64,21 @@ class Catalog:
             extra_fields=collection.extra_fields,
         )
         for item in self.items:
-            if copy_assets:
-                for asset in copy_assets:
-                    item = copy_asset(
-                        item, asset, os.path.join(output_path, collection.id, item.id)
+            if assets:
+                if assets_dst_resolution:
+                    item = convert_assets(
+                        item,
+                        assets,
+                        os.path.join(output_path, collection.id, item.id),
+                        resolution=assets_dst_resolution,
+                        overwrite=overwrite,
+                    )
+                else:
+                    item = copy_assets(
+                        item,
+                        assets,
+                        os.path.join(output_path, collection.id, item.id),
+                        overwrite=overwrite,
                     )
             new_collection.add_item(item)
         new_collection.update_extent_from_items()

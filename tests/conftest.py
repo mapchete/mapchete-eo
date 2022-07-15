@@ -69,6 +69,15 @@ def stac_search_catalog():
 def e84_cog_catalog():
     return E84Sentinel2COGs(
         start_time="2022-06-01",
-        end_time="2022-06-02",
+        end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
+    )
+
+
+@pytest.fixture(scope="session")
+def e84_cog_catalog_short():
+    return E84Sentinel2COGs(
+        start_time="2022-06-01",
+        end_time="2022-06-03",
+        bounds=[16, 46.4, 16.1, 46.5],
     )

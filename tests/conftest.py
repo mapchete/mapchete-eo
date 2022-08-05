@@ -4,8 +4,8 @@ import pystac
 import pytest
 from mapchete.testing import ProcessFixture
 
-from mapchete_eo.search import STACSearchCatalog
 from mapchete_eo.known_catalogs import E84Sentinel2COGs
+from mapchete_eo.search import STACSearchCatalog
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")

@@ -1,9 +1,9 @@
+import xarray as xr
 from mapchete.formats import base
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
-import xarray as xr
 
 from mapchete_eo.io import items_to_xarray
 

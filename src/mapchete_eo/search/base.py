@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import logging
 import os
+from abc import ABC, abstractmethod
 
 import pystac
 from mapchete.io import fs_from_path

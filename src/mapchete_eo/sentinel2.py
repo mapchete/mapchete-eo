@@ -3,12 +3,11 @@ Reader driver for Sentinel-2 data.
 """
 import datetime
 
-from mapchete.tile import BufferedTile
 import xarray as xr
+from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
 from mapchete_eo.known_catalogs import E84Sentinel2COGs
-
 
 METADATA = {
     "driver_name": "Sentinel-2",

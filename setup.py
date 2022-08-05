@@ -18,9 +18,7 @@ with open("README.md") as f:
     readme = f.read()
 
 # package requirements
-install_requires = [
-    "mapchete>=2022.2.2",
-]
+install_requires = ["mapchete>=2022.2.2", "pystac", "pystac_client", "rtree", "xarray"]
 extras_require = {}
 extras_require.update(complete=set(chain(*[v for v in extras_require.values()])))
 
@@ -44,6 +42,7 @@ setup(
         ],
         "mapchete.formats.drivers": [
             "eostac=mapchete_eo.eostac",
+            "sentinel2=mapchete_eo.sentinel2",
         ],
     },
     classifiers=[

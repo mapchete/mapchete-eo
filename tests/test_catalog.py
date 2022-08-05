@@ -2,7 +2,7 @@ import pystac
 import rasterio
 from mapchete.io.vector import IndexedFeatures
 
-from mapchete_eo.discovery import STACStaticCatalog
+from mapchete_eo.search import STACStaticCatalog
 
 
 def test_pf_sr_items(pf_sr_stac_collection):

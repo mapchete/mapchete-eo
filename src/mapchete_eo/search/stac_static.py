@@ -9,7 +9,7 @@ from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from pystac.stac_io import StacIO
 from tilematrix import Bounds
 
-from mapchete_eo.discovery.base import Catalog, FSSpecStacIO
+from mapchete_eo.search.base import Catalog, FSSpecStacIO
 from mapchete_eo.time import time_ranges_intersect
 
 logger = logging.getLogger(__name__)

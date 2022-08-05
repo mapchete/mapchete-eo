@@ -9,7 +9,7 @@ from pystac_client import Client
 from shapely.geometry import box
 from tilematrix import Bounds
 
-from mapchete_eo.discovery.base import Catalog
+from mapchete_eo.search.base import Catalog
 
 logger = logging.getLogger(__name__)
 

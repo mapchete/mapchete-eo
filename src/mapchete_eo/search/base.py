@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import logging
 import os
 
@@ -27,14 +28,16 @@ class FSSpecStacIO(DefaultStacIO):
             return dst.write(txt)
 
 
-class Catalog:
+class Catalog(ABC):
     @property
+    @abstractmethod
     def items(self) -> IndexedFeatures:
-        raise NotImplementedError("catalog class has not implemented this property")
+        pass
 
     @property
+    @abstractmethod
     def eo_bands(self) -> list:
-        raise NotImplementedError("catalog class has not implemented this property")
+        pass
 
     def write_static_catalog(
         self,

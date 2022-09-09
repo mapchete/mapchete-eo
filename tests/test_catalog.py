@@ -1,4 +1,5 @@
 import pystac
+import pytest
 import rasterio
 from mapchete.io.vector import IndexedFeatures
 
@@ -35,12 +36,14 @@ def test_pf_qa_eo_bands(pf_qa_stac_collection):
     assert len(catalog.eo_bands) > 0
 
 
+@pytest.mark.webtest
 def test_write_static_catalog(e84_cog_catalog, tmp_path):
     output_path = e84_cog_catalog.write_static_catalog(output_path=str(tmp_path))
     cat = pystac.Catalog.from_file(output_path)
     assert len(list(cat.get_all_items())) == 18
 
 
+@pytest.mark.webtest
 def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),
@@ -52,6 +55,7 @@ def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
         assert "http" not in item.assets["metadata"].href
 
 
+@pytest.mark.webtest
 def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
     asset = "B01"
     resolution = 120.0

@@ -54,6 +54,15 @@ def stac_mapchete(tmp_path):
         yield example
 
 
+@pytest.fixture
+def sentinel2_mapchete(tmp_path):
+    with ProcessFixture(
+        os.path.join(TESTDATA_DIR, "sentinel2.mapchete"),
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
 @pytest.fixture(scope="session")
 def stac_search_catalog():
     return STACSearchCatalog(

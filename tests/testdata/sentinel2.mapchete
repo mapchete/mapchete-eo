@@ -1,0 +1,16 @@
+process: read_xarray.py
+input:
+  inp:
+    format: Sentinel-2
+    level: L2A
+    start_time: 2018-12-29
+    end_time: 2018-12-30
+output:
+  format: GTiff
+  bands: 3
+  path: stac
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+bounds: [13.861470921201, 36.9525648726427, 15.1110860058322, 37.9475371328026]

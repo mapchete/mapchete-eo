@@ -1,9 +1,13 @@
+import logging
 import pystac
 import xarray as xr
 from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
 
 from mapchete_eo.array.convert import masked_to_xarr
+
+
+logger = logging.getLogger(__name__)
 
 
 def items_to_xarray(
@@ -20,6 +24,7 @@ def items_to_xarray(
     """
     Read tile window of STAC Items and merge into a 4D xarray.
     """
+    logger.debug("reading %s items...", len(items))
     coords = {}
     return xr.Dataset(
         data_vars={
@@ -54,6 +59,9 @@ def item_to_xarray(
     """
     Read tile window of STAC Item and merge into a 3D xarray.
     """
+    if not assets:
+        raise ValueError("no assets provided to be read")
+    logger.debug("reading %s assets from item %s...", len(assets), item.id)
     attrs = dict(
         item.properties,
         id=item.id,
@@ -99,6 +107,7 @@ def asset_to_xarray(
     """
     Read tile window of STAC Items and merge into a 2D xarray.
     """
+    logger.debug("reading asset %s...", asset)
     return masked_to_xarr(
         read_raster_window(
             item.assets[asset].href,

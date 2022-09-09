@@ -32,12 +32,12 @@ class Catalog(ABC):
     @property
     @abstractmethod
     def items(self) -> IndexedFeatures:
-        pass
+        ...
 
     @property
     @abstractmethod
     def eo_bands(self) -> list:
-        pass
+        ...
 
     def write_static_catalog(
         self,

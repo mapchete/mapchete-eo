@@ -18,7 +18,14 @@ with open("README.md") as f:
     readme = f.read()
 
 # package requirements
-install_requires = ["mapchete>=2022.2.2", "pystac", "pystac_client", "rtree", "xarray"]
+install_requires = [
+    "mapchete>=2022.2.2",
+    "pydantic",
+    "pystac",
+    "pystac_client",
+    "rtree",
+    "xarray",
+]
 extras_require = {}
 extras_require.update(complete=set(chain(*[v for v in extras_require.values()])))
 

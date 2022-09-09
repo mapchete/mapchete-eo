@@ -1,13 +1,62 @@
 """
 Reader driver for Sentinel-2 data.
+
+
 """
 import datetime
-
-import xarray as xr
+from enum import Enum
 from mapchete.tile import BufferedTile
+from pydantic import BaseModel
 
 from mapchete_eo import base
-from mapchete_eo.known_catalogs import E84Sentinel2COGs
+from mapchete_eo.known_catalogs import KnownCatalogs
+
+
+class ProcessingLevel(Enum):
+    """Available processing levels of Sentinel-2."""
+
+    level1c = "L1C"
+    level2a = "L2A"
+
+
+class S2AWSCOGArchive:
+    """
+    Sentinel-2 COG archive on AWS maintained by Element84.
+
+    URL: https://registry.opendata.aws/sentinel-2-l2a-cogs/
+    """
+
+    catalog = KnownCatalogs.earth_search_s2_cogs
+    storage_options = {
+        # "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
+    }
+
+
+class S2AWSJP2Archive:
+    """
+    Sentinel-2 JPEG2000 archive on AWS maintained by Sinergise.
+
+    This requires the requester pays setting.
+
+    URL: https://registry.opendata.aws/sentinel-2/
+    """
+
+    catalog = KnownCatalogs.sinergise_s2
+    storage_options = {}
+
+
+class KnownArchives(Enum):
+    S2AWS_COG = S2AWSCOGArchive
+    S2AWS_JP2 = S2AWSJP2Archive
+
+
+class FormatParams(BaseModel):
+    format: str = "Sentinel-2"
+    level: ProcessingLevel = ProcessingLevel.level2a
+    archive: KnownArchives = KnownArchives.S2AWS_COG
+    start_time: datetime.date
+    end_time: datetime.date
+
 
 METADATA = {
     "driver_name": "Sentinel-2",
@@ -53,13 +102,17 @@ class InputData(base.InputData):
     def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
-        format_params = input_params["abstract"]
+        format_params = dict_to_format_params(input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
-        self.start_time = format_params["start_time"]
-        self.end_time = format_params["end_time"]
-
-        self.catalog = E84Sentinel2COGs(
+        self.start_time = format_params.start_time
+        self.end_time = format_params.end_time
+        self.catalog = format_params.archive.value.catalog.value(
             bounds=self.bbox(out_crs=4326).bounds,
             start_time=self.start_time,
             end_time=self.end_time,
         )
+        self.storage_options = format_params.archive.value.storage_options
+
+
+def dict_to_format_params(format_params: dict) -> FormatParams:
+    return FormatParams(**format_params)

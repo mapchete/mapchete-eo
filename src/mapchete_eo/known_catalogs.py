@@ -1,3 +1,5 @@
+from enum import Enum
+
 from mapchete_eo.search import STACSearchCatalog
 
 
@@ -10,7 +12,6 @@ class SinergiseSentinel2:
     pass
 
 
-CATALOGS = {
-    "E84Sentinel2COGs": E84Sentinel2COGs,
-    "SinergiseSentinel2": SinergiseSentinel2,
-}
+class KnownCatalogs(Enum):
+    earth_search_s2_cogs = E84Sentinel2COGs
+    sinergise_s2 = SinergiseSentinel2

@@ -5,7 +5,7 @@ import pytest
 from mapchete.testing import ProcessFixture
 
 from mapchete_eo.known_catalogs import E84Sentinel2COGs
-from mapchete_eo.search import STACSearchCatalog
+from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
@@ -21,6 +21,15 @@ def pf_sr_stac_collection():
     return os.path.join(
         TESTDATA_DIR, "pf_stac_collection", "stac", "SR", "catalog.json"
     )
+
+
+@pytest.fixture
+def pf_sr_stac_item():
+    path = os.path.join(
+        TESTDATA_DIR, "pf_stac_collection", "stac", "SR", "catalog.json"
+    )
+    catalog = STACStaticCatalog(path)
+    return next(iter(catalog.items.values()))
 
 
 @pytest.fixture

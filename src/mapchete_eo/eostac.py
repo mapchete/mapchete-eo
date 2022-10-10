@@ -8,6 +8,7 @@ from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
 from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.time import to_datetime
 
 METADATA = {
     "driver_name": "EOSTAC",
@@ -41,8 +42,8 @@ class InputTile(base.InputTile):
         self.tile = tile
         self.items = items
         self.eo_bands = eo_bands
-        self.start_time = start_time
-        self.end_time = end_time
+        self.start_time = to_datetime(start_time)
+        self.end_time = to_datetime(end_time)
 
 
 class InputData(base.InputData):
@@ -66,4 +67,5 @@ class InputData(base.InputData):
             bounds=self.bbox(out_crs=4326).bounds,
             start_time=self.start_time,
             end_time=self.end_time,
+            time_pattern=format_params.get("pattern"),
         )

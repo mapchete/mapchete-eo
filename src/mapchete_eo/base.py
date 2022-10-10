@@ -1,3 +1,5 @@
+import croniter
+from dateutil.tz import tzutc
 import xarray as xr
 from mapchete.formats import base
 from mapchete.io.vector import reproject_geometry
@@ -21,13 +23,15 @@ class InputTile(base.InputTile):
 
     def read(
         self,
+        eo_bands=None,
         assets=None,
         resampling="nearest",
         start_time=None,
         end_time=None,
         timestamps=None,
-        x_axis_name="x",
-        y_axis_name="y",
+        time_pattern=None,
+        x_axis_name="X",
+        y_axis_name="Y",
         merge_items_by=None,
         **kwargs,
     ) -> xr.Dataset:
@@ -43,8 +47,23 @@ class InputTile(base.InputTile):
             raise NotImplementedError("time subsets are not yet implemented")
         if merge_items_by is not None:
             raise NotImplementedError("merging items is not yet implemented")
+        if time_pattern:
+            # filter items by time pattern
+            tz = tzutc()
+            coord_time = [
+                t.replace(tzinfo=tz)
+                for t in croniter.croniter_range(
+                    self.start_time, self.end_time, time_pattern, tz
+                )
+            ]
+            items = [i for i in self.items if i.datetime in coord_time]
+        else:
+            items = self.items
+        if len(items) == 0:
+            return xr.Dataset()
         return items_to_xarray(
-            items=self.items,
+            items=items,
+            eo_bands=eo_bands,
             assets=assets,
             tile=self.tile,
             resampling=resampling,
@@ -60,7 +79,7 @@ class InputTile(base.InputTile):
         -------
         is empty : bool
         """
-        raise NotImplementedError()
+        return len(self.items) == 0
 
     def _get_assets(self, indexes=None):
         if indexes is None:
@@ -122,7 +141,11 @@ class InputData(base.InputData):
         """
         return self.input_tile_cls(
             tile,
-            items=self.catalog.items.filter(bounds=tile.bounds),
+            items=self.catalog.items.filter(
+                bounds=reproject_geometry(
+                    tile.bbox, src_crs=tile.crs, dst_crs="EPSG:4326"
+                ).bounds
+            ),
             eo_bands=self.catalog.eo_bands,
             start_time=self.start_time,
             end_time=self.end_time,

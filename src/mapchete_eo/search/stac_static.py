@@ -3,10 +3,9 @@ import logging
 import warnings
 from functools import cached_property
 
-import pystac
-from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from pystac.stac_io import StacIO
+from pystac_client import Client
 from tilematrix import Bounds
 
 from mapchete_eo.search.base import Catalog, FSSpecStacIO
@@ -27,9 +26,8 @@ class STACStaticCatalog(Catalog):
         end_time: datetime.datetime = None,
         **kwargs,
     ) -> None:
-        self.cat = pystac.Catalog.from_file(baseurl)
-        logger.debug("make hrefs absolute")
-        self.cat.make_all_asset_hrefs_absolute()
+        self.client = Client.from_file(baseurl, stac_io=FSSpecStacIO())
+        self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
         self.start_time = start_time
         self.end_time = end_time
@@ -38,19 +36,21 @@ class STACStaticCatalog(Catalog):
     def items(self) -> IndexedFeatures:
         def _gen_items():
             logger.debug("iterate through children")
-            for collection in self.cat.get_children():
-                logger.debug(f"check children for collection {collection.id}")
-                yield from _all_intersecting_items(
-                    collection,
-                    bounds=self.bounds,
-                    timespan=(self.start_time, self.end_time),
-                )
+            for item in _all_intersecting_items(
+                self.client,
+                bounds=self.bounds,
+                timespan=(self.start_time, self.end_time),
+            ):
+                item.make_asset_hrefs_absolute()
+                yield item
 
-        return IndexedFeatures(_gen_items())
+        items = list(_gen_items())
+        logger.debug("%s items found", len(items))
+        return IndexedFeatures(items)
 
     @cached_property
     def eo_bands(self) -> list:
-        for collection in self.cat.get_children():
+        for collection in self.client.get_children():
             eo_bands = collection.extra_fields.get("properties", {}).get("eo:bands")
             if eo_bands:
                 return eo_bands
@@ -59,12 +59,21 @@ class STACStaticCatalog(Catalog):
                 "Unable to read eo:bands definition from collections. "
                 "Trying now to get information from assets ..."
             )
-            item = _get_first_item(self.cat.get_children())
+            item = _get_first_item(self.client.get_children())
             eo_bands = item.properties.get("eo:bands")
             if eo_bands:
                 return eo_bands
             else:
                 raise ValueError("cannot find eo:bands definition")
+
+    def get_collections(self):
+        for collection in self.client.get_children():
+            if _collection_extent_intersects(
+                collection,
+                bounds=self.bounds,
+                timespan=(self.start_time, self.end_time),
+            ):
+                yield collection
 
 
 def _get_first_item(collections):

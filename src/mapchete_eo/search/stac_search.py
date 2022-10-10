@@ -94,6 +94,10 @@ class STACSearchCatalog(Catalog):
         logger.debug(f"query catalog using params: {search_params}")
         return self.client.search(**search_params)
 
+    def get_collections(self):
+        for collection_name in self.collections:
+            yield self.client.get_collection(collection_name)
+
 
 def bounds_intersection(bounds1, bounds2):
     g = box(*bounds1).intersection(box(*bounds2))

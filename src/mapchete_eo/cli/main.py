@@ -1,8 +1,9 @@
+from multiprocessing.sharedctypes import Value
 import click
 from mapchete.cli.options import opt_bounds, opt_debug
-from pystac import Extent
 
 from mapchete_eo.known_catalogs import E84Sentinel2COGs
+from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 
 def _str_to_list(_, __, value):
@@ -38,6 +39,11 @@ def eo(ctx):
     type=click.STRING,
     help="Search endpoint.",
 )
+@click.option(
+    "--catalog-json",
+    type=click.STRING,
+    help="JSON file for a static catalog.",
+)
 @click.option("--name", type=click.STRING, help="Static catalog name.")
 @click.option("--description", type=click.STRING, help="Static catalog description.")
 @click.option(
@@ -63,6 +69,7 @@ def static_catalog(
     archive=None,
     collection=None,
     endpoint=None,
+    catalog_json=None,
     name=None,
     description=None,
     assets=None,
@@ -70,15 +77,42 @@ def static_catalog(
     overwrite=False,
     **kwargs,
 ):
-    if archive == "sentinel-s2-l2a-cogs":
-        catalog = E84Sentinel2COGs(
-            bounds=bounds, start_time=start_time, end_time=end_time
+    selector = {
+        "archive": archive,
+        "catalog-json": catalog_json,
+        "endpoint": endpoint,
+    }
+    if len([v for v in selector.values() if v is not None]) != 1:
+        raise click.ClickException(
+            "exactly one of --archive, --catalog-json or --endpoint has to be set."
         )
-    else:
-        raise click.ClickException("archive must be provided")
     if any([bounds is None, start_time is None, end_time is None]):
         raise click.ClickException(
             "--bounds, --start-time and --end-time are mandatory"
+        )
+
+    if archive:
+        if archive == "sentinel-s2-l2a-cogs":
+            catalog = E84Sentinel2COGs(
+                bounds=bounds, start_time=start_time, end_time=end_time
+            )
+        else:
+            raise ValueError(
+                "currently ony archive 'sentinel-s2-l2a-cogs' is supported"
+            )
+    if catalog_json:
+        catalog = STACStaticCatalog(
+            baseurl=catalog_json,
+            bounds=bounds,
+            start_time=start_time,
+            end_time=end_time,
+        )
+    if endpoint:
+        catalog = STACSearchCatalog(
+            baseurl=endpoint,
+            bounds=bounds,
+            start_time=start_time,
+            end_time=end_time,
         )
 
     catalog_json = catalog.write_static_catalog(

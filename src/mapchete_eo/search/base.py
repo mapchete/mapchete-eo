@@ -3,7 +3,7 @@ import os
 from abc import ABC, abstractmethod
 
 import pystac
-from mapchete.io import fs_from_path
+from mapchete.io import fs_from_path, makedirs
 from mapchete.io.vector import IndexedFeatures
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
@@ -27,6 +27,11 @@ class FSSpecStacIO(DefaultStacIO):
         with fs.open(dest, "w", auto_mkdir=True) as dst:
             return dst.write(txt)
 
+    def conforms_to(self, *args):
+        # required otherwise generating static catalog subset from static
+        # catalog won't work
+        return False
+
 
 class Catalog(ABC):
     @property
@@ -39,6 +44,10 @@ class Catalog(ABC):
     def eo_bands(self) -> list:
         ...
 
+    @abstractmethod
+    def get_collections(self, collection_name: str) -> Collection:
+        ...
+
     def write_static_catalog(
         self,
         output_path: str,
@@ -49,48 +58,9 @@ class Catalog(ABC):
         overwrite: bool = False,
     ):
         """Dump static version of current items."""
-        if len(self.collections) > 1:
-            raise ValueError(
-                f"{len(self.collections)} collections found. Writing static STAC catalog is "
-                "currently only possible with exactly one collection"
-            )
-
-        # create collection and copy metadata
-        collection = self.client.get_collection(self.collections[0])
-        new_collection = Collection(
-            id=collection.id,
-            extent=pystac.Extent(spatial=[], temporal=[]),
-            description=collection.description,
-            title=collection.title,
-            stac_extensions=collection.stac_extensions,
-            license=collection.license,
-            keywords=collection.keywords,
-            providers=collection.providers,
-            summaries=collection.summaries,
-            extra_fields=collection.extra_fields,
-        )
-        for item in self.items:
-            if assets:
-                logger.debug("get assets %s", assets)
-                if assets_dst_resolution:
-                    item = convert_assets(
-                        item,
-                        assets,
-                        os.path.join(output_path, collection.id, item.id),
-                        resolution=assets_dst_resolution,
-                        overwrite=overwrite,
-                    )
-                else:
-                    item = copy_assets(
-                        item,
-                        assets,
-                        os.path.join(output_path, collection.id, item.id),
-                        overwrite=overwrite,
-                    )
-            new_collection.add_item(item)
-        new_collection.update_extent_from_items()
 
         # initialize catalog
+        makedirs(output_path)
         catalog_json = os.path.join(output_path, "catalog.json")
         catalog = pystac.Catalog(
             name or f"{self.client.id}",
@@ -99,7 +69,42 @@ class Catalog(ABC):
             href=catalog_json,
         )
 
-        catalog.add_child(new_collection)
+        for collection in self.get_collections():
+            # create collection and copy metadata
+            new_collection = Collection(
+                id=collection.id,
+                extent=pystac.Extent(spatial=[], temporal=[]),
+                description=collection.description,
+                title=collection.title,
+                stac_extensions=collection.stac_extensions,
+                license=collection.license,
+                keywords=collection.keywords,
+                providers=collection.providers,
+                summaries=collection.summaries,
+                extra_fields=collection.extra_fields,
+            )
+            for item in self.items:
+                if assets:
+                    logger.debug("get assets %s", assets)
+                    if assets_dst_resolution:
+                        item = convert_assets(
+                            item,
+                            assets,
+                            os.path.join(output_path, collection.id, item.id),
+                            resolution=assets_dst_resolution,
+                            overwrite=overwrite,
+                        )
+                    else:
+                        item = copy_assets(
+                            item,
+                            assets,
+                            os.path.join(output_path, collection.id, item.id),
+                            overwrite=overwrite,
+                        )
+                new_collection.add_item(item)
+            new_collection.update_extent_from_items()
+
+            catalog.add_child(new_collection)
 
         logger.debug("write catalog to %s", output_path)
         catalog.normalize_and_save(

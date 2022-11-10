@@ -1,7 +1,7 @@
 process: read_xarray.py
 input:
   inp:
-    format: EOSTAC
+    format: EOSTAC_DEV
     level: L2A
     start_time: 2018-12-29
     end_time: 2018-12-30

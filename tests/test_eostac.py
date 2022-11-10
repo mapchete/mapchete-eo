@@ -3,7 +3,7 @@ from mapchete.formats import available_input_formats
 
 
 def test_format_available():
-    assert "EOSTAC" in available_input_formats()
+    assert "EOSTAC_DEV" in available_input_formats()
 
 
 def test_stac_read_xarray(stac_mapchete):

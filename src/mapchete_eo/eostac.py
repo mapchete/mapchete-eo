@@ -11,7 +11,7 @@ from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
 METADATA = {
-    "driver_name": "EOSTAC",
+    "driver_name": "EOSTAC_DEV",
     "data_type": None,
     "mode": "r",
     "file_extensions": [],

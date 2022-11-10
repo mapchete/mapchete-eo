@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mapchete-eo"
+dynamic = ["version"]
+description = "mapchete EO data reader"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Joachim Ungar", email = "joachim.ungar@eox.at" },
+    { name = "Petr Sevcik", email = "petr.sevcik@eox.at" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "mapchete>=2022.2.2",
+    "pydantic",
+    "pystac",
+    "pystac_client",
+    "rtree",
+    "xarray",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-coverage",
+    "mapchete_xarray",
+]
+
+[project.entry-points."mapchete.cli.commands"]
+eo = "mapchete_eo.cli.main:eo"
+
+[project.entry-points."mapchete.formats.drivers"]
+eostac_dev = "mapchete_eo.eostac"
+sentinel2 = "mapchete_eo.sentinel2"
+
+[project.urls]
+Homepage = "https://gitlab.eox.at/maps/mapchete_eo"
+
+[tool.hatch.version]
+path = "mapchete_eo/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]

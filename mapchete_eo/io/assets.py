@@ -30,6 +30,10 @@ def copy_assets(
     for asset in assets:
         asset_path = item.assets[asset].href
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
+        dst_fs = dst_fs or src_fs or fs_from_path(output_path)
+
+        if not overwrite and dst_fs.exists(output_path):  # pragma: no cover
+            raise IOError(f"{output_path} already exists")
 
         with Timer() as t:
             copy(
@@ -64,9 +68,9 @@ def convert_assets(
     for asset in assets:
         asset_path = item.assets[asset].href
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
-        dst_fs = src_fs or fs_from_path(output_path)
+        dst_fs = dst_fs or src_fs or fs_from_path(output_path)
 
-        if not overwrite and dst_fs.exists(output_path):
+        if not overwrite and dst_fs.exists(output_path):  # pragma: no cover
             raise IOError(f"{output_path} already exists")
 
         makedirs(dst_dir, fs=dst_fs)

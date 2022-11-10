@@ -2,6 +2,7 @@
 Contains all classes required to use the driver as mapchete input.
 """
 import datetime
+from pydantic import BaseModel
 
 from mapchete.io import absolute_path
 from mapchete.tile import BufferedTile
@@ -16,6 +17,14 @@ METADATA = {
     "mode": "r",
     "file_extensions": [],
 }
+
+
+class FormatParams(BaseModel):
+    format: str
+    start_time: datetime.date
+    end_time: datetime.date
+    cat_baseurl: str
+    pattern: dict = None
 
 
 class InputTile(base.InputTile):
@@ -54,18 +63,16 @@ class InputData(base.InputData):
     def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
-        format_params = input_params["abstract"]
-        if "cat_baseurl" not in format_params:
-            raise ValueError("cat_baseurl is missing from config")
+        format_params = FormatParams(**input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
-        self.start_time = format_params["start_time"]
-        self.end_time = format_params["end_time"]
+        self.start_time = format_params.start_time
+        self.end_time = format_params.end_time
         self.catalog = STACStaticCatalog(
             baseurl=absolute_path(
-                path=format_params["cat_baseurl"], base_dir=input_params["conf_dir"]
+                path=format_params.cat_baseurl, base_dir=input_params["conf_dir"]
             ),
             bounds=self.bbox(out_crs=4326).bounds,
             start_time=self.start_time,
             end_time=self.end_time,
-            time_pattern=format_params.get("pattern"),
+            time_pattern=format_params.pattern,
         )

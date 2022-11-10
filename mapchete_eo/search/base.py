@@ -36,16 +36,16 @@ class FSSpecStacIO(DefaultStacIO):
 class Catalog(ABC):
     @property
     @abstractmethod
-    def items(self) -> IndexedFeatures:
+    def items(self) -> IndexedFeatures:  # pragma: no cover
         ...
 
     @property
     @abstractmethod
-    def eo_bands(self) -> list:
+    def eo_bands(self) -> list:  # pragma: no cover
         ...
 
     @abstractmethod
-    def get_collections(self, collection_name: str) -> Collection:
+    def get_collections(self, collection_name: str) -> Collection:  # pragma: no cover
         ...
 
     def write_static_catalog(

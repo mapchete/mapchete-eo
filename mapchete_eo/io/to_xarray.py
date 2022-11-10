@@ -28,7 +28,7 @@ def items_to_xarray(
     """
     Read tile window of STAC Items and merge into a 4D xarray.
     """
-    if len(items) == 0:
+    if len(items) == 0:  # pragma: no cover
         raise ValueError("no items to read")
     logger.debug("reading %s items...", len(items))
     coords = {}
@@ -70,10 +70,11 @@ def item_to_xarray(
     """
     Read tile window of STAC Item and merge into a 3D xarray.
     """
-    if (assets and eo_bands) or (assets is None and eo_bands is None):
+    if (assets and eo_bands) or (
+        assets is None and eo_bands is None
+    ):  # pragma: no cover
         raise ValueError("either assets or eo_bands have to be provided")
-    if isinstance(assets, str):
-        assets = [assets]
+    assets = [assets] if isinstance(assets, str) else assets
     if eo_bands:
         assets_indexes = eo_bands_to_assets_indexes(item, eo_bands)
     else:
@@ -160,7 +161,7 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
             if asset_eo_bands:
                 for band_idx, band_info in enumerate(asset_eo_bands, 1):
                     if eo_band == band_info.get("name"):
-                        if asset_found:
+                        if asset_found:  # pragma: no cover
                             raise ValueError(
                                 "EO band %s found in multiple assets (%s, %s)",
                                 eo_band,

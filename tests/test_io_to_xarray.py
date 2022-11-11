@@ -125,17 +125,17 @@ def test_group_items_per_property_day(s2_stac_items):
             assert property == item.datetime.day
 
 
-# def test_s2_items_to_xarray_merge(s2_stac_items, test_tile):
-#     eo_bands = ["B04"]
-#     ds = items_to_xarray(
-#         items=s2_stac_items,
-#         eo_bands=eo_bands,
-#         tile=test_tile,
-#         nodatavals=[0, 0, 0],
-#         merge_items_by="date"
-#     )
-#     assert isinstance(ds, xr.Dataset)
-#     breakpoint()
+def test_s2_items_to_xarray_merge(s2_stac_items, test_tile):
+    eo_bands = ["B04"]
+    ds = items_to_xarray(
+        items=s2_stac_items,
+        eo_bands=eo_bands,
+        tile=test_tile,
+        nodatavals=[0, 0, 0],
+        merge_items_by="date",
+    )
+    assert isinstance(ds, xr.Dataset)
+    1 / 0
 
 
 # TODO:

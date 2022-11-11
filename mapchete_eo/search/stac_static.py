@@ -59,12 +59,22 @@ class STACStaticCatalog(Catalog):
                 "Unable to read eo:bands definition from collections. "
                 "Trying now to get information from assets ..."
             )
+
+            # see if eo:bands can be found in properties
             item = _get_first_item(self.client.get_children())
             eo_bands = item.properties.get("eo:bands")
             if eo_bands:
                 return eo_bands
-            else:
-                raise ValueError("cannot find eo:bands definition")
+
+            # look through the assets and collect eo:bands
+            out = {}
+            for asset in item.assets.values():
+                for eo_band in asset.extra_fields.get("eo:bands", []):
+                    out[eo_band["name"]] = eo_band
+            if out:
+                return [v for v in out.values()]
+
+            raise ValueError("cannot find eo:bands definition")
 
     def get_collections(self):
         for collection in self.client.get_children():

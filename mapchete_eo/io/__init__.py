@@ -4,6 +4,8 @@ from mapchete_eo.io.to_xarray import (
     item_to_xarray,
     items_to_xarray,
     eo_bands_to_assets_indexes,
+    group_items_per_property,
+    get_item_property,
 )
 
 __all__ = [
@@ -13,4 +15,6 @@ __all__ = [
     "item_to_xarray",
     "items_to_xarray",
     "eo_bands_to_assets_indexes",
+    "group_items_per_property",
+    "get_item_property",
 ]

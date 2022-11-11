@@ -1,17 +1,25 @@
 {
-    "id": "catalog",
-    "stac_version": "0.8.1",
-    "description": "staged catalog",
+    "type": "Catalog",
+    "id": "earth-search",
+    "stac_version": "1.0.0",
+    "description": "Static subset of A STAC API of AWS Public Datasets powered by stac-server",
     "links": [
         {
             "rel": "root",
-            "href": "./catalog.json",
+            "href": "/home/ungarj/git/mapchete/mapchete_eo/tests/testdata/s2_stac_collection/catalog.json",
             "type": "application/json"
         },
         {
             "rel": "child",
-            "href": "./collection/collection.json",
+            "href": "/home/ungarj/git/mapchete/mapchete_eo/tests/testdata/s2_stac_collection/sentinel-s2-l2a-cogs/collection.json",
+            "type": "application/json",
+            "title": "Sentinel 2 L2A COGs"
+        },
+        {
+            "rel": "self",
+            "href": "/home/ungarj/git/mapchete/mapchete_eo/tests/testdata/s2_stac_collection/catalog.json",
             "type": "application/json"
         }
-    ]
+    ],
+    "stac_extensions": []
 }

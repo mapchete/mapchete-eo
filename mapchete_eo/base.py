@@ -45,8 +45,6 @@ class InputTile(base.InputTile):
         # TODO: iterate through items, filter by time and read assets to window
         if any([start_time, end_time, timestamps]):
             raise NotImplementedError("time subsets are not yet implemented")
-        if merge_items_by is not None:
-            raise NotImplementedError("merging items is not yet implemented")
         if time_pattern:
             # filter items by time pattern
             tz = tzutc()
@@ -69,6 +67,7 @@ class InputTile(base.InputTile):
             resampling=resampling,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
+            merge_items_by=merge_items_by,
         )
 
     def is_empty(self) -> bool:

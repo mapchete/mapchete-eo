@@ -1,8 +1,10 @@
 import os
 
 import pystac
+from pystac_client import Client
 import pytest
 from mapchete.testing import ProcessFixture
+from mapchete.tile import BufferedTilePyramid
 
 from mapchete_eo.known_catalogs import E84Sentinel2COGs
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
@@ -13,7 +15,18 @@ TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
 
 @pytest.fixture
 def s2_stac_collection():
+    # generated with:
+    # $ mapchete eo static-catalog tests/testdata/s2_stac_collection --start-time 2022-04-01 --end-time 2022-04-05 --bounds 16 48 17 49 -d --assets-dst-resolution 480 --assets B04,B03,B02,B08
     return os.path.join(TESTDATA_DIR, "s2_stac_collection", "catalog.json")
+
+
+@pytest.fixture
+def s2_stac_items():
+    client = Client.from_file(
+        os.path.join(TESTDATA_DIR, "s2_stac_collection", "catalog.json")
+    )
+    collection = next(client.get_collections())
+    return list(collection.get_items())
 
 
 @pytest.fixture
@@ -45,9 +58,9 @@ def s2_stac_item():
         os.path.join(
             TESTDATA_DIR,
             "s2_stac_collection",
-            "collection",
-            "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231",
-            "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.json",
+            "sentinel-s2-l2a-cogs",
+            "S2A_33UWP_20220405_0_L2A",
+            "S2A_33UWP_20220405_0_L2A.json",
         )
     )
     item.make_asset_hrefs_absolute()
@@ -70,6 +83,11 @@ def sentinel2_mapchete(tmp_path):
         output_tempdir=tmp_path,
     ) as example:
         yield example
+
+
+@pytest.fixture
+def test_tile():
+    return BufferedTilePyramid("geodetic").tile(13, 1879, 8938)
 
 
 @pytest.fixture(scope="session")

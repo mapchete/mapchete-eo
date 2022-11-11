@@ -7,11 +7,18 @@ import pystac
 import rasterio
 from affine import Affine
 from mapchete import Timer
-from mapchete.io import copy, fs_from_path, makedirs
+from mapchete.io import copy, fs_from_path, makedirs, path_is_remote
 from mapchete.io.raster import rasterio_write
 from rasterio.vrt import WarpedVRT
 
 logger = logging.getLogger(__name__)
+
+
+def path_is_relative(path):
+    if path_is_remote(path):
+        return False
+    else:
+        return not os.path.isabs(path)
 
 
 def copy_assets(
@@ -21,6 +28,8 @@ def copy_assets(
     src_fs: fsspec.AbstractFileSystem = None,
     dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
+    ignore_if_exists: bool = False,
+    item_href_in_dst_dir: bool = True,
 ) -> str:
     """Copy asset from one place to another."""
     assets = assets if isinstance(assets, list) else [assets]
@@ -32,8 +41,23 @@ def copy_assets(
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
         dst_fs = dst_fs or src_fs or fs_from_path(output_path)
 
-        if not overwrite and dst_fs.exists(output_path):  # pragma: no cover
-            raise IOError(f"{output_path} already exists")
+        # write relative path into asset.href if Item will be in the same directory
+        if item_href_in_dst_dir and path_is_relative(output_path):
+            item.assets[asset].href = os.path.basename(asset_path)
+        else:
+            item.assets[asset].href = output_path
+
+        if dst_fs.exists(output_path):
+            if ignore_if_exists:
+                logger.debug("ignore existing asset %s", output_path)
+                continue
+            elif overwrite:
+                logger.debug("overwrite exsiting asset %s", output_path)
+                pass
+            else:
+                raise IOError(f"{output_path} already exists")
+        else:
+            makedirs(dst_dir, fs=dst_fs)
 
         with Timer() as t:
             copy(
@@ -45,8 +69,6 @@ def copy_assets(
             )
         logger.debug("copied asset %s in %s", asset, t)
 
-        item.assets[asset].href = output_path
-
     return item
 
 
@@ -57,9 +79,11 @@ def convert_assets(
     src_fs: fsspec.AbstractFileSystem = None,
     dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
+    ignore_if_exists: bool = False,
     resolution: int = None,
     compression: str = "deflate",
     driver: str = "COG",
+    item_href_in_dst_dir: bool = True,
 ):
     assets = assets if isinstance(assets, list) else [assets]
 
@@ -70,10 +94,23 @@ def convert_assets(
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
         dst_fs = dst_fs or src_fs or fs_from_path(output_path)
 
-        if not overwrite and dst_fs.exists(output_path):  # pragma: no cover
-            raise IOError(f"{output_path} already exists")
+        # write relative path into asset.href if Item will be in the same directory
+        if item_href_in_dst_dir and path_is_relative(output_path):
+            item.assets[asset].href = os.path.basename(asset_path)
+        else:
+            item.assets[asset].href = output_path
 
-        makedirs(dst_dir, fs=dst_fs)
+        if dst_fs.exists(output_path):
+            if ignore_if_exists:
+                logger.debug("ignore existing asset %s", output_path)
+                continue
+            elif overwrite:
+                logger.debug("overwrite exsiting asset %s", output_path)
+                pass
+            else:
+                raise IOError(f"{output_path} already exists")
+        else:
+            makedirs(dst_dir, fs=dst_fs)
 
         with Timer() as t:
             with rasterio.open(asset_path, "r") as src:
@@ -108,7 +145,5 @@ def convert_assets(
                     ) as warped:
                         dst.write(warped.read())
         logger.debug("converted asset %s in %s", asset, t)
-
-        item.assets[asset].href = output_path
 
     return item

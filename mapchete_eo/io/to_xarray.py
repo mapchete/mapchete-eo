@@ -32,7 +32,7 @@ def items_to_xarray(
     if len(items) == 0:  # pragma: no cover
         raise ValueError("no items to read")
     if merge_items_by is not None:
-        breakpoint()
+        items = group_items_per_property(items, merge_items_by)
         raise NotImplementedError()
     logger.debug("reading %s items...", len(items))
     coords = {}

@@ -32,32 +32,78 @@ def items_to_xarray(
     if len(items) == 0:
         raise ValueError("no items to read")
     if merge_items_by is not None:
-        # items_per_property = group_items_per_property(items, merge_items_by)
-        raise NotImplementedError()
-    logger.debug("reading %s items...", len(items))
-    coords = {}
-    coords[time_axis_name] = np.array([i.datetime for i in items], dtype=np.datetime64)
-    return xr.Dataset(
-        data_vars={
-            item.id: item_to_xarray(
-                item=item,
-                assets=assets,
-                eo_bands=eo_bands,
-                tile=tile,
-                resampling=resampling,
-                nodatavals=nodatavals,
-                x_axis_name=x_axis_name,
-                y_axis_name=y_axis_name,
-                time_axis_name=time_axis_name,
-            ).to_stacked_array(
-                new_dim=band_axis_name,
-                sample_dims=(x_axis_name, y_axis_name),
-                name=item.id,
-            )
-            for item in items
-        },
-        coords=coords,
-    ).transpose(time_axis_name, band_axis_name, x_axis_name, y_axis_name)
+        items_per_property = group_items_per_property(items, merge_items_by)
+        logger.debug(
+            "reading %s items in %s groups...", len(items), len(items_per_property)
+        )
+        return xr.Dataset(
+            data_vars={
+                data_var_name: merge_items(
+                    items=items,
+                    assets=assets,
+                    eo_bands=eo_bands,
+                    tile=tile,
+                    resampling=resampling,
+                    nodatavals=nodatavals,
+                    x_axis_name=x_axis_name,
+                    y_axis_name=y_axis_name,
+                    time_axis_name=time_axis_name,
+                ).to_stacked_array(
+                    new_dim=band_axis_name,
+                    sample_dims=(x_axis_name, y_axis_name),
+                    name=data_var_name,
+                )
+                for data_var_name, items in items_per_property.items()
+            },
+        ).transpose(band_axis_name, x_axis_name, y_axis_name)
+    else:
+        logger.debug("reading %s items...", len(items))
+        return xr.Dataset(
+            data_vars={
+                item.id: item_to_xarray(
+                    item=item,
+                    assets=assets,
+                    eo_bands=eo_bands,
+                    tile=tile,
+                    resampling=resampling,
+                    nodatavals=nodatavals,
+                    x_axis_name=x_axis_name,
+                    y_axis_name=y_axis_name,
+                    time_axis_name=time_axis_name,
+                ).to_stacked_array(
+                    new_dim=band_axis_name,
+                    sample_dims=(x_axis_name, y_axis_name),
+                    name=item.id,
+                )
+                for item in items
+            },
+            coords={
+                time_axis_name: np.array(
+                    [i.datetime for i in items], dtype=np.datetime64
+                )
+            },
+        ).transpose(time_axis_name, band_axis_name, x_axis_name, y_axis_name)
+
+
+def merge_items(
+    items: List[pystac.Item] = [], merge_method: str = "first", **kwargs
+) -> xr.Dataset:
+    if len(items) == 0:
+        raise ValueError("no items to merge")
+    out = item_to_xarray(items[0], **kwargs)
+    # delete attributes because dataset is a merge of multiple items
+    out.attrs = dict()
+    for item in items[1:]:
+        xr = item_to_xarray(item=item, **kwargs)
+        if merge_method == "first":
+            # replace masked values with values from freshly read xarray
+            for variable in out.variables:
+                out[variable] = out[variable].where(
+                    out[variable] == out[variable].attrs["_FillValue"], xr[variable]
+                )
+        else:
+            raise NotImplementedError(f"unknown merge method: {merge_method}")
+    return out
 
 
 def item_to_xarray(
@@ -67,8 +113,8 @@ def item_to_xarray(
     tile: BufferedTile = None,
     resampling: Union[List[str], str] = "nearest",
     nodatavals: Union[List[float], List[None], float, None] = None,
-    x_axis_name: str = "X",
-    y_axis_name: str = "X",
+    x_axis_name: str = "x",
+    y_axis_name: str = "y",
     time_axis_name: str = "time",
 ) -> xr.Dataset:
     """

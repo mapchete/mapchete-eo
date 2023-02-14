@@ -26,6 +26,7 @@ def s2_stac_items():
         os.path.join(TESTDATA_DIR, "s2_stac_collection", "catalog.json")
     )
     collection = next(client.get_collections())
+    collection.make_all_asset_hrefs_absolute()
     return list(collection.get_items())
 
 

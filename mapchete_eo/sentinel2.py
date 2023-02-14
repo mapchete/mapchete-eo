@@ -27,7 +27,7 @@ class S2AWSCOGArchive:
     """
 
     catalog = KnownCatalogs.earth_search_s2_cogs
-    storage_options = {
+    storage_options: dict = {
         # "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
     }
 
@@ -42,7 +42,7 @@ class S2AWSJP2Archive:
     """
 
     catalog = KnownCatalogs.sinergise_s2
-    storage_options = {}
+    storage_options: dict = {}
 
 
 class KnownArchives(Enum):
@@ -58,7 +58,7 @@ class FormatParams(BaseModel):
     end_time: datetime.date
 
 
-METADATA = {
+METADATA: dict = {
     "driver_name": "Sentinel-2",
     "data_type": None,
     "mode": "r",

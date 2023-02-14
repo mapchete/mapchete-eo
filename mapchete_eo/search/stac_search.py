@@ -1,6 +1,7 @@
 import datetime
 import logging
 from functools import cached_property
+from typing import Union, Dict, List
 
 from mapchete.io.vector import IndexedFeatures
 from mapchete.tile import BufferedTilePyramid
@@ -15,30 +16,25 @@ logger = logging.getLogger(__name__)
 
 
 class STACSearchCatalog(Catalog):
-    ENDPOINT = None
-    COLLECTION = None
+    ENDPOINT: str
+    COLLECTION: str
 
     def __init__(
         self,
-        endpoint: str = None,
-        collections: str = None,
+        endpoint: Union[str, None] = None,
+        start_time: Union[datetime.datetime, None] = None,
+        end_time: Union[datetime.datetime, None] = None,
+        collections: List[str] = [],
         bounds: Bounds = None,
-        start_time: datetime.datetime = None,
-        end_time: datetime.datetime = None,
-        config: dict = None,
+        config: dict = dict(),
         **kwargs,
     ) -> None:
-        self._collection_items = {}
+        self._collection_items: Dict = {}
         self.bounds = bounds
         self.start_time = start_time
         self.end_time = end_time
         self.client = Client.open(endpoint or self.ENDPOINT)
-        if collections is None:
-            self.collections = [self.COLLECTION]
-        else:
-            self.collections = (
-                collections if isinstance(collections, list) else [collections]
-            )
+        self.collections = collections or [self.COLLECTION]
         self.config = dict(
             max_cloud_percent=100.0,
             stac_catalog_chunk_threshold=10000,
@@ -73,10 +69,13 @@ class STACSearchCatalog(Catalog):
     def eo_bands(self) -> list:
         for collection_name in self.collections:
             collection = self.client.get_collection(collection_name)
-            item_assets = collection.extra_fields.get("item_assets")
-            for v in item_assets.values():
-                if "eo:bands" in v and "data" in v.get("roles", []):
-                    return ["eo:bands"]
+            if collection:
+                item_assets = collection.extra_fields.get("item_assets", {})
+                for v in item_assets.values():
+                    if "eo:bands" in v and "data" in v.get("roles", []):
+                        return ["eo:bands"]
+            else:
+                raise ValueError(f"cannot fin collection {collection}")
         else:
             raise ValueError("cannot find eo:bands definition from collections")
 

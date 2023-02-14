@@ -1,4 +1,4 @@
-from multiprocessing.sharedctypes import Value
+from typing import Union
 
 import numpy as np
 import numpy.ma as ma
@@ -17,7 +17,9 @@ _NUMPY_FLOAT_DTYPES = [
 ]
 
 
-def xarr_to_masked(xarr, copy=False):
+def xarr_to_masked(
+    xarr: Union[xr.Dataset, xr.DataArray], copy: bool = False
+) -> ma.MaskedArray:
     """Convert xr.DataArray to ma.MaskedArray."""
     fill_value = xarr.attrs.get("_FillValue")
     if fill_value is None:
@@ -32,8 +34,13 @@ def xarr_to_masked(xarr, copy=False):
 
 
 def masked_to_xarr(
-    masked_arr, nodataval=None, name=None, x_axis_name="x", y_axis_name="y", attrs=None
-):
+    masked_arr: ma.MaskedArray,
+    nodataval: Union[float, None] = None,
+    name: Union[str, None] = None,
+    x_axis_name: str = "x",
+    y_axis_name: str = "y",
+    attrs: dict = dict(),
+) -> xr.DataArray:
     """Convert ma.MaskedArray to xr.DataArray."""
 
     # nodata handling is weird.

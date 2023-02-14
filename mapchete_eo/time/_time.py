@@ -1,11 +1,14 @@
 import datetime
+from typing import Union, Tuple
 
 import dateutil.parser
 
 _time = {"min": datetime.datetime.min.time(), "max": datetime.datetime.max.time()}
 
 
-def to_datetime(t, append_time="min"):
+def to_datetime(
+    t: Union[datetime.datetime, str], append_time="min"
+) -> datetime.datetime:
     """Convert input into datetime object."""
     if isinstance(t, datetime.datetime):
         return t
@@ -15,7 +18,10 @@ def to_datetime(t, append_time="min"):
         return dateutil.parser.parse(t)
 
 
-def time_ranges_intersect(t1, t2):
+def time_ranges_intersect(
+    t1: Tuple[Union[datetime.datetime, str], Union[datetime.datetime, str]],
+    t2: Tuple[Union[datetime.datetime, str], Union[datetime.datetime, str]],
+) -> bool:
     """Check if two time ranges intersect."""
     t1_start = to_datetime(t1[0], "min").replace(tzinfo=None)
     t1_end = to_datetime(t1[1], "max").replace(tzinfo=None)

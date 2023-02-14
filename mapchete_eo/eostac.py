@@ -11,7 +11,7 @@ from mapchete_eo import base
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
-METADATA = {
+METADATA: dict = {
     "driver_name": "EOSTAC_DEV",
     "data_type": None,
     "mode": "r",
@@ -21,10 +21,10 @@ METADATA = {
 
 class FormatParams(BaseModel):
     format: str
-    start_time: datetime.date
-    end_time: datetime.date
+    start_time: datetime.datetime
+    end_time: datetime.datetime
     cat_baseurl: str
-    pattern: dict = None
+    pattern: dict = {}
 
 
 class InputTile(base.InputTile):

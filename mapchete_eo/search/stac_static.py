@@ -2,6 +2,7 @@ import datetime
 import logging
 import warnings
 from functools import cached_property
+from typing import Union
 
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from pystac.stac_io import StacIO
@@ -20,10 +21,10 @@ StacIO.set_default(FSSpecStacIO)
 class STACStaticCatalog(Catalog):
     def __init__(
         self,
-        baseurl: str = None,
+        baseurl: str,
+        start_time: Union[datetime.datetime, None] = None,
+        end_time: Union[datetime.datetime, None] = None,
         bounds: Bounds = None,
-        start_time: datetime.datetime = None,
-        end_time: datetime.datetime = None,
         **kwargs,
     ) -> None:
         self.client = Client.from_file(baseurl, stac_io=FSSpecStacIO())

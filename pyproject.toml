@@ -54,3 +54,6 @@ path = "mapchete_eo/__init__.py"
 include = [
     "/src",
 ]
+
+[tool.mypy]
+ignore_missing_imports = true

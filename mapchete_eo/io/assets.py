@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+from typing import Union, List
 
 import fsspec
 import pystac
@@ -30,7 +31,7 @@ def copy_assets(
     overwrite: bool = False,
     ignore_if_exists: bool = False,
     item_href_in_dst_dir: bool = True,
-) -> str:
+) -> pystac.Item:
     """Copy asset from one place to another."""
     assets = assets if isinstance(assets, list) else [assets]
 
@@ -74,19 +75,17 @@ def copy_assets(
 
 def convert_assets(
     item: pystac.Item,
-    assets: str,
+    assets: List[str],
     dst_dir: str,
     src_fs: fsspec.AbstractFileSystem = None,
     dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     ignore_if_exists: bool = False,
-    resolution: int = None,
+    resolution: int = 10,
     compression: str = "deflate",
     driver: str = "COG",
     item_href_in_dst_dir: bool = True,
 ):
-    assets = assets if isinstance(assets, list) else [assets]
-
     logger.debug("convert assets %s to %s ...", assets, dst_dir)
 
     for asset in assets:

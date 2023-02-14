@@ -1,5 +1,4 @@
 from enum import Enum
-from pydantic import BaseModel
 
 from mapchete_eo.known_catalogs import KnownCatalogs
 
@@ -16,7 +15,7 @@ from mapchete_eo.known_catalogs import KnownCatalogs
 class S2AWSCOGArchive:
 
     catalog = KnownCatalogs.earth_search_s2_cogs
-    storage_options = {
+    storage_options: dict = {
         "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
     }
 
@@ -24,7 +23,7 @@ class S2AWSCOGArchive:
 class S2AWSJP2Archive:
 
     catalog = KnownCatalogs.sinergise_s2
-    storage_options = {}
+    storage_options: dict = {}
 
 
 class KnownArchives(Enum):

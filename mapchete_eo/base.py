@@ -52,7 +52,9 @@ class InputTile(base.InputTile):
             coord_time = [
                 t.replace(tzinfo=tz)
                 for t in croniter.croniter_range(
-                    self.start_time, self.end_time, time_pattern, tz
+                    self.start_time,
+                    self.end_time,
+                    time_pattern,
                 )
             ]
             items = [i for i in self.items if i.datetime in coord_time]

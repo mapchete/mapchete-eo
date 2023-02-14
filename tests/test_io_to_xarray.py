@@ -135,7 +135,6 @@ def test_s2_items_to_xarray_merge(s2_stac_items, test_tile):
         merge_items_by="date",
     )
     assert isinstance(ds, xr.Dataset)
-    1 / 0
 
 
 # TODO:

@@ -14,25 +14,25 @@ logger = logging.getLogger(__name__)
 
 
 def items_to_xarray(
-    items: list = None,
-    assets: list = None,
-    eo_bands: List[str] = None,
+    items: List[pystac.Item] = [],
+    assets: List[str] = [],
+    eo_bands: List[str] = [],
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodatavals: list = None,
+    nodatavals: Union[List, None] = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
     time_axis_name: str = "time",
-    merge_items_by: str = None,
+    merge_items_by: Union[str, None] = None,
 ) -> xr.Dataset:
     """
     Read tile window of STAC Items and merge into a 4D xarray.
     """
-    if len(items) == 0:  # pragma: no cover
+    if len(items) == 0:
         raise ValueError("no items to read")
     if merge_items_by is not None:
-        items = group_items_per_property(items, merge_items_by)
+        # items_per_property = group_items_per_property(items, merge_items_by)
         raise NotImplementedError()
     logger.debug("reading %s items...", len(items))
     coords = {}
@@ -61,12 +61,12 @@ def items_to_xarray(
 
 
 def item_to_xarray(
-    item: pystac.Item = None,
-    assets: list = None,
-    eo_bands: List[str] = None,
+    item: pystac.Item,
+    eo_bands: List[str] = [],
+    assets: List[str] = [],
     tile: BufferedTile = None,
-    resampling: list = "nearest",
-    nodatavals: list = None,
+    resampling: Union[List[str], str] = "nearest",
+    nodatavals: Union[List[float], List[None], float, None] = None,
     x_axis_name: str = "X",
     y_axis_name: str = "X",
     time_axis_name: str = "time",
@@ -74,61 +74,60 @@ def item_to_xarray(
     """
     Read tile window of STAC Item and merge into a 3D xarray.
     """
-    if (assets and eo_bands) or (
-        assets is None and eo_bands is None
-    ):  # pragma: no cover
+    if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
         raise ValueError("either assets or eo_bands have to be provided")
-    assets = [assets] if isinstance(assets, str) else assets
     if eo_bands:
         assets_indexes = eo_bands_to_assets_indexes(item, eo_bands)
+        data_var_names = eo_bands
     else:
         assets_indexes = [(asset, 1) for asset in assets]
-        eo_bands = [None for _ in assets]
+        data_var_names = assets
     logger.debug("reading %s assets from item %s...", len(assets_indexes), item.id)
     attrs = dict(
         item.properties,
         id=item.id,
     )
-    resampling = (
+    expanded_resamplings = (
         resampling
         if isinstance(resampling, list)
         else [resampling for _ in range(len(assets_indexes))]
     )
-    nodatavals = (
+    expanded_nodatavals = (
         nodatavals
         if isinstance(nodatavals, list)
         else [nodatavals for _ in range(len(assets_indexes))]
     )
-    coords = {}
     return xr.Dataset(
         data_vars={
-            eo_band
-            or asset: asset_to_xarray(
+            data_var_name: asset_to_xarray(
                 item=item,
                 asset=asset,
                 indexes=index,
                 tile=tile,
-                resampling=resampling,
+                resampling=expanded_resampling,
                 nodataval=nodataval,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
             )
-            for eo_band, (asset, index), resampling, nodataval in zip(
-                eo_bands, assets_indexes, resampling, nodatavals
+            for data_var_name, (asset, index), expanded_resampling, nodataval in zip(
+                data_var_names,
+                assets_indexes,
+                expanded_resamplings,
+                expanded_nodatavals,
             )
         },
-        coords=coords,
+        coords={},
         attrs=attrs,
     )
 
 
 def asset_to_xarray(
-    item: pystac.Item = None,
-    asset: str = None,
+    item: pystac.Item,
+    asset: str,
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodataval: float = None,
+    nodataval: Union[float, None] = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.DataArray:
@@ -216,16 +215,17 @@ def get_item_property(item: pystac.Item, property: str):
     | ``collection``     | The collection ID of an Item's collection.             |
     +--------------------+--------------------------------------------------------+
     """
-    if property == "year":
-        return item.datetime.year
-    elif property == "month":
-        return item.datetime.month
-    elif property == "day":
-        return item.datetime.day
-    elif property == "date":
-        return item.datetime.date().isoformat()
-    elif property == "datetime":
-        return item.datetime
+    if property in ["year", "month", "day", "date", "datetime"]:
+        if item.datetime is None:
+            raise ValueError(
+                f"STAC item has no datetime attached, thus cannot get property {property}"
+            )
+        elif property == "date":
+            return item.datetime.date().isoformat()
+        elif property == "datetime":
+            return item.datetime
+        else:
+            return item.datetime.__getattribute__(property)
     elif property == "collection":
         return item.collection_id
     elif property in item.properties:

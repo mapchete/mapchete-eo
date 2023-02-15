@@ -7,6 +7,7 @@ import datetime
 from enum import Enum
 from mapchete.tile import BufferedTile
 from pydantic import BaseModel
+from typing import Union
 
 from mapchete_eo import base
 from mapchete_eo.known_catalogs import KnownCatalogs
@@ -54,8 +55,8 @@ class FormatParams(BaseModel):
     format: str = "Sentinel-2"
     level: ProcessingLevel = ProcessingLevel.level2a
     archive: KnownArchives = KnownArchives.S2AWS_COG
-    start_time: datetime.date
-    end_time: datetime.date
+    start_time: Union[datetime.date, datetime.datetime]
+    end_time: Union[datetime.date, datetime.datetime]
 
 
 METADATA: dict = {

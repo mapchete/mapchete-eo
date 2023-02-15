@@ -22,8 +22,8 @@ class STACStaticCatalog(Catalog):
     def __init__(
         self,
         baseurl: str,
-        start_time: Union[datetime.datetime, None] = None,
-        end_time: Union[datetime.datetime, None] = None,
+        start_time: Union[datetime.date, datetime.datetime, None] = None,
+        end_time: Union[datetime.date, datetime.datetime, None] = None,
         bounds: Bounds = None,
         **kwargs,
     ) -> None:

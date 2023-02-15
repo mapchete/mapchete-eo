@@ -3,6 +3,7 @@ Contains all classes required to use the driver as mapchete input.
 """
 import datetime
 from pydantic import BaseModel
+from typing import Union
 
 from mapchete.io import absolute_path
 from mapchete.tile import BufferedTile
@@ -21,8 +22,8 @@ METADATA: dict = {
 
 class FormatParams(BaseModel):
     format: str
-    start_time: datetime.datetime
-    end_time: datetime.datetime
+    start_time: Union[datetime.date, datetime.datetime]
+    end_time: Union[datetime.date, datetime.datetime]
     cat_baseurl: str
     pattern: dict = {}
 

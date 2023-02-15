@@ -22,8 +22,8 @@ class STACSearchCatalog(Catalog):
     def __init__(
         self,
         endpoint: Union[str, None] = None,
-        start_time: Union[datetime.datetime, None] = None,
-        end_time: Union[datetime.datetime, None] = None,
+        start_time: Union[datetime.date, datetime.datetime, None] = None,
+        end_time: Union[datetime.date, datetime.datetime, None] = None,
         collections: List[str] = [],
         bounds: Bounds = None,
         config: dict = dict(),

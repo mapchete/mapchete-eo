@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 import numpy as np
 import pystac
@@ -227,7 +227,7 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
     return [mapping[eo_band][0] for eo_band in eo_bands]
 
 
-def get_item_property(item: pystac.Item, property: str):
+def get_item_property(item: pystac.Item, property: str) -> Any:
     """
     Return item property.
 

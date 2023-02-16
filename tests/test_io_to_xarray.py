@@ -126,7 +126,7 @@ def test_group_items_per_property_day(s2_stac_items):
 
 
 def test_s2_items_to_xarray_merge_date(s2_stac_items, test_tile):
-    eo_bands = ["B04", "B03", "B02"]
+    eo_bands = ["red", "green", "blue"]
     ds = items_to_xarray(
         items=s2_stac_items,
         eo_bands=eo_bands,
@@ -138,15 +138,16 @@ def test_s2_items_to_xarray_merge_date(s2_stac_items, test_tile):
 
 
 def test_s2_items_to_xarray_merge_datastrip_id(s2_stac_items, test_tile):
-    eo_bands = ["B04", "B03", "B02"]
+    eo_bands = ["red", "green", "blue"]
     ds = items_to_xarray(
         items=s2_stac_items,
         eo_bands=eo_bands,
         tile=test_tile,
-        merge_items_by="datastrip_id",
+        merge_items_by="s2:datastrip_id",
     )
-    assert len(ds.time) == 2
+    assert len(ds) == 2
     assert isinstance(ds, xr.Dataset)
+    assert "s2:datastrip_id" in ds.coords
 
 
 # TODO:

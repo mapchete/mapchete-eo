@@ -9,6 +9,8 @@ from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
 
 from mapchete_eo.array.convert import masked_to_xarr
+from mapchete_eo.io.assets import eo_bands_to_assets_indexes
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,8 @@ def items_to_xarray(
                 )
                 for data_var_name, items in items_per_property.items()
             },
-        ).transpose(band_axis_name, x_axis_name, y_axis_name)
+            coords={merge_items_by: list(items_per_property.keys())},
+        ).transpose(merge_items_by, band_axis_name, x_axis_name, y_axis_name)
     else:
         logger.debug("reading %s items...", len(items))
         return xr.Dataset(
@@ -197,36 +200,6 @@ def asset_to_xarray(
     )
 
 
-def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
-    """
-    Find out location (asset and band index) of EO band.
-    """
-    mapping = defaultdict(list)
-    for eo_band in eo_bands:
-        for asset_name, asset in item.assets.items():
-            asset_eo_bands = asset.extra_fields.get("eo:bands")
-            if asset_eo_bands:
-                for band_idx, band_info in enumerate(asset_eo_bands, 1):
-                    if eo_band == band_info.get("name"):
-                        mapping[eo_band].append((asset_name, band_idx))
-
-    for eo_band in eo_bands:
-        if eo_band not in mapping:
-            raise KeyError(f"EO band {eo_band} not found in item assets")
-        found = mapping[eo_band]
-        if len(found) > 1:
-            for asset_name, band_idx in found:
-                if asset_name == eo_band:
-                    mapping[eo_band] = [(asset_name, band_idx)]
-                    break
-            else:
-                raise ValueError(
-                    f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
-                )
-
-    return [mapping[eo_band][0] for eo_band in eo_bands]
-
-
 def get_item_property(item: pystac.Item, property: str) -> Any:
     """
     Return item property.
@@ -278,8 +251,9 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
         return item.properties[property]
     elif property in item.extra_fields:
         return item.extra_fields[property]
+    elif property == "datastrip_id":
+        return S2Metadata.from_stac_item(item).datastrip_id
     else:
-        breakpoint()
         raise KeyError(
             f"item does not have property {property} in its datetime, properties or extra_fields"
         )

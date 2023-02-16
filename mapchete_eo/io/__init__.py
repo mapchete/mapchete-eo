@@ -1,4 +1,4 @@
-from mapchete_eo.io.assets import convert_assets, copy_assets
+from mapchete_eo.io.assets import convert_asset, copy_asset, get_assets
 from mapchete_eo.io.to_xarray import (
     asset_to_xarray,
     item_to_xarray,
@@ -9,8 +9,9 @@ from mapchete_eo.io.to_xarray import (
 )
 
 __all__ = [
-    "convert_assets",
-    "copy_assets",
+    "get_assets",
+    "convert_asset",
+    "copy_asset",
     "asset_to_xarray",
     "item_to_xarray",
     "items_to_xarray",

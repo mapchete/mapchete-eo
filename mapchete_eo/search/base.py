@@ -12,7 +12,7 @@ from pystac.stac_io import DefaultStacIO
 from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
 
-from mapchete_eo.io.assets import convert_assets, copy_assets
+from mapchete_eo.io.assets import get_assets
 
 logger = logging.getLogger(__name__)
 
@@ -89,34 +89,28 @@ class Catalog(ABC):
             catalog_type=pystac.CatalogType.SELF_CONTAINED,
         )
         for collection in self.get_collections():
-            # create collection and copy metadata
+
+            # collect all items and download assets if required
             items: List[pystac.Item] = []
             for item in self.items:
                 logger.debug("found item %s", item)
                 item = item.clone()
                 if assets:
                     logger.debug("get assets %s", assets)
-                    if assets_dst_resolution:
-                        item = convert_assets(
-                            item,
-                            assets,
-                            os.path.join(output_path, collection.id, item.id),
-                            resolution=assets_dst_resolution,
-                            overwrite=overwrite,
-                            ignore_if_exists=True,
-                        )
-                    else:
-                        item = copy_assets(
-                            item,
-                            assets,
-                            os.path.join(output_path, collection.id, item.id),
-                            overwrite=overwrite,
-                            ignore_if_exists=True,
-                        )
+                    item = get_assets(
+                        item,
+                        assets,
+                        os.path.join(output_path, collection.id, item.id),
+                        resolution=assets_dst_resolution,
+                        overwrite=overwrite,
+                        ignore_if_exists=True,
+                    )
                 # this has to be set to None, otherwise pystac will mess up the asset paths
                 # after normalizing
                 item.set_self_href(None)
                 items.append(item)
+
+            # create collection and copy metadata
             new_collection = Collection(
                 id=collection.id,
                 extent=pystac.Extent.from_items(items),
@@ -130,6 +124,8 @@ class Catalog(ABC):
                 extra_fields=collection.extra_fields,
                 catalog_type=pystac.CatalogType.SELF_CONTAINED,
             )
+
+            # finally, add all items to collection
             for item in items:
                 new_collection.add_item(item)
 

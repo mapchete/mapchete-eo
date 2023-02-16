@@ -16,7 +16,7 @@ TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
 @pytest.fixture
 def s2_stac_collection():
     # generated with:
-    # $ mapchete eo static-catalog tests/testdata/s2_stac_collection --start-time 2022-04-01 --end-time 2022-04-05 --bounds 16 48 17 49 -d --assets-dst-resolution 480 --assets B04,B03,B02,B08
+    # $ mapchete eo static-catalog tests/testdata/s2_stac_collection --start-time 2022-04-01 --end-time 2022-04-05 --bounds 16 48 17 49 -d --assets-dst-resolution 480 --assets red,green,blue,nir,granule_metadata
     return os.path.join(TESTDATA_DIR, "s2_stac_collection", "catalog.json")
 
 
@@ -55,7 +55,7 @@ def pf_qa_stac_collection():
 
 @pytest.fixture
 def s2_stac_item():
-    item = pystac.Item.from_file(
+    item = pystac.pystac.Item.from_file(
         os.path.join(
             TESTDATA_DIR,
             "s2_stac_collection",
@@ -118,3 +118,154 @@ def e84_cog_catalog_short():
         end_time="2022-06-03",
         bounds=[16, 46.4, 16.1, 46.5],
     )
+
+
+@pytest.fixture()
+def s2_l2a_metadata_xml_remote():
+    return "s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/metadata.xml"
+
+
+@pytest.fixture()
+def s2_l2a_roda_metadata_xml_remote():
+    """Same content as s2_l2a_metadata_xml_remote, but hosted on different server."""
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/metadata.xml"
+
+
+@pytest.fixture()
+def s2_l2a_roda_metadata_jp2_masks_xml_remote():
+    """From about 2022 on, ahte masks are now encoded as JP2 (rasters), not as GMLs (features)."""
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/33/T/WL/2022/6/6/0/metadata.xml"
+
+
+@pytest.fixture()
+def tileinfo_gml_schema():
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/33/T/WL/2020/6/6/0/tileInfo.json"
+
+
+@pytest.fixture()
+def tileinfo_jp2_schema():
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/33/T/WL/2022/6/6/0/tileInfo.json"
+
+
+@pytest.fixture()
+def stac_item_pb0509():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_32TMS_20221207_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0400():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20220130_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0400_offset():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20220226_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0301():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20220122_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0300():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20210629_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0214():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20210328_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0213():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20200202_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0212():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20190707_1_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0211():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20190503_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0210():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20181119_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0209():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20181104_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0208():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20181005_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb0207():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180521_1_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb_l1c_0206():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180806_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb_l1c_0205():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20171005_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_pb_l1c_0204():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20161202_0_L2A"
+    )
+
+
+@pytest.fixture()
+def stac_item_invalid_pb0001():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180806_0_L2A"
+    )
+
+
+@pytest.fixture()
+def product_no_detector_footprints():
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/34/R/FN/2022/4/15/0/metadata.xml"

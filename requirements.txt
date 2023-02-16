@@ -1,4 +1,5 @@
 croniter
+lxml
 mapchete>=2022.2.2
 pydantic
 pystac

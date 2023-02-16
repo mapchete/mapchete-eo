@@ -279,6 +279,7 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
     elif property in item.extra_fields:
         return item.extra_fields[property]
     else:
+        breakpoint()
         raise KeyError(
             f"item does not have property {property} in its datetime, properties or extra_fields"
         )

@@ -48,14 +48,14 @@ def test_write_static_catalog(e84_cog_catalog, tmp_path):
 def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),
-        assets=["metadata"],
+        assets=["granule_metadata"],
     )
     cat = pystac.Catalog.from_file(output_path)
     assert len(list(cat.get_all_items())) == 1
     for item in cat.get_all_items():
-        assert item.assets["metadata"].href == "./metadata.xml"
+        assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
         item.make_asset_hrefs_absolute()
-        assert path_exists(item.assets["metadata"].href)
+        assert path_exists(item.assets["granule_metadata"].href)
 
 
 @pytest.mark.webtest
@@ -64,14 +64,14 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
     try:
         output_path = e84_cog_catalog_short.write_static_catalog(
             output_path=str(tmp_path),
-            assets=["metadata"],
+            assets=["granule_metadata"],
         )
         cat = pystac.Catalog.from_file(output_path)
         assert len(list(cat.get_all_items())) == 1
         for item in cat.get_all_items():
-            assert item.assets["metadata"].href == "./metadata.xml"
+            assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
             item.make_asset_hrefs_absolute()
-            assert path_exists(item.assets["metadata"].href)
+            assert path_exists(item.assets["granule_metadata"].href)
     finally:
         try:
             fs_from_path(tmp_path).rm(tmp_path, recursive=True)
@@ -81,7 +81,7 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
 
 @pytest.mark.webtest
 def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
-    asset = "B01"
+    asset = "coastal"
     resolution = 120.0
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),

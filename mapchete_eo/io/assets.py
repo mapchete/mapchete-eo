@@ -38,7 +38,12 @@ def copy_assets(
     logger.debug("copy assets %s to %s ...", assets, dst_dir)
 
     for asset in assets:
-        asset_path = item.assets[asset].href
+        try:
+            asset_path = item.assets[asset].href
+        except KeyError:
+            raise KeyError(
+                f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
+            )
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
         dst_fs = dst_fs or src_fs or fs_from_path(output_path)
 
@@ -89,7 +94,12 @@ def convert_assets(
     logger.debug("convert assets %s to %s ...", assets, dst_dir)
 
     for asset in assets:
-        asset_path = item.assets[asset].href
+        try:
+            asset_path = item.assets[asset].href
+        except KeyError:
+            raise KeyError(
+                f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
+            )
         output_path = os.path.join(dst_dir, os.path.basename(asset_path))
         dst_fs = dst_fs or src_fs or fs_from_path(output_path)
 

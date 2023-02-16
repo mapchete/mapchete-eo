@@ -14,7 +14,7 @@ from mapchete_eo.io import (
 
 
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
-    eo_bands = ["B04", "B03", "B02"]
+    eo_bands = ["red", "green", "blue"]
     assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
     assert len(eo_bands) == len(assets_indexes)
     for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
@@ -29,16 +29,16 @@ def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
 
 
 def test_s2_asset_to_xarray(s2_stac_item, test_tile):
-    asset = "B01"
+    asset = "coastal"
     darr = asset_to_xarray(item=s2_stac_item, asset=asset, tile=test_tile, nodataval=0)
     assert isinstance(darr, xr.DataArray)
     assert darr.attrs.get("_FillValue") == 0
-    assert darr.name == "B01"
+    assert darr.name == "coastal"
     assert darr.any()
 
 
 def test_s2_item_to_xarray(s2_stac_item, test_tile):
-    assets = ["B04", "B03", "B02"]
+    assets = ["red", "green", "blue"]
     ds = item_to_xarray(
         item=s2_stac_item, assets=assets, tile=test_tile, nodatavals=[0, 0, 0]
     )
@@ -48,7 +48,7 @@ def test_s2_item_to_xarray(s2_stac_item, test_tile):
 
 
 def test_s2_items_to_xarray(s2_stac_item, test_tile):
-    assets = ["B04", "B03", "B02"]
+    assets = ["red", "green", "blue"]
     ds = items_to_xarray(
         items=[s2_stac_item], assets=assets, tile=test_tile, nodatavals=[0, 0, 0]
     )
@@ -58,7 +58,7 @@ def test_s2_items_to_xarray(s2_stac_item, test_tile):
 
 
 def test_s2_item_to_xarray_eo_bands(s2_stac_item, test_tile):
-    eo_bands = ["B04", "B03", "B02"]
+    eo_bands = ["red", "green", "blue"]
     ds = item_to_xarray(
         item=s2_stac_item, eo_bands=eo_bands, tile=test_tile, nodatavals=[0, 0, 0]
     )
@@ -68,7 +68,7 @@ def test_s2_item_to_xarray_eo_bands(s2_stac_item, test_tile):
 
 
 def test_s2_items_to_xarray_eo_bands(s2_stac_item, test_tile):
-    eo_bands = ["B04", "B03", "B02"]
+    eo_bands = ["red", "green", "blue"]
     ds = items_to_xarray(
         items=[s2_stac_item], eo_bands=eo_bands, tile=test_tile, nodatavals=[0, 0, 0]
     )
@@ -93,27 +93,33 @@ def test_get_item_property_properties(s2_stac_item):
         "platform": "sentinel-2a",
         "constellation": "sentinel-2",
         "instruments": ["msi"],
-        "gsd": 10,
-        "view:off_nadir": 0,
         "proj:epsg": 32633,
-        "sentinel:utm_zone": 33,
-        "sentinel:latitude_band": "U",
-        "sentinel:grid_square": "WP",
-        "sentinel:sequence": "0",
-        "sentinel:product_id": "S2A_MSIL2A_20220405T100031_N0400_R122_T33UWP_20220405T120515",
-        "sentinel:data_coverage": 100,
-        "eo:cloud_cover": 89.48,
-        "sentinel:valid_cloud_cover": True,
-        "sentinel:processing_baseline": "04.00",
-        "sentinel:boa_offset_applied": True,
-        "created": "2022-04-05T17:55:51.345Z",
-        "updated": "2022-04-05T17:55:51.345Z",
+        "eo:cloud_cover": 94.103563,
+        "mgrs:utm_zone": 33,
+        "mgrs:latitude_band": "U",
+        "mgrs:grid_square": "WP",
+        "s2:sequence": "0",
+        "s2:granule_id": "S2A_OPER_MSI_L2A_TL_VGS4_20220405T120515_A035440_T33UWP_N04.00",
+        "s2:processing_baseline": "04.00",
+        "earthsearch:boa_offset_applied": True,
+        "created": "2022-11-06T12:37:04.689Z",
+        "updated": "2022-11-06T12:37:04.689Z",
     }.items():
         assert get_item_property(s2_stac_item, property) == value
 
 
 def test_get_item_property_extra_fields(s2_stac_item):
-    for property, value in {"stac_extensions": ["eo", "view", "proj"]}.items():
+    for property, value in {
+        "stac_extensions": [
+            "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
+            "https://stac-extensions.github.io/mgrs/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/processing/v1.1.0/schema.json",
+            "https://stac-extensions.github.io/view/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/grid/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/projection/v1.0.0/schema.json",
+        ]
+    }.items():
         assert get_item_property(s2_stac_item, property) == value
 
 

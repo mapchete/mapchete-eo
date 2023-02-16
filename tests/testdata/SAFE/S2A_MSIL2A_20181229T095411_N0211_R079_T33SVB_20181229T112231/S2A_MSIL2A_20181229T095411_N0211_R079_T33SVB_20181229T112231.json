@@ -1,0 +1,272 @@
+{
+    "type": "Feature",
+    "stac_version": "0.8.1",
+    "id": "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231",
+    "properties": {
+        "eo:productType": "S2MSI2A",
+        "eop:wrsLongitudeGrid": "79",
+        "proj:epsg": "32633",
+        "eo:cloud_cover": 4.202743,
+        "s2:tile": "T33SVB",
+        "s2:latitude_band": "S",
+        "s2:grid_square_x": "V",
+        "s2:grid_square_y": "B",
+        "datetime": "2018-12-29T09:54:11Z",
+        "eo:gsd": [
+            10,
+            20,
+            60
+        ],
+        "eo:platform": "S2A",
+        "eo:instrument": "S2MSI",
+        "eo:bands": [
+            {
+                "name": "B01",
+                "common_name": "coastal",
+                "center_wavelength": 0.4439,
+                "full_width_half_max": 0.027
+            },
+            {
+                "name": "B02",
+                "common_name": "blue",
+                "center_wavelength": 0.4966,
+                "full_width_half_max": 0.098
+            },
+            {
+                "name": "B03",
+                "common_name": "green",
+                "center_wavelength": 0.56,
+                "full_width_half_max": 0.045
+            },
+            {
+                "name": "B04",
+                "common_name": "red",
+                "center_wavelength": 0.6645,
+                "full_width_half_max": 0.038
+            },
+            {
+                "name": "B05",
+                "center_wavelength": 0.7039,
+                "full_width_half_max": 0.019
+            },
+            {
+                "name": "B06",
+                "center_wavelength": 0.7402,
+                "full_width_half_max": 0.018
+            },
+            {
+                "name": "B07",
+                "center_wavelength": 0.7825,
+                "full_width_half_max": 0.028
+            },
+            {
+                "name": "B08",
+                "common_name": "nir",
+                "center_wavelength": 0.8351,
+                "full_width_half_max": 0.145
+            },
+            {
+                "name": "B8A",
+                "center_wavelength": 0.8648,
+                "full_width_half_max": 0.033
+            },
+            {
+                "name": "B09",
+                "center_wavelength": 0.945,
+                "full_width_half_max": 0.026
+            },
+            {
+                "name": "B11",
+                "common_name": "swir16",
+                "center_wavelength": 1.6137,
+                "full_width_half_max": 0.143
+            },
+            {
+                "name": "B12",
+                "common_name": "swir22",
+                "center_wavelength": 2.22024,
+                "full_width_half_max": 0.242
+            },
+            {
+                "name": "AOT",
+                "center_wavelength": 0,
+                "full_width_half_max": 0
+            },
+            {
+                "name": "SCL",
+                "center_wavelength": 0,
+                "full_width_half_max": 0
+            },
+            {
+                "name": "WVP",
+                "center_wavelength": 0,
+                "full_width_half_max": 0
+            }
+        ]
+    },
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    13.861470921201,
+                    37.9420809165272
+                ],
+                [
+                    15.1110860058322,
+                    37.9475371328026
+                ],
+                [
+                    15.1096318866712,
+                    36.9578304879872
+                ],
+                [
+                    13.8763704915855,
+                    36.9525648726427
+                ],
+                [
+                    13.861470921201,
+                    37.9420809165272
+                ]
+            ]
+        ]
+    },
+    "bbox": [
+        13.861470921201,
+        36.9525648726427,
+        15.1110860058322,
+        37.9475371328026
+    ],
+    "links": [
+        {
+            "rel": "collection",
+            "href": "../collection.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "root",
+            "href": "../../catalog.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "parent",
+            "href": "../collection.json",
+            "type": "application/json"
+        }
+    ],
+    "assets": {
+        "metadata": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/MTD_MSIL2A.xml",
+            "type": "application/xml"
+        },
+        "B01": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R60m/T33SVB_20181229T095411_B01_60m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                0
+            ]
+        },
+        "B02": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_B02_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                1
+            ]
+        },
+        "B03": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_B03_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                2
+            ]
+        },
+        "B04": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_B04_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                3
+            ]
+        },
+        "B05": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B05_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                4
+            ]
+        },
+        "B06": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B06_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                5
+            ]
+        },
+        "B07": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B07_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                6
+            ]
+        },
+        "B08": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_B08_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                7
+            ]
+        },
+        "B8A": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B8A_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                8
+            ]
+        },
+        "B09": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R60m/T33SVB_20181229T095411_B09_60m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                9
+            ]
+        },
+        "B11": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B11_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                10
+            ]
+        },
+        "B12": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_B12_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                11
+            ]
+        },
+        "AOT": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_AOT_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                12
+            ]
+        },
+        "SCL": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R20m/T33SVB_20181229T095411_SCL_20m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                13
+            ]
+        },
+        "WVP": {
+            "href": "./S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE/GRANULE/L2A_T33SVB_A018380_20181229T095413/IMG_DATA/R10m/T33SVB_20181229T095411_WVP_10m.jp2",
+            "type": "image/jp2",
+            "eo:bands": [
+                14
+            ]
+        }
+    },
+    "stac_extensions": [
+        "eo"
+    ],
+    "collection": "collection"
+}

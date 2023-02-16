@@ -3,7 +3,7 @@ from enum import Enum
 from mapchete_eo.search import STACSearchCatalog
 
 
-class E84Sentinel2COGs(STACSearchCatalog):
+class E84Sentinel2COGsV1(STACSearchCatalog):
     COLLECTION: str = "sentinel-2-l2a"
     ENDPOINT: str = "https://earth-search.aws.element84.com/v1/"
 
@@ -13,5 +13,5 @@ class SinergiseSentinel2:
 
 
 class KnownCatalogs(Enum):
-    earth_search_s2_cogs = E84Sentinel2COGs
+    earth_search_s2_cogs = E84Sentinel2COGsV1
     sinergise_s2 = SinergiseSentinel2

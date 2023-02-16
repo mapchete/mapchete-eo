@@ -8,4 +8,4 @@ def test_format_available():
 
 def test_stac_read_xarray(stac_mapchete, test_tile):
     with stac_mapchete.process_mp(tile=test_tile).open("inp") as cube:
-        assert isinstance(cube.read(assets=["B04", "B03", "B02"]), xr.Dataset)
+        assert isinstance(cube.read(assets=["red", "green", "blue"]), xr.Dataset)

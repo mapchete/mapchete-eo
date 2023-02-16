@@ -255,7 +255,9 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
         return S2Metadata.from_stac_item(item).datastrip_id
     else:
         raise KeyError(
-            f"item does not have property {property} in its datetime, properties or extra_fields"
+            f"item does not have property {property} in its datetime, properties "
+            f"({', '.join(item.properties.keys())}) or extra_fields "
+            f"({', '.join(item.extra_fields.keys())})"
         )
 
 

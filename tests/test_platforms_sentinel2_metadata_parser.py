@@ -7,13 +7,9 @@ import pytest
 from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import (
-    S2Metadata,
-    SinergisePathMapper,
-    XMLMapper,
-    BaselineVersion,
-    MissingAsset,
-)
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata, MissingAsset
+from mapchete_eo.platforms.sentinel2.path_mappers import SinergisePathMapper, XMLMapper
+from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):
@@ -337,37 +333,30 @@ def test_from_stac_item():
 
 
 @pytest.mark.parametrize(
-    "item, expected_baseline, offset",
+    "item, offset",
     [
-        (pytest.lazy_fixture("stac_item_pb_l1c_0204"), "02.04", 0),
-        (pytest.lazy_fixture("stac_item_pb_l1c_0205"), "02.05", 0),
-        (pytest.lazy_fixture("stac_item_pb_l1c_0206"), "02.06", 0),
-        (pytest.lazy_fixture("stac_item_pb0207"), "02.07", 0),
-        (pytest.lazy_fixture("stac_item_pb0208"), "02.08", 0),
-        (pytest.lazy_fixture("stac_item_pb0209"), "02.09", 0),
-        (pytest.lazy_fixture("stac_item_pb0210"), "02.10", 0),
-        (pytest.lazy_fixture("stac_item_pb0211"), "02.11", 0),
-        (pytest.lazy_fixture("stac_item_pb0212"), "02.12", 0),
-        (pytest.lazy_fixture("stac_item_pb0213"), "02.13", 0),
-        (pytest.lazy_fixture("stac_item_pb0214"), "02.14", 0),
-        (pytest.lazy_fixture("stac_item_pb0300"), "03.00", 0),
-        (pytest.lazy_fixture("stac_item_pb0301"), "03.01", 0),
-        (pytest.lazy_fixture("stac_item_pb0400"), "04.00", 0),
-        (pytest.lazy_fixture("stac_item_pb0400_offset"), "04.00", -1000),
-        (pytest.lazy_fixture("stac_item_pb0509"), "05.09", 0),
+        (pytest.lazy_fixture("stac_item_pb0207"), 0),
+        (pytest.lazy_fixture("stac_item_pb0208"), 0),
+        (pytest.lazy_fixture("stac_item_pb0209"), 0),
+        (pytest.lazy_fixture("stac_item_pb0210"), 0),
+        (pytest.lazy_fixture("stac_item_pb0211"), 0),
+        (pytest.lazy_fixture("stac_item_pb0212"), 0),
+        (pytest.lazy_fixture("stac_item_pb0213"), 0),
+        (pytest.lazy_fixture("stac_item_pb0214"), 0),
+        (pytest.lazy_fixture("stac_item_pb0300"), 0),
+        (pytest.lazy_fixture("stac_item_pb0301"), 0),
+        (pytest.lazy_fixture("stac_item_pb0400"), 0),
+        (pytest.lazy_fixture("stac_item_pb0400_offset"), -1000),
+        (pytest.lazy_fixture("stac_item_pb0509"), 0),
     ],
 )
-def test_from_stac_item_backwards(item, expected_baseline, offset):
+def test_from_stac_item_backwards(item, offset):
     s2_metadata = S2Metadata.from_stac_item(item)
-
-    # on E84 processing_baseline is only reported since PB 04.00
-    if s2_metadata.processing_baseline.version == "04.00":
-        assert s2_metadata.processing_baseline.version == item.properties.get(
-            "sentinel:processing_baseline"
-        )
-
+    breakpoint()
     # make sure baseline version is as expected
-    assert s2_metadata.processing_baseline.version == expected_baseline
+    assert s2_metadata.processing_baseline.version == item.properties.get(
+        "s2:processing_baseline"
+    )
 
     # make sure offset is correct
     assert s2_metadata.reflectance_offset == offset
@@ -382,6 +371,19 @@ def test_from_stac_item_backwards(item, expected_baseline, offset):
         assert path_exists(
             s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
         )
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        (pytest.lazy_fixture("stac_item_pb_l1c_0204")),
+        (pytest.lazy_fixture("stac_item_pb_l1c_0205")),
+        (pytest.lazy_fixture("stac_item_pb_l1c_0206")),
+    ],
+)
+def test_from_stac_item_backwards_not_supported(item):
+    with pytest.raises(ValueError):
+        S2Metadata.from_stac_item(item).processing_baseline.version
 
 
 def test_from_stac_item_invalid(stac_item_invalid_pb0001):

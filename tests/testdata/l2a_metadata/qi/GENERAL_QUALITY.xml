@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Earth_Explorer_File xmlns="http://gs2.esa.int/DATA_STRUCTURE/olqcReport">
+    <Earth_Explorer_Header>
+        <Fixed_Header>
+            <File_Name>GENERAL_QUALITY.xml</File_Name>
+            <File_Description>Report produced by OLQC-SC</File_Description>
+            <Notes></Notes>
+            <Mission>S2A</Mission>
+            <File_Class>OPER</File_Class>
+            <File_Type>REP_OLQCPA</File_Type>
+            <Validity_Period>
+                <Validity_Start>UTC=2019-10-20T23:30:00</Validity_Start>
+                <Validity_Stop>UTC=2100-01-01T00:00:00</Validity_Stop>
+            </Validity_Period>
+            <File_Version>2</File_Version>
+            <Source>
+                <System>OLQC-SC</System>
+                <Creator>OLQC-SC</Creator>
+                <Creator_Version>01.06.04</Creator_Version>
+                <Creation_Date>UTC=2020-07-31T05:11:12</Creation_Date>
+            </Source>
+        </Fixed_Header>
+    </Earth_Explorer_Header>
+    <Data_Block type="xml">
+        <report gippVersion="1.0" globalStatus="PASSED" date="2020-07-31T05:11:12.674Z">
+            <checkList>
+                <parentID>S2A_OPER_GIP_OLQCPA_MPC__20191004T000021_V20191020T233000</parentID>
+                <name>GENERAL_QUALITY</name>
+                <version>1.0</version>
+                <item url="/dpc/data/phoebus-share/PHOEBUS-3.4.1/wp_in_progress/l2a_20200731_15/app_data/steps_data/GR/S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14/" className="PDI Level 2A Tile Folder" name="S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14" class="http://www.esa.int/s2#pdi_level_2a_tile_container"/>
+                <check>
+                    <inspection creation="2020-07-31T05:11:11.859Z" duration="767" execution="2020-07-31T05:11:11.904Z" id="Solar_Angle_Zenith" item="MTD_TL.xml" itemURL="/dpc/data/phoebus-share/PHOEBUS-3.4.1/wp_in_progress/l2a_20200731_15/app_data/steps_data/GR/S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14/MTD_TL.xml" name="Check the zenith solar angle. " priority="5" processingStatus="done" status="PASSED"/>
+                    <message contentType="text/plain">Zenith solar angle (49.1440175813279) is within the threshold limit (70.0) </message>
+                    <extraValues>
+                        <value name="EXPECTED">70.0</value>
+                        <value name="SOLAR_ZENITH_ANGLE">49.1440175813279</value>
+                    </extraValues>
+                </check>
+                <check>
+                    <inspection creation="2020-07-31T05:11:13.317Z" duration="20" execution="2020-07-31T05:11:13.329Z" id="checkMetadata" item="S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14" itemURL="/dpc/data/phoebus-share/PHOEBUS-3.4.1/wp_in_progress/l2a_20200731_15/app_data/steps_data/GR/S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14/" name="Metadata file check. " priority="5" processingStatus="done" status="PASSED"/>
+                    <message contentType="text/plain">Metadata file is present.</message>
+                </check>
+                <check>
+                    <inspection creation="2020-07-31T05:11:15.759Z" duration="281" execution="2020-07-31T05:11:15.766Z" id="Data_Loss" item="S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14" itemURL="/dpc/data/phoebus-share/PHOEBUS-3.4.1/wp_in_progress/l2a_20200731_15/app_data/steps_data/GR/S2A_OPER_MSI_L2A_TL_EPAE_20200731T041724_A026669_T51KXR_N02.14/" name="Check TECQUA for data loss " priority="5" processingStatus="done" status="PASSED"/>
+                    <message contentType="text/plain">No data loss in this tile.</message>
+                </check>
+            </checkList>
+        </report>
+    </Data_Block>
+</Earth_Explorer_File>

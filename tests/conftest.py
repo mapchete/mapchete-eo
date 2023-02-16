@@ -6,7 +6,7 @@ import pytest
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 
-from mapchete_eo.known_catalogs import E84Sentinel2COGs
+from mapchete_eo.known_catalogs import E84Sentinel2COGsV1
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -59,7 +59,7 @@ def s2_stac_item():
         os.path.join(
             TESTDATA_DIR,
             "s2_stac_collection",
-            "sentinel-s2-l2a-cogs",
+            "sentinel-2-l2a",
             "S2A_33UWP_20220405_0_L2A",
             "S2A_33UWP_20220405_0_L2A.json",
         )
@@ -94,17 +94,17 @@ def test_tile():
 @pytest.fixture(scope="session")
 def stac_search_catalog():
     return STACSearchCatalog(
-        collection="sentinel-s2-l2a-cogs",
+        collection="sentinel-2-l2a",
         start_time="2022-06-01",
         end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
-        endpoint="https://earth-search.aws.element84.com/v0/",
+        endpoint="https://earth-search.aws.element84.com/v1/",
     )
 
 
 @pytest.fixture(scope="session")
 def e84_cog_catalog():
-    return E84Sentinel2COGs(
+    return E84Sentinel2COGsV1(
         start_time="2022-06-01",
         end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
@@ -113,10 +113,28 @@ def e84_cog_catalog():
 
 @pytest.fixture(scope="session")
 def e84_cog_catalog_short():
-    return E84Sentinel2COGs(
+    return E84Sentinel2COGsV1(
         start_time="2022-06-01",
         end_time="2022-06-03",
         bounds=[16, 46.4, 16.1, 46.5],
+    )
+
+
+@pytest.fixture()
+def s2_l2a_metadata_xml():
+    return os.path.join(*[TESTDATA_DIR, "l2a_metadata", "metadata.xml"])
+
+
+@pytest.fixture()
+def s2_l2a_safe_metadata_xml():
+    return os.path.join(
+        *[
+            TESTDATA_DIR,
+            "SAFE",
+            "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231",
+            "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE",
+            "MTD_MSIL2A.xml",
+        ]
     )
 
 
@@ -150,119 +168,119 @@ def tileinfo_jp2_schema():
 @pytest.fixture()
 def stac_item_pb0509():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_32TMS_20221207_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0400():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20220130_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220130_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0400_offset():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20220226_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220226_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0301():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20220122_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20220122_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0300():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20210629_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210629_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0214():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20210328_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210328_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0213():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20200202_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20200202_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0212():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20190707_1_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20190707_1_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0211():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20190503_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20190503_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0210():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20181119_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20181119_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0209():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20181104_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181104_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0208():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20181005_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181005_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb0207():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180521_1_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180521_1_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb_l1c_0206():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180806_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb_l1c_0205():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20171005_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20171005_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_pb_l1c_0204():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20161202_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20161202_0_L2A"
     )
 
 
 @pytest.fixture()
 def stac_item_invalid_pb0001():
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2B_33TWN_20180806_0_L2A"
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"
     )
 
 

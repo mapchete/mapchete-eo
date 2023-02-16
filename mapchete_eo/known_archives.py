@@ -15,6 +15,7 @@ from mapchete_eo.known_catalogs import KnownCatalogs
 class S2AWSCOGArchive:
 
     catalog = KnownCatalogs.earth_search_s2_cogs
+    path_mapper = TODO
     storage_options: dict = {
         "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
     }

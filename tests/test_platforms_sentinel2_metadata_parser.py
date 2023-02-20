@@ -94,51 +94,46 @@ def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_product_id(metadata_xml):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
-
+def test_metadata_product_id(metadata):
     # product ID
     assert "L2A" in metadata.product_id
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_crs(metadata_xml):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
-
+def test_metadata_crs(metadata):
     # crs
     assert metadata.crs.startswith("EPSG")
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_bounds(metadata_xml):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
+def test_metadata_bounds(metadata):
     # bounds
     assert isinstance(metadata.bounds, tuple)
     assert len(metadata.bounds) == 4
@@ -147,21 +142,20 @@ def test_metadata_bounds(metadata_xml):
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
 @pytest.mark.parametrize(
     "resolution",
     [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
 )
-def test_metadata_geoinfo(metadata_xml, resolution):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
+def test_metadata_geoinfo(metadata, resolution):
     # shape
     assert isinstance(metadata.shape(resolution), tuple)
     assert len(metadata.shape(resolution)) == 2
@@ -182,33 +176,31 @@ def test_metadata_geoinfo(metadata_xml, resolution):
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_safe_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_safe_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_cloud_mask(metadata_xml):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
+def test_metadata_cloud_mask(metadata):
     # cloud mask
     assert isinstance(metadata.cloud_mask(), list)
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
     ],
 )
-def test_metadata_band_masks(metadata_xml):
+def test_metadata_band_masks(metadata):
     band_ids = [1, 4]
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
     # band_masks
     for band_id in band_ids:
 
@@ -240,9 +232,9 @@ def test_metadata_band_masks(metadata_xml):
             assert shape(feature["geometry"]).is_valid
 
 
-def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_xml_remote):
+def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_remote):
     band_ids = [1, 4]
-    metadata = S2Metadata.from_metadata_xml(s2_l2a_roda_metadata_jp2_masks_xml_remote)
+    metadata = s2_l2a_roda_metadata_jp2_masks_remote
     # band_masks
     for band_id in band_ids:
 
@@ -272,17 +264,16 @@ def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_xml_remot
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_sun_angles(metadata_xml):
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
+def test_metadata_sun_angles(metadata):
     # sun_angles
     for angle, properties in metadata.sun_angles.items():
         assert angle in ["zenith", "azimuth"]
@@ -302,18 +293,17 @@ def test_metadata_sun_angles(metadata_xml):
 
 
 @pytest.mark.parametrize(
-    "metadata_xml",
+    "metadata",
     [
-        lazy_fixture("s2_l2a_metadata_xml"),
-        lazy_fixture("s2_l2a_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
-        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_viewing_incidence_angles(metadata_xml):
+def test_metadata_viewing_incidence_angles(metadata):
     band_ids = [1, 4]
-    metadata = S2Metadata.from_metadata_xml(metadata_xml)
     # viewing incidence angles
     for band_id in band_ids:
         grids = metadata.viewing_incidence_angles(band_id)

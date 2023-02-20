@@ -36,11 +36,6 @@ logger = logging.getLogger(__name__)
 CloudMaskType = Enum("CloudMaskType", ["opaque", "cirrus"])
 CLOUD_MASK_TYPES = [CloudMaskType.opaque, CloudMaskType.cirrus]
 Resolution = Enum("Resolution", ["10m", "20m", "60m", "120m"])
-# class Resolution(IntEnum):
-#     "10m": 10
-#     "20m": 20
-#     "60m": 60
-#     "120m": 120
 
 
 @dataclass

@@ -8,7 +8,11 @@ from pytest import lazy_fixture
 from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata, MissingAsset
+from mapchete_eo.platforms.sentinel2.metadata_parser import (
+    S2Metadata,
+    MissingAsset,
+    Resolution,
+)
 from mapchete_eo.platforms.sentinel2.path_mappers import (
     SinergisePathMapper,
     XMLMapper,
@@ -152,28 +156,29 @@ def test_metadata_bounds(metadata_xml):
         lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
-def test_metadata_geoinfo(metadata_xml):
+@pytest.mark.parametrize(
+    "resolution",
+    [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
+)
+def test_metadata_geoinfo(metadata_xml, resolution):
     metadata = S2Metadata.from_metadata_xml(metadata_xml)
-    # geoinfo
-    for res in ["10m", "20m", "60m", "120m"]:
+    # shape
+    assert isinstance(metadata.shape(resolution), tuple)
+    assert len(metadata.shape(resolution)) == 2
+    for i in metadata.shape(resolution):
+        assert isinstance(i, int)
 
-        # shape
-        assert isinstance(metadata.shape(res), tuple)
-        assert len(metadata.shape(res)) == 2
-        for i in metadata.shape(res):
-            assert isinstance(i, int)
+    # x_size
+    assert isinstance(metadata.pixel_x_size(resolution), float)
+    assert metadata.pixel_x_size(resolution) >= 0.0
 
-        # x_size
-        assert isinstance(metadata.pixel_x_size(res), float)
-        assert metadata.pixel_x_size(res) >= 0.0
+    # y_size
+    assert isinstance(metadata.pixel_y_size(resolution), float)
+    assert metadata.pixel_y_size(resolution) <= 0.0
 
-        # y_size
-        assert isinstance(metadata.pixel_y_size(res), float)
-        assert metadata.pixel_y_size(res) <= 0.0
-
-        # transform
-        assert isinstance(metadata.transform(res), Affine)
-        assert metadata.transform(res)[0] == float(res.rstrip("m"))
+    # transform
+    assert isinstance(metadata.transform(resolution), Affine)
+    assert metadata.transform(resolution)[0] == float(str(resolution.name).rstrip("m"))
 
 
 @pytest.mark.parametrize(

@@ -17,7 +17,7 @@ from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 logger = logging.getLogger(__name__)
 
 
-MergeMethods = Enum("MergeMethods", ["first", "average"])
+MergeMethod = Enum("MergeMethod", ["first", "average"])
 
 
 def items_to_xarray(
@@ -26,16 +26,35 @@ def items_to_xarray(
     eo_bands: List[str] = [],
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodatavals: Union[List, None] = None,
+    nodatavals: Union[List[float], None] = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
     time_axis_name: str = "time",
     merge_items_by: Union[str, None] = None,
-    merge_method: MergeMethods = MergeMethods.first,
+    merge_method: Union[MergeMethod, str] = MergeMethod.first,
 ) -> xr.Dataset:
-    """
-    Read tile window of STAC Items and merge into a 4D xarray.
+    """Read tile window of STAC Items and merge into a 4D xarray.
+
+    Args:
+        items (List[pystac.Item], optional): _description_. Defaults to [].
+        assets (List[str], optional): _description_. Defaults to [].
+        eo_bands (List[str], optional): _description_. Defaults to [].
+        tile (BufferedTile, optional): _description_. Defaults to None.
+        resampling (str, optional): _description_. Defaults to "nearest".
+        nodatavals (Union[List, None], optional): _description_. Defaults to None.
+        band_axis_name (str, optional): _description_. Defaults to "bands".
+        x_axis_name (str, optional): _description_. Defaults to "x".
+        y_axis_name (str, optional): _description_. Defaults to "y".
+        time_axis_name (str, optional): _description_. Defaults to "time".
+        merge_items_by (Union[str, None], optional): _description_. Defaults to None.
+        merge_method (Union[MergeMethod, str], optional): _description_. Defaults to MergeMethod.first.
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        xr.Dataset: _description_
     """
     if len(items) == 0:
         raise ValueError("no items to read")
@@ -97,9 +116,27 @@ def items_to_xarray(
 
 def merge_items(
     items: List[pystac.Item] = [],
-    merge_method: MergeMethods = MergeMethods.first,
+    merge_method: Union[MergeMethod, str] = MergeMethod.first,
     **kwargs,
 ) -> xr.Dataset:
+    """_summary_
+
+    Args:
+        items (List[pystac.Item], optional): _description_. Defaults to [].
+        merge_method (Union[MergeMethod, str], optional): _description_. Defaults to MergeMethod.first.
+
+    Raises:
+        ValueError: _description_
+        NotImplementedError: _description_
+
+    Returns:
+        xr.Dataset: _description_
+    """
+    merge_method = (
+        merge_method
+        if isinstance(merge_method, MergeMethod)
+        else MergeMethod[merge_method]
+    )
     if len(items) == 0:
         raise ValueError("no items to merge")
     out = item_to_xarray(items[0], **kwargs)
@@ -107,8 +144,7 @@ def merge_items(
     out.attrs = dict()
     if len(items) == 1:
         return out
-
-    if merge_method == "first":
+    if merge_method == MergeMethod.first:
         for item in items[1:]:
             xr = item_to_xarray(item=item, **kwargs)
             # replace masked values with values from freshly read xarray
@@ -116,7 +152,7 @@ def merge_items(
                 out[variable] = out[variable].where(
                     out[variable] == out[variable].attrs["_FillValue"], xr[variable]
                 )
-    elif merge_method == "average":
+    elif merge_method == MergeMethod.average:
         full_stack = [out, *[item_to_xarray(item=item, **kwargs) for item in items[1:]]]
         for variable in out.variables:
             out[variable] = masked_to_xarr(

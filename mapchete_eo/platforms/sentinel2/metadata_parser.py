@@ -2,6 +2,7 @@ from affine import Affine
 from cached_property import cached_property
 from contextlib import contextmanager
 from dataclasses import dataclass
+from enum import Enum, IntEnum
 import fiona
 from fiona.transform import transform_geom
 import logging
@@ -32,7 +33,14 @@ from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseli
 logger = logging.getLogger(__name__)
 
 
-CLOUD_MASK_TYPES = ["opaque", "cirrus"]
+CloudMaskType = Enum("CloudMaskType", ["opaque", "cirrus"])
+CLOUD_MASK_TYPES = [CloudMaskType.opaque, CloudMaskType.cirrus]
+Resolution = Enum("Resolution", ["10m", "20m", "60m", "120m"])
+# class Resolution(IntEnum):
+#     "10m": 10
+#     "20m": 20
+#     "60m": 60
+#     "120m": 120
 
 
 @dataclass
@@ -193,7 +201,7 @@ class S2Metadata:
         else:
             return 0
 
-    def shape(self, resolution) -> Tuple:
+    def shape(self, resolution: Resolution) -> Tuple:
         """
         Return grid shape for resolution.
 
@@ -208,7 +216,7 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["shape"]
 
-    def pixel_x_size(self, resolution) -> float:
+    def pixel_x_size(self, resolution: Resolution) -> float:
         """
         Return horizontal pixel size for resolution.
 
@@ -223,7 +231,7 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["x_size"]
 
-    def pixel_y_size(self, resolution) -> float:
+    def pixel_y_size(self, resolution: Resolution) -> float:
         """
         Return vertical pixel size for resolution.
 
@@ -238,7 +246,7 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["y_size"]
 
-    def transform(self, resolution) -> Affine:
+    def transform(self, resolution: Resolution) -> Affine:
         """
         Return Affine object for resolution.
 
@@ -253,7 +261,9 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["transform"]
 
-    def cloud_mask(self, mask_type: Union[None, str, list, tuple] = None) -> List[Dict]:
+    def cloud_mask(
+        self, mask_type: Union[CloudMaskType, None, str, list, tuple] = None
+    ) -> List[Dict]:
         """
         Return cloud mask.
 
@@ -262,20 +272,15 @@ class S2Metadata:
         List of GeoJSON mappings.
         """
         if mask_type is None:
-            mask_type = CLOUD_MASK_TYPES
+            mask_types = CLOUD_MASK_TYPES
         elif isinstance(mask_type, str):
-            mask_type = [mask_type]
+            mask_types = [CloudMaskType[mask_type]]
         elif isinstance(mask_type, (list, tuple)):
-            pass
+            mask_types = [CloudMaskType[t] for t in mask_type]
         else:
             raise TypeError(
                 f"mask_type must be either 'None' or one of  {CLOUD_MASK_TYPES}"
             )
-        for m in mask_type:
-            if m not in CLOUD_MASK_TYPES:
-                raise ValueError(
-                    f"mask type must be one of {CLOUD_MASK_TYPES}, not {m}"
-                )
         if self._cloud_masks_cache is None:
             mask_path = self.path_mapper.cloud_mask()
 
@@ -294,7 +299,7 @@ class S2Metadata:
         return [
             f
             for f in self._cloud_masks_cache
-            if f["properties"]["maskType"].lower() in mask_type
+            if f["properties"]["maskType"].lower() in mask_types
         ]
 
     def detector_footprints(self, band_idx: int) -> List[Dict]:
@@ -454,7 +459,7 @@ class S2Metadata:
         self,
         band_ids=None,
         angle="zenith",
-        resolution="60m",
+        resolution: Resolution = Resolution["60m"],
         resampling="bilinear",
         smoothing_iterations=10,
     ) -> np.ndarray:
@@ -627,13 +632,13 @@ def _cached_path(path, timeout=5, requester_payer="requester", region="eu-centra
 
 def _get_bounds_geoinfo(root):
     geoinfo = {
-        "10m": {},
-        "20m": {},
-        "60m": {},
-        "120m": {},
+        Resolution["10m"]: {},
+        Resolution["20m"]: {},
+        Resolution["60m"]: {},
+        Resolution["120m"]: {},
     }
     for size in root.iter("Size"):
-        resolution = f"{size.get('resolution')}m"
+        resolution = Resolution[f"{size.get('resolution')}m"]
         for item in size:
             if item.tag == "NROWS":
                 height = int(item.text)
@@ -641,7 +646,7 @@ def _get_bounds_geoinfo(root):
                 width = int(item.text)
         geoinfo[resolution] = dict(shape=(height, width))
     for geoposition in root.iter("Geoposition"):
-        resolution = f"{geoposition.get('resolution')}m"
+        resolution = Resolution[f"{geoposition.get('resolution')}m"]
         for item in geoposition:
             if item.tag == "ULX":
                 left = float(item.text)
@@ -660,13 +665,13 @@ def _get_bounds_geoinfo(root):
             transform=from_bounds(left, bottom, right, top, width, height),
         )
     for additional_resolution in [120]:
-        resolution = f"{additional_resolution}m"
-        width_10m, height_10m = geoinfo["10m"]["shape"]
+        resolution = Resolution[f"{additional_resolution}m"]
+        width_10m, height_10m = geoinfo[Resolution["10m"]]["shape"]
         relation = additional_resolution // 10
         width = width_10m // relation
         height = height_10m // relation
-        x_size = geoinfo["10m"]["x_size"] * relation
-        y_size = geoinfo["10m"]["y_size"] * relation
+        x_size = geoinfo[Resolution["10m"]]["x_size"] * relation
+        y_size = geoinfo[Resolution["10m"]]["y_size"] * relation
         geoinfo[resolution].update(
             shape=(height, width),
             x_size=x_size,

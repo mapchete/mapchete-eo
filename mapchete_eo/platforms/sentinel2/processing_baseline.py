@@ -44,9 +44,7 @@ class BaselineVersion:
     def from_string(version: str) -> "BaselineVersion":
         major, minor = map(int, version.split("."))
         if major < 2:
-            raise ValueError(
-                f"baseline versions below 02.00 are not supported: {version}"
-            )
+            level = "L1C"
         # everything below 02.06 is Level 1C
         elif major == 2 and minor <= 6:
             level = "L1C"

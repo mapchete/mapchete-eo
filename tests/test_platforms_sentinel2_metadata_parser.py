@@ -4,11 +4,16 @@ import numpy as np
 import numpy.ma as ma
 from pystac import Item
 import pytest
+from pytest import lazy_fixture
 from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata, MissingAsset
-from mapchete_eo.platforms.sentinel2.path_mappers import SinergisePathMapper, XMLMapper
+from mapchete_eo.platforms.sentinel2.path_mappers import (
+    SinergisePathMapper,
+    XMLMapper,
+    EarthSearchPathMapper,
+)
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 
 
@@ -65,13 +70,33 @@ def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
             path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
+def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
+    path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
+    assert path_exists(path_mapper.cloud_mask())
+    band = "B01"
+    for qi_mask in [
+        "detector_footprints",
+        "technical_quality",
+    ]:
+        assert path_exists(path_mapper.band_qi_mask(qi_mask=qi_mask, band=band))
+
+    for qi_mask in [
+        "defective",
+        "saturated",
+        "nodata",
+    ]:
+        with pytest.raises(DeprecationWarning):
+            path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
+
+
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_product_id(metadata_xml):
@@ -84,10 +109,11 @@ def test_metadata_product_id(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_crs(metadata_xml):
@@ -100,10 +126,11 @@ def test_metadata_crs(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_bounds(metadata_xml):
@@ -118,10 +145,11 @@ def test_metadata_bounds(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_geoinfo(metadata_xml):
@@ -151,11 +179,12 @@ def test_metadata_geoinfo(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_safe_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_safe_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_cloud_mask(metadata_xml):
@@ -167,9 +196,9 @@ def test_metadata_cloud_mask(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
     ],
 )
 def test_metadata_band_masks(metadata_xml):
@@ -240,10 +269,11 @@ def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_xml_remot
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_sun_angles(metadata_xml):
@@ -269,10 +299,11 @@ def test_metadata_sun_angles(metadata_xml):
 @pytest.mark.parametrize(
     "metadata_xml",
     [
-        pytest.lazy_fixture("s2_l2a_metadata_xml"),
-        pytest.lazy_fixture("s2_l2a_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
-        pytest.lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_metadata_xml"),
+        lazy_fixture("s2_l2a_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_xml_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_xml_remote"),
+        lazy_fixture("s2_l2a_earthsearch_xml_remote"),
     ],
 )
 def test_metadata_viewing_incidence_angles(metadata_xml):
@@ -287,7 +318,6 @@ def test_metadata_viewing_incidence_angles(metadata_xml):
 
             # mean
             assert isinstance(items["mean"], float)
-
             # mean viewing angles
             arr = metadata.mean_viewing_incidence_angles(band_ids=band_ids, angle=angle)
             assert not arr.mask.all()
@@ -322,37 +352,56 @@ def test_unavailable_metadata_xml():
         )
 
 
-def test_from_stac_item():
-    s2_metadata = S2Metadata.from_stac_item(
-        Item.from_file(
-            "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20220701_0_L2A"
-        )
-    )
+@pytest.mark.parametrize(
+    "item_url",
+    [
+        "https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items/S2A_33TWN_20220701_0_L2A",
+        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220614_0_L2A/S2A_33TWL_20220614_0_L2A.json",
+    ],
+)
+def test_from_stac_item(item_url):
+    item = Item.from_file(item_url)
+    s2_metadata = S2Metadata.from_stac_item(item)
     assert s2_metadata.processing_baseline.version == "04.00"
-    assert s2_metadata.reflectance_offset == 0
+    if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
+        "earthsearch:boa_offset_applied", False
+    ):
+        offset = -1000
+    else:
+        offset = 0
+    assert s2_metadata.reflectance_offset == offset
 
 
 @pytest.mark.parametrize(
-    "item, offset",
+    "item",
     [
-        (pytest.lazy_fixture("stac_item_pb0207"), 0),
-        (pytest.lazy_fixture("stac_item_pb0208"), 0),
-        (pytest.lazy_fixture("stac_item_pb0209"), 0),
-        (pytest.lazy_fixture("stac_item_pb0210"), 0),
-        (pytest.lazy_fixture("stac_item_pb0211"), 0),
-        (pytest.lazy_fixture("stac_item_pb0212"), 0),
-        (pytest.lazy_fixture("stac_item_pb0213"), 0),
-        (pytest.lazy_fixture("stac_item_pb0214"), 0),
-        (pytest.lazy_fixture("stac_item_pb0300"), 0),
-        (pytest.lazy_fixture("stac_item_pb0301"), 0),
-        (pytest.lazy_fixture("stac_item_pb0400"), 0),
-        (pytest.lazy_fixture("stac_item_pb0400_offset"), -1000),
-        (pytest.lazy_fixture("stac_item_pb0509"), 0),
+        lazy_fixture("stac_item_pb_l1c_0204"),
+        lazy_fixture("stac_item_pb_l1c_0205"),
+        lazy_fixture("stac_item_pb_l1c_0206"),
+        lazy_fixture("stac_item_pb0207"),
+        lazy_fixture("stac_item_pb0208"),
+        lazy_fixture("stac_item_pb0209"),
+        lazy_fixture("stac_item_pb0210"),
+        lazy_fixture("stac_item_pb0211"),
+        lazy_fixture("stac_item_pb0212"),
+        lazy_fixture("stac_item_pb0213"),
+        lazy_fixture("stac_item_pb0214"),
+        lazy_fixture("stac_item_pb0300"),
+        lazy_fixture("stac_item_pb0301"),
+        lazy_fixture("stac_item_pb0400"),
+        lazy_fixture("stac_item_pb0400_offset"),
+        lazy_fixture("stac_item_pb0509"),
     ],
 )
-def test_from_stac_item_backwards(item, offset):
+def test_from_stac_item_backwards(item):
     s2_metadata = S2Metadata.from_stac_item(item)
-    breakpoint()
+    if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
+        "earthsearch:boa_offset_applied", False
+    ):
+        offset = -1000
+    else:
+        offset = 0
+
     # make sure baseline version is as expected
     assert s2_metadata.processing_baseline.version == item.properties.get(
         "s2:processing_baseline"
@@ -371,19 +420,6 @@ def test_from_stac_item_backwards(item, offset):
         assert path_exists(
             s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
         )
-
-
-@pytest.mark.parametrize(
-    "item",
-    [
-        (pytest.lazy_fixture("stac_item_pb_l1c_0204")),
-        (pytest.lazy_fixture("stac_item_pb_l1c_0205")),
-        (pytest.lazy_fixture("stac_item_pb_l1c_0206")),
-    ],
-)
-def test_from_stac_item_backwards_not_supported(item):
-    with pytest.raises(ValueError):
-        S2Metadata.from_stac_item(item).processing_baseline.version
 
 
 def test_from_stac_item_invalid(stac_item_invalid_pb0001):

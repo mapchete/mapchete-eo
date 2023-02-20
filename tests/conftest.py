@@ -156,6 +156,12 @@ def s2_l2a_roda_metadata_jp2_masks_xml_remote():
 
 
 @pytest.fixture()
+def s2_l2a_earthsearch_xml_remote():
+    """Metadata used by Earth-Search V1 endpoint"""
+    return "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220601_0_L2A/granule_metadata.xml"
+
+
+@pytest.fixture()
 def tileinfo_gml_schema():
     return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/33/T/WL/2020/6/6/0/tileInfo.json"
 

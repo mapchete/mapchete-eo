@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from cached_property import cached_property
 from fsspec.exceptions import FSTimeoutError
+import json
 import logging
 from mapchete.io import fs_from_path
 import os
@@ -96,7 +97,7 @@ class S2PathMapper(ABC):
         elif url.startswith(
             "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
         ):
-            raise NotImplementedError("we need a new mapper")
+            return EarthSearchPathMapper(url, **kwargs)
         else:
             return XMLMapper(url, **kwargs)
 
@@ -157,7 +158,7 @@ class SinergisePathMapper(S2PathMapper):
         self._utm_zone, self._latitude_band, self._grid_square = self._path.split("/")[
             1:-4
         ]
-        self._bucket = bucket
+        self._baseurl = bucket
         self._protocol = protocol
         self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
 
@@ -167,7 +168,7 @@ class SinergisePathMapper(S2PathMapper):
         else:
             mask_path = self._POST_0400_MASK_PATHS["clouds"]
         key = f"{self._path}/qi/{mask_path}"
-        return f"{self._protocol}://{self._bucket}/{key}"
+        return f"{self._protocol}://{self._baseurl}/{key}"
 
     def _band_mask(self, qi_mask, band=None) -> str:
         try:
@@ -182,7 +183,7 @@ class SinergisePathMapper(S2PathMapper):
         if band not in self._bands:
             raise KeyError(f"band must be one of {self._bands}, not {band}")
         key = f"{self._path}/qi/{mask_path.format(band=band)}"
-        return f"{self._protocol}://{self._bucket}/{key}"
+        return f"{self._protocol}://{self._baseurl}/{key}"
 
     def band_qi_mask(self, qi_mask=None, band=None) -> str:
         return self._band_mask(qi_mask=qi_mask, band=band)
@@ -259,3 +260,52 @@ class XMLMapper(S2PathMapper):
                 f"QI mask '{qi_mask}' not available for this product"
             )
         return self._band_mask(qi_mask=qi_mask, band=band)
+
+
+class EarthSearchPathMapper(SinergisePathMapper):
+    """
+    The COG archive maintained by E84 and covered by EarthSearch does not hold additional data
+    such as the GML files. This class maps the metadata masks to the current EarthSearch product.
+
+    e.g.:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_DETFOO_B01.gml
+    Cloud masks: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_CLOUDS_B00.gml
+
+    newer products however:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2022/6/6/0/qi/DETFOO_B01.jp2
+    no vector cloudmasks available anymore
+    """
+
+    _PRE_0400_MASK_PATHS = {
+        "clouds": "MSK_CLOUDS_B00.gml",
+        "defective": "MSK_DEFECT_{band}.gml",
+        "saturated": "MSK_SATURA_{band}.gml",
+        "nodata": "MSK_NODATA_{band}.gml",
+        "detector_footprints": "MSK_DETFOO_{band}.gml",
+        "technical_quality": "MSK_TECQUA_{band}.gml",
+    }
+    _POST_0400_MASK_PATHS = {
+        "clouds": "CLASSI_B00.jp2",
+        "detector_footprints": "DETFOO_{band}.jp2",
+        "technical_quality": "QUALIT_{band}.jp2",
+    }
+
+    def __init__(
+        self,
+        metadata_xml: str,
+        alternative_metadata_baseurl: str = "sentinel-s2-l2a",
+        protocol: str = "s3",
+        baseline_version="04.00",
+        **kwargs,
+    ):
+        _basedir = os.path.dirname(metadata_xml)
+        tileinfo_metadata = f"{_basedir}/tileinfo_metadata.json"
+        with fs_from_path(tileinfo_metadata).open(tileinfo_metadata) as src:
+            tileinfo = json.loads(src.read())
+            self._path = tileinfo["path"]
+        self._utm_zone, self._latitude_band, self._grid_square = _basedir.split("/")[
+            -6:-3
+        ]
+        self._baseurl = alternative_metadata_baseurl
+        self._protocol = protocol
+        self.processing_baseline = ProcessingBaseline.from_version(baseline_version)

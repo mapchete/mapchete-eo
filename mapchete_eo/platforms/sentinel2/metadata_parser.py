@@ -113,8 +113,14 @@ class S2Metadata:
         )
 
     @staticmethod
-    def from_stac_item(item: Item) -> "S2Metadata":
-        for metadata_asset in ["metadata", "granule_metadata"]:
+    def from_stac_item(
+        item: Item,
+        metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
+    ) -> "S2Metadata":
+        metadata_assets = (
+            [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
+        )
+        for metadata_asset in metadata_assets:
             if metadata_asset in item.assets:
                 metadata_path = item.assets[metadata_asset].href
                 break
@@ -122,10 +128,16 @@ class S2Metadata:
             raise KeyError(
                 f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
             )
+        for field in ["sentinel:boa_offset_applied", "earthsearch:boa_offset_applied"]:
+            if item.properties.get(field):
+                boa_offset_applied = True
+                break
+            else:
+                boa_offset_applied = False
         return S2Metadata.from_metadata_xml(
             metadata_xml=metadata_path,
             processing_baseline=item.properties.get("s2:processing_baseline"),
-            boa_offset_applied=item.properties.get("s2:boa_offset_applied", False),
+            boa_offset_applied=boa_offset_applied,
         )
 
     @cached_property
@@ -174,15 +186,12 @@ class S2Metadata:
     @property
     def reflectance_offset(self) -> float:
         """
-        Reflectance offset to be applied when reading bands.
-
-        For baselines 04.00 and above a constant value of -1000 has to be applied
-        to all reflectance bands.
+        Reflectance offset of -1000 to be applied when reading bands.
         """
-        if self.processing_baseline.version != "04.00" or self.boa_offset_applied:
-            return 0
-        else:
+        if self.boa_offset_applied:
             return self.default_boa_offset
+        else:
+            return 0
 
     def shape(self, resolution) -> Tuple:
         """
@@ -244,7 +253,7 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["transform"]
 
-    def cloud_mask(self, mask_type=None) -> List[Dict]:
+    def cloud_mask(self, mask_type: Union[None, str, list, tuple] = None) -> List[Dict]:
         """
         Return cloud mask.
 
@@ -288,7 +297,7 @@ class S2Metadata:
             if f["properties"]["maskType"].lower() in mask_type
         ]
 
-    def detector_footprints(self, band_idx) -> List[Dict]:
+    def detector_footprints(self, band_idx: int) -> List[Dict]:
         """
         Return detector footprints.
 
@@ -308,7 +317,7 @@ class S2Metadata:
             )
         return footprints
 
-    def defective_mask(self, band_idx) -> List[Dict]:
+    def defective_mask(self, band_idx: int) -> List[Dict]:
         """
         Return defective mask.
 
@@ -323,7 +332,7 @@ class S2Metadata:
         """
         return self._get_band_mask(band_idx, "defective")
 
-    def saturated_mask(self, band_idx) -> List[Dict]:
+    def saturated_mask(self, band_idx: int) -> List[Dict]:
         """
         Return saturated mask.
 
@@ -338,7 +347,7 @@ class S2Metadata:
         """
         return self._get_band_mask(band_idx, "saturated")
 
-    def nodata_mask(self, band_idx) -> List[Dict]:
+    def nodata_mask(self, band_idx: int) -> List[Dict]:
         """
         Return nodata mask.
 
@@ -353,7 +362,7 @@ class S2Metadata:
         """
         return self._get_band_mask(band_idx, "nodata")
 
-    def technical_quality_mask(self, band_idx) -> List[Dict]:
+    def technical_quality_mask(self, band_idx: int) -> List[Dict]:
         """
         Return technical quality mask.
 
@@ -368,7 +377,7 @@ class S2Metadata:
         """
         return self._get_band_mask(band_idx, "technical_quality")
 
-    def viewing_incidence_angles(self, band_idx) -> Dict:
+    def viewing_incidence_angles(self, band_idx: int) -> Dict:
         """
         Return viewing incidence angles.
 
@@ -436,7 +445,9 @@ class S2Metadata:
             self._viewing_incidence_angles_cache[band_idx] = angles
         return self._viewing_incidence_angles_cache[band_idx]
 
-    def viewing_incidence_angle(self, band_idx, detector_id, angle="zenith") -> Dict:
+    def viewing_incidence_angle(
+        self, band_idx: int, detector_id: int, angle: str = "zenith"
+    ) -> Dict:
         return self.viewing_incidence_angles(band_idx)[angle]["detector"][detector_id]
 
     def mean_viewing_incidence_angles(
@@ -476,7 +487,6 @@ class S2Metadata:
                         smoothing_iterations=smoothing_iterations,
                     )
                 )
-
                 # resample detector angles to output resolution
                 detector_angle = _resample_array(
                     in_array=detector_array,

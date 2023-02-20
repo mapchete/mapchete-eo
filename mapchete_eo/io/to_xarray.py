@@ -1,18 +1,23 @@
+from enum import Enum
 import logging
 from collections import defaultdict
 from typing import Dict, List, Union, Any
 
 import numpy as np
+import numpy.ma as ma
 import pystac
 import xarray as xr
 from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
 
-from mapchete_eo.array.convert import masked_to_xarr
+from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 
 logger = logging.getLogger(__name__)
+
+
+MergeMethods = Enum("MergeMethods", ["first", "average"])
 
 
 def items_to_xarray(
@@ -27,6 +32,7 @@ def items_to_xarray(
     y_axis_name: str = "y",
     time_axis_name: str = "time",
     merge_items_by: Union[str, None] = None,
+    merge_method: MergeMethods = MergeMethods.first,
 ) -> xr.Dataset:
     """
     Read tile window of STAC Items and merge into a 4D xarray.
@@ -50,6 +56,7 @@ def items_to_xarray(
                     x_axis_name=x_axis_name,
                     y_axis_name=y_axis_name,
                     time_axis_name=time_axis_name,
+                    merge_method=merge_method,
                 ).to_stacked_array(
                     new_dim=band_axis_name,
                     sample_dims=(x_axis_name, y_axis_name),
@@ -89,23 +96,38 @@ def items_to_xarray(
 
 
 def merge_items(
-    items: List[pystac.Item] = [], merge_method: str = "first", **kwargs
+    items: List[pystac.Item] = [],
+    merge_method: MergeMethods = MergeMethods.first,
+    **kwargs,
 ) -> xr.Dataset:
     if len(items) == 0:
         raise ValueError("no items to merge")
     out = item_to_xarray(items[0], **kwargs)
     # delete attributes because dataset is a merge of multiple items
     out.attrs = dict()
-    for item in items[1:]:
-        xr = item_to_xarray(item=item, **kwargs)
-        if merge_method == "first":
+    if len(items) == 1:
+        return out
+
+    if merge_method == "first":
+        for item in items[1:]:
+            xr = item_to_xarray(item=item, **kwargs)
             # replace masked values with values from freshly read xarray
             for variable in out.variables:
                 out[variable] = out[variable].where(
                     out[variable] == out[variable].attrs["_FillValue"], xr[variable]
                 )
-        else:
-            raise NotImplementedError(f"unknown merge method: {merge_method}")
+    elif merge_method == "average":
+        full_stack = [out, *[item_to_xarray(item=item, **kwargs) for item in items[1:]]]
+        for variable in out.variables:
+            out[variable] = masked_to_xarr(
+                ma.stack([xarr_to_masked(xarr[variable]) for xarr in full_stack])
+                .mean(axis=0)
+                .astype(out[variable].dtype, copy=False)
+            )
+
+    else:
+        raise NotImplementedError(f"unknown merge method: {merge_method}")
+
     return out
 
 

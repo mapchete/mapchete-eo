@@ -143,13 +143,18 @@ def test_s2_items_to_xarray_merge_date(s2_stac_items, test_tile):
     assert isinstance(ds, xr.Dataset)
 
 
-def test_s2_items_to_xarray_merge_datastrip_id(s2_stac_items, test_tile):
+@pytest.mark.parametrize(
+    "merge_method",
+    ["first", "average"],
+)
+def test_s2_items_to_xarray_merge_datastrip_id(s2_stac_items, test_tile, merge_method):
     eo_bands = ["red", "green", "blue"]
     ds = items_to_xarray(
         items=s2_stac_items,
         eo_bands=eo_bands,
         tile=test_tile,
         merge_items_by="s2:datastrip_id",
+        merge_method=merge_method,
     )
     assert len(ds) == 2
     assert isinstance(ds, xr.Dataset)

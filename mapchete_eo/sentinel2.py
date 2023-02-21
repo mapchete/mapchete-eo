@@ -9,7 +9,7 @@ from mapchete.tile import BufferedTile
 import os
 from pydantic import BaseModel
 from pystac import Item
-from typing import Union, List
+from typing import Union, List, Type
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
@@ -246,7 +246,7 @@ class KnownArchives(Enum):
 class FormatParams(BaseModel):
     format: str = "Sentinel-2"
     level: ProcessingLevel = ProcessingLevel.level2a
-    archive: type[Archive] = KnownArchives.S2AWS_COG.value
+    archive: Type[Archive] = KnownArchives.S2AWS_COG.value
     start_time: Union[datetime.date, datetime.datetime]
     end_time: Union[datetime.date, datetime.datetime]
 

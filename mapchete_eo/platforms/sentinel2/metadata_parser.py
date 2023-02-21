@@ -1,8 +1,11 @@
+"""
+A metadata parser helps to read additional Sentinel-2 metadata such as
+sun angles, quality masks, etc.
+"""
+
 from affine import Affine
 from cached_property import cached_property
 from contextlib import contextmanager
-from dataclasses import dataclass
-from enum import Enum, IntEnum
 import fiona
 from fiona.transform import transform_geom
 import logging
@@ -25,29 +28,13 @@ from mapchete_eo.platforms.sentinel2.path_mappers import (
     S2PathMapper,
     XMLMapper,
     QI_MASKS,
-    open_metadata_xml,
+    open_xml,
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
+from mapchete_eo.platforms.sentinel2.types import Resolution, CloudType, L2ABand
 
 
 logger = logging.getLogger(__name__)
-
-
-CloudMaskType = Enum("CloudMaskType", ["opaque", "cirrus"])
-CLOUD_MASK_TYPES = [CloudMaskType.opaque, CloudMaskType.cirrus]
-Resolution = Enum("Resolution", ["10m", "20m", "60m", "120m"])
-
-
-@dataclass
-class ProcessingLevel:
-    level: str
-
-    @staticmethod
-    def from_string(level: str):
-        if level in ["L1C", "L2A"]:
-            return ProcessingLevel(level)
-        else:
-            return KeyError(f"unknown level: {level}")
 
 
 class S2Metadata:
@@ -87,7 +74,7 @@ class S2Metadata:
         guess_path_mapper: bool = True,
         **kwargs,
     ) -> "S2Metadata":
-        xml_root = open_metadata_xml(metadata_xml)
+        xml_root = open_xml(metadata_xml)
         _default_path_mapper = XMLMapper(
             xml_root=xml_root, metadata_xml=metadata_xml, **kwargs
         )
@@ -119,6 +106,11 @@ class S2Metadata:
     def from_stac_item(
         item: Item,
         metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
+        boa_offset_fields: Union[List[str], str] = [
+            "sentinel:boa_offset_applied",
+            "earthsearch:boa_offset_applied",
+        ],
+        processing_baseline_field: str = "s2:processing_baseline",
     ) -> "S2Metadata":
         metadata_assets = (
             [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
@@ -131,7 +123,11 @@ class S2Metadata:
             raise KeyError(
                 f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
             )
-        for field in ["sentinel:boa_offset_applied", "earthsearch:boa_offset_applied"]:
+        for field in (
+            [boa_offset_fields]
+            if isinstance(boa_offset_fields, str)
+            else boa_offset_fields
+        ):
             if item.properties.get(field):
                 boa_offset_applied = True
                 break
@@ -139,14 +135,14 @@ class S2Metadata:
                 boa_offset_applied = False
         return S2Metadata.from_metadata_xml(
             metadata_xml=metadata_path,
-            processing_baseline=item.properties.get("s2:processing_baseline"),
+            processing_baseline=item.properties.get(processing_baseline_field),
             boa_offset_applied=boa_offset_applied,
         )
 
     @cached_property
     def xml_root(self):
         if self._cached_xml_root is None:
-            self._cached_xml_root = open_metadata_xml(self.metadata_xml)
+            self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
     @cached_property
@@ -257,7 +253,7 @@ class S2Metadata:
         return self._geoinfo[resolution]["transform"]
 
     def cloud_mask(
-        self, mask_type: Union[CloudMaskType, None, str, list, tuple] = None
+        self, mask_type: Union[CloudType, None, str, list, tuple] = None
     ) -> List[Dict]:
         """
         Return cloud mask.
@@ -267,26 +263,30 @@ class S2Metadata:
         List of GeoJSON mappings.
         """
         if mask_type is None:
-            mask_types = CLOUD_MASK_TYPES
+            mask_types = list(CloudType)
         elif isinstance(mask_type, str):
-            mask_types = [CloudMaskType[mask_type]]
+            mask_types = [CloudType[mask_type]]
         elif isinstance(mask_type, (list, tuple)):
-            mask_types = [CloudMaskType[t] for t in mask_type]
+            mask_types = [CloudType[t] for t in mask_type]
         else:
             raise TypeError(
-                f"mask_type must be either 'None' or one of  {CLOUD_MASK_TYPES}"
+                f"mask_type must be either 'None' or one of {list(CloudType)}"
             )
         if self._cloud_masks_cache is None:
             mask_path = self.path_mapper.cloud_mask()
 
-            band_idx_cloud_type = {1: "OPAQUE", 2: "CIRRUS"}
-
             if mask_path.endswith(".jp2"):
                 features = []
-                # read opaque mask
                 for f in self._vectorize_raster_mask(mask_path, indexes=[1, 2]):
                     band_idx = f["properties"].pop("_band_idx")
-                    f["properties"]["maskType"] = band_idx_cloud_type[band_idx]
+                    for cloud_type in CloudType:
+                        if band_idx == cloud_type.value:
+                            f["properties"]["maskType"] = cloud_type.name
+                            break
+                    else:
+                        raise KeyError(
+                            f"unknown band index {band_idx} for cloud bands: {list(CloudType)}"
+                        )
                     features.append(f)
             else:
                 features = self._read_vector_mask(mask_path)
@@ -304,7 +304,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -324,7 +324,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -339,7 +339,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -354,7 +354,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -369,7 +369,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -384,7 +384,7 @@ class S2Metadata:
         Paramerters
         -----------
         band_idx : int
-            Band index.
+            L2ABand index.
 
         Returns
         -------
@@ -585,26 +585,9 @@ class S2Metadata:
 
     def _band_idx_to_name(self, band_idx):
         # band indexes start at 1
-        for idx, band_name in enumerate(
-            [
-                "B01",
-                "B02",
-                "B03",
-                "B04",
-                "B05",
-                "B06",
-                "B07",
-                "B08",
-                "B8A",
-                "B09",
-                "B10",
-                "B11",
-                "B12",
-            ],
-            1,
-        ):
-            if band_idx == idx:
-                return band_name
+        for band in L2ABand:
+            if band.value == band_idx:
+                return band.name
         else:
             raise KeyError(f"cannot assign band index {band_idx} to band name")
 

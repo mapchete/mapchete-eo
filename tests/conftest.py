@@ -6,7 +6,7 @@ import pytest
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 
-from mapchete_eo.known_catalogs import E84Sentinel2COGsV1
+from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 
@@ -105,7 +105,7 @@ def stac_search_catalog():
 
 @pytest.fixture(scope="session")
 def e84_cog_catalog():
-    return E84Sentinel2COGsV1(
+    return EarthSearchV1S2L2A(
         start_time="2022-06-01",
         end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
@@ -114,7 +114,7 @@ def e84_cog_catalog():
 
 @pytest.fixture(scope="session")
 def e84_cog_catalog_short():
-    return E84Sentinel2COGsV1(
+    return EarthSearchV1S2L2A(
         start_time="2022-06-01",
         end_time="2022-06-03",
         bounds=[16, 46.4, 16.1, 46.5],
@@ -180,8 +180,10 @@ def s2_l2a_earthsearch_xml_remote():
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote():
     """Metadata used by Earth-Search V1 endpoint"""
-    return S2Metadata.from_metadata_xml(
-        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220601_0_L2A/granule_metadata.xml"
+    return S2Metadata.from_stac_item(
+        pystac.Item.from_file(
+            "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220601_0_L2A/S2A_33TWL_20220601_0_L2A.json"
+        )
     )
 
 

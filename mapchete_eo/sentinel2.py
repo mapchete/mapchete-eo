@@ -11,13 +11,7 @@ from typing import Union
 
 from mapchete_eo import base
 from mapchete_eo.known_catalogs import KnownCatalogs
-
-
-class ProcessingLevel(Enum):
-    """Available processing levels of Sentinel-2."""
-
-    level1c = "L1C"
-    level2a = "L2A"
+from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
 
 class S2AWSCOGArchive:
@@ -33,22 +27,22 @@ class S2AWSCOGArchive:
     }
 
 
-class S2AWSJP2Archive:
-    """
-    Sentinel-2 JPEG2000 archive on AWS maintained by Sinergise.
+# class S2AWSJP2Archive:
+#     """
+#     Sentinel-2 JPEG2000 archive on AWS maintained by Sinergise.
 
-    This requires the requester pays setting.
+#     This requires the requester pays setting.
 
-    URL: https://registry.opendata.aws/sentinel-2/
-    """
+#     URL: https://registry.opendata.aws/sentinel-2/
+#     """
 
-    catalog = KnownCatalogs.sinergise_s2
-    storage_options: dict = {}
+#     catalog = KnownCatalogs.sinergise_s2
+#     storage_options: dict = {}
 
 
 class KnownArchives(Enum):
     S2AWS_COG = S2AWSCOGArchive
-    S2AWS_JP2 = S2AWSJP2Archive
+    # S2AWS_JP2 = S2AWSJP2Archive
 
 
 class FormatParams(BaseModel):

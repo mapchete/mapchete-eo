@@ -1,3 +1,8 @@
+"""
+A path mapper maps from an metadata XML file to additional metadata
+on a given archive or a local SAFE file.
+"""
+
 from abc import ABC, abstractmethod
 from cached_property import cached_property
 from fsspec.exceptions import FSTimeoutError
@@ -10,41 +15,10 @@ from typing import Union
 import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
+from mapchete_eo.platforms.sentinel2.types import QI_MASKS, L2ABand
 from mapchete_eo.settings import MP_EO_IO_RETRY_SETTINGS
 
 logger = logging.getLogger(__name__)
-
-
-QI_MASKS = {
-    # Finer cloud mask
-    # ----------------
-    # A finer cloud mask is computed on final Level-1C images. It is provided in the final
-    # reference frame (ground geometry).
-    "clouds": "MSK_CLOUDS",
-    #
-    # Radiometric quality masks
-    # -------------------------
-    # A defective pixels’ mask, containing the position of defective pixels.
-    "defective": "MSK_DEFECT",
-    #
-    # A saturated pixels’ mask, containing the position of the saturated pixels in the
-    # full resolution image.
-    "saturated": "MSK_SATURA",
-    #
-    # A nodata pixels’ mask, containing the position of pixels with no data.
-    "nodata": "MSK_NODATA",
-    #
-    # Detector footprint mask
-    # -----------------------
-    # A mask providing the ground footprint of each detector within a Tile.
-    "detector_footprints": "MSK_DETFOO",
-    #
-    # Technical quality mask files
-    # ----------------------------
-    # These vector files contain a list of polygons in Level-1A reference frame indicating
-    # degraded quality areas in the image.
-    "technical_quality": "MSK_TECQUA",
-}
 
 
 @retry(
@@ -52,34 +26,22 @@ QI_MASKS = {
     exceptions=(TimeoutError, FSTimeoutError),
     **MP_EO_IO_RETRY_SETTINGS,
 )
-def open_metadata_xml(metadata_xml):
-    logger.debug(f"open {metadata_xml}")
-    with fs_from_path(metadata_xml).open(metadata_xml, "r") as metadata:
-        return etree.fromstring(metadata.read())
+def open_xml(path):
+    logger.debug(f"open {path}")
+    with fs_from_path(path).open(path, "r") as src:
+        return etree.fromstring(src.read())
 
 
 class S2PathMapper(ABC):
     """
     Abstract class to help mapping asset paths from metadata.xml to their
     locations of various data archives.
+
+    This is mainly used for additional data like QI masks.
     """
 
-    # All available bands for Sentinel-2 Level 1C.
-    _bands = [
-        "B01",
-        "B02",
-        "B03",
-        "B04",
-        "B05",
-        "B06",
-        "B07",
-        "B08",
-        "B8A",
-        "B09",
-        "B10",
-        "B11",
-        "B12",
-    ]
+    # All available bands for Sentinel-2 Level 2A.
+    _bands = [band.name for band in L2ABand]
 
     processing_baseline: ProcessingBaseline
 
@@ -90,10 +52,7 @@ class S2PathMapper(ABC):
         ) or url.startswith(
             ("https://roda.sentinel-hub.com/sentinel-s2-l1c/", "s3://sentinel-s2-l1c/")
         ):
-            # TODO maybe add more checks for invalid input URLs
-            return SinergisePathMapper(
-                tileinfo_path=f"{os.path.dirname(url)}/tileInfo.json", **kwargs
-            )
+            return SinergisePathMapper(url, **kwargs)
         elif url.startswith(
             "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
         ):
@@ -134,11 +93,11 @@ class SinergisePathMapper(S2PathMapper):
 
     _PRE_0400_MASK_PATHS = {
         "clouds": "MSK_CLOUDS_B00.gml",
+        "detector_footprints": "MSK_DETFOO_{band}.gml",
+        "technical_quality": "MSK_TECQUA_{band}.gml",
         "defective": "MSK_DEFECT_{band}.gml",
         "saturated": "MSK_SATURA_{band}.gml",
         "nodata": "MSK_NODATA_{band}.gml",
-        "detector_footprints": "MSK_DETFOO_{band}.gml",
-        "technical_quality": "MSK_TECQUA_{band}.gml",
     }
     _POST_0400_MASK_PATHS = {
         "clouds": "CLASSI_B00.jp2",
@@ -148,12 +107,13 @@ class SinergisePathMapper(S2PathMapper):
 
     def __init__(
         self,
-        tileinfo_path: str,
+        url: str,
         bucket="sentinel-s2-l2a",
         protocol="s3",
         baseline_version="04.00",
         **kwargs,
     ):
+        tileinfo_path = f"{os.path.dirname(url)}/tileInfo.json"
         self._path = "/".join(tileinfo_path.split("/")[-9:-1])
         self._utm_zone, self._latitude_band, self._grid_square = self._path.split("/")[
             1:-4
@@ -201,7 +161,7 @@ class XMLMapper(S2PathMapper):
     @cached_property
     def xml_root(self):
         if self._cached_xml_root is None:
-            self._cached_xml_root = open_metadata_xml(self.metadata_xml)
+            self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
     @cached_property
@@ -278,11 +238,11 @@ class EarthSearchPathMapper(SinergisePathMapper):
 
     _PRE_0400_MASK_PATHS = {
         "clouds": "MSK_CLOUDS_B00.gml",
+        "detector_footprints": "MSK_DETFOO_{band}.gml",
+        "technical_quality": "MSK_TECQUA_{band}.gml",
         "defective": "MSK_DEFECT_{band}.gml",
         "saturated": "MSK_SATURA_{band}.gml",
         "nodata": "MSK_NODATA_{band}.gml",
-        "detector_footprints": "MSK_DETFOO_{band}.gml",
-        "technical_quality": "MSK_TECQUA_{band}.gml",
     }
     _POST_0400_MASK_PATHS = {
         "clouds": "CLASSI_B00.jp2",

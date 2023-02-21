@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from abc import ABC
+from typing import Type
 
 from mapchete_eo.search.base import Catalog
 
@@ -9,7 +9,7 @@ class Archive(ABC):
     An archive combines a Catalog and a Storage.
     """
 
-    catalog_cls: type[Catalog]
+    catalog_cls: Type[Catalog]
     collection: str
 
     def __init__(self, start_time=None, end_time=None, bounds=None):

@@ -1,7 +1,5 @@
 """
 Reader driver for Sentinel-2 data.
-
-
 """
 import datetime
 from enum import Enum
@@ -10,7 +8,8 @@ from mapchete.io import fs_from_path
 from mapchete.tile import BufferedTile
 import os
 from pydantic import BaseModel
-from typing import Union
+from pystac import Item
+from typing import Union, List
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
@@ -21,35 +20,8 @@ from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseli
 from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
 
-# AWS L1C JP2 Archive v0:
-#   * earth search v0
-#   * processing level 2a
-#   * E84 path mapper
-
-# AWS L1C JP2 Archive v1:
-#   * earth search v1
-#   * processing level 2a
-#   * E84 path mapper
-
-# AWS L2A COG Archive v0:
-#   * earth search v0
-#   * processing level 2a
-#   * E84 path mapper
-
-# AWS L2A COG Archive v1:
-#   * earth search v1
-#   * processing level 2a
-#   * E84 path mapper
-
-# AWS L2A JP2 Archive v0:
-#   * earth search v0
-#   * processing level 2a
-#   * E84 path mapper
-
-# AWS L2A JP2 Archive v1:
-#   * earth search v1
-#   * processing level 2a
-#   * E84 path mapper
+# all custom path mappers and constructors are below
+####################################################
 
 
 class SinergisePathMapper(S2PathMapper):
@@ -195,8 +167,57 @@ def path_mapper_guesser(
         return XMLMapper(url, **kwargs)
 
 
+def s2metadata_from_stac_item(
+    item: Item,
+    metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
+    boa_offset_fields: Union[List[str], str] = [
+        "sentinel:boa_offset_applied",
+        "earthsearch:boa_offset_applied",
+    ],
+    processing_baseline_field: str = "s2:processing_baseline",
+    **kwargs,
+) -> "S2Metadata":
+    """Custom code to initialize S2Metadate from a STAC item.
+
+    Depending on from which catalog the STAC item comes, this function should correctly
+    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
+    using the proper asset name.
+    """
+    metadata_assets = (
+        [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
+    )
+    for metadata_asset in metadata_assets:
+        if metadata_asset in item.assets:
+            metadata_path = item.assets[metadata_asset].href
+            break
+    else:
+        raise KeyError(
+            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
+        )
+    for field in (
+        [boa_offset_fields] if isinstance(boa_offset_fields, str) else boa_offset_fields
+    ):
+        if item.properties.get(field):
+            boa_offset_applied = True
+            break
+        else:
+            boa_offset_applied = False
+    return S2Metadata.from_metadata_xml(
+        metadata_xml=metadata_path,
+        processing_baseline=item.properties.get(processing_baseline_field),
+        boa_offset_applied=boa_offset_applied,
+        **kwargs,
+    )
+
+
 # this is important to add all path mappers defined here to the automated constructor
 S2Metadata.path_mapper_guesser = path_mapper_guesser
+# this is important to properly parse incoming pystac Items
+S2Metadata.from_stac_item_constructor = s2metadata_from_stac_item
+
+
+# below all supported archives are defined
+##########################################
 
 
 class AWSL2ACOGv0(Archive):
@@ -213,35 +234,13 @@ class AWSL2ACOGv1(Archive):
     path_mapper_cls = EarthSearchPathMapper
 
 
-# class S2AWSCOGArchive:
-#     """
-#     Sentinel-2 COG archive on AWS maintained by Element84.
-
-#     URL: https://registry.opendata.aws/sentinel-2-l2a-cogs/
-#     """
-
-#     catalog = KnownCatalogs.earth_search_s2_cogs
-#     storage_options: dict = {
-#         # "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
-#     }
-
-
-# class S2AWSJP2Archive:
-#     """
-#     Sentinel-2 JPEG2000 archive on AWS maintained by Sinergise.
-
-#     This requires the requester pays setting.
-
-#     URL: https://registry.opendata.aws/sentinel-2/
-#     """
-
-#     catalog = KnownCatalogs.sinergise_s2
-#     storage_options: dict = {}
-
-
 class KnownArchives(Enum):
     S2AWS_COG = AWSL2ACOGv1
-    # S2AWS_JP2 = S2AWSJP2Archive
+    S2AWS_COG_V0 = AWSL2ACOGv0
+
+
+# here is everything we need to configure and initialize the mapchete driver
+############################################################################
 
 
 class FormatParams(BaseModel):

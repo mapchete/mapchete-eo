@@ -41,9 +41,20 @@ def _default_path_mapper_guesser(*args, **kwargs):
     return XMLMapper(*args, **kwargs)
 
 
+def _default_from_stac_item_constructor(
+    item: Item,
+    **kwargs,
+) -> "S2Metadata":
+    return S2Metadata.from_metadata_xml(
+        metadata_xml=item.assets["metadata"].href,
+        **kwargs,
+    )
+
+
 class S2Metadata:
     _cached_xml_root = None
     path_mapper_guesser: Callable = _default_path_mapper_guesser
+    from_stac_item_constructor: Callable = _default_from_stac_item_constructor
 
     def __init__(
         self,
@@ -80,10 +91,8 @@ class S2Metadata:
         **kwargs,
     ) -> "S2Metadata":
         xml_root = open_xml(metadata_xml)
-        _default_path_mapper = XMLMapper(
-            xml_root=xml_root, metadata_xml=metadata_xml, **kwargs
-        )
         if path_mapper is None:
+            # guess correct path mapper
             path_mapper = cls.path_mapper_guesser(
                 url=metadata_xml,
                 xml_root=xml_root,
@@ -98,50 +107,18 @@ class S2Metadata:
         # use the information about processing baseline gained when initializing the default mapper to
         # let the path mapper generate the right paths
         else:
+            _default_path_mapper = XMLMapper(
+                xml_root=xml_root, metadata_xml=metadata_xml, **kwargs
+            )
             path_mapper.processing_baseline = _default_path_mapper.processing_baseline
 
         return S2Metadata(
             metadata_xml, path_mapper=path_mapper, xml_root=xml_root, **kwargs
         )
 
-    @staticmethod
-    def from_stac_item(
-        item: Item,
-        metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
-        boa_offset_fields: Union[List[str], str] = [
-            "sentinel:boa_offset_applied",
-            "earthsearch:boa_offset_applied",
-        ],
-        processing_baseline_field: str = "s2:processing_baseline",
-        **kwargs,
-    ) -> "S2Metadata":
-        metadata_assets = (
-            [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
-        )
-        for metadata_asset in metadata_assets:
-            if metadata_asset in item.assets:
-                metadata_path = item.assets[metadata_asset].href
-                break
-        else:
-            raise KeyError(
-                f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
-            )
-        for field in (
-            [boa_offset_fields]
-            if isinstance(boa_offset_fields, str)
-            else boa_offset_fields
-        ):
-            if item.properties.get(field):
-                boa_offset_applied = True
-                break
-            else:
-                boa_offset_applied = False
-        return S2Metadata.from_metadata_xml(
-            metadata_xml=metadata_path,
-            processing_baseline=item.properties.get(processing_baseline_field),
-            boa_offset_applied=boa_offset_applied,
-            **kwargs,
-        )
+    @classmethod
+    def from_stac_item(cls, item: Item, **kwargs) -> "S2Metadata":
+        return cls.from_stac_item_constructor(item, **kwargs)
 
     @cached_property
     def xml_root(self):

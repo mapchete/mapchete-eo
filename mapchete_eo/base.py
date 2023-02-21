@@ -1,4 +1,5 @@
 import croniter
+import datetime
 from dateutil.tz import tzutc
 import xarray as xr
 from mapchete.formats import base
@@ -6,9 +7,9 @@ from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
-from typing import List
+from typing import List, Union
 
-from mapchete_eo.io import items_to_xarray
+from mapchete_eo.io import items_to_xarray, MergeMethod
 
 
 class InputTile(base.InputTile):
@@ -26,14 +27,15 @@ class InputTile(base.InputTile):
         self,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        resampling="nearest",
-        start_time=None,
-        end_time=None,
-        timestamps=None,
-        time_pattern=None,
-        x_axis_name="X",
-        y_axis_name="Y",
-        merge_items_by=None,
+        resampling: str = "nearest",
+        start_time: Union[str, datetime.datetime, None] = None,
+        end_time: Union[str, datetime.datetime, None] = None,
+        timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
+        time_pattern: Union[str, None] = None,
+        x_axis_name: str = "x",
+        y_axis_name: str = "y",
+        merge_items_by: Union[str, None] = None,
+        merge_method: Union[MergeMethod, str] = MergeMethod.first,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -71,6 +73,7 @@ class InputTile(base.InputTile):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             merge_items_by=merge_items_by,
+            merge_method=merge_method,
         )
 
     def is_empty(self) -> bool:
@@ -83,7 +86,7 @@ class InputTile(base.InputTile):
         """
         return len(self.items) == 0
 
-    def _get_assets(self, indexes=None):
+    def _get_assets(self, indexes: Union[int, str, List[Union[int, str]], None] = None):
         if indexes is None:
             return list(range(len(self.eo_bands)))
         out = []
@@ -107,7 +110,7 @@ class InputTile(base.InputTile):
 class InputData(base.InputData):
     """In case this driver is used when being a readonly input to another process."""
 
-    def bbox(self, out_crs=None) -> BaseGeometry:
+    def bbox(self, out_crs: Union[str, None] = None) -> BaseGeometry:
         """
         Return data bounding box.
 
@@ -143,12 +146,12 @@ class InputData(base.InputData):
         """
         return self.input_tile_cls(
             tile,
-            items=self.catalog.items.filter(
+            items=self.archive.catalog.items.filter(
                 bounds=reproject_geometry(
                     tile.bbox, src_crs=tile.crs, dst_crs="EPSG:4326"
                 ).bounds
             ),
-            eo_bands=self.catalog.eo_bands,
+            eo_bands=self.archive.catalog.eo_bands,
             start_time=self.start_time,
             end_time=self.end_time,
             **kwargs,

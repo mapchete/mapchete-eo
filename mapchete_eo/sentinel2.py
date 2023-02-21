@@ -10,21 +10,68 @@ from pydantic import BaseModel
 from typing import Union
 
 from mapchete_eo import base
-from mapchete_eo.known_catalogs import KnownCatalogs
+from mapchete_eo.archives.base import Archive
+from mapchete_eo.known_catalogs import EarthSearchV0S2L2A, EarthSearchV1S2L2A
+from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
 from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
 
-class S2AWSCOGArchive:
-    """
-    Sentinel-2 COG archive on AWS maintained by Element84.
+# AWS L1C JP2 Archive v0:
+#   * earth search v0
+#   * processing level 2a
+#   * E84 path mapper
 
-    URL: https://registry.opendata.aws/sentinel-2-l2a-cogs/
-    """
+# AWS L1C JP2 Archive v1:
+#   * earth search v1
+#   * processing level 2a
+#   * E84 path mapper
 
-    catalog = KnownCatalogs.earth_search_s2_cogs
-    storage_options: dict = {
-        # "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
-    }
+# AWS L2A COG Archive v0:
+#   * earth search v0
+#   * processing level 2a
+#   * E84 path mapper
+
+# AWS L2A COG Archive v1:
+#   * earth search v1
+#   * processing level 2a
+#   * E84 path mapper
+
+# AWS L2A JP2 Archive v0:
+#   * earth search v0
+#   * processing level 2a
+#   * E84 path mapper
+
+# AWS L2A JP2 Archive v1:
+#   * earth search v1
+#   * processing level 2a
+#   * E84 path mapper
+
+
+class AWSL2ACOGv0(Archive):
+    catalog_cls = EarthSearchV0S2L2A
+    collection = "sentinel-s2-l2a-cogs"
+    processing_level = ProcessingLevel.level2a
+    path_mapper_cls = EarthSearchPathMapper
+
+
+class AWSL2ACOGv1(Archive):
+    catalog_cls = EarthSearchV1S2L2A
+    collection = "sentinel-2-l2a"
+    processing_level = ProcessingLevel.level2a
+    path_mapper_cls = EarthSearchPathMapper
+
+
+# class S2AWSCOGArchive:
+#     """
+#     Sentinel-2 COG archive on AWS maintained by Element84.
+
+#     URL: https://registry.opendata.aws/sentinel-2-l2a-cogs/
+#     """
+
+#     catalog = KnownCatalogs.earth_search_s2_cogs
+#     storage_options: dict = {
+#         # "baseurl": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
+#     }
 
 
 # class S2AWSJP2Archive:
@@ -41,14 +88,14 @@ class S2AWSCOGArchive:
 
 
 class KnownArchives(Enum):
-    S2AWS_COG = S2AWSCOGArchive
+    S2AWS_COG = AWSL2ACOGv1
     # S2AWS_JP2 = S2AWSJP2Archive
 
 
 class FormatParams(BaseModel):
     format: str = "Sentinel-2"
     level: ProcessingLevel = ProcessingLevel.level2a
-    archive: KnownArchives = KnownArchives.S2AWS_COG
+    archive: type[Archive] = KnownArchives.S2AWS_COG.value
     start_time: Union[datetime.date, datetime.datetime]
     end_time: Union[datetime.date, datetime.datetime]
 
@@ -101,12 +148,9 @@ class InputData(base.InputData):
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = format_params.start_time
         self.end_time = format_params.end_time
-        self.catalog = format_params.archive.value.catalog.value(
-            bounds=self.bbox(out_crs=4326).bounds,
-            start_time=self.start_time,
-            end_time=self.end_time,
+        self.archive = format_params.archive(
+            self.start_time, self.end_time, self._bounds
         )
-        self.storage_options = format_params.archive.value.storage_options
 
 
 def dict_to_format_params(format_params: dict) -> FormatParams:

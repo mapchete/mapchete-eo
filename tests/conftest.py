@@ -109,6 +109,7 @@ def e84_cog_catalog():
         start_time="2022-06-01",
         end_time="2022-06-06",
         bounds=[16, 46, 17, 47],
+        collections=["sentinel-2-l2a"],
     )
 
 
@@ -118,6 +119,7 @@ def e84_cog_catalog_short():
         start_time="2022-06-01",
         end_time="2022-06-03",
         bounds=[16, 46.4, 16.1, 46.5],
+        collections=["sentinel-2-l2a"],
     )
 
 

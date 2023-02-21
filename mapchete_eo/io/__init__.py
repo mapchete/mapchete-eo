@@ -6,6 +6,7 @@ from mapchete_eo.io.to_xarray import (
     eo_bands_to_assets_indexes,
     group_items_per_property,
     get_item_property,
+    MergeMethod,
 )
 
 __all__ = [

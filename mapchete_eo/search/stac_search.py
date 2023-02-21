@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class STACSearchCatalog(Catalog):
-    ENDPOINT: str
-    COLLECTION: str
+    endpoint: str
 
     def __init__(
         self,
@@ -33,8 +32,10 @@ class STACSearchCatalog(Catalog):
         self.bounds = bounds
         self.start_time = start_time
         self.end_time = end_time
-        self.client = Client.open(endpoint or self.ENDPOINT)
-        self.collections = collections or [self.COLLECTION]
+        self.client = Client.open(endpoint or self.endpoint)
+        if len(collections) == 0:
+            raise ValueError("no collections provided")
+        self.collections = collections
         self.config = dict(
             max_cloud_percent=100.0,
             stac_catalog_chunk_threshold=10000,

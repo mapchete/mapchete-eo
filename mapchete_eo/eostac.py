@@ -9,6 +9,7 @@ from mapchete.io import absolute_path
 from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
+from mapchete_eo.archives.base import Archive
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
@@ -18,6 +19,11 @@ METADATA: dict = {
     "mode": "r",
     "file_extensions": [],
 }
+
+
+class StaticArchive(Archive):
+    def __init__(self, catalog=None, **kwargs):
+        self.catalog = catalog
 
 
 class FormatParams(BaseModel):
@@ -68,12 +74,14 @@ class InputData(base.InputData):
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = format_params.start_time
         self.end_time = format_params.end_time
-        self.catalog = STACStaticCatalog(
-            baseurl=absolute_path(
-                path=format_params.cat_baseurl, base_dir=input_params["conf_dir"]
-            ),
-            bounds=self.bbox(out_crs=4326).bounds,
-            start_time=self.start_time,
-            end_time=self.end_time,
-            time_pattern=format_params.pattern,
+        self.archive = StaticArchive(
+            catalog=STACStaticCatalog(
+                baseurl=absolute_path(
+                    path=format_params.cat_baseurl, base_dir=input_params["conf_dir"]
+                ),
+                bounds=self.bbox(out_crs=4326).bounds,
+                start_time=self.start_time,
+                end_time=self.end_time,
+                time_pattern=format_params.pattern,
+            )
         )

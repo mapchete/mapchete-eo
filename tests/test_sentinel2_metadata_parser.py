@@ -9,15 +9,11 @@ from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.metadata_parser import (
-    S2Metadata,
     MissingAsset,
     Resolution,
 )
-from mapchete_eo.platforms.sentinel2.path_mappers import (
-    SinergisePathMapper,
-    XMLMapper,
-    EarthSearchPathMapper,
-)
+from mapchete_eo.platforms.sentinel2.path_mappers import XMLMapper
+from mapchete_eo.sentinel2 import SinergisePathMapper, EarthSearchPathMapper, S2Metadata
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 
 

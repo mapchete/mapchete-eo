@@ -21,7 +21,7 @@ from rasterio.fill import fillnodata
 from rasterio.transform import from_bounds
 from rasterio.warp import reproject
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Callable
 import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.path_mappers import (
@@ -37,8 +37,13 @@ from mapchete_eo.platforms.sentinel2.types import Resolution, CloudType, L2ABand
 logger = logging.getLogger(__name__)
 
 
+def _default_path_mapper_guesser(*args, **kwargs):
+    return XMLMapper(*args, **kwargs)
+
+
 class S2Metadata:
     _cached_xml_root = None
+    path_mapper_guesser: Callable = _default_path_mapper_guesser
 
     def __init__(
         self,
@@ -66,12 +71,12 @@ class S2Metadata:
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
 
-    @staticmethod
+    @classmethod
     def from_metadata_xml(
+        cls,
         metadata_xml,
         processing_baseline: Union[str, None] = None,
         path_mapper: Union[S2PathMapper, None] = None,
-        guess_path_mapper: bool = True,
         **kwargs,
     ) -> "S2Metadata":
         xml_root = open_xml(metadata_xml)
@@ -79,14 +84,11 @@ class S2Metadata:
             xml_root=xml_root, metadata_xml=metadata_xml, **kwargs
         )
         if path_mapper is None:
-            if guess_path_mapper:
-                path_mapper = S2PathMapper.from_xml_url(
-                    url=metadata_xml,
-                    xml_root=xml_root,
-                    **kwargs,
-                )
-            else:
-                path_mapper = _default_path_mapper
+            path_mapper = cls.path_mapper_guesser(
+                url=metadata_xml,
+                xml_root=xml_root,
+                **kwargs,
+            )
 
         # use processing baseline version from argument if available
         if processing_baseline:
@@ -111,6 +113,7 @@ class S2Metadata:
             "earthsearch:boa_offset_applied",
         ],
         processing_baseline_field: str = "s2:processing_baseline",
+        **kwargs,
     ) -> "S2Metadata":
         metadata_assets = (
             [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
@@ -137,6 +140,7 @@ class S2Metadata:
             metadata_xml=metadata_path,
             processing_baseline=item.properties.get(processing_baseline_field),
             boa_offset_applied=boa_offset_applied,
+            **kwargs,
         )
 
     @cached_property

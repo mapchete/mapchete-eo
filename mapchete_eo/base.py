@@ -27,15 +27,10 @@ class InputTile(base.InputTile):
         self,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        resampling: str = "nearest",
         start_time: Union[str, datetime.datetime, None] = None,
         end_time: Union[str, datetime.datetime, None] = None,
         timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
         time_pattern: Union[str, None] = None,
-        x_axis_name: str = "x",
-        y_axis_name: str = "y",
-        merge_items_by: Union[str, None] = None,
-        merge_method: Union[MergeMethod, str] = MergeMethod.first,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -65,15 +60,7 @@ class InputTile(base.InputTile):
         if len(items) == 0:
             return xr.Dataset()
         return items_to_xarray(
-            items=items,
-            eo_bands=eo_bands,
-            assets=assets,
-            tile=self.tile,
-            resampling=resampling,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            merge_items_by=merge_items_by,
-            merge_method=merge_method,
+            items=items, eo_bands=eo_bands, assets=assets, tile=self.tile, **kwargs
         )
 
     def is_empty(self) -> bool:

@@ -79,7 +79,7 @@ class InputData(base.InputData):
                 baseurl=absolute_path(
                     path=format_params.cat_baseurl, base_dir=input_params["conf_dir"]
                 ),
-                bounds=self.bbox(out_crs=4326).bounds,
+                bounds=self.bbox(out_crs="EPSG:4326").bounds,
                 start_time=self.start_time,
                 end_time=self.end_time,
                 time_pattern=format_params.pattern,

@@ -34,8 +34,12 @@ test_wheel_base_image:
       --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
       --upgrade
       `ls dist/mapchete_eo*.whl -1 | head -1`[test]
-    - pytest -v --cov=mapchete_eo tests/ --cov-report html
+    - pytest -v --cov=mapchete_eo tests/ --cov-report html --cov-report xml
   artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
       name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
       paths:
           - htmlcov
@@ -59,15 +63,18 @@ test_tar_base_image:
       --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
       --upgrade
       `ls dist/mapchete_eo*.tar.gz -1 | head -1`[test]
-    - pytest -v --cov=mapchete_eo tests/ --cov-report html
+    - pytest -v --cov=mapchete_eo tests/ --cov-report html --cov-report xml
   artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
       name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
       paths:
           - htmlcov
       when: on_success
       expire_in: 1 week
   coverage: "/TOTAL.+ ([0-9]{1,3}%)/"
-
 package:
   stage: package
   tags:

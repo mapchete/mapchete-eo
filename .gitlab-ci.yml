@@ -35,6 +35,13 @@ test_wheel_base_image:
       --upgrade
       `ls dist/mapchete_eo*.whl -1 | head -1`[test]
     - pytest -v --cov=mapchete_eo tests/
+  artifacts:
+      name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+      paths:
+          - /workspace/coverage/
+      when: on_success
+      expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+%)$/'
 
 test_tar_base_image:
   stage: test
@@ -53,6 +60,13 @@ test_tar_base_image:
       --upgrade
       `ls dist/mapchete_eo*.tar.gz -1 | head -1`[test]
     - pytest -v --cov=mapchete_eo tests/
+  artifacts:
+      name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+      paths:
+          - /workspace/coverage/
+      when: on_success
+      expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+%)$/'
 
 package:
   stage: package

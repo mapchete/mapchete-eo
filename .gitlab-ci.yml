@@ -8,6 +8,8 @@ default:
 
 build:
   stage: build
+  tags:
+    - dind-test
   artifacts:
     paths:
       - dist/
@@ -18,6 +20,8 @@ build:
 
 test_wheel_base_image:
   stage: test
+  tags:
+    - dind-test
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -34,6 +38,8 @@ test_wheel_base_image:
 
 test_tar_base_image:
   stage: test
+  tags:
+    - dind-test
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -50,6 +56,8 @@ test_tar_base_image:
 
 package:
   stage: package
+  tags:
+    - dind-test
   before_script:
     - pip install --upgrade hatch
   script:

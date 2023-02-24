@@ -109,20 +109,6 @@ class EarthSearchPathMapper(SinergisePathMapper):
     no vector cloudmasks available anymore
     """
 
-    _PRE_0400_MASK_PATHS = {
-        "clouds": "MSK_CLOUDS_B00.gml",
-        "detector_footprints": "MSK_DETFOO_{band}.gml",
-        "technical_quality": "MSK_TECQUA_{band}.gml",
-        "defective": "MSK_DEFECT_{band}.gml",
-        "saturated": "MSK_SATURA_{band}.gml",
-        "nodata": "MSK_NODATA_{band}.gml",
-    }
-    _POST_0400_MASK_PATHS = {
-        "clouds": "CLASSI_B00.jp2",
-        "detector_footprints": "DETFOO_{band}.jp2",
-        "technical_quality": "QUALIT_{band}.jp2",
-    }
-
     def __init__(
         self,
         metadata_xml: str,
@@ -245,7 +231,6 @@ class KnownArchives(Enum):
 
 class FormatParams(BaseModel):
     format: str = "Sentinel-2"
-    level: ProcessingLevel = ProcessingLevel.level2a
     archive: Type[Archive] = KnownArchives.S2AWS_COG.value
     start_time: Union[datetime.date, datetime.datetime]
     end_time: Union[datetime.date, datetime.datetime]

@@ -201,120 +201,137 @@ def tileinfo_jp2_schema():
 
 @pytest.fixture(scope="session")
 def stac_item_pb0509():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_32TMS_20221207_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0400():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220130_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220130_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20220130_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0400_offset():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220226_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220226_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20220226_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0301():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20220122_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20220122_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20220122_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0300():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210629_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210629_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20210629_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0214():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210328_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210328_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20210328_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0213():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20200202_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20200202_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20200202_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0212():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20190707_1_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20190707_1_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20190707_1_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0211():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20190503_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20190503_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20190503_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0210():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20181119_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20181119_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20181119_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0209():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181104_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181104_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20181104_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0208():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181005_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181005_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20181005_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb0207():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180521_1_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180521_1_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20180521_1_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb_l1c_0206():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20180806_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb_l1c_0205():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20171005_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20171005_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20171005_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_pb_l1c_0204():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20161202_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20161202_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2A_33TWN_20161202_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
 def stac_item_invalid_pb0001():
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"""
     return pystac.Item.from_file(
-        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"
+        os.path.join(TESTDATA_DIR, "stac_items", "S2B_33TWN_20180806_0_L2A")
     )
 
 

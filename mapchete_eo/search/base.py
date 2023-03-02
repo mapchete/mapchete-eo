@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import json
 import logging
 import os
-from typing import Union, List
+from typing import Union, List, Callable
 
 from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures
@@ -76,6 +76,7 @@ class Catalog(ABC):
         assets_dst_resolution: Union[int, None] = None,
         overwrite: bool = False,
         stac_io: DefaultStacIO = FSSpecStacIO(),
+        progress_callback: Union[Callable, None] = None,
     ):
         """Dump static version of current items."""
 
@@ -92,7 +93,7 @@ class Catalog(ABC):
 
             # collect all items and download assets if required
             items: List[pystac.Item] = []
-            for item in self.items:
+            for n, item in enumerate(self.items, 1):
                 logger.debug("found item %s", item)
                 item = item.clone()
                 if assets:
@@ -109,6 +110,8 @@ class Catalog(ABC):
                 # after normalizing
                 item.set_self_href(None)
                 items.append(item)
+                if progress_callback:
+                    progress_callback(n=n, total=len(self.items))
 
             # create collection and copy metadata
             new_collection = Collection(

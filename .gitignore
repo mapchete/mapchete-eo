@@ -4,6 +4,7 @@
 .cache
 htmlcov
 .coverage
+.coverage.*
 build/
 dist/
 .pytest*

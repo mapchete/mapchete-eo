@@ -27,6 +27,7 @@ dependencies = [
     "pystac",
     "pystac_client",
     "rtree",
+    "tqdm",
     "xarray",
 ]
 

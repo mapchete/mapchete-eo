@@ -1,9 +1,28 @@
 from multiprocessing.sharedctypes import Value
 import click
 from mapchete.cli.options import opt_bounds, opt_debug
+import tqdm
+from typing import Union
 
-from mapchete_eo.known_catalogs import E84Sentinel2COGs
+from mapchete_eo.sentinel2 import AWSL2ACOGv1
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
+
+
+class TqdmUpTo(tqdm.tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+
+    def update_to(self, n: int = 1, nsize: int = 1, total: Union[int, None] = None):
+        """
+        n  : int, optional
+            Number of blocks transferred so far [default: 1].
+        nsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        total  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if total is not None:
+            self.total = total
+        return self.update(n * nsize - self.n)  # also sets self.n = b * bsize
 
 
 def _str_to_list(_, __, value):
@@ -93,9 +112,9 @@ def static_catalog(
 
     if archive:
         if archive == "sentinel-s2-l2a-cogs":
-            catalog = E84Sentinel2COGs(
+            catalog = AWSL2ACOGv1(
                 bounds=bounds, start_time=start_time, end_time=end_time
-            )
+            ).catalog
         else:
             raise ValueError(
                 "currently ony archive 'sentinel-s2-l2a-cogs' is supported"
@@ -115,13 +134,15 @@ def static_catalog(
             end_time=end_time,
         )
 
-    catalog_json = catalog.write_static_catalog(
-        dst_path,
-        name=name,
-        description=description,
-        assets=assets,
-        assets_dst_resolution=assets_dst_resolution,
-        overwrite=overwrite,
-    )
+    with TqdmUpTo(unit="B", unit_scale=True, unit_divisor=1024, miniters=1) as progress:
+        catalog_json = catalog.write_static_catalog(
+            dst_path,
+            name=name,
+            description=description,
+            assets=assets,
+            assets_dst_resolution=assets_dst_resolution,
+            overwrite=overwrite,
+            progress_callback=progress.update_to,
+        )
 
     click.echo(f"Catalog successfully written to {catalog_json}")

@@ -208,14 +208,14 @@ S2Metadata.from_stac_item_constructor = s2metadata_from_stac_item
 
 class AWSL2ACOGv0(Archive):
     catalog_cls = EarthSearchV0S2L2A
-    collection = "sentinel-s2-l2a-cogs"
+    collection_name = "sentinel-s2-l2a-cogs"
     processing_level = ProcessingLevel.level2a
     path_mapper_cls = EarthSearchPathMapper
 
 
 class AWSL2ACOGv1(Archive):
     catalog_cls = EarthSearchV1S2L2A
-    collection = "sentinel-2-l2a"
+    collection_name = "sentinel-2-l2a"
     processing_level = ProcessingLevel.level2a
     path_mapper_cls = EarthSearchPathMapper
 

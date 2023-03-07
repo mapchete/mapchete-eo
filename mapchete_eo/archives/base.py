@@ -10,11 +10,11 @@ class Archive(ABC):
     """
 
     catalog_cls: Type[Catalog]
-    collection: str
+    collection_name: str
 
     def __init__(self, start_time=None, end_time=None, bounds=None):
         self.catalog = self.catalog_cls(
-            collections=[self.collection],
+            collections=[self.collection_name],
             start_time=start_time,
             end_time=end_time,
             bounds=bounds,

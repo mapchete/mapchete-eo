@@ -4,6 +4,7 @@ import rasterio
 from mapchete.io import fs_from_path, path_exists
 from mapchete.io.vector import IndexedFeatures
 
+from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACStaticCatalog
 
 
@@ -82,11 +83,11 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
 @pytest.mark.webtest
 def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
     asset = "coastal"
-    resolution = 120.0
+    resolution = Resolution["120m"]
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),
         assets=[asset],
-        assets_dst_resolution=120,
+        assets_dst_resolution=resolution,
     )
     cat = pystac.Catalog.from_file(output_path)
     assert len(list(cat.get_all_items())) == 1
@@ -94,5 +95,5 @@ def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
         assert "http" not in item.assets[asset].href
         item.make_asset_hrefs_absolute()
         with rasterio.open(item.assets[asset].href) as src:
-            assert src.meta["transform"][0] == resolution
+            assert src.meta["transform"][0] == resolution.value
             assert src.read(masked=True).any()

@@ -13,6 +13,8 @@ from mapchete.io import copy, fs_from_path, makedirs, path_is_remote
 from mapchete.io.raster import rasterio_write
 from rasterio.vrt import WarpedVRT
 
+from mapchete_eo.platforms.sentinel2.types import Resolution
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,14 +42,14 @@ def get_assets(
     dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     ignore_if_exists: bool = False,
-    resolution: Union[int, None] = None,
+    resolution: Resolution = Resolution["original"],
     compression: str = "deflate",
     driver: str = "COG",
     item_href_in_dst_dir: bool = True,
     convert_file_extensions: List[str] = [".tif", ".jp2"],
 ) -> pystac.Item:
     for asset in assets:
-        if resolution and asset_href(item, asset).endswith(
+        if resolution != Resolution.original and asset_href(item, asset).endswith(
             tuple(convert_file_extensions)
         ):
             item = convert_asset(
@@ -56,7 +58,7 @@ def get_assets(
                 dst_dir,
                 src_fs=src_fs,
                 dst_fs=dst_fs,
-                resolution=resolution,
+                resolution=resolution.value,
                 overwrite=overwrite,
                 ignore_if_exists=ignore_if_exists,
                 compression=compression,

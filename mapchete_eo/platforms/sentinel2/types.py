@@ -2,7 +2,18 @@ from dataclasses import dataclass
 from enum import Enum, IntEnum
 
 
-Resolution = Enum("Resolution", ["10m", "20m", "60m", "120m"])
+Resolution = Enum(
+    "Resolution",
+    {
+        "original": None,
+        "10m": 10,
+        "20m": 20,
+        "60m": 60,
+        "120m": 120,
+    },
+)
+
+
 CloudType = Enum("CloudType", ["opaque", "cirrus"])
 L2ABand = Enum(
     "L2ABand",

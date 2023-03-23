@@ -5,6 +5,7 @@ import tqdm
 from typing import Union
 
 from mapchete_eo.sentinel2 import AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 
@@ -30,6 +31,11 @@ def _str_to_list(_, __, value):
         return value.split(",")
 
 
+def _str_to_resolution(_, __, value):
+    if value:
+        return Resolution[value]
+
+
 @click.group(help="Tools around mapchete EO package.")
 @click.pass_context
 def eo(ctx):
@@ -40,6 +46,7 @@ def eo(ctx):
 @click.pass_context
 @click.argument("dst_path", type=click.Path())
 @opt_bounds
+@click.option("--mgrs-tile", type=click.STRING)
 @click.option("--start-time", type=click.STRING, help="Start time")
 @click.option("--end-time", type=click.STRING, help="End time")
 @click.option(
@@ -73,8 +80,10 @@ def eo(ctx):
 )
 @click.option(
     "--assets-dst-resolution",
-    type=click.INT,
-    default=60,
+    type=click.Choice(list(Resolution.__members__.keys())),
+    default="original",
+    show_default=True,
+    callback=_str_to_resolution,
     help="Resample assets to this resolution in meter.",
 )
 @click.option("--overwrite", "-o", is_flag=True, help="Overwrite existing files.")
@@ -83,6 +92,7 @@ def static_catalog(
     ctx,
     dst_path,
     bounds=None,
+    mgrs_tile=None,
     start_time=None,
     end_time=None,
     archive=None,
@@ -105,15 +115,18 @@ def static_catalog(
         raise click.ClickException(
             "exactly one of --archive, --catalog-json or --endpoint has to be set."
         )
-    if any([bounds is None, start_time is None, end_time is None]):
-        raise click.ClickException(
-            "--bounds, --start-time and --end-time are mandatory"
-        )
+    if any([start_time is None, end_time is None]):
+        raise click.ClickException("--start-time and --end-time are mandatory")
+    if all([bounds is None, mgrs_tile is None]):
+        raise click.ClickException("--bounds and --mgrs-tile are required")
 
     if archive:
         if archive == "sentinel-s2-l2a-cogs":
             catalog = AWSL2ACOGv1(
-                bounds=bounds, start_time=start_time, end_time=end_time
+                bounds=bounds,
+                start_time=start_time,
+                end_time=end_time,
+                mgrs_tile=mgrs_tile,
             ).catalog
         else:
             raise ValueError(
@@ -134,7 +147,7 @@ def static_catalog(
             end_time=end_time,
         )
 
-    with TqdmUpTo(unit="B", unit_scale=True, unit_divisor=1024, miniters=1) as progress:
+    with TqdmUpTo(unit="products", unit_scale=True, miniters=1) as progress:
         catalog_json = catalog.write_static_catalog(
             dst_path,
             name=name,

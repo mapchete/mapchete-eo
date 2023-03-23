@@ -13,6 +13,7 @@ from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
 
 from mapchete_eo.io.assets import get_assets
+from mapchete_eo.platforms.sentinel2.types import Resolution
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class Catalog(ABC):
         name: Union[str, None] = None,
         description: Union[str, None] = None,
         assets: List[str] = [],
-        assets_dst_resolution: Union[int, None] = None,
+        assets_dst_resolution: Resolution = Resolution["original"],
         overwrite: bool = False,
         stac_io: DefaultStacIO = FSSpecStacIO(),
         progress_callback: Union[Callable, None] = None,

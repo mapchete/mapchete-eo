@@ -3,12 +3,11 @@ A path mapper maps from an metadata XML file to additional metadata
 on a given archive or a local SAFE file.
 """
 
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
 from cached_property import cached_property
 from fsspec.exceptions import FSTimeoutError
 import logging
-from mapchete.io import fs_from_path
-import os
+from mapchete.path import MPath
 from retry import retry
 from typing import Union
 import xml.etree.ElementTree as etree
@@ -25,10 +24,9 @@ logger = logging.getLogger(__name__)
     exceptions=(TimeoutError, FSTimeoutError),
     **MP_EO_IO_RETRY_SETTINGS,
 )
-def open_xml(path):
+def open_xml(path: MPath):
     logger.debug(f"open {path}")
-    with fs_from_path(path).open(path, "r") as src:
-        return etree.fromstring(src.read())
+    return etree.fromstring(path.read_text())
 
 
 class S2PathMapper(ABC):
@@ -52,13 +50,13 @@ class S2PathMapper(ABC):
             raise KeyError(f"band name {band_name} not found in {self._bands}")
 
     @abstractmethod
-    def cloud_mask(self) -> str:
+    def cloud_mask(self) -> MPath:
         ...
 
     @abstractmethod
     def band_qi_mask(
         self, qi_mask: Union[str, None] = None, band=Union[str, int, None]
-    ) -> str:
+    ) -> MPath:
         ...
 
 
@@ -66,10 +64,11 @@ class XMLMapper(S2PathMapper):
     _cached_xml_root = None
 
     def __init__(
-        self, metadata_xml: str, xml_root: Union[etree.Element, None] = None, **kwargs
+        self, metadata_xml: MPath, xml_root: Union[etree.Element, None] = None, **kwargs
     ):
+        self.metadata_xml = metadata_xml
         self._cached_xml_root = xml_root
-        self._metadata_dir = os.path.dirname(metadata_xml)
+        self._metadata_dir = metadata_xml.parent
 
     @cached_property
     def xml_root(self):
@@ -99,7 +98,7 @@ class XMLMapper(S2PathMapper):
                 return ProcessingBaseline.from_version(f"{l1c_version}")
 
     def _qi_mask_abs_path(self, qi_path) -> str:
-        return os.path.join(self._metadata_dir, qi_path)
+        return self._metadata_dir / qi_path
 
     def cloud_mask(self) -> str:
         for i in self.xml_root.iter():

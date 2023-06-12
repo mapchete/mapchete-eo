@@ -1,7 +1,6 @@
 from collections import defaultdict
 import logging
 import math
-import os
 from typing import List, Union
 
 import fsspec
@@ -9,8 +8,9 @@ import pystac
 import rasterio
 from affine import Affine
 from mapchete import Timer
-from mapchete.io import copy, fs_from_path, makedirs, path_is_remote
+from mapchete.io import copy
 from mapchete.io.raster import rasterio_write
+from mapchete.path import MPath
 from rasterio.vrt import WarpedVRT
 
 from mapchete_eo.platforms.sentinel2.types import Resolution
@@ -19,15 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 def path_is_relative(path):
-    if path_is_remote(path):
-        return False
-    else:
-        return not os.path.isabs(path)
+    return not MPath.from_inp(path).is_absolute()
 
 
-def asset_href(item: pystac.Item, asset: str) -> str:
+def asset_href(
+    item: pystac.Item, asset: str, fs: fsspec.AbstractFileSystem = None
+) -> MPath:
     try:
-        return item.assets[asset].href
+        return MPath(item.assets[asset].href, fs=fs)
     except KeyError:
         raise KeyError(
             f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
@@ -37,9 +36,8 @@ def asset_href(item: pystac.Item, asset: str) -> str:
 def get_assets(
     item: pystac.Item,
     assets: List[str],
-    dst_dir: str,
+    dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
-    dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     ignore_if_exists: bool = False,
     resolution: Resolution = Resolution["original"],
@@ -57,7 +55,6 @@ def get_assets(
                 asset,
                 dst_dir,
                 src_fs=src_fs,
-                dst_fs=dst_fs,
                 resolution=resolution.value,
                 overwrite=overwrite,
                 ignore_if_exists=ignore_if_exists,
@@ -70,8 +67,6 @@ def get_assets(
                 item,
                 asset,
                 dst_dir,
-                src_fs=src_fs,
-                dst_fs=dst_fs,
                 overwrite=overwrite,
                 ignore_if_exists=ignore_if_exists,
                 item_href_in_dst_dir=item_href_in_dst_dir,
@@ -82,26 +77,24 @@ def get_assets(
 def copy_asset(
     item: pystac.Item,
     asset: str,
-    dst_dir: str,
+    dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
-    dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     ignore_if_exists: bool = False,
     item_href_in_dst_dir: bool = True,
 ) -> pystac.Item:
     """Copy asset from one place to another."""
 
-    asset_path = asset_href(item, asset)
-    output_path = os.path.join(dst_dir, os.path.basename(asset_path))
-    dst_fs = dst_fs or src_fs or fs_from_path(output_path)
+    asset_path = asset_href(item, asset, fs=src_fs)
+    output_path = dst_dir / asset_path.name
 
     # write relative path into asset.href if Item will be in the same directory
-    if item_href_in_dst_dir and path_is_relative(output_path):
-        item.assets[asset].href = os.path.basename(asset_path)
+    if item_href_in_dst_dir and not output_path.is_absolute():
+        item.assets[asset].href = asset_path.name
     else:
-        item.assets[asset].href = output_path
+        item.assets[asset].href = str(output_path)
 
-    if dst_fs.exists(output_path):
+    if output_path.exists():
         if ignore_if_exists:
             logger.debug("ignore existing asset %s", output_path)
             return item
@@ -111,15 +104,13 @@ def copy_asset(
         else:
             raise IOError(f"{output_path} already exists")
     else:
-        makedirs(dst_dir, fs=dst_fs)
+        dst_dir.makedirs()
 
     with Timer() as t:
         logger.debug("copy asset %s to %s ...", asset_path, dst_dir)
         copy(
             asset_path,
             output_path,
-            src_fs=src_fs,
-            dst_fs=dst_fs,
             overwrite=overwrite,
         )
     logger.debug("copied asset '%s' in %s", asset, t)
@@ -130,9 +121,8 @@ def copy_asset(
 def convert_asset(
     item: pystac.Item,
     asset: str,
-    dst_dir: str,
+    dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
-    dst_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     ignore_if_exists: bool = False,
     resolution: int = 10,
@@ -140,17 +130,16 @@ def convert_asset(
     driver: str = "COG",
     item_href_in_dst_dir: bool = True,
 ) -> pystac.Item:
-    asset_path = asset_href(item, asset)
-    output_path = os.path.join(dst_dir, os.path.basename(asset_path))
-    dst_fs = dst_fs or src_fs or fs_from_path(output_path)
+    asset_path = asset_href(item, asset, fs=src_fs)
+    output_path = dst_dir / asset_path.name
 
     # write relative path into asset.href if Item will be in the same directory
-    if item_href_in_dst_dir and path_is_relative(output_path):
-        item.assets[asset].href = os.path.basename(asset_path)
+    if item_href_in_dst_dir and not output_path.is_absolute():
+        item.assets[asset].href = asset_path.name
     else:
-        item.assets[asset].href = output_path
+        item.assets[asset].href = str(output_path)
 
-    if dst_fs.exists(output_path):
+    if output_path.exists():
         if ignore_if_exists:
             logger.debug("ignore existing asset %s", output_path)
             return item
@@ -160,7 +149,7 @@ def convert_asset(
         else:
             raise IOError(f"{output_path} already exists")
     else:
-        makedirs(dst_dir, fs=dst_fs)
+        dst_dir.makedirs()
 
     with Timer() as t:
         logger.debug(

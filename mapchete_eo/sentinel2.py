@@ -4,8 +4,8 @@ Reader driver for Sentinel-2 data.
 import datetime
 from enum import Enum
 import json
-from mapchete.io import fs_from_path
 from mapchete.tile import BufferedTile
+from mapchete.path import MPath
 import os
 from pydantic import BaseModel
 from pystac import Item
@@ -53,14 +53,17 @@ class SinergisePathMapper(S2PathMapper):
 
     def __init__(
         self,
-        url: str,
-        bucket="sentinel-s2-l2a",
-        protocol="s3",
-        baseline_version="04.00",
+        url: Union[MPath, str],
+        bucket: str = "sentinel-s2-l2a",
+        protocol: str = "s3",
+        baseline_version: str = "04.00",
         **kwargs,
     ):
-        tileinfo_path = f"{os.path.dirname(url)}/tileInfo.json"
-        self._path = "/".join(tileinfo_path.split("/")[-9:-1])
+        url = MPath.from_inp(url)
+        tileinfo_path = url.parent / "tileInfo.json"
+        self._path = MPath(
+            "/".join(tileinfo_path.elements[-9:-1]), **tileinfo_path._kwargs
+        )
         self._utm_zone, self._latitude_band, self._grid_square = self._path.split("/")[
             1:-4
         ]
@@ -74,7 +77,7 @@ class SinergisePathMapper(S2PathMapper):
         else:
             mask_path = self._POST_0400_MASK_PATHS["clouds"]
         key = f"{self._path}/qi/{mask_path}"
-        return f"{self._protocol}://{self._baseurl}/{key}"
+        return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
     def _band_mask(self, qi_mask, band=None) -> str:
         try:
@@ -89,7 +92,7 @@ class SinergisePathMapper(S2PathMapper):
         if band not in self._bands:
             raise KeyError(f"band must be one of {self._bands}, not {band}")
         key = f"{self._path}/qi/{mask_path.format(band=band)}"
-        return f"{self._protocol}://{self._baseurl}/{key}"
+        return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
     def band_qi_mask(self, qi_mask=None, band=None) -> str:
         return self._band_mask(qi_mask=qi_mask, band=band)
@@ -111,20 +114,16 @@ class EarthSearchPathMapper(SinergisePathMapper):
 
     def __init__(
         self,
-        metadata_xml: str,
+        metadata_xml: MPath,
         alternative_metadata_baseurl: str = "sentinel-s2-l2a",
         protocol: str = "s3",
         baseline_version="04.00",
         **kwargs,
     ):
-        _basedir = os.path.dirname(metadata_xml)
-        tileinfo_metadata = f"{_basedir}/tileinfo_metadata.json"
-        with fs_from_path(tileinfo_metadata).open(tileinfo_metadata) as src:
-            tileinfo = json.loads(src.read())
-            self._path = tileinfo["path"]
-        self._utm_zone, self._latitude_band, self._grid_square = _basedir.split("/")[
-            -6:-3
-        ]
+        basedir = metadata_xml.parent
+        tileinfo = json.loads((basedir / "tileinfo_metadata.json").read_text())
+        self._path = tileinfo["path"]
+        self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol
         self.processing_baseline = ProcessingBaseline.from_version(baseline_version)

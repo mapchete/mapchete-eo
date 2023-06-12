@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Union, Dict, List
 
 from mapchete.io.vector import IndexedFeatures
+from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from mapchete.validate import validate_bounds
 from pystac_client import Client
@@ -20,7 +21,7 @@ class STACSearchCatalog(Catalog):
 
     def __init__(
         self,
-        endpoint: Union[str, None] = None,
+        endpoint: Union[str, MPath, None] = None,
         start_time: Union[datetime.date, datetime.datetime, None] = None,
         end_time: Union[datetime.date, datetime.datetime, None] = None,
         collections: List[str] = [],

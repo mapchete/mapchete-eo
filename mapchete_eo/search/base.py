@@ -6,6 +6,7 @@ from typing import Union, List, Callable
 
 from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures
+from mapchete.path import MPath
 import pystac
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
@@ -21,28 +22,27 @@ logger = logging.getLogger(__name__)
 class FSSpecStacIO(StacApiIO):
     """Custom class which allows I/O operations on object storage."""
 
-    def read_text(self, source: Union[str, os.PathLike], *args, **kwargs) -> str:
-        fs = fs_from_path(source)
-        with fs.open(source) as src:
-            return src.read()
+    def read_text(self, source: Union[str, os.PathLike, MPath], *args, **kwargs) -> str:
+        path = MPath.from_inp(source)
+        return path.read_text()
 
     def write_text(
-        self, dest: Union[str, os.PathLike], txt: str, *args, **kwargs
+        self, dest: Union[str, os.PathLike, MPath], txt: str, *args, **kwargs
     ) -> None:
-        fs = fs_from_path(dest)
-        fs.mkdirs(os.path.dirname(dest), exist_ok=True)
-        with fs.open(dest, "w", auto_mkdir=True) as dst:
+        path = MPath.from_inp(dest)
+        path.parent.makedirs(exist_ok=True)
+        with path.open("w") as dst:
             return dst.write(txt)
 
     # TODO: investigate in pystac why this has to be a staticmethod
     @staticmethod
     def save_json(
-        dest: Union[str, os.PathLike], json_dict: dict, *args, **kwargs
+        dest: Union[str, os.PathLike, MPath], json_dict: dict, *args, **kwargs
     ) -> None:
         json_txt = json.dumps(json_dict)
-        fs = fs_from_path(dest)
-        fs.mkdirs(os.path.dirname(dest), exist_ok=True)
-        with fs.open(dest, "w", auto_mkdir=True) as dst:
+        path = MPath.from_inp(dest)
+        path.parent.makedirs(exist_ok=True)
+        with path.open("w") as dst:
             return dst.write(json_txt)
 
     def conforms_to(self, *args):
@@ -70,7 +70,7 @@ class Catalog(ABC):
 
     def write_static_catalog(
         self,
-        output_path: str,
+        output_path: Union[MPath, str],
         name: Union[str, None] = None,
         description: Union[str, None] = None,
         assets: List[str] = [],
@@ -78,11 +78,12 @@ class Catalog(ABC):
         overwrite: bool = False,
         stac_io: DefaultStacIO = FSSpecStacIO(),
         progress_callback: Union[Callable, None] = None,
-    ):
+    ) -> MPath:
         """Dump static version of current items."""
+        output_path = MPath.from_inp(output_path)
 
         # initialize catalog
-        catalog_json = os.path.join(output_path, "catalog.json")
+        catalog_json = output_path / "catalog.json"
         catalog = pystac.Catalog(
             name or f"{self.client.id}",
             description or f"Static subset of {self.client.description}",
@@ -102,7 +103,7 @@ class Catalog(ABC):
                     item = get_assets(
                         item,
                         assets,
-                        os.path.join(output_path, collection.id, item.id),
+                        output_path / collection.id / item.id,
                         resolution=assets_dst_resolution,
                         overwrite=overwrite,
                         ignore_if_exists=True,
@@ -136,8 +137,8 @@ class Catalog(ABC):
             catalog.add_child(new_collection)
 
         logger.debug("write catalog to %s", output_path)
-        catalog.normalize_hrefs(output_path)
+        catalog.normalize_hrefs(str(output_path))
         catalog.make_all_asset_hrefs_relative()
-        catalog.save(dest_href=output_path, stac_io=stac_io)
+        catalog.save(dest_href=str(output_path), stac_io=stac_io)
 
         return catalog_json

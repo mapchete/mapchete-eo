@@ -27,7 +27,7 @@ class STACStaticCatalog(Catalog):
         bounds: Bounds = None,
         **kwargs,
     ) -> None:
-        self.client = Client.from_file(baseurl, stac_io=FSSpecStacIO())
+        self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
         self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
         self.start_time = start_time

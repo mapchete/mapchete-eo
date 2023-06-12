@@ -4,7 +4,7 @@ stages:
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.1.1
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.2
 
 build:
   stage: build

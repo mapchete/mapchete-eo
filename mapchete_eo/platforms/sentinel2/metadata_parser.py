@@ -6,13 +6,12 @@ sun angles, quality masks, etc.
 from affine import Affine
 from cached_property import cached_property
 from contextlib import contextmanager
-import fiona
 from fiona.transform import transform_geom
 import logging
-from mapchete.io import copy
+from mapchete.io import copy, fiona_open
+from mapchete.path import MPath
 import numpy as np
 import numpy.ma as ma
-import os
 from pystac import Item
 import rasterio
 from rasterio.enums import Resampling
@@ -58,7 +57,7 @@ class S2Metadata:
 
     def __init__(
         self,
-        metadata_xml: str,
+        metadata_xml: MPath,
         path_mapper: S2PathMapper,
         xml_root: Union[etree.Element, None] = None,
         boa_offset: float = -1000,
@@ -71,7 +70,7 @@ class S2Metadata:
         self.processing_baseline = path_mapper.processing_baseline
         self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
-        self._metadata_dir = os.path.dirname(metadata_xml)
+        self._metadata_dir = metadata_xml.parent
         self._band_masks_cache: Dict[str, dict] = {k: dict() for k in QI_MASKS.keys()}
         self._cloud_masks_cache: Union[List, None] = None
         self._viewing_incidence_angles_cache: Dict = {}
@@ -85,11 +84,12 @@ class S2Metadata:
     @classmethod
     def from_metadata_xml(
         cls,
-        metadata_xml,
+        metadata_xml: Union[str, MPath],
         processing_baseline: Union[str, None] = None,
         path_mapper: Union[S2PathMapper, None] = None,
         **kwargs,
     ) -> "S2Metadata":
+        metadata_xml = MPath.from_inp(metadata_xml, **kwargs)
         xml_root = open_xml(metadata_xml)
         if path_mapper is None:
             # guess correct path mapper
@@ -527,7 +527,7 @@ class S2Metadata:
         logger.debug(f"open {mask_path} with Fiona")
         with _cached_path(mask_path) as cached:
             try:
-                with fiona.open(cached) as src:
+                with fiona_open(cached) as src:
                     return list([dict(f) for f in src])
             except ValueError as e:
                 # this happens if GML file is empty
@@ -574,11 +574,13 @@ class S2Metadata:
 
 
 @contextmanager
-def _cached_path(path, timeout=5, requester_payer="requester", region="eu-central-1"):
+def _cached_path(
+    path: MPath, timeout=5, requester_payer="requester", region="eu-central-1"
+):
     """If path is remote, download to temporary directory and return path."""
-    if path.startswith(("s3://", "http://", "https://")):
+    if path.is_remote():
         with TemporaryDirectory() as tempdir:
-            tempfile = os.path.join(tempdir, os.path.basename(path))
+            tempfile = MPath(tempdir) / path.name
             logger.debug(f"{path} is remote, download to {tempfile}")
             copy(
                 path,

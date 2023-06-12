@@ -41,7 +41,7 @@ def test_pf_qa_eo_bands(pf_qa_stac_collection):
 @pytest.mark.webtest
 def test_write_static_catalog(e84_cog_catalog, tmp_path):
     output_path = e84_cog_catalog.write_static_catalog(output_path=str(tmp_path))
-    cat = pystac.Catalog.from_file(output_path)
+    cat = pystac.Catalog.from_file(str(output_path))
     assert len(list(cat.get_all_items())) == 18
 
 
@@ -51,7 +51,7 @@ def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
         output_path=str(tmp_path),
         assets=["granule_metadata"],
     )
-    cat = pystac.Catalog.from_file(output_path)
+    cat = pystac.Catalog.from_file(str(output_path))
     assert len(list(cat.get_all_items())) == 1
     for item in cat.get_all_items():
         assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
@@ -67,7 +67,7 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
             output_path=str(tmp_path),
             assets=["granule_metadata"],
         )
-        cat = pystac.Catalog.from_file(output_path)
+        cat = pystac.Catalog.from_file(str(output_path))
         assert len(list(cat.get_all_items())) == 1
         for item in cat.get_all_items():
             assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
@@ -89,7 +89,7 @@ def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
         assets=[asset],
         assets_dst_resolution=resolution,
     )
-    cat = pystac.Catalog.from_file(output_path)
+    cat = pystac.Catalog.from_file(str(output_path))
     assert len(list(cat.get_all_items())) == 1
     for item in cat.get_all_items():
         assert "http" not in item.assets[asset].href

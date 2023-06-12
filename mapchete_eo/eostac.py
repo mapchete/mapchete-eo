@@ -5,7 +5,7 @@ import datetime
 from pydantic import BaseModel
 from typing import Union
 
-from mapchete.io import absolute_path
+from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
@@ -76,8 +76,8 @@ class InputData(base.InputData):
         self.end_time = format_params.end_time
         self.archive = StaticArchive(
             catalog=STACStaticCatalog(
-                baseurl=absolute_path(
-                    path=format_params.cat_baseurl, base_dir=input_params["conf_dir"]
+                baseurl=MPath(format_params.cat_baseurl).absolute_path(
+                    base_dir=input_params["conf_dir"]
                 ),
                 bounds=self.bbox(out_crs="EPSG:4326").bounds,
                 start_time=self.start_time,

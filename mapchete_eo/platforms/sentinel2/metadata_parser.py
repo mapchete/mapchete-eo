@@ -8,12 +8,11 @@ from cached_property import cached_property
 from contextlib import contextmanager
 from fiona.transform import transform_geom
 import logging
-from mapchete.io import copy, fiona_open
+from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.path import MPath
 import numpy as np
 import numpy.ma as ma
 from pystac import Item
-import rasterio
 from rasterio.enums import Resampling
 from rasterio.features import geometry_mask, shapes
 from rasterio.fill import fillnodata
@@ -546,7 +545,7 @@ class S2Metadata:
 
         def _gen():
             with _cached_path(mask_path) as cached:
-                with rasterio.open(cached) as src:
+                with rasterio_open(cached) as src:
                     for index in indexes:
                         arr = src.read(index)
                         mask = np.where(arr == 0, False, True)

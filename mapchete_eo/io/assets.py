@@ -5,11 +5,9 @@ from typing import List, Union
 
 import fsspec
 import pystac
-import rasterio
 from affine import Affine
 from mapchete import Timer
-from mapchete.io import copy
-from mapchete.io.raster import rasterio_write
+from mapchete.io import copy, rasterio_open
 from mapchete.path import MPath
 from rasterio.vrt import WarpedVRT
 
@@ -160,7 +158,7 @@ def convert_asset(
             compression,
             driver,
         )
-        with rasterio.open(asset_path, "r") as src:
+        with rasterio_open(asset_path, "r") as src:
             meta = src.meta
             src_transform = src.transform
             src_res = src.transform[0]
@@ -183,7 +181,7 @@ def convert_asset(
                 height=dst_height,
                 compress=compression,
             )
-            with rasterio_write(output_path, "w", **meta) as dst:
+            with rasterio_open(output_path, "w", **meta) as dst:
                 with WarpedVRT(
                     src,
                     width=dst_width,

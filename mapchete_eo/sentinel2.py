@@ -6,7 +6,6 @@ from enum import Enum
 import json
 from mapchete.tile import BufferedTile
 from mapchete.path import MPath
-import os
 from pydantic import BaseModel
 from pystac import Item
 from typing import Union, List, Type

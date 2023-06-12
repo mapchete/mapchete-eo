@@ -3,7 +3,6 @@ Catalogs define access to a search interface which provide products
 as pystac Items.
 """
 
-from enum import Enum
 
 from mapchete_eo.search import STACSearchCatalog
 

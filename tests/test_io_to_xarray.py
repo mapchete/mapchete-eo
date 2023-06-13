@@ -88,24 +88,34 @@ def test_get_item_property_date(s2_stac_item):
     )
 
 
-def test_get_item_property_properties(s2_stac_item):
-    for property, value in {
-        "platform": "sentinel-2a",
-        "constellation": "sentinel-2",
-        "instruments": ["msi"],
-        "proj:epsg": 32633,
-        "eo:cloud_cover": 94.103563,
-        "mgrs:utm_zone": 33,
-        "mgrs:latitude_band": "U",
-        "mgrs:grid_square": "WP",
-        "s2:sequence": "0",
-        "s2:granule_id": "S2A_OPER_MSI_L2A_TL_VGS4_20220405T120515_A035440_T33UWP_N04.00",
-        "s2:processing_baseline": "04.00",
-        "earthsearch:boa_offset_applied": True,
-        "created": "2022-11-06T12:37:04.689Z",
-        "updated": "2022-11-06T12:37:04.689Z",
-    }.items():
-        assert get_item_property(s2_stac_item, property) == value
+@pytest.mark.parametrize(
+    "key, expected_value",
+    [
+        ("platform", "sentinel-2a"),
+        ("constellation", "sentinel-2"),
+        ("instruments", ["msi"]),
+        ("proj:epsg", 32633),
+        ("eo:cloud_cover", 94.103563),
+        ("mgrs:utm_zone", 33),
+        ("mgrs:latitude_band", "U"),
+        ("mgrs:grid_square", "WP"),
+        ("s2:sequence", "0"),
+        (
+            "s2:granule_id",
+            "S2A_OPER_MSI_L2A_TL_VGS4_20220405T120515_A035440_T33UWP_N04.00",
+        ),
+        ("s2:processing_baseline", "04.00"),
+        (
+            "s2:datastrip_id",
+            "S2A_OPER_MSI_L2A_DS_VGS4_20220405T120515_S20220405T100408_N04.00",
+        ),
+        ("earthsearch:boa_offset_applied", True),
+        ("created", "2022-11-06T12:37:04.689Z"),
+        ("updated", "2022-11-06T12:37:04.689Z"),
+    ],
+)
+def test_get_item_property_properties(s2_stac_item, key, expected_value):
+    assert get_item_property(s2_stac_item, key) == expected_value
 
 
 def test_get_item_property_extra_fields(s2_stac_item):

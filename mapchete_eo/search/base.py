@@ -39,16 +39,10 @@ class FSSpecStacIO(StacApiIO):
     def save_json(
         dest: Union[str, os.PathLike, MPath], json_dict: dict, *args, **kwargs
     ) -> None:
-        json_txt = json.dumps(json_dict)
         path = MPath.from_inp(dest)
         path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
-            return dst.write(json_txt)
-
-    def conforms_to(self, *args):
-        # required otherwise generating static catalog subset from static
-        # catalog won't work
-        return False
+            return dst.write(json.dumps(json_dict))
 
 
 class Catalog(ABC):
@@ -88,7 +82,7 @@ class Catalog(ABC):
             name or f"{self.client.id}",
             description or f"Static subset of {self.client.description}",
             stac_extensions=self.client.stac_extensions,
-            href=catalog_json,
+            href=str(catalog_json),
             catalog_type=pystac.CatalogType.SELF_CONTAINED,
         )
         for collection in self.get_collections():
@@ -108,9 +102,6 @@ class Catalog(ABC):
                         overwrite=overwrite,
                         ignore_if_exists=True,
                     )
-                # this has to be set to None, otherwise pystac will mess up the asset paths
-                # after normalizing
-                item.set_self_href(None)
                 items.append(item)
                 if progress_callback:
                     progress_callback(n=n, total=len(self.items))

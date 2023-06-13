@@ -12,7 +12,7 @@ from typing import Union, List, Type
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
-from mapchete_eo.known_catalogs import EarthSearchV0S2L2A, EarthSearchV1S2L2A
+from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import S2PathMapper, XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
@@ -204,13 +204,6 @@ S2Metadata.from_stac_item_constructor = s2metadata_from_stac_item
 ##########################################
 
 
-class AWSL2ACOGv0(Archive):
-    catalog_cls = EarthSearchV0S2L2A
-    collection_name = "sentinel-s2-l2a-cogs"
-    processing_level = ProcessingLevel.level2a
-    path_mapper_cls = EarthSearchPathMapper
-
-
 class AWSL2ACOGv1(Archive):
     catalog_cls = EarthSearchV1S2L2A
     collection_name = "sentinel-2-l2a"
@@ -220,7 +213,6 @@ class AWSL2ACOGv1(Archive):
 
 class KnownArchives(Enum):
     S2AWS_COG = AWSL2ACOGv1
-    S2AWS_COG_V0 = AWSL2ACOGv0
 
 
 # here is everything we need to configure and initialize the mapchete driver

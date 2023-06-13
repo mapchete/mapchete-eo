@@ -1,9 +1,8 @@
 croniter
 lxml
-mapchete>=2022.2.2
+mapchete>=2023.6.2
 pydantic
 pystac
 pystac_client
-rtree
 tqdm
 xarray

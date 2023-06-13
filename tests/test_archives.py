@@ -1,11 +1,11 @@
 import pytest
 
-from mapchete_eo.sentinel2 import AWSL2ACOGv0, AWSL2ACOGv1
+from mapchete_eo.sentinel2 import AWSL2ACOGv1
 
 
 @pytest.mark.parametrize(
     "archive_cls",
-    [AWSL2ACOGv0, AWSL2ACOGv1],
+    [AWSL2ACOGv1],
 )
 def test_s2_archives(archive_cls):
     start_time = "2022-06-01"

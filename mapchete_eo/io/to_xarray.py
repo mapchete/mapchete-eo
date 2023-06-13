@@ -309,8 +309,8 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
         return item.properties[property]
     elif property in item.extra_fields:
         return item.extra_fields[property]
-    elif property == "datastrip_id":
-        return S2Metadata.from_stac_item(item).datastrip_id
+    elif property == "stac_extensions":
+        return item.stac_extensions
     else:
         raise KeyError(
             f"item does not have property {property} in its datetime, properties "

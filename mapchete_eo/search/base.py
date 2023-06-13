@@ -102,7 +102,12 @@ class Catalog(ABC):
                         overwrite=overwrite,
                         ignore_if_exists=True,
                     )
+                # this has to be set to None, otherwise pystac will mess up the asset paths
+                # after normalizing
+                item.set_self_href(None)
+
                 items.append(item)
+
                 if progress_callback:
                     progress_callback(n=n, total=len(self.items))
 

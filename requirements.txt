@@ -1,8 +1,12 @@
+affine
+click
 croniter
 lxml
-mapchete>=2023.6.3
+mapchete>=2023.4.1
 pydantic
 pystac
 pystac_client
+requests
 tqdm
 xarray
+yaml

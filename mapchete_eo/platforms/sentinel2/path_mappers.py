@@ -2,31 +2,19 @@
 A path mapper maps from an metadata XML file to additional metadata
 on a given archive or a local SAFE file.
 """
-
 from abc import ABC, abstractmethod
 from cached_property import cached_property
-from fsspec.exceptions import FSTimeoutError
+import json
 import logging
 from mapchete.path import MPath
-from retry import retry
 from typing import Union
 import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import QI_MASKS, L2ABand
-from mapchete_eo.settings import MP_EO_IO_RETRY_SETTINGS
+from mapchete_eo.utils.tools import open_xml
 
 logger = logging.getLogger(__name__)
-
-
-@retry(
-    logger=logger,
-    exceptions=(TimeoutError, FSTimeoutError),
-    **MP_EO_IO_RETRY_SETTINGS,
-)
-def open_xml(path: MPath):
-    logger.debug(f"open {path}")
-    return etree.fromstring(path.read_text())
 
 
 class S2PathMapper(ABC):
@@ -132,3 +120,131 @@ class XMLMapper(S2PathMapper):
                 f"QI mask '{qi_mask}' not available for this product"
             )
         return self._band_mask(qi_mask=qi_mask, band=band)
+
+
+class SinergisePathMapper(S2PathMapper):
+    """
+    Return true paths of product quality assets from the Sinergise S2 bucket.
+
+    e.g.:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_DETFOO_B01.gml
+    Cloud masks: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_CLOUDS_B00.gml
+
+    newer products however:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2022/6/6/0/qi/DETFOO_B01.jp2
+    no vector cloudmasks available anymore
+    """
+
+    _PRE_0400_MASK_PATHS = {
+        "clouds": "MSK_CLOUDS_B00.gml",
+        "detector_footprints": "MSK_DETFOO_{band}.gml",
+        "technical_quality": "MSK_TECQUA_{band}.gml",
+        "defective": "MSK_DEFECT_{band}.gml",
+        "saturated": "MSK_SATURA_{band}.gml",
+        "nodata": "MSK_NODATA_{band}.gml",
+    }
+    _POST_0400_MASK_PATHS = {
+        "clouds": "CLASSI_B00.jp2",
+        "detector_footprints": "DETFOO_{band}.jp2",
+        "technical_quality": "QUALIT_{band}.jp2",
+    }
+
+    def __init__(
+        self,
+        url: Union[MPath, str],
+        bucket: str = "sentinel-s2-l2a",
+        protocol: str = "s3",
+        baseline_version: str = "04.00",
+        **kwargs,
+    ):
+        url = MPath.from_inp(url)
+        tileinfo_path = url.parent / "tileInfo.json"
+        self._path = MPath(
+            "/".join(tileinfo_path.elements[-9:-1]), **tileinfo_path._kwargs
+        )
+        self._utm_zone, self._latitude_band, self._grid_square = self._path.split("/")[
+            1:-4
+        ]
+        self._baseurl = bucket
+        self._protocol = protocol
+        self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
+
+    def cloud_mask(self) -> str:
+        if self.processing_baseline.version < "04.00":
+            mask_path = self._PRE_0400_MASK_PATHS["clouds"]
+        else:
+            mask_path = self._POST_0400_MASK_PATHS["clouds"]
+        key = f"{self._path}/qi/{mask_path}"
+        return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
+
+    def _band_mask(self, qi_mask, band=None) -> str:
+        try:
+            if self.processing_baseline.version < "04.00":
+                mask_path = self._PRE_0400_MASK_PATHS[qi_mask]
+            else:
+                mask_path = self._POST_0400_MASK_PATHS[qi_mask]
+        except KeyError:
+            raise DeprecationWarning(
+                f"'{qi_mask}' quality mask not found in this product"
+            )
+        if band not in self._bands:
+            raise KeyError(f"band must be one of {self._bands}, not {band}")
+        key = f"{self._path}/qi/{mask_path.format(band=band)}"
+        return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
+
+    def band_qi_mask(self, qi_mask=None, band=None) -> str:
+        return self._band_mask(qi_mask=qi_mask, band=band)
+
+
+class EarthSearchPathMapper(SinergisePathMapper):
+    """
+    The COG archive maintained by E84 and covered by EarthSearch does not hold additional data
+    such as the GML files. This class maps the metadata masks to the current EarthSearch product.
+
+    e.g.:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_DETFOO_B01.gml
+    Cloud masks: s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/qi/MSK_CLOUDS_B00.gml
+
+    newer products however:
+    B01 detector footprints: s3://sentinel-s2-l2a/tiles/51/K/XR/2022/6/6/0/qi/DETFOO_B01.jp2
+    no vector cloudmasks available anymore
+    """
+
+    def __init__(
+        self,
+        metadata_xml: MPath,
+        alternative_metadata_baseurl: str = "sentinel-s2-l2a",
+        protocol: str = "s3",
+        baseline_version="04.00",
+        **kwargs,
+    ):
+        basedir = metadata_xml.parent
+        tileinfo = json.loads((basedir / "tileinfo_metadata.json").read_text())
+        self._path = tileinfo["path"]
+        self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
+        self._baseurl = alternative_metadata_baseurl
+        self._protocol = protocol
+        self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
+
+
+def s2path_mapper_guesser(
+    url: str,
+    **kwargs,
+):
+    """Guess S2PathMapper based on URL.
+
+    If a new path mapper is added in this module, it should also be added to this function
+    in order to be detected.
+    """
+    if url.startswith(
+        ("https://roda.sentinel-hub.com/sentinel-s2-l2a/", "s3://sentinel-s2-l2a/")
+    ) or url.startswith(
+        ("https://roda.sentinel-hub.com/sentinel-s2-l1c/", "s3://sentinel-s2-l1c/")
+    ):
+        return SinergisePathMapper(url, **kwargs)
+    elif url.startswith(
+        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
+    ):
+        return EarthSearchPathMapper(url, **kwargs)
+    else:
+        return XMLMapper(url, **kwargs)

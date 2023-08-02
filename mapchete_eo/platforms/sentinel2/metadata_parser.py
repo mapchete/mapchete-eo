@@ -13,23 +13,24 @@ from mapchete.path import MPath
 import numpy as np
 import numpy.ma as ma
 from pystac import Item
-from rasterio.enums import Resampling
 from rasterio.features import geometry_mask, shapes
 from rasterio.fill import fillnodata
 from rasterio.transform import from_bounds
-from rasterio.warp import reproject
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple, Union, Callable
 import xml.etree.ElementTree as etree
 
-from mapchete_eo.platforms.sentinel2.path_mappers import (
-    S2PathMapper,
-    XMLMapper,
-    QI_MASKS,
-    open_xml,
-)
+
+from mapchete_eo.platforms.sentinel2.path_mappers import S2PathMapper, XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
-from mapchete_eo.platforms.sentinel2.types import Resolution, CloudType, L2ABand
+from mapchete_eo.platforms.sentinel2.types import (
+    Resolution,
+    CloudType,
+    L2ABand,
+    QI_MASKS,
+)
+from mapchete_eo.exceptions import MissingAsset
+from mapchete_eo.utils.tools import _resample_array, open_xml
 
 
 logger = logging.getLogger(__name__)
@@ -139,6 +140,14 @@ class S2Metadata:
         if not crs_str.startswith(("EPSG:326", "EPSG:327")):
             raise ValueError(f"invalid CRS given in metadata.xml: {crs_str}")
         return crs_str
+
+    @cached_property
+    def bands_dict() -> dict:
+        return None
+
+    @cached_property
+    def masks_dict() -> dict:
+        return None
 
     @cached_property
     def sun_angles(self) -> Dict:
@@ -590,6 +599,51 @@ def _cached_path(
         yield path
 
 
+# all custom path mappers and constructors are below
+####################################################
+def s2metadata_from_stac_item(
+    item: Item,
+    metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
+    boa_offset_fields: Union[List[str], str] = [
+        "sentinel:boa_offset_applied",
+        "earthsearch:boa_offset_applied",
+    ],
+    processing_baseline_field: str = "s2:processing_baseline",
+    **kwargs,
+) -> "S2Metadata":
+    """Custom code to initialize S2Metadate from a STAC item.
+
+    Depending on from which catalog the STAC item comes, this function should correctly
+    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
+    using the proper asset name.
+    """
+    metadata_assets = (
+        [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
+    )
+    for metadata_asset in metadata_assets:
+        if metadata_asset in item.assets:
+            metadata_path = item.assets[metadata_asset].href
+            break
+    else:
+        raise KeyError(
+            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
+        )
+    for field in (
+        [boa_offset_fields] if isinstance(boa_offset_fields, str) else boa_offset_fields
+    ):
+        if item.properties.get(field):
+            boa_offset_applied = True
+            break
+        else:
+            boa_offset_applied = False
+    return S2Metadata.from_metadata_xml(
+        metadata_xml=metadata_path,
+        processing_baseline=item.properties.get(processing_baseline_field),
+        boa_offset_applied=boa_offset_applied,
+        **kwargs,
+    )
+
+
 def _get_bounds_geoinfo(root):
     geoinfo = {
         Resolution["10m"]: {},
@@ -677,36 +731,3 @@ def _get_grid_data(group, tag, bounds):
         bounds=bounds, row_step=row_step, col_step=col_step, shape=grid.shape
     )
     return grid, affine
-
-
-def _resample_array(
-    in_array=None,
-    in_transform=None,
-    in_crs=None,
-    nodata=0,
-    dst_transform=None,
-    dst_crs=None,
-    dst_shape=None,
-    resampling="bilinear",
-):
-    dst_data = np.empty(dst_shape, in_array.dtype)
-    reproject(
-        in_array,
-        dst_data,
-        src_transform=in_transform,
-        src_crs=in_crs,
-        src_nodata=nodata,
-        dst_transform=dst_transform,
-        dst_crs=dst_crs,
-        dst_nodata=nodata,
-        resampling=Resampling[resampling],
-    )
-    return ma.masked_array(
-        data=np.nan_to_num(dst_data, nan=nodata),
-        mask=ma.masked_invalid(dst_data).mask,
-        fill_value=nodata,
-    )
-
-
-class MissingAsset(Exception):
-    """Raised when a product asset should contain data but is empty."""

@@ -4,7 +4,6 @@ import logging
 import os
 from typing import Union, List, Callable
 
-from mapchete.io import fs_from_path
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 import pystac
@@ -86,7 +85,6 @@ class Catalog(ABC):
             catalog_type=pystac.CatalogType.SELF_CONTAINED,
         )
         for collection in self.get_collections():
-
             # collect all items and download assets if required
             items: List[pystac.Item] = []
             for n, item in enumerate(self.items, 1):

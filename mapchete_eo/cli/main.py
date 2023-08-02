@@ -4,7 +4,7 @@ from mapchete.cli.options import opt_bounds, opt_debug
 import tqdm
 from typing import Union
 
-from mapchete_eo.sentinel2 import AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.base import AWSL2ACOGv1
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 

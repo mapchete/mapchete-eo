@@ -8,13 +8,27 @@ from pytest import lazy_fixture
 from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
+from mapchete.path import MPath
+
 from mapchete_eo.platforms.sentinel2.metadata_parser import (
     MissingAsset,
     Resolution,
 )
 from mapchete_eo.platforms.sentinel2.path_mappers import XMLMapper
-from mapchete_eo.sentinel2 import SinergisePathMapper, EarthSearchPathMapper, S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.path_mappers import (
+    SinergisePathMapper, EarthSearchPathMapper
+)
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
+
+MISSING_METADATA_XML = "s3://sentinel-s2-l2a/tiles/60/V/WQ/2021/8/19/1/metadata.xml"
+
+
+def metadata_xml_exists(xml_file=MISSING_METADATA_XML):
+    if MPath(xml_file).exists():
+        return True
+    else:
+        return False
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):
@@ -336,6 +350,7 @@ def test_metadata_viewing_incidence_angles(metadata):
                 assert properties["transform"][0] == 5000.0
 
 
+@pytest.mark.skipif(metadata_xml_exists(), reason="metadata.xml for this file was added/exists!")
 def test_unavailable_metadata_xml():
     with pytest.raises(FileNotFoundError):
         S2Metadata.from_metadata_xml(

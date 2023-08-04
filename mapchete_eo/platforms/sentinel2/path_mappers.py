@@ -12,7 +12,7 @@ import xml.etree.ElementTree as etree
 
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import QI_MASKS, L2ABand
-from mapchete_eo.utils.tools import open_xml
+from mapchete_eo.io import open_xml
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ class EarthSearchPathMapper(SinergisePathMapper):
     ):
         basedir = metadata_xml.parent
         tileinfo = json.loads((basedir / "tileinfo_metadata.json").read_text())
-        self._path = tileinfo["path"]
+        self._path = MPath.from_inp(tileinfo["path"])
         self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol

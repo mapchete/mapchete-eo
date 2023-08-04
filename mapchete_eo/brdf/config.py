@@ -1,5 +1,14 @@
-BRDF_MODELS = ["HLS", "HLS_alt", "sen2agri", "combined"]
-DEFAULT_MODEL = "combined"
+from enum import Enum
+
+
+class BRDFModels(str, Enum):
+    HLS = "HLS"
+    HLS_alt = "HLS_alt"
+    sen2agri = "sen2agri"
+    combined = "combined"
+
+
+DEFAULT_MODEL = BRDFModels.combined
 
 # Source for bands outside of RGBNIR range:
 # https://www.sciencedirect.com/science/article/pii/S0034425717302791

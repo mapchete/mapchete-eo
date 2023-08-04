@@ -1,9 +1,10 @@
 import os
+from mapchete.path import MPath
 from mapchete_eo.exceptions import BRDFError, MissingAsset
 
 STAC_ALLOWED_COLLECTIONS = ["sentinel-2-l2a"]
 
-DEFAULT_EOX_S3_CACHE = "s3://eox-mhub-cache/"
+DEFAULT_CACHE_LOCATION = MPath("s3://eox-mhub-cache/")
 
 # retry settings
 MP_EO_IO_RETRY_SETTINGS = {

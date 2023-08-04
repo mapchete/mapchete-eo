@@ -1,12 +1,9 @@
 import os
 import numpy as np
-import yaml
-from tempfile import TemporaryDirectory
 
 import pystac
 from pystac_client import Client
 import pytest
-import mapchete
 from mapchete.path import MPath
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
@@ -14,56 +11,33 @@ from rasterio import Affine
 
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2 import S2Metadata
 
 SCRIPT_DIR = MPath(os.path.dirname(os.path.realpath(__file__)))
 TESTDATA_DIR = SCRIPT_DIR / "testdata"
-S2_CACHE_DIR = os.path.join(TESTDATA_DIR, "s2")
-
-
-def _dict_from_mapchete(path, tmpdir):
-    conf = dict(yaml.load(open(path).read()), config_dir=os.path.dirname(path))
-    if "s2" in conf["input"]:
-        try:
-            conf["input"]["s2"]["cache"]["path"] = S2_CACHE_DIR
-        except KeyError:
-            pass
-    if "angles_file" in conf:
-        try:
-            conf["angles_file"] = os.path.join(TESTDATA_DIR, 'MTD_TL.xml')
-        except KeyError:
-            pass
-    if "modis" in conf:
-        try:
-            conf["modis"] = os.path.join(
-                TESTDATA_DIR,
-                'modis',
-                'MCD43A4.A2019253.h18v04.006.2019262040005_rgbnir_8557.tif'
-            )
-        except KeyError:
-            pass
-    conf["output"].update(path=tmpdir)
-    return conf
+S2_CACHE_DIR = TESTDATA_DIR / "s2"
 
 
 @pytest.fixture
 def testdata_dir():
-    return TESTDATA_DIR    
+    return TESTDATA_DIR
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def s2_stac_collection():
     # generated with:
     # $ mapchete eo static-catalog tests/testdata/s2_stac_collection --start-time 2022-04-01 --end-time 2022-04-05 --bounds 16 48 17 49 -d --assets-dst-resolution 480 --assets red,green,blue,nir,granule_metadata
     return TESTDATA_DIR / "s2_stac_collection" / "catalog.json"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def s2_stac_items(s2_stac_collection):
     client = Client.from_file(str(s2_stac_collection))
     collection = next(client.get_collections())
-    collection.make_all_asset_hrefs_absolute()
-    return list(collection.get_items())
+    items = [item for item in collection.get_items()]
+    for item in items:
+        item.make_asset_hrefs_absolute()
+    return items
 
 
 @pytest.fixture
@@ -84,17 +58,7 @@ def pf_qa_stac_collection():
 
 @pytest.fixture
 def test_array():
-    return np.random.randint(
-        low=0, high=255, size=(3, 256, 256), dtype=np.uint8
-    )
-
-
-@pytest.fixture
-def test_cache_path():
-    return TESTDATA_DIR.joinpath(
-        "test_caching",
-        "test_array.tif"
-    )
+    return np.random.randint(low=0, high=255, size=(3, 256, 256), dtype=np.uint8)
 
 
 @pytest.fixture
@@ -108,7 +72,7 @@ def test_affine():
         20037508.3427892,
         0.0,
         0.0,
-        1.0
+        1.0,
     )
 
 
@@ -149,36 +113,6 @@ def sentinel2_mapchete(tmp_path):
 @pytest.fixture
 def cloudy_tile():
     return BufferedTilePyramid("geodetic").tile(13, 1986, 8557)
-
-
-@pytest.fixture(scope="session")
-def brdf_mapchete_mp():
-    """Fixture for ****.mapchete."""
-    with TemporaryDirectory() as temp_dir:
-        brdf_mapchete = _dict_from_mapchete(
-            os.path.join(TESTDATA_DIR, "brdf.mapchete"), temp_dir
-        )
-        with mapchete.open(
-                brdf_mapchete,
-                # cloudy tile bounds
-                bounds=BufferedTilePyramid("geodetic").tile(13, 1986, 8557).bounds
-        ) as mp:
-            yield mp
-
-
-@pytest.fixture(scope="session")
-def modis_tile_mapchete_mp():
-    """Fixture for ****.mapchete."""
-    with TemporaryDirectory() as temp_dir:
-        brdf_mapchete = _dict_from_mapchete(
-            os.path.join(TESTDATA_DIR, "modis_tile.mapchete"), temp_dir
-        )
-        with mapchete.open(
-                brdf_mapchete,
-                # cloudy tile bounds
-                bounds=BufferedTilePyramid("geodetic").tile(13, 1986, 8557).bounds
-        ) as mp:
-            yield mp
 
 
 @pytest.fixture
@@ -273,12 +207,16 @@ def s2_l2a_earthsearch_xml_remote():
 
 
 @pytest.fixture(scope="session")
-def s2_l2a_earthsearch_remote():
+def s2_l2a_earthsearch_remote(s2_l2a_earthsearch_remote_item):
     """Metadata used by Earth-Search V1 endpoint"""
-    return S2Metadata.from_stac_item(
-        pystac.Item.from_file(
-            "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220601_0_L2A/S2A_33TWL_20220601_0_L2A.json"
-        )
+    return S2Metadata.from_stac_item(s2_l2a_earthsearch_remote_item)
+
+
+@pytest.fixture(scope="session")
+def s2_l2a_earthsearch_remote_item():
+    """Metadata used by Earth-Search V1 endpoint"""
+    return pystac.Item.from_file(
+        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WL/2022/6/S2A_33TWL_20220601_0_L2A/S2A_33TWL_20220601_0_L2A.json"
     )
 
 

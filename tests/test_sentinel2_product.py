@@ -1,0 +1,40 @@
+import pytest
+from mapchete.path import MPath
+
+from mapchete_eo.platforms.sentinel2.brdf import BRDFConfig
+from mapchete_eo.platforms.sentinel2.config import CacheConfig
+from mapchete_eo.platforms.sentinel2.product import S2Product
+
+
+def test_product(s2_stac_item):
+    product = S2Product(
+        s2_stac_item,
+    )
+    assert product.item
+    assert product.s2_metadata
+    assert product.cache is None
+
+
+def test_product_asset_cache(s2_stac_item, tmpdir):
+    product = S2Product(
+        s2_stac_item,
+        cache_config=CacheConfig(path=MPath.from_inp(tmpdir), assets=["aot"]),
+    )
+    assert product.cache
+    assert not product.cache.ls()
+    product.cache_assets()
+    assert product.cache.ls()
+
+
+@pytest.mark.remote
+def test_product_brdf_cache(s2_l2a_earthsearch_remote_item, tmpdir):
+    product = S2Product(
+        s2_l2a_earthsearch_remote_item,
+        cache_config=CacheConfig(
+            path=MPath.from_inp(tmpdir), brdf=BRDFConfig(bands=["blue"])
+        ),
+    )
+    assert product.cache
+    assert not product.cache.ls()
+    product.cache_brdf_grids()
+    assert product.cache.ls()

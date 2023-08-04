@@ -26,8 +26,10 @@ dependencies = [
     "lxml",
     "mapchete>=2023.6.3",
     "pydantic",
-    "pystac>=1.7.3",
-    "pystac-client<=0.6.1",
+    # "pystac[urllib3]<=1.7.3",
+    # "pystac-client<=0.6.1",
+    "pystac[urllib3]>=1.8.2",
+    "pystac-client>=0.7.2",
     "tqdm",
     "xarray",
 ]
@@ -45,7 +47,7 @@ eo = "mapchete_eo.cli.main:eo"
 
 [project.entry-points."mapchete.formats.drivers"]
 eostac_dev = "mapchete_eo.eostac"
-sentinel2 = "mapchete_eo.platforms.sentinel2.base"
+sentinel2 = "mapchete_eo.platforms.sentinel2"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"

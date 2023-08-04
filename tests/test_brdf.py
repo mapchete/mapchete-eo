@@ -1,13 +1,14 @@
 from fiona.transform import transform
 import numpy as np
 import numpy.ma as ma
+import pytest
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.brdf.brdf import get_brdf_param, run_brdf
-from mapchete_eo.brdf.tools import get_constant_sun_angle
+from mapchete_eo.brdf import get_brdf_param, run_brdf, get_constant_sun_angle
 
 
+@pytest.mark.remote
 def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
     band_idx = 2
     metadata = S2Metadata.from_metadata_xml(s2_l2a_metadata_xml)
@@ -15,15 +16,15 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
         metadata.crs,
         "EPSG:4326",
         [metadata.bounds[0], metadata.bounds[2]],
-        [metadata.bounds[1], metadata.bounds[3]]
+        [metadata.bounds[1], metadata.bounds[3]],
     )
     height, width = metadata.shape(resolution=Resolution["60m"])
     band_data = np.concatenate(
         (
             np.zeros((height, width // 2), dtype=np.uint16),
-            np.full((height, width // 2), 500, dtype=np.uint16)
+            np.full((height, width // 2), 500, dtype=np.uint16),
         ),
-        axis=1
+        axis=1,
     )
     band = ma.masked_equal(band_data, 0)
     corrected = run_brdf(
@@ -35,10 +36,7 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
         sun_angles=metadata.sun_angles,
         detector_footprints=metadata._get_band_mask(band_idx, "detector_footprints"),
         viewing_incidence_angles=metadata.viewing_incidence_angles(band_idx),
-        sun_zenith_angle=get_constant_sun_angle(
-            min_lat=bottom,
-            max_lat=top
-        ),
+        sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )
     assert isinstance(corrected, ma.MaskedArray)
@@ -54,7 +52,7 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml):
             metadata.crs,
             "EPSG:4326",
             [metadata.bounds[0], metadata.bounds[2]],
-            [metadata.bounds[1], metadata.bounds[3]]
+            [metadata.bounds[1], metadata.bounds[3]],
         )
         corrected = get_brdf_param(
             band_idx=band_idx,
@@ -62,12 +60,11 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml):
             out_transform=metadata.transform(Resolution["60m"]),
             product_crs=metadata.crs,
             sun_angles=metadata.sun_angles,
-            detector_footprints=metadata._get_band_mask(band_idx, "detector_footprints"),
-            viewing_incidence_angles=metadata.viewing_incidence_angles(band_idx),
-            sun_zenith_angle=get_constant_sun_angle(
-                min_lat=bottom,
-                max_lat=top
+            detector_footprints=metadata._get_band_mask(
+                band_idx, "detector_footprints"
             ),
+            viewing_incidence_angles=metadata.viewing_incidence_angles(band_idx),
+            sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
             model="HLS",
         )
 

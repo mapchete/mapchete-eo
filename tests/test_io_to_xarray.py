@@ -121,13 +121,13 @@ def test_get_item_property_properties(s2_stac_item, key, expected_value):
 def test_get_item_property_extra_fields(s2_stac_item):
     for property, value in {
         "stac_extensions": [
-            "https://stac-extensions.github.io/eo/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/eo/v1.1.0/schema.json",
             "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
             "https://stac-extensions.github.io/mgrs/v1.0.0/schema.json",
             "https://stac-extensions.github.io/processing/v1.1.0/schema.json",
             "https://stac-extensions.github.io/view/v1.0.0/schema.json",
-            "https://stac-extensions.github.io/grid/v1.0.0/schema.json",
-            "https://stac-extensions.github.io/projection/v1.0.0/schema.json",
+            "https://stac-extensions.github.io/grid/v1.1.0/schema.json",
+            "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
         ]
     }.items():
         assert get_item_property(s2_stac_item, property) == value

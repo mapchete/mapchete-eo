@@ -7,8 +7,8 @@ from rasterio.fill import fillnodata
 
 from shapely.geometry import box, mapping, shape
 
-from mapchete_eo.utils.tools import _resample_array
-from mapchete_eo.brdf.settings import BRDF_MODELS, DEFAULT_MODEL, F_MODIS_PARAMS
+from mapchete_eo.array.resampling import resample_array
+from mapchete_eo.brdf.config import BRDFModels, DEFAULT_MODEL, F_MODIS_PARAMS
 
 
 logger = logging.getLogger(__name__)
@@ -27,9 +27,7 @@ class DirectionalModels:
         self.angles = angles
         self.f_band_params = f_band_params
         self.sza = sza
-        self.model = model
-        if model not in BRDF_MODELS:
-            raise ValueError("Chosen model not in availible models: %s", BRDF_MODELS)
+        self.model = BRDFModels(model)
         self.upscale_factor = upscale_factor
         self.sun_model_flag = sun_model_flag
 
@@ -378,7 +376,7 @@ def get_brdf_param(
         )
 
         # resample model to output resolution
-        detector_brdf = _resample_array(
+        detector_brdf = resample_array(
             in_array=detector_brdf_param,
             in_transform=viewing_zenith[detector_id]["transform"],
             in_crs=product_crs,

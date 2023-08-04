@@ -12,7 +12,6 @@ from mapchete.tile import BufferedTile
 
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 
 logger = logging.getLogger(__name__)
 

@@ -1,45 +1,33 @@
 from affine import Affine
-from mapchete.io import path_exists, fs_from_path
+from mapchete.types import Bounds
 import numpy as np
 import numpy.ma as ma
 from pystac import Item
 import pytest
-from pytest import lazy_fixture
+from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
-from mapchete.path import MPath
-
-from mapchete_eo.platforms.sentinel2.metadata_parser import (
-    MissingAsset,
-    Resolution,
-)
+from mapchete_eo.exceptions import MissingAsset
+from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.platforms.sentinel2.path_mappers import XMLMapper
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.base import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
-    SinergisePathMapper, EarthSearchPathMapper
+    SinergisePathMapper,
+    EarthSearchPathMapper,
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 
-MISSING_METADATA_XML = "s3://sentinel-s2-l2a/tiles/60/V/WQ/2021/8/19/1/metadata.xml"
-
-
-def metadata_xml_exists(xml_file=MISSING_METADATA_XML):
-    if MPath(xml_file).exists():
-        return True
-    else:
-        return False
-
 
 def test_xml_mapper(s2_l2a_metadata_xml):
-    with fs_from_path(s2_l2a_metadata_xml).open(s2_l2a_metadata_xml, "rb") as metadata:
+    with s2_l2a_metadata_xml.open("rb") as metadata:
         xml_root = etree.parse(metadata).getroot()
         path_mapper = XMLMapper(
             metadata_xml=s2_l2a_metadata_xml,
             xml_root=xml_root,
         )
 
-        assert path_exists(path_mapper.cloud_mask())
+        assert path_mapper.cloud_mask().exists()
         band = "B01"
         for qi_mask in [
             "defective",
@@ -48,12 +36,12 @@ def test_xml_mapper(s2_l2a_metadata_xml):
             "detector_footprints",
             "technical_quality",
         ]:
-            assert path_exists(path_mapper.band_qi_mask(qi_mask=qi_mask, band=band))
+            assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
 def test_sinergise_mapper_gml(tileinfo_gml_schema):
     path_mapper = SinergisePathMapper(tileinfo_gml_schema, baseline_version="03.01")
-    assert path_exists(path_mapper.cloud_mask())
+    assert path_mapper.cloud_mask().exists()
     band = "B01"
     for qi_mask in [
         "defective",
@@ -62,18 +50,18 @@ def test_sinergise_mapper_gml(tileinfo_gml_schema):
         "detector_footprints",
         "technical_quality",
     ]:
-        assert path_exists(path_mapper.band_qi_mask(qi_mask=qi_mask, band=band))
+        assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
 def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
     path_mapper = SinergisePathMapper(tileinfo_jp2_schema)
-    assert path_exists(path_mapper.cloud_mask())
+    assert path_mapper.cloud_mask().exists()
     band = "B01"
     for qi_mask in [
         "detector_footprints",
         "technical_quality",
     ]:
-        assert path_exists(path_mapper.band_qi_mask(qi_mask=qi_mask, band=band))
+        assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
     for qi_mask in [
         "defective",
@@ -84,15 +72,16 @@ def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
             path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
+@pytest.mark.remote
 def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
-    assert path_exists(path_mapper.cloud_mask())
+    assert path_mapper.cloud_mask().exists()
     band = "B01"
     for qi_mask in [
         "detector_footprints",
         "technical_quality",
     ]:
-        assert path_exists(path_mapper.band_qi_mask(qi_mask=qi_mask, band=band))
+        assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
     for qi_mask in [
         "defective",
@@ -103,6 +92,7 @@ def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
             path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "metadata",
     [
@@ -145,7 +135,7 @@ def test_metadata_crs(metadata):
 )
 def test_metadata_bounds(metadata):
     # bounds
-    assert isinstance(metadata.bounds, tuple)
+    assert isinstance(metadata.bounds, Bounds)
     assert len(metadata.bounds) == 4
     for i in metadata.bounds:
         assert isinstance(i, float)
@@ -350,12 +340,9 @@ def test_metadata_viewing_incidence_angles(metadata):
                 assert properties["transform"][0] == 5000.0
 
 
-@pytest.mark.skipif(metadata_xml_exists(), reason="metadata.xml for this file was added/exists!")
 def test_unavailable_metadata_xml():
     with pytest.raises(FileNotFoundError):
-        S2Metadata.from_metadata_xml(
-            "s3://sentinel-s2-l2a/tiles/60/V/WQ/2021/8/19/1/metadata.xml"
-        )
+        S2Metadata.from_metadata_xml("unavailable_metadata.xml")
 
 
 @pytest.mark.parametrize(
@@ -417,15 +404,13 @@ def test_from_stac_item_backwards(item):
     assert s2_metadata.reflectance_offset == offset
 
     # see if paths exist on prior versions
-    assert path_exists(s2_metadata.path_mapper.cloud_mask())
+    assert s2_metadata.path_mapper.cloud_mask().exists()
     band = "B01"
     for qi_mask in [
         "detector_footprints",
         "technical_quality",
     ]:
-        assert path_exists(
-            s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
-        )
+        assert s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
 def test_from_stac_item_invalid(stac_item_invalid_pb0001):

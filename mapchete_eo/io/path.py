@@ -1,0 +1,95 @@
+from enum import Enum
+from fsspec.exceptions import FSTimeoutError
+import hashlib
+import logging
+from pystac import Item
+from retry import retry
+import xml.etree.ElementTree as etree
+
+from mapchete.path import MPath
+
+from mapchete_eo.settings import MP_EO_IO_RETRY_SETTINGS
+from mapchete_eo.time import to_datetime
+
+
+logger = logging.getLogger(__name__)
+
+
+@retry(
+    logger=logger,
+    exceptions=(TimeoutError, FSTimeoutError),
+    **MP_EO_IO_RETRY_SETTINGS,
+)
+def open_xml(path: MPath):
+    logger.debug(f"open {path}")
+    return etree.fromstring(path.read_text())
+
+
+class ProductPathGenerationMethod(str, Enum):
+    product_id = "product_id"
+    hash = "hash"
+    date_day_first = "date_day_first"
+    date_year_first = "date_year_first"
+
+
+def get_product_cache_path(
+    item: Item,
+    basepath: MPath,
+    path_generation_method: ProductPathGenerationMethod = ProductPathGenerationMethod.product_id,
+):
+    """
+    Create product path with high cardinality prefixes optimized for S3.
+
+    product_path_generation option:
+
+    "product_id":
+    <cache_basepath>/<product-id>
+
+    "product_hash":
+    <cache_basepath>/<product-hash>
+
+    "date_day_first":
+    <cache_basepath>/<product-day>/<product-month>/<product-year>/<product-id>
+
+    "date_year_first":
+    <cache_basepath>/<product-year>/<product-month>/<product-day>/<product-id>
+    """
+    path_generation_method = ProductPathGenerationMethod[path_generation_method]
+    if path_generation_method == ProductPathGenerationMethod.product_id:
+        return basepath / item.id
+
+    elif path_generation_method == ProductPathGenerationMethod.hash:
+        return basepath / hashlib.md5(f"{item.id}".encode()).hexdigest()
+
+    else:
+        if item.datetime is None:
+            raise AttributeError(f"stac item must have a valid datetime object: {item}")
+        elif path_generation_method == ProductPathGenerationMethod.date_day_first:
+            return (
+                basepath
+                / item.datetime.day
+                / item.datetime.month
+                / item.datetime.year
+                / item.id
+            )
+
+        elif path_generation_method == ProductPathGenerationMethod.date_year_first:
+            return (
+                basepath
+                / item.datetime.year
+                / item.datetime.month
+                / item.datetime.day
+                / item.id
+            )
+
+
+def path_in_paths(path, existing_paths):
+    """Check if path is contained in list of existing paths independent of path prefix."""
+    if path.startswith("s3://"):
+        return path.lstrip("s3://") in existing_paths
+    else:
+        for existing_path in existing_paths:
+            if existing_path.endswith(path):
+                return True
+        else:
+            return False

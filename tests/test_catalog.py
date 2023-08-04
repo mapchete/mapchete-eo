@@ -1,4 +1,5 @@
 import pystac
+import pystac_client
 import pytest
 import rasterio
 from mapchete.io import fs_from_path, path_exists
@@ -38,28 +39,35 @@ def test_pf_qa_eo_bands(pf_qa_stac_collection):
     assert len(catalog.eo_bands) > 0
 
 
-@pytest.mark.webtest
+@pytest.mark.remote
 def test_write_static_catalog(e84_cog_catalog, tmp_path):
     output_path = e84_cog_catalog.write_static_catalog(output_path=str(tmp_path))
-    cat = pystac.Catalog.from_file(str(output_path))
-    assert len(list(cat.get_all_items())) == 18
+    cat = pystac_client.Client.from_file(str(output_path))
+    collections = list(cat.get_children())
+    assert len(collections) == 1
+    collection = collections[0]
+    assert len(list(collection.get_items())) == 18
 
 
-@pytest.mark.webtest
+@pytest.mark.remote
 def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),
         assets=["granule_metadata"],
     )
-    cat = pystac.Catalog.from_file(str(output_path))
-    assert len(list(cat.get_all_items())) == 1
-    for item in cat.get_all_items():
+    cat = pystac_client.Client.from_file(str(output_path))
+    collections = list(cat.get_children())
+    assert len(collections) == 1
+    collection = collections[0]
+    items = list(collection.get_items())
+    assert len(items) == 1
+    for item in items:
         assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
         item.make_asset_hrefs_absolute()
         assert path_exists(item.assets["granule_metadata"].href)
 
 
-@pytest.mark.webtest
+@pytest.mark.remote
 def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_short):
     tmp_path = "tmp_static_catalog"
     try:
@@ -67,9 +75,13 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
             output_path=str(tmp_path),
             assets=["granule_metadata"],
         )
-        cat = pystac.Catalog.from_file(str(output_path))
-        assert len(list(cat.get_all_items())) == 1
-        for item in cat.get_all_items():
+        cat = pystac_client.Client.from_file(str(output_path))
+        collections = list(cat.get_children())
+        assert len(collections) == 1
+        collection = collections[0]
+        items = list(collection.get_items())
+        assert len(items) == 1
+        for item in items:
             assert item.assets["granule_metadata"].href == "./granule_metadata.xml"
             item.make_asset_hrefs_absolute()
             assert path_exists(item.assets["granule_metadata"].href)
@@ -80,18 +92,22 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
             pass
 
 
-@pytest.mark.webtest
+@pytest.mark.remote
 def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
     asset = "coastal"
     resolution = Resolution["120m"]
     output_path = e84_cog_catalog_short.write_static_catalog(
         output_path=str(tmp_path),
         assets=[asset],
-        assets_dst_resolution=resolution,
+        assets_dst_resolution=resolution.value,
     )
-    cat = pystac.Catalog.from_file(str(output_path))
-    assert len(list(cat.get_all_items())) == 1
-    for item in cat.get_all_items():
+    cat = pystac_client.Client.from_file(str(output_path))
+    collections = list(cat.get_children())
+    assert len(collections) == 1
+    collection = collections[0]
+    items = list(collection.get_items())
+    assert len(items) == 1
+    for item in items:
         assert "http" not in item.assets[asset].href
         item.make_asset_hrefs_absolute()
         with rasterio.open(item.assets[asset].href) as src:

@@ -1,7 +1,7 @@
 from collections import defaultdict
 import logging
 import math
-from typing import List, Union
+from typing import List
 
 import fsspec
 import pystac
@@ -10,14 +10,9 @@ from mapchete import Timer
 from mapchete.io import copy, rasterio_open
 from mapchete.path import MPath
 from rasterio.vrt import WarpedVRT
-
-from mapchete_eo.platforms.sentinel2.types import Resolution
+from typing import Union
 
 logger = logging.getLogger(__name__)
-
-
-def path_is_relative(path):
-    return not MPath.from_inp(path).is_absolute()
 
 
 def asset_href(
@@ -37,15 +32,15 @@ def get_assets(
     dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
-    ignore_if_exists: bool = False,
-    resolution: Resolution = Resolution["original"],
+    resolution: Union[None, float, int] = None,
     compression: str = "deflate",
     driver: str = "COG",
     item_href_in_dst_dir: bool = True,
     convert_file_extensions: List[str] = [".tif", ".jp2"],
+    ignore_if_exists: bool = False,
 ) -> pystac.Item:
     for asset in assets:
-        if resolution != Resolution.original and asset_href(item, asset).endswith(
+        if resolution is not None and asset_href(item, asset).endswith(
             tuple(convert_file_extensions)
         ):
             item = convert_asset(
@@ -53,7 +48,7 @@ def get_assets(
                 asset,
                 dst_dir,
                 src_fs=src_fs,
-                resolution=resolution.value,
+                resolution=resolution,
                 overwrite=overwrite,
                 ignore_if_exists=ignore_if_exists,
                 compression=compression,
@@ -78,8 +73,8 @@ def copy_asset(
     dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
-    ignore_if_exists: bool = False,
     item_href_in_dst_dir: bool = True,
+    ignore_if_exists: bool = False,
 ) -> pystac.Item:
     """Copy asset from one place to another."""
 
@@ -92,13 +87,13 @@ def copy_asset(
     else:
         item.assets[asset].href = str(output_path)
 
+    # TODO make this check optional
     if output_path.exists():
         if ignore_if_exists:
             logger.debug("ignore existing asset %s", output_path)
             return item
         elif overwrite:
             logger.debug("overwrite exsiting asset %s", output_path)
-            pass
         else:
             raise IOError(f"{output_path} already exists")
     else:
@@ -122,11 +117,11 @@ def convert_asset(
     dst_dir: MPath,
     src_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
-    ignore_if_exists: bool = False,
-    resolution: int = 10,
+    resolution: Union[None, float, int] = None,
     compression: str = "deflate",
     driver: str = "COG",
     item_href_in_dst_dir: bool = True,
+    ignore_if_exists: bool = False,
 ) -> pystac.Item:
     asset_path = asset_href(item, asset, fs=src_fs)
     output_path = dst_dir / asset_path.name
@@ -137,48 +132,51 @@ def convert_asset(
     else:
         item.assets[asset].href = str(output_path)
 
+    # TODO make this check optional
     if output_path.exists():
         if ignore_if_exists:
             logger.debug("ignore existing asset %s", output_path)
             return item
         elif overwrite:
             logger.debug("overwrite exsiting asset %s", output_path)
-            pass
         else:
             raise IOError(f"{output_path} already exists")
     else:
         dst_dir.makedirs()
 
     with Timer() as t:
-        logger.debug(
-            "converting %s to %s using %sm resolution, %s compression and %s driver ...",
-            asset_path,
-            output_path,
-            resolution,
-            compression,
-            driver,
-        )
         with rasterio_open(asset_path, "r") as src:
-            meta = src.meta
+            meta = src.meta.copy()
             src_transform = src.transform
-            src_res = src.transform[0]
-            dst_transform = Affine.from_gdal(
-                *(
-                    src_transform[2],
+            if resolution:
+                logger.debug(
+                    "converting %s to %s using %sm resolution, %s compression and %s driver ...",
+                    asset_path,
+                    output_path,
                     resolution,
-                    0.0,
-                    src_transform[5],
-                    0.0,
-                    -resolution,
+                    compression,
+                    driver,
                 )
-            )
-            dst_width = int(math.ceil(src.width * (src_res / resolution)))
-            dst_height = int(math.ceil(src.height * (src_res / resolution)))
+                src_res = src.transform[0]
+                dst_transform = Affine.from_gdal(
+                    *(
+                        src_transform[2],
+                        resolution,
+                        0.0,
+                        src_transform[5],
+                        0.0,
+                        -resolution,
+                    )
+                )
+                dst_width = int(math.ceil(src.width * (src_res / resolution)))
+                dst_height = int(math.ceil(src.height * (src_res / resolution)))
+                meta.update(
+                    transform=dst_transform,
+                    width=dst_width,
+                    height=dst_height,
+                )
             meta.update(
                 driver=driver,
-                transform=dst_transform,
-                width=dst_width,
-                height=dst_height,
                 compress=compression,
             )
             with rasterio_open(output_path, "w", **meta) as dst:

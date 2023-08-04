@@ -1,4 +1,8 @@
 pytest
 pytest-coverage
 pytest-lazy-fixture
+types-croniter
+types-python-dateutil
+types-pytz
+types-retry
 mapchete_xarray

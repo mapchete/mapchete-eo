@@ -5,19 +5,65 @@ import datetime
 from enum import Enum
 from mapchete.tile import BufferedTile
 from pydantic import BaseModel
-from typing import Type, Union
+import pystac
+from typing import Type, Union, List
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2._metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
     s2path_mapper_guesser,
     EarthSearchPathMapper,
 )
-from mapchete_eo.platforms.sentinel2.metadata_parser import s2metadata_from_stac_item
+
+
+# all custom path mappers and constructors are below
+####################################################
+def s2metadata_from_stac_item(
+    item: pystac.Item,
+    metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
+    boa_offset_fields: Union[List[str], str] = [
+        "sentinel:boa_offset_applied",
+        "earthsearch:boa_offset_applied",
+    ],
+    processing_baseline_field: str = "s2:processing_baseline",
+    **kwargs,
+) -> S2Metadata:
+    """Custom code to initialize S2Metadate from a STAC item.
+
+    Depending on from which catalog the STAC item comes, this function should correctly
+    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
+    using the proper asset name.
+    """
+    metadata_assets = (
+        [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
+    )
+    for metadata_asset in metadata_assets:
+        if metadata_asset in item.assets:
+            metadata_path = item.assets[metadata_asset].href
+            break
+    else:
+        raise KeyError(
+            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
+        )
+    for field in (
+        [boa_offset_fields] if isinstance(boa_offset_fields, str) else boa_offset_fields
+    ):
+        if item.properties.get(field):
+            boa_offset_applied = True
+            break
+        else:
+            boa_offset_applied = False
+    return S2Metadata.from_metadata_xml(
+        metadata_xml=metadata_path,
+        processing_baseline=item.properties.get(processing_baseline_field),
+        boa_offset_applied=boa_offset_applied,
+        **kwargs,
+    )
+
 
 # this is important to add all path mappers defined here to the automated constructor
 S2Metadata.path_mapper_guesser = s2path_mapper_guesser
@@ -95,14 +141,10 @@ class InputData(base.InputData):
     def __init__(self, input_params: dict, **kwargs) -> None:
         """Initialize."""
         super().__init__(input_params, **kwargs)
-        format_params = dict_to_format_params(input_params["abstract"])
+        format_params = FormatParams(**input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = format_params.start_time
         self.end_time = format_params.end_time
         self.archive = format_params.archive(
             self.start_time, self.end_time, self._bounds
         )
-
-
-def dict_to_format_params(format_params: dict) -> FormatParams:
-    return FormatParams(**format_params)

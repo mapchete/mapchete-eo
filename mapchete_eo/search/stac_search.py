@@ -9,9 +9,10 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.validate import validate_bounds
 from pystac_client import Client
 from shapely.geometry import box
-from tilematrix import Bounds
+from mapchete.types import Bounds
 
 from mapchete_eo.search.base import Catalog
+from mapchete_eo.search.config import StacSearchConfig
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class STACSearchCatalog(Catalog):
         end_time: Union[datetime.date, datetime.datetime, None] = None,
         collections: List[str] = [],
         bounds: Bounds = None,
-        config: dict = dict(),
+        config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> None:
         self._collection_items: Dict = {}
@@ -34,24 +35,20 @@ class STACSearchCatalog(Catalog):
         self.start_time = start_time
         self.end_time = end_time
         self.client = Client.open(endpoint or self.endpoint)
-        if len(collections) == 0:
+        if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
         self.collections = collections
-        self.config = dict(
-            max_cloud_percent=100.0,
-            stac_catalog_chunk_threshold=10000,
-            stac_catalog_chunk_zoom=5,
-        )
+        self.config = config
 
     @cached_property
     def items(self) -> IndexedFeatures:
         def _get_items():
             search = self._search()
-            if search.matched() > self.config["stac_catalog_chunk_threshold"]:
+            if search.matched() > self.config.catalog_chunk_threshold:
                 spatial_chunks = bounds_chunks(
                     map(float, self.default_search_params.get("bbox").split(",")),
                     grid="geodetic",
-                    zoom=self.config["stac_catalog_chunk_zoom"],
+                    zoom=self.config.catalog_chunk_zoom,
                 )
                 logger.debug(
                     "too many products (%s), query catalog in %s chunks",
@@ -87,7 +84,7 @@ class STACSearchCatalog(Catalog):
             "collections": self.collections,
             "bbox": ",".join(map(str, self.bounds)),
             "datetime": f"{self.start_time}/{self.end_time}",
-            "query": [f"eo:cloud_cover<{self.config['max_cloud_percent']}"],
+            "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
         }
 
     def _search(self, **kwargs):

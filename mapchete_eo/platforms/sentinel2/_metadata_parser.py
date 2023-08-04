@@ -10,6 +10,7 @@ from fiona.transform import transform_geom
 import logging
 from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.path import MPath
+from mapchete.types import Bounds
 import numpy as np
 import numpy.ma as ma
 from pystac import Item
@@ -26,11 +27,13 @@ from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseli
 from mapchete_eo.platforms.sentinel2.types import (
     Resolution,
     CloudType,
+    CloudTypeBandIndex,
     L2ABand,
     QI_MASKS,
 )
 from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.utils.tools import _resample_array, open_xml
+from mapchete_eo.io import open_xml
+from mapchete_eo.array.resampling import resample_array
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +97,7 @@ class S2Metadata:
         if path_mapper is None:
             # guess correct path mapper
             path_mapper = cls.path_mapper_guesser(
-                url=metadata_xml,
+                metadata_xml,
                 xml_root=xml_root,
                 **kwargs,
             )
@@ -142,12 +145,12 @@ class S2Metadata:
         return crs_str
 
     @cached_property
-    def bands_dict() -> dict:
-        return None
+    def bands_dict(self) -> dict:
+        return {}
 
     @cached_property
-    def masks_dict() -> dict:
-        return None
+    def masks_dict(self) -> dict:
+        return {}
 
     @cached_property
     def sun_angles(self) -> Dict:
@@ -241,9 +244,7 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["transform"]
 
-    def cloud_mask(
-        self, mask_type: Union[CloudType, None, str, list, tuple] = None
-    ) -> List[Dict]:
+    def cloud_mask(self, mask_type: CloudType = CloudType.all) -> List[Dict]:
         """
         Return cloud mask.
 
@@ -251,26 +252,22 @@ class S2Metadata:
         -------
         List of GeoJSON mappings.
         """
-        if mask_type is None:
-            mask_types = list(CloudType)
-        elif isinstance(mask_type, str):
-            mask_types = [CloudType[mask_type]]
-        elif isinstance(mask_type, (list, tuple)):
-            mask_types = [CloudType[t] for t in mask_type]
+        if mask_type == CloudType.all:
+            mask_types_strings = [i.value for i in CloudType if i != CloudType.all]
         else:
-            raise TypeError(
-                f"mask_type must be either 'None' or one of {list(CloudType)}"
-            )
+            mask_types_strings = [mask_type.value]
         if self._cloud_masks_cache is None:
             mask_path = self.path_mapper.cloud_mask()
 
             if mask_path.endswith(".jp2"):
                 features = []
-                for f in self._vectorize_raster_mask(mask_path, indexes=[1, 2]):
+                for f in self._vectorize_raster_mask(
+                    mask_path, indexes=[i.value for i in CloudTypeBandIndex]
+                ):
                     band_idx = f["properties"].pop("_band_idx")
-                    for cloud_type in CloudType:
-                        if band_idx == cloud_type.value:
-                            f["properties"]["maskType"] = cloud_type.name
+                    for cloud_type_index in CloudTypeBandIndex:
+                        if band_idx == cloud_type_index.value:
+                            f["properties"]["maskType"] = cloud_type_index.name
                             break
                     else:
                         raise KeyError(
@@ -283,7 +280,7 @@ class S2Metadata:
         return [
             f
             for f in self._cloud_masks_cache
-            if f["properties"]["maskType"].lower() in mask_types
+            if f["properties"]["maskType"].lower() in mask_types_strings
         ]
 
     def detector_footprints(self, band_idx: int) -> List[Dict]:
@@ -477,7 +474,7 @@ class S2Metadata:
                     )
                 )
                 # resample detector angles to output resolution
-                detector_angle = _resample_array(
+                detector_angle = resample_array(
                     in_array=detector_array,
                     in_transform=detector_angles[detector_id]["transform"],
                     in_crs=self.crs,
@@ -509,7 +506,7 @@ class S2Metadata:
             mask_path = self.path_mapper.band_qi_mask(
                 qi_mask=qi_mask, band=self._band_idx_to_name(band_idx)
             )
-            if mask_path.endswith(".jp2"):
+            if mask_path.suffix == ".jp2":
                 features = self._vectorize_raster_mask(mask_path)
                 # append detector ID for detector footprints
                 if qi_mask == "detector_footprints":
@@ -599,51 +596,6 @@ def _cached_path(
         yield path
 
 
-# all custom path mappers and constructors are below
-####################################################
-def s2metadata_from_stac_item(
-    item: Item,
-    metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
-    boa_offset_fields: Union[List[str], str] = [
-        "sentinel:boa_offset_applied",
-        "earthsearch:boa_offset_applied",
-    ],
-    processing_baseline_field: str = "s2:processing_baseline",
-    **kwargs,
-) -> "S2Metadata":
-    """Custom code to initialize S2Metadate from a STAC item.
-
-    Depending on from which catalog the STAC item comes, this function should correctly
-    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
-    using the proper asset name.
-    """
-    metadata_assets = (
-        [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
-    )
-    for metadata_asset in metadata_assets:
-        if metadata_asset in item.assets:
-            metadata_path = item.assets[metadata_asset].href
-            break
-    else:
-        raise KeyError(
-            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
-        )
-    for field in (
-        [boa_offset_fields] if isinstance(boa_offset_fields, str) else boa_offset_fields
-    ):
-        if item.properties.get(field):
-            boa_offset_applied = True
-            break
-        else:
-            boa_offset_applied = False
-    return S2Metadata.from_metadata_xml(
-        metadata_xml=metadata_path,
-        processing_baseline=item.properties.get(processing_baseline_field),
-        boa_offset_applied=boa_offset_applied,
-        **kwargs,
-    )
-
-
 def _get_bounds_geoinfo(root):
     geoinfo = {
         Resolution["10m"]: {},
@@ -692,7 +644,7 @@ def _get_bounds_geoinfo(root):
             y_size=y_size,
             transform=from_bounds(left, bottom, right, top, width, height),
         )
-    return bounds, geoinfo
+    return Bounds(*bounds), geoinfo
 
 
 def _get_grid_data(group, tag, bounds):

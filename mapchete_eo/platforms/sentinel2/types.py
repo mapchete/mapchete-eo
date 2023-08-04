@@ -13,7 +13,17 @@ Resolution = Enum(
 )
 
 
-CloudType = Enum("CloudType", ["opaque", "cirrus"])
+class CloudType(str, Enum):
+    opaque = "opaque"
+    cirrus = "cirrus"
+    all = "all"
+
+
+class CloudTypeBandIndex(int, Enum):
+    opaque = 1
+    cirrus = 2
+
+
 L2ABand = Enum(
     "L2ABand",
     [

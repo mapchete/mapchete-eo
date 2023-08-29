@@ -3,21 +3,22 @@ Reader driver for Sentinel-2 data.
 """
 import datetime
 from enum import Enum
+from typing import List, Type, Union
+
+import pystac
+from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from pydantic import BaseModel
-import pystac
-from typing import Type, Union, List
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
-from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
-
 from mapchete_eo.platforms.sentinel2._metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
-    s2path_mapper_guesser,
     EarthSearchPathMapper,
+    s2path_mapper_guesser,
 )
+from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
 
 # all custom path mappers and constructors are below
@@ -43,7 +44,7 @@ def s2metadata_from_stac_item(
     )
     for metadata_asset in metadata_assets:
         if metadata_asset in item.assets:
-            metadata_path = item.assets[metadata_asset].href
+            metadata_path = MPath(item.assets[metadata_asset].href)
             break
     else:
         raise KeyError(
@@ -57,12 +58,20 @@ def s2metadata_from_stac_item(
             break
         else:
             boa_offset_applied = False
-    return S2Metadata.from_metadata_xml(
-        metadata_xml=metadata_path,
-        processing_baseline=item.properties.get(processing_baseline_field),
-        boa_offset_applied=boa_offset_applied,
-        **kwargs,
-    )
+    if metadata_path.is_remote() or metadata_path.is_absolute():
+        return S2Metadata.from_metadata_xml(
+            metadata_xml=metadata_path,
+            processing_baseline=item.properties.get(processing_baseline_field),
+            boa_offset_applied=boa_offset_applied,
+            **kwargs,
+        )
+    else:
+        return S2Metadata.from_metadata_xml(
+            metadata_xml=MPath(item.self_href).parent / metadata_path,
+            processing_baseline=item.properties.get(processing_baseline_field),
+            boa_offset_applied=boa_offset_applied,
+            **kwargs,
+        )
 
 
 # this is important to add all path mappers defined here to the automated constructor

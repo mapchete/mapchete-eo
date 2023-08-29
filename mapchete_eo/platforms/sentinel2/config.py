@@ -1,13 +1,14 @@
 from datetime import datetime
+from typing import List, Union
+
 from mapchete.path import MPath
 from pydantic import BaseModel
-from typing import Union, List
 
 from mapchete_eo.io.path import ProductPathGenerationMethod
-from mapchete_eo.types import GeodataType
-from mapchete_eo.search.config import StacSearchConfig
-from mapchete_eo.platforms.sentinel2.types import Resolution, CloudType
 from mapchete_eo.platforms.sentinel2.brdf import BRDFConfig
+from mapchete_eo.platforms.sentinel2.types import CloudType, Resolution
+from mapchete_eo.search.config import StacSearchConfig
+from mapchete_eo.types import GeodataType
 
 
 class CloudmaskConfig(BaseModel):

@@ -6,9 +6,8 @@ class BRDFModels(str, Enum):
     HLS_alt = "HLS_alt"
     sen2agri = "sen2agri"
     combined = "combined"
+    default = "HLS"
 
-
-DEFAULT_MODEL = BRDFModels.combined
 
 # Source for bands outside of RGBNIR range:
 # https://www.sciencedirect.com/science/article/pii/S0034425717302791

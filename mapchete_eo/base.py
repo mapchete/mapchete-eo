@@ -1,15 +1,16 @@
-import croniter
 import datetime
-from dateutil.tz import tzutc
+from typing import List, Union
+
+import croniter
 import xarray as xr
+from dateutil.tz import tzutc
 from mapchete.formats import base
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
-from typing import List, Union
 
-from mapchete_eo.io import items_to_xarray, MergeMethod
+from mapchete_eo.io import MergeMethod, items_to_xarray
 
 
 class InputTile(base.InputTile):

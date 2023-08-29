@@ -1,22 +1,32 @@
-from affine import Affine
-from mapchete.types import Bounds
-import numpy as np
-import numpy.ma as ma
-from pystac import Item
-import pytest
-from pytest_lazyfixture import lazy_fixture
-from shapely.geometry import shape
 import xml.etree.ElementTree as etree
 
+import numpy as np
+import numpy.ma as ma
+import pytest
+from affine import Affine
+from mapchete.io.raster import ReferencedRaster
+from mapchete.types import Bounds
+from pystac import Item
+from pytest_lazyfixture import lazy_fixture
+from rasterio.crs import CRS
+from shapely.geometry import shape
+
 from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.platforms.sentinel2.path_mappers import XMLMapper
 from mapchete_eo.platforms.sentinel2.base import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
-    SinergisePathMapper,
     EarthSearchPathMapper,
+    SinergisePathMapper,
+    XMLMapper,
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
+from mapchete_eo.platforms.sentinel2.types import (
+    L2ABand,
+    QIMask,
+    QIMask_deprecated,
+    Resolution,
+    SunAngle,
+    ViewAngle,
+)
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):
@@ -26,48 +36,30 @@ def test_xml_mapper(s2_l2a_metadata_xml):
             metadata_xml=s2_l2a_metadata_xml,
             xml_root=xml_root,
         )
-
+        band = L2ABand.B01
         assert path_mapper.cloud_mask().exists()
-        band = "B01"
-        for qi_mask in [
-            "defective",
-            "saturated",
-            "nodata",
-            "detector_footprints",
-            "technical_quality",
-        ]:
+        for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
+@pytest.mark.remote
 def test_sinergise_mapper_gml(tileinfo_gml_schema):
     path_mapper = SinergisePathMapper(tileinfo_gml_schema, baseline_version="03.01")
     assert path_mapper.cloud_mask().exists()
-    band = "B01"
-    for qi_mask in [
-        "defective",
-        "saturated",
-        "nodata",
-        "detector_footprints",
-        "technical_quality",
-    ]:
+    band = L2ABand.B01
+    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
+@pytest.mark.remote
 def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
     path_mapper = SinergisePathMapper(tileinfo_jp2_schema)
     assert path_mapper.cloud_mask().exists()
-    band = "B01"
-    for qi_mask in [
-        "detector_footprints",
-        "technical_quality",
-    ]:
+    band = L2ABand.B01
+    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
-    for qi_mask in [
-        "defective",
-        "saturated",
-        "nodata",
-    ]:
+    for qi_mask in QIMask_deprecated:
         with pytest.raises(DeprecationWarning):
             path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
@@ -76,31 +68,19 @@ def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
 def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
     assert path_mapper.cloud_mask().exists()
-    band = "B01"
-    for qi_mask in [
-        "detector_footprints",
-        "technical_quality",
-    ]:
+    band = L2ABand.B01
+    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
-    for qi_mask in [
-        "defective",
-        "saturated",
-        "nodata",
-    ]:
+    for qi_mask in QIMask_deprecated:
         with pytest.raises(DeprecationWarning):
             path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
-@pytest.mark.remote
 @pytest.mark.parametrize(
     "metadata",
     [
         lazy_fixture("s2_l2a_metadata"),
-        lazy_fixture("s2_l2a_metadata_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
-        lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
 def test_metadata_product_id(metadata):
@@ -108,32 +88,46 @@ def test_metadata_product_id(metadata):
     assert "L2A" in metadata.product_id
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "metadata",
     [
-        lazy_fixture("s2_l2a_metadata"),
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
+)
+def test_remote_metadata_product_id(metadata):
+    # product ID
+    assert "L2A" in metadata.product_id
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [lazy_fixture("s2_l2a_metadata")],
 )
 def test_metadata_crs(metadata):
     # crs
-    assert metadata.crs.startswith("EPSG")
+    assert isinstance(metadata.crs, CRS)
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "metadata",
     [
-        lazy_fixture("s2_l2a_metadata"),
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_bounds(metadata):
+def test_remote_metadata_crs(metadata):
+    # crs
+    assert isinstance(metadata.crs, CRS)
+
+
+def _test_metadata_bounds(metadata):
     # bounds
     assert isinstance(metadata.bounds, Bounds)
     assert len(metadata.bounds) == 4
@@ -145,17 +139,27 @@ def test_metadata_bounds(metadata):
     "metadata",
     [
         lazy_fixture("s2_l2a_metadata"),
+    ],
+)
+def test_metadata_bounds(metadata):
+    _test_metadata_bounds(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-@pytest.mark.parametrize(
-    "resolution",
-    [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
-)
-def test_metadata_geoinfo(metadata, resolution):
+def test_remote_metadata_bounds(metadata):
+    _test_metadata_bounds(metadata)
+
+
+def _test_metadata_geoinfo(metadata, resolution):
     # shape
     assert isinstance(metadata.shape(resolution), tuple)
     assert len(metadata.shape(resolution)) == 2
@@ -179,11 +183,70 @@ def test_metadata_geoinfo(metadata, resolution):
     "metadata",
     [
         lazy_fixture("s2_l2a_metadata"),
-        lazy_fixture("s2_l2a_safe_metadata"),
+    ],
+)
+@pytest.mark.parametrize(
+    "resolution",
+    [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
+)
+def test_metadata_geoinfo(metadata, resolution):
+    _test_metadata_geoinfo(metadata, resolution)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
+    ],
+)
+@pytest.mark.parametrize(
+    "resolution",
+    [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
+)
+def test_remote_metadata_geoinfo(metadata, resolution):
+    _test_metadata_geoinfo(metadata, resolution)
+
+
+def _test_metadata_footprint(metadata):
+    # footprint
+    assert metadata.footprint.is_valid
+    assert shape(metadata).is_valid
+    assert metadata.footprint_latlon.is_valid
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+    ],
+)
+def test_metadata_footprint(metadata):
+    _test_metadata_footprint(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
+    ],
+)
+def test_remote_metadata_footprint(metadata):
+    _test_metadata_footprint(metadata)
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_safe_metadata"),
     ],
 )
 def test_metadata_cloud_mask(metadata):
@@ -191,102 +254,95 @@ def test_metadata_cloud_mask(metadata):
     assert isinstance(metadata.cloud_mask(), list)
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "metadata",
     [
-        lazy_fixture("s2_l2a_metadata"),
-        lazy_fixture("s2_l2a_metadata_remote"),
-        lazy_fixture("s2_l2a_roda_metadata_remote"),
-    ],
-)
-def test_metadata_band_masks(metadata):
-    band_ids = [1, 4]
-    # band_masks
-    for band_id in band_ids:
-
-        # detector footprints
-        assert metadata.detector_footprints(band_id)
-        for feature in metadata.detector_footprints(band_id):
-            detector_id = feature["properties"]["detector_id"]
-            assert isinstance(detector_id, int)
-            assert shape(feature["geometry"]).is_valid
-
-        # defective mask
-        assert isinstance(metadata.defective_mask(band_id), list)
-        for feature in metadata.defective_mask(band_id):
-            assert shape(feature["geometry"]).is_valid
-
-        # saturated mask
-        assert isinstance(metadata.saturated_mask(band_id), list)
-        for feature in metadata.saturated_mask(band_id):
-            assert shape(feature["geometry"]).is_valid
-
-        # nodata mask
-        assert isinstance(metadata.nodata_mask(band_id), list)
-        for feature in metadata.nodata_mask(band_id):
-            assert shape(feature["geometry"]).is_valid
-
-        # technical quality mask
-        assert isinstance(metadata.technical_quality_mask(band_id), list)
-        for feature in metadata.technical_quality_mask(band_id):
-            assert shape(feature["geometry"]).is_valid
-
-
-def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_remote):
-    band_ids = [1, 4]
-    metadata = s2_l2a_roda_metadata_jp2_masks_remote
-    # band_masks
-    for band_id in band_ids:
-
-        # detector footprints
-        assert metadata.detector_footprints(band_id)
-        for feature in metadata.detector_footprints(band_id):
-            detector_id = feature["properties"]["detector_id"]
-            assert isinstance(detector_id, int)
-            assert shape(feature["geometry"]).is_valid
-
-        # defective mask
-        with pytest.raises(DeprecationWarning):
-            metadata.defective_mask(band_id)
-
-        # saturated mask
-        with pytest.raises(DeprecationWarning):
-            metadata.saturated_mask(band_id)
-
-        # nodata mask
-        with pytest.raises(DeprecationWarning):
-            metadata.nodata_mask(band_id)
-
-        # technical quality mask
-        assert isinstance(metadata.technical_quality_mask(band_id), list)
-        for feature in metadata.technical_quality_mask(band_id):
-            assert shape(feature["geometry"]).is_valid
-
-
-@pytest.mark.parametrize(
-    "metadata",
-    [
-        lazy_fixture("s2_l2a_metadata"),
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_metadata_sun_angles(metadata):
+def test_remote_metadata_cloud_mask(metadata):
+    # cloud mask
+    assert isinstance(metadata.cloud_mask(), list)
+
+
+def _test_metadata_band_masks(metadata):
+    bands = [L2ABand.B01, L2ABand.B04]
+    # band_masks
+    for band in bands:
+        # detector footprints
+        assert metadata.detector_footprints(band)
+        for feature in metadata.detector_footprints(band):
+            detector_id = feature["properties"]["detector_id"]
+            assert isinstance(detector_id, int)
+            assert shape(feature["geometry"]).is_valid
+
+        # technical quality mask
+        assert isinstance(metadata.technical_quality_mask(band), list)
+        for feature in metadata.technical_quality_mask(band):
+            assert shape(feature["geometry"]).is_valid
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+    ],
+)
+def test_metadata_band_masks(metadata):
+    _test_metadata_band_masks(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+    ],
+)
+def test_remote_metadata_band_masks(metadata):
+    _test_metadata_band_masks(metadata)
+
+
+@pytest.mark.remote
+def test_metadata_deprecated_band_masks(s2_l2a_roda_metadata_jp2_masks_remote):
+    bands = [L2ABand.B01, L2ABand.B04]
+    metadata = s2_l2a_roda_metadata_jp2_masks_remote
+    # band_masks
+    for band in bands:
+        # detector footprints
+        assert metadata.detector_footprints(band)
+        for feature in metadata.detector_footprints(band):
+            detector_id = feature["properties"]["detector_id"]
+            assert isinstance(detector_id, int)
+            assert shape(feature["geometry"]).is_valid
+
+        # technical quality mask
+        assert isinstance(metadata.technical_quality_mask(band), list)
+        for feature in metadata.technical_quality_mask(band):
+            assert shape(feature["geometry"]).is_valid
+
+
+def _test_metadata_sun_angles(metadata):
     # sun_angles
     for angle, properties in metadata.sun_angles.items():
-        assert angle in ["zenith", "azimuth"]
+        assert angle in SunAngle
 
         # array
-        assert isinstance(properties["array"], ma.MaskedArray)
-        assert properties["array"].ndim == 2
-        assert properties["array"].dtype == np.float32
-        assert not properties["array"].mask.all()
+        raster = properties["raster"]
+        assert isinstance(raster, ReferencedRaster)
+        assert isinstance(raster.data, ma.MaskedArray)
+        assert raster.data.ndim == 2
+        assert raster.data.dtype == np.float32
+        assert not raster.data.mask.all()
 
         # transform
-        assert isinstance(properties["transform"], Affine)
-        assert properties["transform"][0] == 5000.0
+        assert isinstance(raster.transform, Affine)
+        assert raster.transform[0] == 5000.0
 
         # mean
         assert isinstance(properties["mean"], float)
@@ -296,48 +352,82 @@ def test_metadata_sun_angles(metadata):
     "metadata",
     [
         lazy_fixture("s2_l2a_metadata"),
+    ],
+)
+def test_metadata_sun_angles(metadata):
+    _test_metadata_sun_angles(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
         lazy_fixture("s2_l2a_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_remote"),
         lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
+def test_remote_metadata_sun_angles(metadata):
+    _test_metadata_sun_angles(metadata)
+
+
+def _test_metadata_viewing_incidence_angles(metadata):
+    band = L2ABand.B04
+    grids = metadata.viewing_incidence_angles(band)
+
+    for angle, items in grids.items():
+        assert angle in ViewAngle
+        # mean
+        assert isinstance(items["mean"], float)
+        # mean viewing angles
+        arr = metadata.mean_viewing_incidence_angles(bands=band, angle=angle)
+        assert not arr.mask.all()
+
+        # detector footprints
+        footprints = len(items["detector"])
+        assert footprints
+        assert set(list(range(1, footprints + 1))) == set(
+            [i["properties"]["detector_id"] for i in metadata.detector_footprints(band)]
+        )
+        for detector_id, properties in items["detector"].items():
+            assert isinstance(detector_id, int)
+
+            # array
+            raster = properties["raster"]
+            assert isinstance(raster, ReferencedRaster)
+            assert isinstance(raster.data, ma.MaskedArray)
+            assert raster.data.ndim == 2
+            assert raster.data.dtype == np.float32
+            assert not raster.data.mask.all()
+
+            # transform
+            assert isinstance(raster.transform, Affine)
+            assert raster.transform[0] == 5000.0
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+    ],
+)
 def test_metadata_viewing_incidence_angles(metadata):
-    band_ids = [1, 4]
-    # viewing incidence angles
-    for band_id in band_ids:
-        grids = metadata.viewing_incidence_angles(band_id)
+    _test_metadata_viewing_incidence_angles(metadata)
 
-        for angle, items in grids.items():
-            assert angle in ["zenith", "azimuth"]
 
-            # mean
-            assert isinstance(items["mean"], float)
-            # mean viewing angles
-            arr = metadata.mean_viewing_incidence_angles(band_ids=band_ids, angle=angle)
-            assert not arr.mask.all()
-
-            # detector footprints
-            footprints = len(items["detector"])
-            assert footprints
-            assert set(list(range(1, footprints + 1))) == set(
-                [
-                    i["properties"]["detector_id"]
-                    for i in metadata.detector_footprints(band_id)
-                ]
-            )
-            for detector_id, properties in items["detector"].items():
-                assert isinstance(detector_id, int)
-
-                # array
-                assert isinstance(properties["array"], ma.MaskedArray)
-                assert properties["array"].ndim == 2
-                assert properties["array"].dtype == np.float32
-                assert not properties["array"].mask.all()
-
-                # transform
-                assert isinstance(properties["transform"], Affine)
-                assert properties["transform"][0] == 5000.0
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
+    ],
+)
+def test_remote_metadata_viewing_incidence_angles(metadata):
+    _test_metadata_viewing_incidence_angles(metadata)
 
 
 def test_unavailable_metadata_xml():
@@ -345,6 +435,7 @@ def test_unavailable_metadata_xml():
         S2Metadata.from_metadata_xml("unavailable_metadata.xml")
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "item_url",
     [
@@ -365,6 +456,7 @@ def test_from_stac_item(item_url):
     assert s2_metadata.reflectance_offset == offset
 
 
+@pytest.mark.remote
 @pytest.mark.parametrize(
     "item",
     [
@@ -405,14 +497,12 @@ def test_from_stac_item_backwards(item):
 
     # see if paths exist on prior versions
     assert s2_metadata.path_mapper.cloud_mask().exists()
-    band = "B01"
-    for qi_mask in [
-        "detector_footprints",
-        "technical_quality",
-    ]:
+    band = L2ABand.B01
+    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
         assert s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
+@pytest.mark.remote
 def test_from_stac_item_invalid(stac_item_invalid_pb0001):
     S2Metadata.from_stac_item(stac_item_invalid_pb0001)
 
@@ -443,7 +533,48 @@ def test_future_baseline_version():
     BaselineVersion.from_string("10.00")
 
 
+@pytest.mark.remote
 def test_product_no_detector_footprints(product_no_detector_footprints):
     s2_product = S2Metadata.from_metadata_xml(product_no_detector_footprints)
     with pytest.raises(MissingAsset):
-        s2_product.detector_footprints(2)
+        s2_product.detector_footprints(L2ABand.B02)
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("full_stac_item_pb0509"),
+    ],
+)
+def test_full_product_paths(item):
+    metadata = S2Metadata.from_stac_item(item)
+    for name, path in metadata.assets.items():
+        assert path.exists()
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("stac_item_pb_l1c_0204"),
+        lazy_fixture("stac_item_pb_l1c_0205"),
+        lazy_fixture("stac_item_pb_l1c_0206"),
+        lazy_fixture("stac_item_pb0207"),
+        lazy_fixture("stac_item_pb0208"),
+        lazy_fixture("stac_item_pb0209"),
+        lazy_fixture("stac_item_pb0210"),
+        lazy_fixture("stac_item_pb0211"),
+        lazy_fixture("stac_item_pb0212"),
+        lazy_fixture("stac_item_pb0213"),
+        lazy_fixture("stac_item_pb0214"),
+        lazy_fixture("stac_item_pb0300"),
+        lazy_fixture("stac_item_pb0301"),
+        lazy_fixture("stac_item_pb0400"),
+        lazy_fixture("stac_item_pb0400_offset"),
+        lazy_fixture("stac_item_pb0509"),
+    ],
+)
+def test_full_remote_product_paths(item):
+    metadata = S2Metadata.from_stac_item(item)
+    for name, path in metadata.assets.items():
+        assert path.exists()

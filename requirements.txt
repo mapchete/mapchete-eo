@@ -2,7 +2,7 @@ affine
 click
 croniter
 lxml
-mapchete>=2023.4.1
+mapchete>=2023.8.1
 pydantic
 pystac[urllib3]==1.8.2
 pystac-client==0.7.2

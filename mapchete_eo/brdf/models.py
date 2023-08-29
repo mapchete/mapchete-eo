@@ -1,15 +1,14 @@
-from fiona.transform import transform_geom
 import logging
+
 import numpy as np
 import numpy.ma as ma
+from fiona.transform import transform_geom
 from rasterio.features import geometry_mask
 from rasterio.fill import fillnodata
-
 from shapely.geometry import box, mapping, shape
 
 from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.brdf.config import BRDFModels, DEFAULT_MODEL, F_MODIS_PARAMS
-
+from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class DirectionalModels:
         angles,
         f_band_params,
         sza,
-        model=DEFAULT_MODEL,
+        model=BRDFModels.default,
         upscale_factor=10000,
         sun_model_flag=False,
     ):
@@ -256,16 +255,18 @@ def get_corrected_band_reflectance(band, brdf_param, nodata=0):
 
 
 def get_brdf_param(
-    band_idx=None,
     out_shape=None,
     out_transform=None,
     out_crs=None,
     product_crs=None,
-    sun_angles=None,
+    sun_azimuth_angle_array=None,
+    sun_zenith_angle_array=None,
     detector_footprints=None,
-    viewing_incidence_angles=None,
+    viewing_zenith=None,
+    viewing_azimuth=None,
     sun_zenith_angle=None,
-    model=DEFAULT_MODEL,
+    f_band_params=None,
+    model=BRDFModels.default,
     smoothing_iterations=10,
 ):
     """
@@ -273,20 +274,22 @@ def get_brdf_param(
 
     Parameters
     ----------
-    band_idx : int
-        Sentinel-2 band index.
     out_shape : tuple
         Shape of output model.
     out_transform : affine.Affine
         Output model geotransform.
     product_crs : str
         CRS of product.
-    sun_angles : dict
-        Dictionary of Zenith and Azimuth angle grids.
+    sun_azimuth_angle_array : dict
+        Dictionary of Azimuth angle grids.
+    sun_zenith_angle_array : dict
+        Dictionary of Zenith angle grids.
     detector_footprints : dict
         Detector footprints by detector ID.
-    viewing_incidence_angles : dict
-        Dictionary of Zenith and Azimuth incidence angles by detector ID.
+    viewing_zenith : dict
+        Dictionary of Zenith incidence angles by detector ID.
+    viewing_azimuth : dict
+        Dictionary of Zenith incidence angles by detector ID.
     sun_zenith_angle : float
         Constant sun angle for product.
     model : str
@@ -299,19 +302,20 @@ def get_brdf_param(
     BRDF model parameters : np.ma.MaskedArray
     """
     for param, name in [
-        (band_idx, "band_idx"),
         (out_shape, "out_shape"),
         (out_transform, "out_transform"),
         (product_crs, "product_crs"),
-        (sun_angles, "sun_angles"),
+        (sun_azimuth_angle_array, "sun_azimuth_angle"),
+        (sun_zenith_angle_array, "sun_zenith_angle"),
         (detector_footprints, "detector_footprints"),
-        (viewing_incidence_angles, "viewing_incidence_angles"),
+        (viewing_zenith, "viewing_zenith"),
+        (viewing_azimuth, "viewing_azimuth"),
         (sun_zenith_angle, "sun_zenith_angle"),
+        (f_band_params, "f_band_params"),
     ]:
         if param is None:  # pragma: no cover
             raise ValueError(f"{name} must be provided")
     out_crs = out_crs or product_crs
-
     # create output array
     model_params = ma.masked_equal(np.zeros(out_shape, dtype=np.float32), 0)
 
@@ -327,10 +331,6 @@ def get_brdf_param(
             ),
         )
     )
-
-    # viewing angles
-    viewing_zenith = viewing_incidence_angles["zenith"]["detector"]
-    viewing_azimuth = viewing_incidence_angles["azimuth"]["detector"]
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector in detector_footprints:
@@ -356,16 +356,15 @@ def get_brdf_param(
         if not shape(detector_footprint).intersects(out_footprint):  # pragma: no cover
             logger.debug(f"detector {detector_id} does not intersect with band window")
             continue
-
         # run low resolution model
         detector_model = DirectionalModels(
             angles=(
-                sun_angles["zenith"]["array"],
-                sun_angles["azimuth"]["array"],
-                viewing_zenith[detector_id]["array"],
-                viewing_azimuth[detector_id]["array"],
+                sun_zenith_angle_array["raster"].data,
+                sun_azimuth_angle_array["raster"].data,
+                viewing_zenith[detector_id]["raster"].data,
+                viewing_azimuth[detector_id]["raster"].data,
             ),
-            f_band_params=F_MODIS_PARAMS[band_idx],
+            f_band_params=f_band_params,
             sza=sun_zenith_angle,
             model=model,
         ).get_band_param()
@@ -378,7 +377,7 @@ def get_brdf_param(
         # resample model to output resolution
         detector_brdf = resample_array(
             in_array=detector_brdf_param,
-            in_transform=viewing_zenith[detector_id]["transform"],
+            in_transform=viewing_zenith[detector_id]["raster"].transform,
             in_crs=product_crs,
             nodata=0,
             dst_transform=out_transform,
@@ -400,17 +399,19 @@ def get_brdf_param(
     return model_params
 
 
-def run_brdf(
+def apply_brdf_correction(
     band=None,
-    band_idx=None,
     band_crs=None,
     band_transform=None,
     product_crs=None,
-    sun_angles=None,
+    sun_azimuth_angle_array=None,
+    sun_zenith_angle_array=None,
     detector_footprints=None,
-    viewing_incidence_angles=None,
+    viewing_zenith=None,
+    viewing_azimuth=None,
     sun_zenith_angle=None,
-    model=DEFAULT_MODEL,
+    f_band_params=None,
+    model=BRDFModels.default,
     smoothing_iterations=10,
 ):
     """
@@ -420,20 +421,22 @@ def run_brdf(
     ----------
     band : np.ndarray
         Band reflectance.
-    band_idx : int
-        Sentinel-2 band index.
     band_crs : str
         CRS of band.
     band_transform : Affine
         Band Affine object.
     product_crs : str
         CRS of product.
-    sun_angles : dict
-        Dictionary of Zenith and Azimuth angle grids.
+    sun_azimuth_angle_array : dict
+        Dictionary of Azimuth angle grids.
+    sun_zenith_angle_array : dict
+        Dictionary of Zenith angle grids.
     detector_footprints : dict
         Detector footprints by detector ID.
-    viewing_incidence_angles : dict
-        Dictionary of Zenith and Azimuth incidence angles by detector ID.
+    viewing_zenith : dict
+        Dictionary of Zenith incidence angles by detector ID.
+    viewing_azimuth : dict
+        Dictionary of Zenith incidence angles by detector ID.
     sun_zenith_angle : float
         Constant sun angle for product.
     model : str
@@ -443,15 +446,16 @@ def run_brdf(
     """
     if not isinstance(band, ma.MaskedArray):  # pragma: no cover
         raise TypeError("input band must be a masked array")
-    if not isinstance(band_idx, int):  # pragma: no cover
-        raise TypeError("band_idx must be a Sentinel-2 band index")
     for param, name in [
         (band_transform, "band_transform"),
         (product_crs, "product_crs"),
-        (sun_angles, "sun_angles"),
+        (sun_azimuth_angle_array, "sun_azimuth_angle"),
+        (sun_zenith_angle_array, "sun_zenith_angle"),
         (detector_footprints, "detector_footprints"),
-        (viewing_incidence_angles, "viewing_incidence_angles"),
+        (viewing_zenith, "viewing_zenith"),
+        (viewing_azimuth, "viewing_azimuth"),
         (sun_zenith_angle, "sun_zenith_angle"),
+        (f_band_params, "f_band_params"),
     ]:
         if param is None:  # pragma: no cover
             raise ValueError(f"{name} must be provided")
@@ -459,15 +463,17 @@ def run_brdf(
     return get_corrected_band_reflectance(
         band=band,
         brdf_param=get_brdf_param(
-            band_idx=band_idx,
             out_shape=band.shape,
             out_transform=band_transform,
             out_crs=band_crs,
             product_crs=product_crs,
-            sun_angles=sun_angles,
+            sun_azimuth_angle_array=sun_azimuth_angle_array,
+            sun_zenith_angle_array=sun_zenith_angle_array,
             detector_footprints=detector_footprints,
-            viewing_incidence_angles=viewing_incidence_angles,
+            viewing_zenith=viewing_zenith,
+            viewing_azimuth=viewing_azimuth,
             sun_zenith_angle=sun_zenith_angle,
+            f_band_params=f_band_params,
             model=model,
             smoothing_iterations=smoothing_iterations,
         ),

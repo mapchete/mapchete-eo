@@ -11,4 +11,3 @@ dist/
 *.gfs
 .vscode/
 __pycache__
-*.aux.xml

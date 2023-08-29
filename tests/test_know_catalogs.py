@@ -1,5 +1,5 @@
-from mapchete.io.vector import IndexedFeatures
 import pytest
+from mapchete.io.vector import IndexedFeatures
 
 
 @pytest.mark.remote

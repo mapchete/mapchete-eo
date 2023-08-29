@@ -1,10 +1,21 @@
 stages:
+  - codecheck
   - build
   - test
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.7.1
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.8.0
+
+precommit:
+  stage: codecheck
+  image: python:3.10.2-slim-bullseye
+  before_script:
+    - apt update && apt install -y --no-install-recommends git
+    - pip install pre-commit
+  script:
+    - pre-commit run --all-files
+
 
 build:
   stage: build
@@ -17,6 +28,7 @@ build:
     - pip install --upgrade hatch
   script:
     - hatch build
+
 
 test_wheel_base_image:
   stage: test

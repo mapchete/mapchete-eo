@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Union, Set
+from typing import Any, Set, Union
 
 PRE_0400_MASKS = {
     "clouds",

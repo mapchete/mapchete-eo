@@ -1,11 +1,10 @@
+import pytest
 from mapchete.io import rasterio_open
 from mapchete.path import MPath
-import pytest
 
 from mapchete_eo.io import cache_to_file
 
 
-@pytest.mark.remote
 def test_cache_raster_file_to_dir(test_array, test_affine, tmp_path):
     out_dir = MPath(str(tmp_path))
     out_file = cache_to_file(
@@ -22,7 +21,6 @@ def test_cache_raster_file_to_dir(test_array, test_affine, tmp_path):
         assert not src.read(masked=True).mask.all()
 
 
-@pytest.mark.remote
 def test_cache_raster_file_to_file(test_array, test_affine, tmp_path):
     out_dir = MPath(str(tmp_path)) / "temp.tif"
     out_file = cache_to_file(

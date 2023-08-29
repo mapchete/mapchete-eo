@@ -1,18 +1,19 @@
-from abc import ABC, abstractmethod
 import json
 import logging
 import os
-from typing import Union, List, Callable
+from abc import ABC, abstractmethod
+from typing import Callable, List, Union
 
+import pystac
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
-import pystac
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
 from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
+from rasterio.profiles import Profile
 
-from mapchete_eo.io.assets import get_assets
+from mapchete_eo.io.assets import copy_metadata_assets, get_assets
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ class Catalog(ABC):
         description: Union[str, None] = None,
         assets: List[str] = [],
         assets_dst_resolution: Union[None, float, int] = None,
+        assets_convert_profile: Union[Profile, None] = None,
+        copy_metadata: bool = False,
+        metadata_parser_classes: Union[tuple, None] = None,
         overwrite: bool = False,
         stac_io: DefaultStacIO = FSSpecStacIO(),
         progress_callback: Union[Callable, None] = None,
@@ -96,8 +100,16 @@ class Catalog(ABC):
                         assets,
                         output_path / collection.id / item.id,
                         resolution=assets_dst_resolution,
+                        convert_profile=assets_convert_profile,
                         overwrite=overwrite,
                         ignore_if_exists=True,
+                    )
+                if copy_metadata:
+                    item = copy_metadata_assets(
+                        item,
+                        output_path / collection.id / item.id,
+                        metadata_parser_classes=metadata_parser_classes,
+                        overwrite=overwrite,
                     )
                 # this has to be set to None, otherwise pystac will mess up the asset paths
                 # after normalizing

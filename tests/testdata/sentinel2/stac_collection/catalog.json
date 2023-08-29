@@ -1,1 +1,0 @@
-{"type": "Catalog", "id": "earth-search-aws", "stac_version": "1.0.0", "description": "Static subset of A STAC API of public datasets on AWS", "links": [{"rel": "root", "href": "./catalog.json", "type": "application/json"}, {"rel": "child", "href": "./sentinel-2-l2a/collection.json", "type": "application/json", "title": "Sentinel 2 Level 2A"}], "stac_extensions": []}

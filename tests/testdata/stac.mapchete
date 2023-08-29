@@ -3,9 +3,9 @@ input:
   inp:
     format: EOSTAC_DEV
     level: L2A
-    start_time: 2022-04-01
-    end_time: 2022-04-05
-    cat_baseurl: sentinel2/stac_collection/catalog.json
+    start_time: 2023-08-10
+    end_time: 2023-08-13
+    cat_baseurl: sentinel2/full_products/catalog.json
     with_cloudmasks: true
 output:
   format: GTiff
@@ -15,5 +15,4 @@ output:
 pyramid:
   grid: geodetic
 zoom_levels: 13
-# tmx bounds 13 1879 8938
-bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]
+bounds: [16, 46, 16.1, 46.1]

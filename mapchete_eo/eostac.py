@@ -2,11 +2,11 @@
 Contains all classes required to use the driver as mapchete input.
 """
 import datetime
-from pydantic import BaseModel
 from typing import Union
 
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
+from pydantic import BaseModel
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive

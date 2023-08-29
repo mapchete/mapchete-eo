@@ -3,38 +3,44 @@ A metadata parser helps to read additional Sentinel-2 metadata such as
 sun angles, quality masks, etc.
 """
 
-from affine import Affine
-from cached_property import cached_property
-from contextlib import contextmanager
-from fiona.transform import transform_geom
 import logging
-from mapchete.io import copy, fiona_open, rasterio_open
-from mapchete.path import MPath
-from mapchete.types import Bounds
+import xml.etree.ElementTree as etree
+from contextlib import contextmanager
+from functools import cached_property
+from tempfile import TemporaryDirectory
+from typing import Any, Callable, Dict, List, Tuple, Union
+
 import numpy as np
 import numpy.ma as ma
+from affine import Affine
+from fiona.transform import transform_geom
+from mapchete import Timer
+from mapchete.io import copy, fiona_open, rasterio_open
+from mapchete.io.raster import ReferencedRaster
+from mapchete.path import MPath
+from mapchete.types import Bounds
 from pystac import Item
+from rasterio.crs import CRS
 from rasterio.features import geometry_mask, shapes
 from rasterio.fill import fillnodata
 from rasterio.transform import from_bounds
-from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Tuple, Union, Callable
-import xml.etree.ElementTree as etree
+from shapely.geometry import mapping, shape
+from shapely.geometry.base import BaseGeometry
 
-
+from mapchete_eo.array.resampling import resample_array
+from mapchete_eo.exceptions import MissingAsset
+from mapchete_eo.io import open_xml
 from mapchete_eo.platforms.sentinel2.path_mappers import S2PathMapper, XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    Resolution,
     CloudType,
     CloudTypeBandIndex,
     L2ABand,
-    QI_MASKS,
+    QIMask,
+    Resolution,
+    SunAngle,
+    ViewAngle,
 )
-from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.io import open_xml
-from mapchete_eo.array.resampling import resample_array
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +63,8 @@ class S2Metadata:
     _cached_xml_root = None
     path_mapper_guesser: Callable = _default_path_mapper_guesser
     from_stac_item_constructor: Callable = _default_from_stac_item_constructor
+    crs: CRS
+    bounds: Bounds
 
     def __init__(
         self,
@@ -74,15 +82,32 @@ class S2Metadata:
         self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._band_masks_cache: Dict[str, dict] = {k: dict() for k in QI_MASKS.keys()}
+        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in QIMask}
         self._cloud_masks_cache: Union[List, None] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
         self.bounds, self._geoinfo = _get_bounds_geoinfo(self.xml_root)
+        self.footprint = shape(self.bounds)
+        self.crs = self._crs
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
+
+    @property
+    def __geo_interface__(self) -> dict:
+        return mapping(self.footprint)
+
+    @property
+    def footprint_latlon(self) -> BaseGeometry:
+        return shape(
+            transform_geom(
+                src_crs=self.crs,
+                dst_crs="EPSG:4326",
+                geom=self.__geo_interface__,
+                antimeridian_cutting=True,
+            )
+        )
 
     @classmethod
     def from_metadata_xml(
@@ -138,11 +163,9 @@ class S2Metadata:
         return next(self.xml_root.iter("DATASTRIP_ID")).text
 
     @cached_property
-    def crs(self) -> str:
+    def _crs(self) -> CRS:
         crs_str = next(self.xml_root.iter("HORIZONTAL_CS_CODE")).text
-        if not crs_str.startswith(("EPSG:326", "EPSG:327")):
-            raise ValueError(f"invalid CRS given in metadata.xml: {crs_str}")
-        return crs_str
+        return CRS.from_string(crs_str)
 
     @cached_property
     def bands_dict(self) -> dict:
@@ -157,21 +180,20 @@ class S2Metadata:
         """
         Return sun angle grids.
         """
-        sun_angles: dict = {"zenith": {}, "azimuth": {}}
-        for angle in ["Zenith", "Azimuth"]:
-            array, transform = _get_grid_data(
+        sun_angles: dict = {angle: dict() for angle in SunAngle}
+        for angle in SunAngle:
+            raster = _get_grid_data(
                 group=next(self.xml_root.iter("Sun_Angles_Grid")),
                 tag=angle,
                 bounds=self.bounds,
+                crs=self.crs,
             )
             mean = float(
                 next(self.xml_root.iter("Mean_Sun_Angle"))
-                .findall(f"{angle.upper()}_ANGLE")[0]
+                .findall(f"{angle.value.upper()}_ANGLE")[0]
                 .text
             )
-            sun_angles[angle.lower()].update(
-                array=array, transform=transform, mean=mean
-            )
+            sun_angles[angle].update(raster=raster, mean=mean)
         return sun_angles
 
     @property
@@ -183,6 +205,21 @@ class S2Metadata:
             return self.default_boa_offset
         else:
             return 0
+
+    @property
+    def assets(self) -> dict:
+        """
+        Mapping of all available metadata assets such as QI bands
+        """
+        out = dict(
+            cloud_mask=self.path_mapper.cloud_mask(),
+        )
+        for qi_mask in [QIMask.detector_footprints, QIMask.technical_quality]:
+            for band in L2ABand:
+                out[f"{band.name}-{qi_mask.name}"] = self.path_mapper.band_qi_mask(
+                    qi_mask=qi_mask, band=band
+                )
+        return out
 
     def shape(self, resolution: Resolution) -> Tuple:
         """
@@ -283,7 +320,7 @@ class S2Metadata:
             if f["properties"]["maskType"].lower() in mask_types_strings
         ]
 
-    def detector_footprints(self, band_idx: int) -> List[Dict]:
+    def detector_footprints(self, band: L2ABand) -> List[Dict]:
         """
         Return detector footprints.
 
@@ -296,59 +333,14 @@ class S2Metadata:
         -------
         List of GeoJSON mappings.
         """
-        footprints = self._get_band_mask(band_idx, "detector_footprints")
+        footprints = self._get_band_mask(band, QIMask.detector_footprints)
         if len(footprints) == 0:
             raise MissingAsset(
-                f"No detector footprints found for band {band_idx} in {self}"
+                f"No detector footprints found for band {band} in {self}"
             )
         return footprints
 
-    def defective_mask(self, band_idx: int) -> List[Dict]:
-        """
-        Return defective mask.
-
-        Paramerters
-        -----------
-        band_idx : int
-            L2ABand index.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
-        """
-        return self._get_band_mask(band_idx, "defective")
-
-    def saturated_mask(self, band_idx: int) -> List[Dict]:
-        """
-        Return saturated mask.
-
-        Paramerters
-        -----------
-        band_idx : int
-            L2ABand index.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
-        """
-        return self._get_band_mask(band_idx, "saturated")
-
-    def nodata_mask(self, band_idx: int) -> List[Dict]:
-        """
-        Return nodata mask.
-
-        Paramerters
-        -----------
-        band_idx : int
-            L2ABand index.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
-        """
-        return self._get_band_mask(band_idx, "nodata")
-
-    def technical_quality_mask(self, band_idx: int) -> List[Dict]:
+    def technical_quality_mask(self, band: L2ABand) -> List[Dict]:
         """
         Return technical quality mask.
 
@@ -361,9 +353,9 @@ class S2Metadata:
         -------
         List of GeoJSON mappings.
         """
-        return self._get_band_mask(band_idx, "technical_quality")
+        return self._get_band_mask(band, QIMask.technical_quality)
 
-    def viewing_incidence_angles(self, band_idx: int) -> Dict:
+    def viewing_incidence_angles(self, band: L2ABand) -> Dict:
         """
         Return viewing incidence angles.
 
@@ -375,88 +367,65 @@ class S2Metadata:
         Returns
         -------
         Dictionary of 'zenith' and 'azimuth' angles.
-
-        Example
-        -------
-            {
-                "zenith": {
-                    "mean": float --> mean angle
-                    "detector": {
-                        1: { --> detector ID (same as in viewing angles)
-                            "array": np.ma.MaskedArray --> zenith angles grid
-                            "transform": Affine --> geotransform object
-                        }
-                        ...
-                    }
-                },
-                "azimuth": {
-                    "mean": float --> mean angle
-                    "detector": {
-                        1: { --> detector ID (same as in viewing angles)
-                            "array": np.ma.MaskedArray --> azimuth angles grid
-                            "transform": Affine --> geotransform object
-                        }
-                        ...
-                    }
-                }
-            }
         """
-        if self._viewing_incidence_angles_cache.get(band_idx) is None:
+        if self._viewing_incidence_angles_cache.get(band) is None:
             angles: Dict[str, Any] = {
-                "zenith": {"detector": dict(), "mean": None},
-                "azimuth": {"detector": dict(), "mean": None},
+                ViewAngle.zenith: {"detector": dict(), "mean": None},
+                ViewAngle.azimuth: {"detector": dict(), "mean": None},
             }
             for grids in self.xml_root.iter("Viewing_Incidence_Angles_Grids"):
-                band = int(grids.get("bandId")) + 1
-                if band == band_idx:
+                band_idx = int(grids.get("bandId"))
+                if band_idx == band.value:
                     detector = int(grids.get("detectorId"))
-                    for angle in ["Zenith", "Azimuth"]:
-                        array, transform = _get_grid_data(
-                            group=grids, tag=angle, bounds=self.bounds
+                    for angle in ViewAngle:
+                        raster = _get_grid_data(
+                            group=grids,
+                            tag=angle.value,
+                            bounds=self.bounds,
+                            crs=self.crs,
                         )
-                        angles[angle.lower()]["detector"][detector] = dict(
-                            array=array, transform=transform
-                        )
+                        angles[angle]["detector"][detector] = dict(raster=raster)
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
                 for band_angle in band_angles:
-                    band = int(band_angle.get("bandId")) + 1
-                    if band == band_idx:
-                        for angle in ["Zenith", "Azimuth"]:
-                            angles[angle.lower()].update(
+                    band_idx = int(band_angle.get("bandId"))
+                    if band_idx == band.value:
+                        for angle in ViewAngle:
+                            angles[angle].update(
                                 mean=float(
-                                    band_angle.findall(f"{angle.upper()}_ANGLE")[0].text
+                                    band_angle.findall(f"{angle.value.upper()}_ANGLE")[
+                                        0
+                                    ].text
                                 )
                             )
 
-            self._viewing_incidence_angles_cache[band_idx] = angles
-        return self._viewing_incidence_angles_cache[band_idx]
+            self._viewing_incidence_angles_cache[band] = angles
+        return self._viewing_incidence_angles_cache[band]
 
     def viewing_incidence_angle(
-        self, band_idx: int, detector_id: int, angle: str = "zenith"
+        self, band: L2ABand, detector_id: int, angle: ViewAngle = ViewAngle.zenith
     ) -> Dict:
-        return self.viewing_incidence_angles(band_idx)[angle]["detector"][detector_id]
+        return self.viewing_incidence_angles(band)[angle]["detector"][detector_id]
 
     def mean_viewing_incidence_angles(
         self,
-        band_ids=None,
-        angle="zenith",
-        resolution: Resolution = Resolution["60m"],
+        bands: Union[List[L2ABand], L2ABand, None] = None,
+        angle: ViewAngle = ViewAngle.zenith,
+        resolution: Resolution = Resolution["120m"],
         resampling="bilinear",
         smoothing_iterations=10,
     ) -> np.ndarray:
-        band_ids = band_ids or list(range(1, 14))
-        if isinstance(band_ids, int):
-            band_ids = [band_ids]
-        if angle not in ["zenith", "azimuth"]:
-            raise ValueError("angle must be either 'zenith' or 'azimuth'")
+        if bands is None:
+            bands = list(L2ABand)
+        if isinstance(bands, L2ABand):
+            bands = [bands]
 
-        def _band_angles(band_id):
-            detector_angles = self.viewing_incidence_angles(band_id)[angle]["detector"]
+        def _band_angles(band: L2ABand):
+            detector_angles = self.viewing_incidence_angles(band)[angle]["detector"]
             band_angles = ma.masked_equal(
                 np.zeros(self.shape(resolution), dtype=np.float32), 0
             )
             # for detector in detectors.values():
-            for detector in self.detector_footprints(band_id):
+            for detector in self.detector_footprints(band):
                 detector_id = int(detector["id"])
                 # handle rare cases where detector geometries are available but no respective
                 # angle arrays:
@@ -465,19 +434,19 @@ class S2Metadata:
                         f"no {angle} angles grid found for detector {detector_id}"
                     )
                     continue
-
+                detector_raster = detector_angles[detector_id]["raster"]
                 # interpolate missing nodata edges and return BRDF difference model
-                detector_array = ma.masked_invalid(
+                detector_raster.data = ma.masked_invalid(
                     fillnodata(
-                        detector_angles[detector_id]["array"],
+                        detector_raster.data,
                         smoothing_iterations=smoothing_iterations,
                     )
                 )
                 # resample detector angles to output resolution
                 detector_angle = resample_array(
-                    in_array=detector_array,
-                    in_transform=detector_angles[detector_id]["transform"],
-                    in_crs=self.crs,
+                    in_array=detector_raster.data,
+                    in_crs=detector_raster.crs,
+                    in_transform=detector_raster.transform,
                     nodata=0,
                     dst_transform=self.transform(resolution),
                     dst_crs=self.crs,
@@ -497,19 +466,20 @@ class S2Metadata:
 
             return band_angles
 
-        return ma.mean(
-            ma.stack([_band_angles(band_id) for band_id in band_ids]), axis=0
+        with Timer() as tt:
+            mean = ma.mean(ma.stack([_band_angles(band) for band in bands]), axis=0)
+        logger.debug(
+            "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
+        return mean
 
-    def _get_band_mask(self, band_idx, qi_mask):
-        if self._band_masks_cache.get(qi_mask, {}).get(band_idx) is None:
-            mask_path = self.path_mapper.band_qi_mask(
-                qi_mask=qi_mask, band=self._band_idx_to_name(band_idx)
-            )
+    def _get_band_mask(self, band: L2ABand, qi_mask: QIMask):
+        if self._band_masks_cache.get(qi_mask, {}).get(band) is None:
+            mask_path = self.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
             if mask_path.suffix == ".jp2":
                 features = self._vectorize_raster_mask(mask_path)
                 # append detector ID for detector footprints
-                if qi_mask == "detector_footprints":
+                if qi_mask == QIMask.detector_footprints:
                     for f in features:
                         f["properties"]["detector_id"] = int(
                             f["properties"].pop("value")
@@ -517,15 +487,15 @@ class S2Metadata:
             else:
                 features = self._read_vector_mask(mask_path)
                 # append detector ID for detector footprints
-                if qi_mask == "detector_footprints":
+                if qi_mask == QIMask.detector_footprints:
                     for f in features:
                         detector_id = int(f["properties"]["gml_id"].split("-")[-2])
                         f["id"] = detector_id
                         f["properties"]["detector_id"] = detector_id
 
-            self._band_masks_cache[qi_mask][band_idx] = features
+            self._band_masks_cache[qi_mask][band] = features
 
-        return self._band_masks_cache[qi_mask][band_idx]
+        return self._band_masks_cache[qi_mask][band]
 
     @staticmethod
     def _read_vector_mask(mask_path):
@@ -568,14 +538,6 @@ class S2Metadata:
                             yield out
 
         return list(_gen())
-
-    def _band_idx_to_name(self, band_idx):
-        # band indexes start at 1
-        for band in L2ABand:
-            if band.value == band_idx:
-                return band.name
-        else:
-            raise KeyError(f"cannot assign band index {band_idx} to band name")
 
 
 @contextmanager
@@ -647,7 +609,7 @@ def _get_bounds_geoinfo(root):
     return Bounds(*bounds), geoinfo
 
 
-def _get_grid_data(group, tag, bounds):
+def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
     def _get_grid(values_list):
         return ma.masked_invalid(
             np.array(
@@ -663,7 +625,7 @@ def _get_grid_data(group, tag, bounds):
         )
 
     def _get_affine(bounds=None, row_step=None, col_step=None, shape=None):
-        left, bottom, right, top = bounds
+        left, _, _, top = bounds
         height, width = shape
 
         angles_left = left - col_step / 2
@@ -682,4 +644,4 @@ def _get_grid_data(group, tag, bounds):
     affine = _get_affine(
         bounds=bounds, row_step=row_step, col_step=col_step, shape=grid.shape
     )
-    return grid, affine
+    return ReferencedRaster(data=grid, transform=affine, bounds=bounds, crs=crs)

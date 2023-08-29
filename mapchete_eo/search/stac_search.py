@@ -1,15 +1,15 @@
 import datetime
 import logging
 from functools import cached_property
-from typing import Union, Dict, List
+from typing import Dict, List, Union
 
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
+from mapchete.types import Bounds
 from mapchete.validate import validate_bounds
 from pystac_client import Client
 from shapely.geometry import box
-from mapchete.types import Bounds
 
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import StacSearchConfig
@@ -60,7 +60,7 @@ class STACSearchCatalog(Catalog):
                 searches = [search]
 
             for search in searches:
-                yield from search.get_items()
+                yield from search.items()
 
         return IndexedFeatures(_get_items())
 

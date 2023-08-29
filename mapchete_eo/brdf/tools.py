@@ -1,8 +1,8 @@
 import logging
 import math
+
 import numpy as np
 from affine import Affine
-
 from mapchete.io.raster import resample_from_array
 
 logger = logging.getLogger(__name__)

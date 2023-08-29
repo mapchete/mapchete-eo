@@ -1,8 +1,8 @@
 from mapchete_eo.platforms.sentinel2.base import (
-    S2Metadata,
+    METADATA,
     InputData,
     InputTile,
-    METADATA,
+    S2Metadata,
 )
 from mapchete_eo.platforms.sentinel2.product import S2Product
 

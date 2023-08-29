@@ -1,33 +1,33 @@
 import os
-import numpy as np
 
+import numpy as np
 import pystac
-from pystac_client import Client
 import pytest
 from mapchete.path import MPath
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
+from pystac_client import Client
 from rasterio import Affine
+from shapely.geometry import shape
 
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
-from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.platforms.sentinel2 import S2Metadata
-
-SCRIPT_DIR = MPath(os.path.dirname(os.path.realpath(__file__)))
-TESTDATA_DIR = SCRIPT_DIR / "testdata"
-S2_CACHE_DIR = TESTDATA_DIR / "s2"
-
-
-@pytest.fixture
-def testdata_dir():
-    return TESTDATA_DIR
+from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 
 @pytest.fixture(scope="session")
-def s2_stac_collection():
-    # generated with:
-    # $ mapchete eo static-catalog tests/testdata/s2_stac_collection --start-time 2022-04-01 --end-time 2022-04-05 --bounds 16 48 17 49 -d --assets-dst-resolution 480 --assets red,green,blue,nir,granule_metadata
-    return TESTDATA_DIR / "s2_stac_collection" / "catalog.json"
+def testdata_dir():
+    return MPath(os.path.dirname(os.path.realpath(__file__))) / "testdata"
+
+
+@pytest.fixture(scope="session")
+def s2_testdata_dir(testdata_dir):
+    return testdata_dir / "sentinel2"
+
+
+@pytest.fixture(scope="session")
+def s2_stac_collection(s2_testdata_dir):
+    return s2_testdata_dir / "full_products" / "catalog.json"
 
 
 @pytest.fixture(scope="session")
@@ -41,8 +41,8 @@ def s2_stac_items(s2_stac_collection):
 
 
 @pytest.fixture
-def pf_sr_stac_collection():
-    return TESTDATA_DIR / "pf_stac_collection" / "stac" / "SR" / "catalog.json"
+def pf_sr_stac_collection(testdata_dir):
+    return testdata_dir / "pf_stac_collection" / "stac" / "SR" / "catalog.json"
 
 
 @pytest.fixture
@@ -52,8 +52,8 @@ def pf_sr_stac_item(pf_sr_stac_collection):
 
 
 @pytest.fixture
-def pf_qa_stac_collection():
-    return TESTDATA_DIR / "pf_stac_collection" / "stac" / "QA" / "catalog.json"
+def pf_qa_stac_collection(testdata_dir):
+    return testdata_dir / "pf_stac_collection" / "stac" / "QA" / "catalog.json"
 
 
 @pytest.fixture
@@ -77,15 +77,15 @@ def test_affine():
 
 
 @pytest.fixture
-def s2_stac_item():
+def s2_stac_item(s2_stac_collection):
     item = pystac.pystac.Item.from_file(
         str(
-            TESTDATA_DIR.joinpath(
-                "s2_stac_collection",
-                "sentinel-2-l2a",
-                "S2A_33UWP_20220405_0_L2A",
-                "S2A_33UWP_20220405_0_L2A.json",
-            )
+            s2_stac_collection.parent
+            / "sentinel-2-l2a"
+            # / "S2B_33TWL_20230803_0_L2A"
+            # / "S2B_33TWL_20230803_0_L2A.json"
+            / "S2B_33TWM_20230810_0_L2A"
+            / "S2B_33TWM_20230810_0_L2A.json"
         )
     )
     item.make_asset_hrefs_absolute()
@@ -93,18 +93,18 @@ def s2_stac_item():
 
 
 @pytest.fixture
-def stac_mapchete(tmp_path):
+def stac_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        TESTDATA_DIR / "stac.mapchete",
+        testdata_dir / "stac.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
 
 
 @pytest.fixture
-def sentinel2_mapchete(tmp_path):
+def sentinel2_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        TESTDATA_DIR / "sentinel2.mapchete",
+        testdata_dir / "sentinel2.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
@@ -117,7 +117,8 @@ def cloudy_tile():
 
 @pytest.fixture
 def test_tile():
-    return BufferedTilePyramid("geodetic").tile(13, 1879, 8938)
+    """Tile on the overlap between MGRS granules 33TWL and 33TWM."""
+    return BufferedTilePyramid("geodetic").tile_from_xy(15.77928, 46.01972, 13)
 
 
 @pytest.fixture(scope="session")
@@ -131,6 +132,7 @@ def stac_search_catalog():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def e84_cog_catalog():
     return EarthSearchV1S2L2A(
@@ -152,8 +154,14 @@ def e84_cog_catalog_short():
 
 
 @pytest.fixture(scope="session")
-def s2_l2a_metadata_xml():
-    return TESTDATA_DIR / "l2a_metadata" / "metadata.xml"
+def s2_l2a_metadata_xml(s2_testdata_dir):
+    return (
+        s2_testdata_dir
+        / "full_products"
+        / "sentinel-2-l2a"
+        / "S2B_33TWM_20230810_0_L2A"
+        / "granule_metadata.xml"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -162,10 +170,10 @@ def s2_l2a_metadata(s2_l2a_metadata_xml):
 
 
 @pytest.fixture(scope="session")
-def s2_l2a_safe_metadata():
+def s2_l2a_safe_metadata(s2_testdata_dir):
     return S2Metadata.from_metadata_xml(
         str(
-            TESTDATA_DIR.joinpath(
+            s2_testdata_dir.joinpath(
                 "SAFE",
                 "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231",
                 "S2A_MSIL2A_20181229T095411_N0211_R079_T33SVB_20181229T112231.SAFE",
@@ -175,6 +183,7 @@ def s2_l2a_safe_metadata():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_metadata_remote():
     return S2Metadata.from_metadata_xml(
@@ -182,6 +191,7 @@ def s2_l2a_metadata_remote():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_remote():
     """Same content as s2_l2a_metadata_remote, but hosted on different server."""
@@ -190,6 +200,7 @@ def s2_l2a_roda_metadata_remote():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_jp2_masks_remote():
     """From about 2022 on, ahte masks are now encoded as JP2 (rasters), not as GMLs (features)."""
@@ -198,6 +209,7 @@ def s2_l2a_roda_metadata_jp2_masks_remote():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture()
 def s2_l2a_earthsearch_xml_remote():
     """Metadata used by Earth-Search V1 endpoint"""
@@ -206,12 +218,14 @@ def s2_l2a_earthsearch_xml_remote():
     )
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote(s2_l2a_earthsearch_remote_item):
     """Metadata used by Earth-Search V1 endpoint"""
     return S2Metadata.from_stac_item(s2_l2a_earthsearch_remote_item)
 
 
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote_item():
     """Metadata used by Earth-Search V1 endpoint"""
@@ -231,138 +245,149 @@ def tileinfo_jp2_schema():
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0509():
+def stac_item_pb0509(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_32TMS_20221207_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_32TMS_20221207_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0400():
+def stac_item_pb0400(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220130_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20220130_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20220130_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0400_offset():
+def stac_item_pb0400_offset(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20220226_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20220226_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20220226_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0301():
+def stac_item_pb0301(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20220122_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20220122_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20220122_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0300():
+def stac_item_pb0300(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210629_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20210629_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20210629_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0214():
+def stac_item_pb0214(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20210328_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20210328_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20210328_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0213():
+def stac_item_pb0213(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20200202_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20200202_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20200202_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0212():
+def stac_item_pb0212(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20190707_1_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20190707_1_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20190707_1_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0211():
+def stac_item_pb0211(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20190503_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20190503_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20190503_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0210():
+def stac_item_pb0210(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20181119_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20181119_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20181119_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0209():
+def stac_item_pb0209(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181104_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20181104_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20181104_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0208():
+def stac_item_pb0208(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20181005_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20181005_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20181005_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb0207():
+def stac_item_pb0207(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180521_1_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20180521_1_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20180521_1_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb_l1c_0206():
+def stac_item_pb_l1c_0206(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20180806_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20180806_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb_l1c_0205():
+def stac_item_pb_l1c_0205(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20171005_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20171005_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20171005_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_pb_l1c_0204():
+def stac_item_pb_l1c_0204(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_33TWN_20161202_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2A_33TWN_20161202_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2A_33TWN_20161202_0_L2A")
     )
 
 
 @pytest.fixture(scope="session")
-def stac_item_invalid_pb0001():
+def stac_item_invalid_pb0001(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_33TWN_20180806_0_L2A"""
     return pystac.Item.from_file(
-        str(TESTDATA_DIR / "stac_items" / "S2B_33TWN_20180806_0_L2A")
+        str(s2_testdata_dir / "stac_items" / "S2B_33TWN_20180806_0_L2A")
+    )
+
+
+@pytest.fixture(scope="session")
+def full_stac_item_pb0509(s2_testdata_dir):
+    return pystac.Item.from_file(
+        s2_testdata_dir
+        / "full_products"
+        / "sentinel-2-l2a"
+        / "S2B_33TWM_20230810_0_L2A"
+        / "S2B_33TWM_20230810_0_L2A.json"
     )
 
 

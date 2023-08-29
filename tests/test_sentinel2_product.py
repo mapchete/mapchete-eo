@@ -1,5 +1,7 @@
 import pytest
 from mapchete.path import MPath
+from mapchete.types import Bounds
+from rasterio.crs import CRS
 
 from mapchete_eo.platforms.sentinel2.brdf import BRDFConfig
 from mapchete_eo.platforms.sentinel2.config import CacheConfig
@@ -11,19 +13,23 @@ def test_product(s2_stac_item):
         s2_stac_item,
     )
     assert product.item
-    assert product.s2_metadata
+    assert product.metadata
     assert product.cache is None
+    assert isinstance(product.bounds, Bounds)
+    assert isinstance(product.crs, CRS)
 
 
 def test_product_asset_cache(s2_stac_item, tmpdir):
     product = S2Product(
         s2_stac_item,
-        cache_config=CacheConfig(path=MPath.from_inp(tmpdir), assets=["aot"]),
+        cache_config=CacheConfig(
+            path=MPath.from_inp(tmpdir), assets=["granule_metadata"]
+        ),
     )
     assert product.cache
-    assert not product.cache.ls()
+    assert not product.cache.path.ls()
     product.cache_assets()
-    assert product.cache.ls()
+    assert product.cache.path.ls()
 
 
 @pytest.mark.remote
@@ -35,6 +41,6 @@ def test_product_brdf_cache(s2_l2a_earthsearch_remote_item, tmpdir):
         ),
     )
     assert product.cache
-    assert not product.cache.ls()
+    assert not product.cache.path.ls()
     product.cache_brdf_grids()
-    assert product.cache.ls()
+    assert product.cache.path.ls()

@@ -1,7 +1,7 @@
-from enum import Enum
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union, Any
+from enum import Enum
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -16,7 +16,9 @@ from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 logger = logging.getLogger(__name__)
 
 
-MergeMethod = Enum("MergeMethod", ["first", "average"])
+class MergeMethod(str, Enum):
+    first = "first"
+    average = "average"
 
 
 def items_to_xarray(
@@ -33,58 +35,13 @@ def items_to_xarray(
     merge_items_by: Union[str, None] = None,
     merge_method: Union[MergeMethod, str] = MergeMethod.first,
 ) -> xr.Dataset:
-    """Read tile window of STAC Items and merge into a 4D xarray.
+    """Read tile window of STAC Items and merge into a 4D xarray."""
 
-    Args:
-        items (List[pystac.Item], optional): _description_. Defaults to [].
-        assets (List[str], optional): _description_. Defaults to [].
-        eo_bands (List[str], optional): _description_. Defaults to [].
-        tile (BufferedTile, optional): _description_. Defaults to None.
-        resampling (str, optional): _description_. Defaults to "nearest".
-        nodatavals (Union[List, None], optional): _description_. Defaults to None.
-        band_axis_name (str, optional): _description_. Defaults to "bands".
-        x_axis_name (str, optional): _description_. Defaults to "x".
-        y_axis_name (str, optional): _description_. Defaults to "y".
-        time_axis_name (str, optional): _description_. Defaults to "time".
-        merge_items_by (Union[str, None], optional): _description_. Defaults to None.
-        merge_method (Union[MergeMethod, str], optional): _description_. Defaults to MergeMethod.first.
-
-    Raises:
-        ValueError: _description_
-
-    Returns:
-        xr.Dataset: _description_
-    """
     if len(items) == 0:
         raise ValueError("no items to read")
-    if merge_items_by is not None:
-        items_per_property = group_items_per_property(items, merge_items_by)
-        logger.debug(
-            "reading %s items in %s groups...", len(items), len(items_per_property)
-        )
-        return xr.Dataset(
-            data_vars={
-                data_var_name: merge_items(
-                    items=items,
-                    assets=assets,
-                    eo_bands=eo_bands,
-                    tile=tile,
-                    resampling=resampling,
-                    nodatavals=nodatavals,
-                    x_axis_name=x_axis_name,
-                    y_axis_name=y_axis_name,
-                    time_axis_name=time_axis_name,
-                    merge_method=merge_method,
-                ).to_stacked_array(
-                    new_dim=band_axis_name,
-                    sample_dims=(x_axis_name, y_axis_name),
-                    name=data_var_name,
-                )
-                for data_var_name, items in items_per_property.items()
-            },
-            coords={merge_items_by: list(items_per_property.keys())},
-        ).transpose(merge_items_by, band_axis_name, x_axis_name, y_axis_name)
-    else:
+
+    # don't merge items
+    if merge_items_by is None:
         logger.debug("reading %s items...", len(items))
         return xr.Dataset(
             data_vars={
@@ -112,25 +69,43 @@ def items_to_xarray(
             },
         ).transpose(time_axis_name, band_axis_name, x_axis_name, y_axis_name)
 
+    # merge items
+    else:
+        items_per_property = group_items_per_property(items, merge_items_by)
+        logger.debug(
+            "reading %s items in %s groups...", len(items), len(items_per_property)
+        )
+        return xr.Dataset(
+            data_vars={
+                data_var_name: merge_items(
+                    items=items,
+                    merge_method=merge_method,
+                    item_to_xarray_kwargs=dict(
+                        assets=assets,
+                        eo_bands=eo_bands,
+                        tile=tile,
+                        resampling=resampling,
+                        nodatavals=nodatavals,
+                        x_axis_name=x_axis_name,
+                        y_axis_name=y_axis_name,
+                        time_axis_name=time_axis_name,
+                    ),
+                ).to_stacked_array(
+                    new_dim=band_axis_name,
+                    sample_dims=(x_axis_name, y_axis_name),
+                    name=data_var_name,
+                )
+                for data_var_name, items in items_per_property.items()
+            },
+            coords={merge_items_by: list(items_per_property.keys())},
+        ).transpose(merge_items_by, band_axis_name, x_axis_name, y_axis_name)
+
 
 def merge_items(
     items: List[pystac.Item] = [],
     merge_method: Union[MergeMethod, str] = MergeMethod.first,
-    **kwargs,
+    item_to_xarray_kwargs: dict = {},
 ) -> xr.Dataset:
-    """_summary_
-
-    Args:
-        items (List[pystac.Item], optional): _description_. Defaults to [].
-        merge_method (Union[MergeMethod, str], optional): _description_. Defaults to MergeMethod.first.
-
-    Raises:
-        ValueError: _description_
-        NotImplementedError: _description_
-
-    Returns:
-        xr.Dataset: _description_
-    """
     merge_method = (
         merge_method
         if isinstance(merge_method, MergeMethod)
@@ -138,21 +113,30 @@ def merge_items(
     )
     if len(items) == 0:
         raise ValueError("no items to merge")
-    out = item_to_xarray(items[0], **kwargs)
+    out = item_to_xarray(items[0], **item_to_xarray_kwargs)
     # delete attributes because dataset is a merge of multiple items
     out.attrs = dict()
+
+    # nothing to merge here
     if len(items) == 1:
         return out
+
+    # first pixels first
     if merge_method == MergeMethod.first:
         for item in items[1:]:
-            xr = item_to_xarray(item=item, **kwargs)
+            xr = item_to_xarray(item=item, **item_to_xarray_kwargs)
             # replace masked values with values from freshly read xarray
             for variable in out.variables:
                 out[variable] = out[variable].where(
                     out[variable] == out[variable].attrs["_FillValue"], xr[variable]
                 )
+
+    # read all and average
     elif merge_method == MergeMethod.average:
-        full_stack = [out, *[item_to_xarray(item=item, **kwargs) for item in items[1:]]]
+        full_stack = [
+            out,
+            *[item_to_xarray(item=item, **item_to_xarray_kwargs) for item in items[1:]],
+        ]
         for variable in out.variables:
             out[variable] = masked_to_xarr(
                 ma.stack([xarr_to_masked(xarr[variable]) for xarr in full_stack])

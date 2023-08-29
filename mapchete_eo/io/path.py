@@ -1,16 +1,15 @@
-from enum import Enum
-from fsspec.exceptions import FSTimeoutError
 import hashlib
 import logging
+import xml.etree.ElementTree as etree
+from enum import Enum
+
+from fsspec.exceptions import FSTimeoutError
+from mapchete.path import MPath
 from pystac import Item
 from retry import retry
-import xml.etree.ElementTree as etree
-
-from mapchete.path import MPath
 
 from mapchete_eo.settings import MP_EO_IO_RETRY_SETTINGS
 from mapchete_eo.time import to_datetime
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +25,18 @@ def open_xml(path: MPath):
 
 
 class ProductPathGenerationMethod(str, Enum):
+    """Option to generate product cache path."""
+
+    # <cache_basepath>/<product-id>
     product_id = "product_id"
+
+    # <cache_basepath>/<product-hash>
     hash = "hash"
+
+    # <cache_basepath>/<product-day>/<product-month>/<product-year>/<product-id>
     date_day_first = "date_day_first"
+
+    # <cache_basepath>/<product-year>/<product-month>/<product-day>/<product-id>
     date_year_first = "date_year_first"
 
 
@@ -36,7 +44,7 @@ def get_product_cache_path(
     item: Item,
     basepath: MPath,
     path_generation_method: ProductPathGenerationMethod = ProductPathGenerationMethod.product_id,
-):
+) -> MPath:
     """
     Create product path with high cardinality prefixes optimized for S3.
 
@@ -83,7 +91,7 @@ def get_product_cache_path(
             )
 
 
-def path_in_paths(path, existing_paths):
+def path_in_paths(path, existing_paths) -> bool:
     """Check if path is contained in list of existing paths independent of path prefix."""
     if path.startswith("s3://"):
         return path.lstrip("s3://") in existing_paths

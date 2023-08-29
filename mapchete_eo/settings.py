@@ -1,5 +1,7 @@
 import os
+
 from mapchete.path import MPath
+
 from mapchete_eo.exceptions import BRDFError, MissingAsset
 
 STAC_ALLOWED_COLLECTIONS = ["sentinel-2-l2a"]

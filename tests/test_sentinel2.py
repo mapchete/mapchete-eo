@@ -1,8 +1,9 @@
-from mapchete.formats import available_input_formats
 import pytest
 import xarray as xr
+from mapchete.formats import available_input_formats
 
 from mapchete_eo.platforms.sentinel2.config import DriverConfig
+from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
 def test_format_available():

@@ -1,14 +1,14 @@
-from affine import Affine
+import uuid
 from datetime import datetime
+from typing import Union
+
 import numpy as np
 import numpy.ma as ma
-from rasterio.crs import CRS
-from typing import Union
-import uuid
-
-from mapchete.path import MPath
-from mapchete.io import rasterio_open
+from affine import Affine
 from mapchete.formats.default.gtiff import DefaultGTiffProfile
+from mapchete.io import rasterio_open
+from mapchete.path import MPath
+from rasterio.crs import CRS
 
 from mapchete_eo.settings import DEFAULT_CACHE_LOCATION
 

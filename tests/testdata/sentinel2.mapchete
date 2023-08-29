@@ -8,7 +8,7 @@ input:
 output:
   format: GTiff
   bands: 3
-  path: stac
+  path: sentinel2
   dtype: uint16
 pyramid:
   grid: geodetic

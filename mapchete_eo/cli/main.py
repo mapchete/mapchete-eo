@@ -1,9 +1,11 @@
-from multiprocessing.sharedctypes import Value
-import click
-from mapchete.cli.options import opt_bounds, opt_debug
-import tqdm
 from typing import Union
 
+import click
+import tqdm
+from mapchete.cli.options import opt_bounds, opt_debug
+
+from mapchete_eo.io.profiles import rio_profiles
+from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.base import AWSL2ACOGv1
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
@@ -34,6 +36,11 @@ def _str_to_list(_, __, value):
 def _str_to_resolution(_, __, value):
     if value:
         return Resolution[value]
+
+
+def _str_to_rio_profile(_, __, value):
+    if value:
+        return rio_profiles[value]
 
 
 @click.group(help="Tools around mapchete EO package.")
@@ -86,6 +93,16 @@ def eo(ctx):
     callback=_str_to_resolution,
     help="Resample assets to this resolution in meter.",
 )
+@click.option(
+    "--assets-dst-rio-profile",
+    type=click.Choice(list(rio_profiles.keys())),
+    default="cog_deflate",
+    callback=_str_to_rio_profile,
+    help="Available rasterio profiles for raster assets.",
+)
+@click.option(
+    "--copy-metadata", is_flag=True, help="Download granule metadata and QI bands."
+)
 @click.option("--overwrite", "-o", is_flag=True, help="Overwrite existing files.")
 @opt_debug
 def static_catalog(
@@ -103,6 +120,8 @@ def static_catalog(
     description=None,
     assets=None,
     assets_dst_resolution=None,
+    assets_dst_rio_profile=None,
+    copy_metadata=False,
     overwrite=False,
     **kwargs,
 ):
@@ -147,13 +166,18 @@ def static_catalog(
             end_time=end_time,
         )
 
-    with TqdmUpTo(unit="products", unit_scale=True, miniters=1) as progress:
+    with TqdmUpTo(
+        unit="products", unit_scale=True, miniters=1, disable=opt_debug
+    ) as progress:
         catalog_json = catalog.write_static_catalog(
             dst_path,
             name=name,
             description=description,
             assets=assets,
-            assets_dst_resolution=assets_dst_resolution,
+            assets_dst_resolution=assets_dst_resolution.value,
+            assets_convert_profile=assets_dst_rio_profile,
+            copy_metadata=copy_metadata,
+            metadata_parser_classes=(S2Metadata,),
             overwrite=overwrite,
             progress_callback=progress.update_to,
         )

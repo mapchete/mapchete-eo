@@ -20,9 +20,9 @@ from mapchete_eo.platforms.sentinel2.path_mappers import (
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 from mapchete_eo.platforms.sentinel2.types import (
+    BandQIMask,
     L2ABand,
-    QIMask,
-    QIMask_deprecated,
+    ProductQIMask,
     Resolution,
     SunAngle,
     ViewAngle,
@@ -37,44 +37,34 @@ def test_xml_mapper(s2_l2a_metadata_xml):
             xml_root=xml_root,
         )
         band = L2ABand.B01
-        assert path_mapper.cloud_mask().exists()
-        for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
+        assert path_mapper.classification_mask().exists()
+        for qi_mask in BandQIMask:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
 @pytest.mark.remote
-def test_sinergise_mapper_gml(tileinfo_gml_schema):
-    path_mapper = SinergisePathMapper(tileinfo_gml_schema, baseline_version="03.01")
-    assert path_mapper.cloud_mask().exists()
+@pytest.mark.parametrize(
+    "tileinfo, baseline_version",
+    [
+        (lazy_fixture("tileinfo_gml_schema"), "03.01"),
+        (lazy_fixture("tileinfo_jp2_schema"), "04.00"),
+    ],
+)
+def test_sinergise_mapper(tileinfo, baseline_version):
+    path_mapper = SinergisePathMapper(tileinfo, baseline_version=baseline_version)
+    assert path_mapper.classification_mask().exists()
     band = L2ABand.B01
-    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
+    for qi_mask in BandQIMask:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
-
-
-@pytest.mark.remote
-def test_sinergise_mapper_jp2(tileinfo_jp2_schema):
-    path_mapper = SinergisePathMapper(tileinfo_jp2_schema)
-    assert path_mapper.cloud_mask().exists()
-    band = L2ABand.B01
-    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
-        assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
-
-    for qi_mask in QIMask_deprecated:
-        with pytest.raises(DeprecationWarning):
-            path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
 @pytest.mark.remote
 def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
-    assert path_mapper.cloud_mask().exists()
+    assert path_mapper.classification_mask().exists()
     band = L2ABand.B01
-    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
+    for qi_mask in BandQIMask:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
-
-    for qi_mask in QIMask_deprecated:
-        with pytest.raises(DeprecationWarning):
-            path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
 
 
 @pytest.mark.parametrize(
@@ -496,9 +486,9 @@ def test_from_stac_item_backwards(item):
     assert s2_metadata.reflectance_offset == offset
 
     # see if paths exist on prior versions
-    assert s2_metadata.path_mapper.cloud_mask().exists()
+    assert s2_metadata.path_mapper.classification_mask().exists()
     band = L2ABand.B01
-    for qi_mask in [mask for mask in QIMask if mask != QIMask.clouds]:
+    for qi_mask in BandQIMask:
         assert s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 

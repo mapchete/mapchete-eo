@@ -6,6 +6,7 @@ import json
 import logging
 import xml.etree.ElementTree as etree
 from abc import ABC, abstractmethod
+from enum import Enum
 from functools import cached_property
 from typing import Union
 
@@ -13,9 +14,19 @@ from mapchete.path import MPath
 
 from mapchete_eo.io import open_xml
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
-from mapchete_eo.platforms.sentinel2.types import L2ABand, QIMask
+from mapchete_eo.platforms.sentinel2.types import BandQIMask, L2ABand, ProductQIMask
 
 logger = logging.getLogger(__name__)
+
+
+# available product mask resolutions
+ProductMaskResolution = Enum(
+    "ProductMaskResolution",
+    {
+        "20m": 20,
+        "60m": 60,
+    },
+)
 
 
 class S2PathMapper(ABC):
@@ -32,17 +43,43 @@ class S2PathMapper(ABC):
     processing_baseline: ProcessingBaseline
 
     @abstractmethod
-    def cloud_mask(self) -> MPath:
+    def product_qi_mask(
+        self,
+        qi_mask: ProductQIMask,
+        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+    ) -> MPath:
         ...
 
     @abstractmethod
-    def band_qi_mask(self, qi_mask: QIMask, band: L2ABand) -> MPath:
+    def classification_mask(self) -> MPath:
+        ...
+
+    @abstractmethod
+    def cloud_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        ...
+
+    @abstractmethod
+    def snow_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        ...
+
+    @abstractmethod
+    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+        ...
+
+    @abstractmethod
+    def technical_quality_mask(self, band: L2ABand) -> MPath:
+        ...
+
+    @abstractmethod
+    def detector_footprints(self, band: L2ABand) -> MPath:
         ...
 
 
 class XMLMapper(S2PathMapper):
-    _cached_xml_root = None
-
     def __init__(
         self, metadata_xml: MPath, xml_root: Union[etree.Element, None] = None, **kwargs
     ):
@@ -77,21 +114,37 @@ class XMLMapper(S2PathMapper):
             if l1c_version is not None:
                 return ProcessingBaseline.from_version(f"{l1c_version}")
 
-    def _qi_mask_abs_path(self, qi_path: str) -> MPath:
-        return self._metadata_dir / qi_path
-
-    def cloud_mask(self) -> str:
+    def product_qi_mask(
+        self,
+        qi_mask: ProductQIMask,
+        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+    ) -> MPath:
+        """Determine product QI mask from metadata.xml."""
+        qi_mask_type = dict(self.processing_baseline.product_mask_types)[qi_mask]
         for i in self.xml_root.iter():
-            if i.tag == "MASK_FILENAME" and i.get("type") in [
-                "MSK_CLOUDS",
-                "MSK_CLASSI",
-            ]:
-                return self._qi_mask_abs_path(i.text)
+            if i.tag == "MASK_FILENAME" and i.get("type") == qi_mask_type:
+                return self._metadata_dir / i.text
         else:
-            raise KeyError("no MSK_CLOUDS or MSK_CLASSI item found in metadata")
+            raise KeyError(f"no {qi_mask_type} item found in metadata")
 
-    def band_qi_mask(self, qi_mask: QIMask, band: L2ABand) -> MPath:
-        if qi_mask.name not in self.processing_baseline.available_masks():
+    def classification_mask(self) -> MPath:
+        return self.product_qi_mask(ProductQIMask.classification)
+
+    def cloud_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        # TODO: handle resolution
+        return self.product_qi_mask(ProductQIMask.cloud_probability)
+
+    def snow_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        # TODO: handle resolution
+        return self.product_qi_mask(ProductQIMask.snow_probability)
+
+    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+        """Determine band QI mask from metadata.xml."""
+        if qi_mask.name not in dict(self.processing_baseline.band_mask_types).keys():
             raise DeprecationWarning(
                 f"QI mask '{qi_mask}' not available for this product"
             )
@@ -99,20 +152,29 @@ class XMLMapper(S2PathMapper):
         for masks in self.xml_root.iter("Pixel_Level_QI"):
             if masks.get("geometry") == "FULL_RESOLUTION":
                 for mask_path in masks:
+                    qi_mask_type = dict(self.processing_baseline.band_mask_types)[
+                        qi_mask
+                    ]
                     mask_type = mask_path.get("type")
                     mask_types.add(mask_type)
-                    if mask_type == qi_mask.value and mask_path.get("bandId"):
+                    if mask_type == qi_mask_type and mask_path.get("bandId"):
                         band_idx = int(mask_path.get("bandId"))
                         if band_idx == band.value:
-                            return self._qi_mask_abs_path(mask_path.text)
+                            return self._metadata_dir / mask_path.text
                 else:
                     raise KeyError(
-                        f"no {qi_mask.value} for band {band.name} not found in metadata: {', '.join(mask_types)}"
+                        f"no {qi_mask_type} for band {band.name} not found in metadata: {', '.join(mask_types)}"
                     )
         else:
             raise KeyError(
-                f"no {qi_mask.value} not found in metadata: {', '.join(mask_types)}"
+                f"no {qi_mask_type} not found in metadata: {', '.join(mask_types)}"
             )
+
+    def technical_quality_mask(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQIMask.technical_quality, band)
+
+    def detector_footprints(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQIMask.detector_footprints, band)
 
 
 class SinergisePathMapper(S2PathMapper):
@@ -129,14 +191,18 @@ class SinergisePathMapper(S2PathMapper):
     """
 
     _PRE_0400_MASK_PATHS = {
-        "clouds": "MSK_CLOUDS_B00.gml",
-        "detector_footprints": "MSK_DETFOO_{band_identifier}.gml",
-        "technical_quality": "MSK_TECQUA_{band_identifier}.gml",
+        ProductQIMask.classification: "MSK_CLOUDS_B00.gml",
+        ProductQIMask.cloud_probability: "CLD_20m.jp2",  # are they really there?
+        ProductQIMask.snow_probability: "SNW_20m.jp2",  # are they really there?
+        BandQIMask.detector_footprints: "MSK_DETFOO_{band_identifier}.gml",
+        BandQIMask.technical_quality: "MSK_TECQUA_{band_identifier}.gml",
     }
     _POST_0400_MASK_PATHS = {
-        "clouds": "CLASSI_B00.jp2",
-        "detector_footprints": "DETFOO_{band_identifier}.jp2",
-        "technical_quality": "QUALIT_{band_identifier}.jp2",
+        ProductQIMask.classification: "CLASSI_B00.jp2",
+        ProductQIMask.cloud_probability: "CLD_20m.jp2",
+        ProductQIMask.snow_probability: "SNW_20m.jp2",
+        BandQIMask.detector_footprints: "DETFOO_{band_identifier}.jp2",
+        BandQIMask.technical_quality: "QUALIT_{band_identifier}.jp2",
     }
 
     def __init__(
@@ -159,26 +225,51 @@ class SinergisePathMapper(S2PathMapper):
         self._protocol = protocol
         self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
 
-    def cloud_mask(self) -> str:
+    def product_qi_mask(
+        self,
+        qi_mask: ProductQIMask,
+        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+    ) -> MPath:
+        """Determine product QI mask according to Sinergise bucket schema."""
         if self.processing_baseline.version < "04.00":
-            mask_path = self._PRE_0400_MASK_PATHS["clouds"]
+            mask_path = self._PRE_0400_MASK_PATHS[qi_mask]
         else:
-            mask_path = self._POST_0400_MASK_PATHS["clouds"]
+            mask_path = self._POST_0400_MASK_PATHS[qi_mask]
         key = f"{self._path}/qi/{mask_path}"
         return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
-    def band_qi_mask(self, qi_mask: QIMask, band: L2ABand) -> MPath:
+    def classification_mask(self) -> MPath:
+        return self.product_qi_mask(ProductQIMask.classification)
+
+    def cloud_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        return self.product_qi_mask(ProductQIMask.cloud_probability)
+
+    def snow_probability_mask(
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    ) -> MPath:
+        return self.product_qi_mask(ProductQIMask.snow_probability)
+
+    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+        """Determine product QI mask according to Sinergise bucket schema."""
         try:
             if self.processing_baseline.version < "04.00":
-                mask_path = self._PRE_0400_MASK_PATHS[qi_mask.name]
+                mask_path = self._PRE_0400_MASK_PATHS[qi_mask]
             else:
-                mask_path = self._POST_0400_MASK_PATHS[qi_mask.name]
+                mask_path = self._POST_0400_MASK_PATHS[qi_mask]
         except KeyError:
             raise DeprecationWarning(
                 f"'{qi_mask.name}' quality mask not found in this product"
             )
         key = f"{self._path}/qi/{mask_path.format(band_identifier=band.name)}"
         return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
+
+    def technical_quality_mask(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQIMask.technical_quality, band)
+
+    def detector_footprints(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQIMask.detector_footprints, band)
 
 
 class EarthSearchPathMapper(SinergisePathMapper):

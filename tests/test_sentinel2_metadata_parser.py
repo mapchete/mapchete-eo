@@ -37,7 +37,10 @@ def test_xml_mapper(s2_l2a_metadata_xml):
             xml_root=xml_root,
         )
         band = L2ABand.B01
-        assert path_mapper.classification_mask().exists()
+
+        for qi_mask in ProductQIMask:
+            assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+
         for qi_mask in BandQIMask:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
@@ -52,7 +55,10 @@ def test_xml_mapper(s2_l2a_metadata_xml):
 )
 def test_sinergise_mapper(tileinfo, baseline_version):
     path_mapper = SinergisePathMapper(tileinfo, baseline_version=baseline_version)
-    assert path_mapper.classification_mask().exists()
+
+    for qi_mask in ProductQIMask:
+        assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+
     band = L2ABand.B01
     for qi_mask in BandQIMask:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
@@ -61,7 +67,10 @@ def test_sinergise_mapper(tileinfo, baseline_version):
 @pytest.mark.remote
 def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
-    assert path_mapper.classification_mask().exists()
+
+    for qi_mask in ProductQIMask:
+        assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+
     band = L2ABand.B01
     for qi_mask in BandQIMask:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
@@ -486,7 +495,9 @@ def test_from_stac_item_backwards(item):
     assert s2_metadata.reflectance_offset == offset
 
     # see if paths exist on prior versions
-    assert s2_metadata.path_mapper.classification_mask().exists()
+    for qi_mask in ProductQIMask:
+        assert s2_metadata.path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+
     band = L2ABand.B01
     for qi_mask in BandQIMask:
         assert s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()

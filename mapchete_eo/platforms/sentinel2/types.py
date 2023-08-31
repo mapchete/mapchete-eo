@@ -12,6 +12,15 @@ Resolution = Enum(
 )
 
 
+ProductQIMaskResolution = Enum(
+    "ProductMaskResolution",
+    {
+        "20m": 20,
+        "60m": 60,
+    },
+)
+
+
 class CloudType(str, Enum):
     """Available cloud types in masks."""
 

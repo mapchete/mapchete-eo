@@ -11,9 +11,13 @@ from mapchete.path import MPath
 
 from mapchete_eo.io import open_xml
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
-from mapchete_eo.platforms.sentinel2.path_mappers.types import ProductMaskResolution
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
-from mapchete_eo.platforms.sentinel2.types import BandQIMask, L2ABand, ProductQIMask
+from mapchete_eo.platforms.sentinel2.types import (
+    BandQIMask,
+    L2ABand,
+    ProductQIMask,
+    ProductQIMaskResolution,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ class XMLMapper(S2PathMapper):
     def product_qi_mask(
         self,
         qi_mask: ProductQIMask,
-        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+        resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         """Determine product QI mask from metadata.xml."""
         qi_mask_type = dict(self.processing_baseline.product_mask_types)[qi_mask]
@@ -70,13 +74,13 @@ class XMLMapper(S2PathMapper):
         return self.product_qi_mask(ProductQIMask.classification)
 
     def cloud_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         # TODO: handle resolution
         return self.product_qi_mask(ProductQIMask.cloud_probability)
 
     def snow_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         # TODO: handle resolution
         return self.product_qi_mask(ProductQIMask.snow_probability)

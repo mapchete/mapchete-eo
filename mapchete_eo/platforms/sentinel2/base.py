@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
-from mapchete_eo.platforms.sentinel2._metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
 from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 

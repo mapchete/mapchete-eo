@@ -2,9 +2,13 @@ from abc import ABC, abstractmethod
 
 from mapchete.path import MPath
 
-from mapchete_eo.platforms.sentinel2.path_mappers.types import ProductMaskResolution
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
-from mapchete_eo.platforms.sentinel2.types import BandQIMask, L2ABand, ProductQIMask
+from mapchete_eo.platforms.sentinel2.types import (
+    BandQIMask,
+    L2ABand,
+    ProductQIMask,
+    ProductQIMaskResolution,
+)
 
 
 class S2PathMapper(ABC):
@@ -24,7 +28,7 @@ class S2PathMapper(ABC):
     def product_qi_mask(
         self,
         qi_mask: ProductQIMask,
-        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+        resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         ...
 
@@ -34,13 +38,13 @@ class S2PathMapper(ABC):
 
     @abstractmethod
     def cloud_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         ...
 
     @abstractmethod
     def snow_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         ...
 

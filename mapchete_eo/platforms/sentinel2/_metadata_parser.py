@@ -30,7 +30,8 @@ from shapely.geometry.base import BaseGeometry
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
 from mapchete_eo.io import open_xml
-from mapchete_eo.platforms.sentinel2.path_mappers import S2PathMapper, XMLMapper
+from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
+from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
     BandQIMask,

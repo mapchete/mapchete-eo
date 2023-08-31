@@ -58,20 +58,18 @@ def s2metadata_from_stac_item(
             break
         else:
             boa_offset_applied = False
+
     if metadata_path.is_remote() or metadata_path.is_absolute():
-        return S2Metadata.from_metadata_xml(
-            metadata_xml=metadata_path,
-            processing_baseline=item.properties.get(processing_baseline_field),
-            boa_offset_applied=boa_offset_applied,
-            **kwargs,
-        )
+        metadata_xml = metadata_path
     else:
-        return S2Metadata.from_metadata_xml(
-            metadata_xml=MPath(item.self_href).parent / metadata_path,
-            processing_baseline=item.properties.get(processing_baseline_field),
-            boa_offset_applied=boa_offset_applied,
-            **kwargs,
-        )
+        metadata_xml = (MPath(item.self_href).parent / metadata_path,)
+
+    return S2Metadata.from_metadata_xml(
+        metadata_xml=metadata_xml,
+        processing_baseline=item.properties.get(processing_baseline_field),
+        boa_offset_applied=boa_offset_applied,
+        **kwargs,
+    )
 
 
 # this is important to add all path mappers defined here to the automated constructor

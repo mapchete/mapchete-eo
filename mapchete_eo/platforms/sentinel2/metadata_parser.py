@@ -40,6 +40,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     L2ABand,
     ProductQIMask,
+    ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
@@ -212,13 +213,21 @@ class S2Metadata:
         """
         out = dict()
         for product_qi_mask in ProductQIMask:
-            out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
-                product_qi_mask
-            )
+            if product_qi_mask == ProductQIMask.classification:
+                out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
+                    product_qi_mask
+                )
+            else:
+                for resolution in ProductQIMaskResolution:
+                    out[
+                        f"{product_qi_mask.name}-{resolution.name}"
+                    ] = self.path_mapper.product_qi_mask(
+                        product_qi_mask, resolution=resolution
+                    )
 
         for band_qi_mask in BandQIMask:
             for band in L2ABand:
-                out[f"{band.name}-{band_qi_mask.name}"] = self.path_mapper.band_qi_mask(
+                out[f"{band_qi_mask.name}-{band.name}"] = self.path_mapper.band_qi_mask(
                     qi_mask=band_qi_mask, band=band
                 )
 

@@ -66,9 +66,14 @@ class XMLMapper(S2PathMapper):
         qi_mask_type = dict(self.processing_baseline.product_mask_types)[qi_mask]
         for i in self.xml_root.iter():
             if i.tag == "MASK_FILENAME" and i.get("type") == qi_mask_type:
-                return self._metadata_dir / i.text
+                path = self._metadata_dir / i.text
+                if qi_mask == ProductQIMask.classification:
+                    return path
+                else:
+                    if resolution.name in path.name:
+                        return path
         else:
-            raise KeyError(f"no {qi_mask_type} item found in metadata")
+            raise KeyError(f"no {qi_mask_type} with item found in metadata")
 
     def classification_mask(self) -> MPath:
         return self.product_qi_mask(ProductQIMask.classification)
@@ -76,14 +81,16 @@ class XMLMapper(S2PathMapper):
     def cloud_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        # TODO: handle resolution
-        return self.product_qi_mask(ProductQIMask.cloud_probability)
+        return self.product_qi_mask(
+            ProductQIMask.cloud_probability, resolution=resolution
+        )
 
     def snow_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        # TODO: handle resolution
-        return self.product_qi_mask(ProductQIMask.snow_probability)
+        return self.product_qi_mask(
+            ProductQIMask.snow_probability, resolution=resolution
+        )
 
     def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
         """Determine band QI mask from metadata.xml."""

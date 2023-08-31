@@ -23,6 +23,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     BandQIMask,
     L2ABand,
     ProductQIMask,
+    ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
@@ -39,7 +40,13 @@ def test_xml_mapper(s2_l2a_metadata_xml):
         band = L2ABand.B01
 
         for qi_mask in ProductQIMask:
-            assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+            for resolution in ProductQIMaskResolution:
+                path = path_mapper.product_qi_mask(
+                    qi_mask=qi_mask, resolution=resolution
+                )
+                assert path.exists()
+                if qi_mask != ProductQIMask.classification:
+                    assert resolution.name in path.name
 
         for qi_mask in BandQIMask:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
@@ -57,7 +64,11 @@ def test_sinergise_mapper(tileinfo, baseline_version):
     path_mapper = SinergisePathMapper(tileinfo, baseline_version=baseline_version)
 
     for qi_mask in ProductQIMask:
-        assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+        for resolution in ProductQIMaskResolution:
+            path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
+            assert path.exists()
+            if qi_mask != ProductQIMask.classification:
+                assert resolution.name in path.name
 
     band = L2ABand.B01
     for qi_mask in BandQIMask:
@@ -69,7 +80,11 @@ def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
 
     for qi_mask in ProductQIMask:
-        assert path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+        for resolution in ProductQIMaskResolution:
+            path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
+            assert path.exists()
+            if qi_mask != ProductQIMask.classification:
+                assert resolution.name in path.name
 
     band = L2ABand.B01
     for qi_mask in BandQIMask:
@@ -496,7 +511,13 @@ def test_from_stac_item_backwards(item):
 
     # see if paths exist on prior versions
     for qi_mask in ProductQIMask:
-        assert s2_metadata.path_mapper.product_qi_mask(qi_mask=qi_mask).exists()
+        for resolution in ProductQIMaskResolution:
+            path = s2_metadata.path_mapper.product_qi_mask(
+                qi_mask=qi_mask, resolution=resolution
+            )
+            assert path.exists()
+            if qi_mask != ProductQIMask.classification:
+                assert resolution.name in path.name
 
     band = L2ABand.B01
     for qi_mask in BandQIMask:

@@ -27,15 +27,15 @@ class SinergisePathMapper(S2PathMapper):
 
     _PRE_0400_MASK_PATHS = {
         ProductQIMask.classification: "MSK_CLOUDS_B00.gml",
-        ProductQIMask.cloud_probability: "CLD_20m.jp2",  # are they really there?
-        ProductQIMask.snow_probability: "SNW_20m.jp2",  # are they really there?
+        ProductQIMask.cloud_probability: "CLD_{resolution}.jp2",  # are they really there?
+        ProductQIMask.snow_probability: "SNW_{resolution}.jp2",  # are they really there?
         BandQIMask.detector_footprints: "MSK_DETFOO_{band_identifier}.gml",
         BandQIMask.technical_quality: "MSK_TECQUA_{band_identifier}.gml",
     }
     _POST_0400_MASK_PATHS = {
         ProductQIMask.classification: "CLASSI_B00.jp2",
-        ProductQIMask.cloud_probability: "CLD_20m.jp2",
-        ProductQIMask.snow_probability: "SNW_20m.jp2",
+        ProductQIMask.cloud_probability: "CLD_{resolution}.jp2",
+        ProductQIMask.snow_probability: "SNW_{resolution}.jp2",
         BandQIMask.detector_footprints: "DETFOO_{band_identifier}.jp2",
         BandQIMask.technical_quality: "QUALIT_{band_identifier}.jp2",
     }
@@ -70,7 +70,7 @@ class SinergisePathMapper(S2PathMapper):
             mask_path = self._PRE_0400_MASK_PATHS[qi_mask]
         else:
             mask_path = self._POST_0400_MASK_PATHS[qi_mask]
-        key = f"{self._path}/qi/{mask_path}"
+        key = f"{self._path}/qi/{mask_path.format(resolution=resolution.name)}"
         return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
     def classification_mask(self) -> MPath:
@@ -79,12 +79,16 @@ class SinergisePathMapper(S2PathMapper):
     def cloud_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(ProductQIMask.cloud_probability)
+        return self.product_qi_mask(
+            ProductQIMask.cloud_probability, resolution=resolution
+        )
 
     def snow_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(ProductQIMask.snow_probability)
+        return self.product_qi_mask(
+            ProductQIMask.snow_probability, resolution=resolution
+        )
 
     def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
         """Determine product QI mask according to Sinergise bucket schema."""

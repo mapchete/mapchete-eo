@@ -150,7 +150,7 @@ class S2Metadata:
 
     @cached_property
     def xml_root(self):
-        if self._cached_xml_root is None:
+        if self._cached_xml_root is None:  # pragma: no cover
             self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
@@ -166,14 +166,6 @@ class S2Metadata:
     def _crs(self) -> CRS:
         crs_str = next(self.xml_root.iter("HORIZONTAL_CS_CODE")).text
         return CRS.from_string(crs_str)
-
-    @cached_property
-    def bands_dict(self) -> dict:
-        return {}
-
-    @cached_property
-    def masks_dict(self) -> dict:
-        return {}
 
     @cached_property
     def sun_angles(self) -> Dict:

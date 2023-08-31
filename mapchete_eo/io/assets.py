@@ -197,12 +197,13 @@ def convert_raster(
                 height=dst_height,
             )
         meta.update(profile)
+        logger.debug("convert %s to %s with settings %s", src_path, dst_path, meta)
         with rasterio_open(dst_path, "w", **meta) as dst:
             with WarpedVRT(
                 src,
-                width=dst_width,
-                height=dst_height,
-                transform=dst_transform,
+                width=meta["width"],
+                height=meta["height"],
+                transform=meta["transform"],
             ) as warped:
                 dst.write(warped.read())
 

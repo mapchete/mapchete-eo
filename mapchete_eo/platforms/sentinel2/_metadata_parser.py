@@ -30,6 +30,7 @@ from shapely.geometry.base import BaseGeometry
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
 from mapchete_eo.io import open_xml
+from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
@@ -47,10 +48,6 @@ from mapchete_eo.platforms.sentinel2.types import (
 logger = logging.getLogger(__name__)
 
 
-def _default_path_mapper_guesser(*args, **kwargs):
-    return XMLMapper(*args, **kwargs)
-
-
 def _default_from_stac_item_constructor(
     item: Item,
     **kwargs,
@@ -63,7 +60,7 @@ def _default_from_stac_item_constructor(
 
 class S2Metadata:
     _cached_xml_root = None
-    path_mapper_guesser: Callable = _default_path_mapper_guesser
+    path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = _default_from_stac_item_constructor
     crs: CRS
     bounds: Bounds

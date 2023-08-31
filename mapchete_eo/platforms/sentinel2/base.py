@@ -14,15 +14,10 @@ from mapchete_eo import base
 from mapchete_eo.archives.base import Archive
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2._metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.path_mappers import (
-    EarthSearchPathMapper,
-    s2path_mapper_guesser,
-)
+from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
 from mapchete_eo.platforms.sentinel2.types import ProcessingLevel
 
 
-# all custom path mappers and constructors are below
-####################################################
 def s2metadata_from_stac_item(
     item: pystac.Item,
     metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
@@ -33,7 +28,7 @@ def s2metadata_from_stac_item(
     processing_baseline_field: str = "s2:processing_baseline",
     **kwargs,
 ) -> S2Metadata:
-    """Custom code to initialize S2Metadate from a STAC item.
+    """Custom code to initialize S2Metadata from a STAC item.
 
     Depending on from which catalog the STAC item comes, this function should correctly
     set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
@@ -62,7 +57,7 @@ def s2metadata_from_stac_item(
     if metadata_path.is_remote() or metadata_path.is_absolute():
         metadata_xml = metadata_path
     else:
-        metadata_xml = (MPath(item.self_href).parent / metadata_path,)
+        metadata_xml = MPath(item.self_href).parent / metadata_path
 
     return S2Metadata.from_metadata_xml(
         metadata_xml=metadata_xml,
@@ -72,8 +67,6 @@ def s2metadata_from_stac_item(
     )
 
 
-# this is important to add all path mappers defined here to the automated constructor
-S2Metadata.path_mapper_guesser = s2path_mapper_guesser
 # this is important to properly parse incoming pystac Items
 S2Metadata.from_stac_item_constructor = s2metadata_from_stac_item
 

@@ -1,3 +1,4 @@
+from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.earthsearch import (
     EarthSearchPathMapper,
 )
@@ -5,10 +6,10 @@ from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.sinergise import SinergisePathMapper
 
 
-def s2path_mapper_guesser(
+def default_path_mapper_guesser(
     url: str,
     **kwargs,
-):
+) -> S2PathMapper:
     """Guess S2PathMapper based on URL.
 
     If a new path mapper is added in this module, it should also be added to this function

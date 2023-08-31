@@ -13,7 +13,7 @@ from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
 from rasterio.profiles import Profile
 
-from mapchete_eo.io.assets import copy_metadata_assets, get_assets
+from mapchete_eo.io.assets import get_assets, get_metadata_assets
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +105,12 @@ class Catalog(ABC):
                         ignore_if_exists=True,
                     )
                 if copy_metadata:
-                    item = copy_metadata_assets(
+                    item = get_metadata_assets(
                         item,
                         output_path / collection.id / item.id,
                         metadata_parser_classes=metadata_parser_classes,
+                        resolution=assets_dst_resolution,
+                        convert_profile=assets_convert_profile,
                         overwrite=overwrite,
                     )
                 # this has to be set to None, otherwise pystac will mess up the asset paths

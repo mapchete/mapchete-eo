@@ -48,24 +48,23 @@ def get_assets(
     Conversion is triggered if either resolution or convert_profile is provided.
     """
     for asset in assets:
+        path = asset_mpath(item, asset, fs=src_fs)
         # convert if possible
-        if resolution is not None or convert_profile is not None:
-            path = asset_mpath(item, asset, fs=src_fs)
-            if path.endswith(tuple(CONVERT_AVAILABLE_EXTENSIONS)):
-                item = convert_asset(
-                    item,
-                    asset,
-                    dst_dir,
-                    src_fs=src_fs,
-                    resolution=resolution,
-                    overwrite=overwrite,
-                    ignore_if_exists=ignore_if_exists,
-                    profile=convert_profile or COGDeflateProfile(),
-                    item_href_in_dst_dir=item_href_in_dst_dir,
-                )
-                continue
-            logger.warn("cannot convert asset with suffix %s", path.suffix)
+        if should_be_converted(path, resolution=resolution, profile=convert_profile):
+            item = convert_asset(
+                item,
+                asset,
+                dst_dir,
+                src_fs=src_fs,
+                resolution=resolution,
+                overwrite=overwrite,
+                ignore_if_exists=ignore_if_exists,
+                profile=convert_profile or COGDeflateProfile(),
+                item_href_in_dst_dir=item_href_in_dst_dir,
+            )
+            continue
 
+        logger.warn("cannot convert asset with suffix %s, copy instead", path.suffix)
         # copy
         item = copy_asset(
             item,
@@ -156,47 +155,56 @@ def convert_asset(
         dst_dir.makedirs()
 
     with Timer() as t:
-        with rasterio_open(src_path, "r") as src:
-            meta = src.meta.copy()
-            src_transform = src.transform
-            if resolution:
-                logger.debug(
-                    "converting %s to %s using %sm resolution with profile %s ...",
-                    src_path,
-                    output_path,
-                    resolution,
-                    profile,
-                )
-                src_res = src.transform[0]
-                dst_transform = Affine.from_gdal(
-                    *(
-                        src_transform[2],
-                        resolution,
-                        0.0,
-                        src_transform[5],
-                        0.0,
-                        -resolution,
-                    )
-                )
-                dst_width = int(math.ceil(src.width * (src_res / resolution)))
-                dst_height = int(math.ceil(src.height * (src_res / resolution)))
-                meta.update(
-                    transform=dst_transform,
-                    width=dst_width,
-                    height=dst_height,
-                )
-            meta.update(profile)
-            with rasterio_open(output_path, "w", **meta) as dst:
-                with WarpedVRT(
-                    src,
-                    width=dst_width,
-                    height=dst_height,
-                    transform=dst_transform,
-                ) as warped:
-                    dst.write(warped.read())
+        convert_raster(src_path, output_path, resolution, profile)
     logger.debug("converted asset '%s' in %s", asset, t)
 
     return item
+
+
+def convert_raster(
+    src_path: MPath,
+    dst_path: MPath,
+    resolution: Union[None, float, int] = None,
+    profile: Union[Profile, None] = None,
+) -> None:
+    with rasterio_open(src_path, "r") as src:
+        meta = src.meta.copy()
+        src_transform = src.transform
+        if resolution:
+            logger.debug(
+                "converting %s to %s using %sm resolution with profile %s ...",
+                src_path,
+                dst_path,
+                resolution,
+                profile,
+            )
+            src_res = src.transform[0]
+            dst_transform = Affine.from_gdal(
+                *(
+                    src_transform[2],
+                    resolution,
+                    0.0,
+                    src_transform[5],
+                    0.0,
+                    -resolution,
+                )
+            )
+            dst_width = int(math.ceil(src.width * (src_res / resolution)))
+            dst_height = int(math.ceil(src.height * (src_res / resolution)))
+            meta.update(
+                transform=dst_transform,
+                width=dst_width,
+                height=dst_height,
+            )
+        meta.update(profile)
+        with rasterio_open(dst_path, "w", **meta) as dst:
+            with WarpedVRT(
+                src,
+                width=dst_width,
+                height=dst_height,
+                transform=dst_transform,
+            ) as warped:
+                dst.write(warped.read())
 
 
 def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
@@ -229,11 +237,13 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
     return [mapping[eo_band][0] for eo_band in eo_bands]
 
 
-def copy_metadata_assets(
+def get_metadata_assets(
     item: pystac.Item,
     dst_dir: MPath,
     overwrite: bool = False,
     metadata_parser_classes: Union[tuple, None] = None,
+    resolution: Union[None, float, int] = None,
+    convert_profile: Union[None, Profile] = None,
 ):
     """Copy STAC item metadata and its metadata assets."""
     for metadata_asset in ["metadata", "granule_metadata"]:
@@ -244,6 +254,8 @@ def copy_metadata_assets(
             pass
     else:
         raise KeyError("no 'metadata' or 'granule_metadata' asset found")
+
+    # copy metadata.xml
     dst_metadata_xml = dst_dir / src_metadata_xml.name
     if overwrite or not dst_metadata_xml.exists():
         copy(src_metadata_xml, dst_metadata_xml, overwrite=overwrite)
@@ -260,12 +272,41 @@ def copy_metadata_assets(
         raise TypeError(
             f"could not parse {src_metadata_xml} with {metadata_parser_classes}"
         )
+
+    # copy assets
     original_asset_paths = src_metadata.assets
-    for asset, path in dst_metadata.assets.items():
+    for asset, dst_path in dst_metadata.assets.items():
         src_path = original_asset_paths[asset]
-        dst_path = path
+
         if overwrite or not dst_path.exists():
-            logger.debug(f"copy {asset} ...")
-            copy(src_path, dst_path, overwrite=overwrite)
+            # convert if possible
+            if should_be_converted(
+                src_path, resolution=resolution, profile=convert_profile
+            ):
+                convert_raster(src_path, dst_path, resolution, convert_profile)
+            else:
+                logger.debug(f"copy {asset} ...")
+                copy(src_path, dst_path, overwrite=overwrite)
 
     return item
+
+
+def should_be_converted(
+    path: MPath,
+    resolution: Union[None, float, int] = None,
+    profile: Union[None, Profile] = None,
+) -> bool:
+    """Decide whether a raster file should be converted or not."""
+    if path.endswith(tuple(CONVERT_AVAILABLE_EXTENSIONS)):
+        # see if it even pays off to convert based on resolution
+        if resolution is not None:
+            with rasterio_open(path) as src:
+                src_resolution = src.transform[0]
+            if src_resolution < resolution:
+                return True
+
+        # when profile is given, convert anyways
+        elif profile is not None:
+            return True
+
+    return False

@@ -1,44 +1,78 @@
 from dataclasses import dataclass
-from typing import Any, Set, Union
+from typing import Any, Union
 
-PRE_0400_MASKS = {
-    "clouds",
-    "defective",
-    "saturated",
-    "nodata",
-    "detector_footprints",
-    "technical_quality",
-}
-POST_0400_MASKS = {
-    "clouds",
-    "detector_footprints",
-    "technical_quality",
-}
-PRE_0400_MASK_EXTENSION = "gml"
-POST_0400_MASK_EXTENSION = "jp2"
+from pydantic import BaseModel
+
+
+class ProductMaskTypes(BaseModel):
+    """Mapping between mask type and respective metadata.xml type key."""
+
+    classification: Union[str, None] = None
+    cloud_probability: Union[str, None] = None
+    snow_probability: Union[str, None] = None
+
+
+class BandMaskTypes(BaseModel):
+    """Mapping between band mask type and respective metadata.xml type key."""
+
+    technical_quality: Union[str, None] = None
+    detector_footprints: Union[str, None] = None
+    # deprecated since 04.00
+    # nodata: Union[str, None] = None
+    # defect: Union[str, None] = None
+    # saturated: Union[str, None] = None
+
+
+class ItemMapping(BaseModel):
+    """Configuration of processing baseline keys in metadata.xml."""
+
+    product_mask_types: ProductMaskTypes
+    band_mask_types: BandMaskTypes
+    band_mask_extension: str
+
+
+# Available product mask types from PB 00.01 until 03.01.
+# "classification" mask was provided as GML, the other two as JP2.
+# Cloud probability and snow probability are available in two separate files for
+# 20m and 60m.
+pre_0400 = ItemMapping(
+    product_mask_types=ProductMaskTypes(
+        classification="MSK_CLOUDS",
+        cloud_probability="MSK_CLDPRB",
+        snow_probability="MSK_SNWPRB",
+    ),
+    band_mask_types=BandMaskTypes(
+        technical_quality="MSK_TECQUA",
+        detector_footprints="MSK_DETFOO",
+    ),
+    band_mask_extension="gml",
+)
+
+
+# Available product mask types from PB 04.00 onwards.
+# Cloud probability and snow probability are available in two separate files for
+# 20m and 60m.
+post_0400 = ItemMapping(
+    product_mask_types=ProductMaskTypes(
+        classification="MSK_CLASSI",
+        cloud_probability="MSK_CLDPRB",
+        snow_probability="MSK_SNWPRB",
+    ),
+    band_mask_types=BandMaskTypes(
+        technical_quality="MSK_QUALIT",
+        detector_footprints="MSK_DETFOO",
+    ),
+    band_mask_extension="jp2",
+)
 
 
 @dataclass
 class BaselineVersion:
-    """Helper for Processing Baseline versions"""
+    """Helper for Processing Baseline versions."""
 
     major: int
     minor: int
     level: str
-
-    def masks(self) -> set:
-        """Return set of available masks for version."""
-        if self.major < 4:
-            return PRE_0400_MASKS
-        else:
-            return POST_0400_MASKS
-
-    def qi_band_extension(self) -> str:
-        """Return file extension for QI masks."""
-        if self.major < 4:
-            return PRE_0400_MASK_EXTENSION
-        else:
-            return POST_0400_MASK_EXTENSION
 
     @staticmethod
     def from_string(version: str) -> "BaselineVersion":
@@ -98,9 +132,25 @@ class BaselineVersion:
         return f"{self.major:02}.{self.minor:02}"
 
 
-@dataclass
 class ProcessingBaseline:
+    """Class which combines PB version and metadata.xml keys for QI masks."""
+
     version: BaselineVersion
+    item_mapping: ItemMapping
+    product_mask_types: ProductMaskTypes
+    band_mask_types: BandMaskTypes
+    band_mask_extension: str
+
+    def __init__(self, version: BaselineVersion):
+        self.version = version
+        if self.version.major < 4:
+            self.item_mapping = pre_0400
+        else:
+            self.item_mapping = post_0400
+
+        self.product_mask_types = self.item_mapping.product_mask_types
+        self.band_mask_types = self.item_mapping.band_mask_types
+        self.band_mask_extension = self.item_mapping.band_mask_extension
 
     @staticmethod
     def from_version(version: Union[BaselineVersion, str]) -> "ProcessingBaseline":
@@ -108,9 +158,3 @@ class ProcessingBaseline:
             return ProcessingBaseline(version=version)
         else:
             return ProcessingBaseline(version=BaselineVersion.from_string(version))
-
-    def available_masks(self) -> Set:
-        return self.version.masks()
-
-    def qi_band_extension(self) -> str:
-        return self.version.qi_band_extension()

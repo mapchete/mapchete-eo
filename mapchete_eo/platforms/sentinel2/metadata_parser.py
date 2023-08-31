@@ -30,23 +30,23 @@ from shapely.geometry.base import BaseGeometry
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
 from mapchete_eo.io import open_xml
-from mapchete_eo.platforms.sentinel2.path_mappers import S2PathMapper, XMLMapper
+from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
+from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
+from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
+    BandQIMask,
+    ClassificationBandIndex,
     CloudType,
-    CloudTypeBandIndex,
     L2ABand,
-    QIMask,
+    ProductQIMask,
+    ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _default_path_mapper_guesser(*args, **kwargs):
-    return XMLMapper(*args, **kwargs)
 
 
 def _default_from_stac_item_constructor(
@@ -61,7 +61,7 @@ def _default_from_stac_item_constructor(
 
 class S2Metadata:
     _cached_xml_root = None
-    path_mapper_guesser: Callable = _default_path_mapper_guesser
+    path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = _default_from_stac_item_constructor
     crs: CRS
     bounds: Bounds
@@ -82,7 +82,7 @@ class S2Metadata:
         self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in QIMask}
+        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQIMask}
         self._cloud_masks_cache: Union[List, None] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
@@ -211,14 +211,26 @@ class S2Metadata:
         """
         Mapping of all available metadata assets such as QI bands
         """
-        out = dict(
-            cloud_mask=self.path_mapper.cloud_mask(),
-        )
-        for qi_mask in [QIMask.detector_footprints, QIMask.technical_quality]:
-            for band in L2ABand:
-                out[f"{band.name}-{qi_mask.name}"] = self.path_mapper.band_qi_mask(
-                    qi_mask=qi_mask, band=band
+        out = dict()
+        for product_qi_mask in ProductQIMask:
+            if product_qi_mask == ProductQIMask.classification:
+                out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
+                    product_qi_mask
                 )
+            else:
+                for resolution in ProductQIMaskResolution:
+                    out[
+                        f"{product_qi_mask.name}-{resolution.name}"
+                    ] = self.path_mapper.product_qi_mask(
+                        product_qi_mask, resolution=resolution
+                    )
+
+        for band_qi_mask in BandQIMask:
+            for band in L2ABand:
+                out[f"{band_qi_mask.name}-{band.name}"] = self.path_mapper.band_qi_mask(
+                    qi_mask=band_qi_mask, band=band
+                )
+
         return out
 
     def shape(self, resolution: Resolution) -> Tuple:
@@ -294,15 +306,20 @@ class S2Metadata:
         else:
             mask_types_strings = [mask_type.value]
         if self._cloud_masks_cache is None:
-            mask_path = self.path_mapper.cloud_mask()
+            mask_path = self.path_mapper.classification_mask()
 
             if mask_path.endswith(".jp2"):
                 features = []
                 for f in self._vectorize_raster_mask(
-                    mask_path, indexes=[i.value for i in CloudTypeBandIndex]
+                    mask_path,
+                    indexes=[
+                        i.value
+                        for i in ClassificationBandIndex
+                        if i.value in mask_types_strings
+                    ],
                 ):
                     band_idx = f["properties"].pop("_band_idx")
-                    for cloud_type_index in CloudTypeBandIndex:
+                    for cloud_type_index in ClassificationBandIndex:
                         if band_idx == cloud_type_index.value:
                             f["properties"]["maskType"] = cloud_type_index.name
                             break
@@ -333,7 +350,7 @@ class S2Metadata:
         -------
         List of GeoJSON mappings.
         """
-        footprints = self._get_band_mask(band, QIMask.detector_footprints)
+        footprints = self._get_band_mask(band, BandQIMask.detector_footprints)
         if len(footprints) == 0:
             raise MissingAsset(
                 f"No detector footprints found for band {band} in {self}"
@@ -353,7 +370,7 @@ class S2Metadata:
         -------
         List of GeoJSON mappings.
         """
-        return self._get_band_mask(band, QIMask.technical_quality)
+        return self._get_band_mask(band, BandQIMask.technical_quality)
 
     def viewing_incidence_angles(self, band: L2ABand) -> Dict:
         """
@@ -473,13 +490,13 @@ class S2Metadata:
         )
         return mean
 
-    def _get_band_mask(self, band: L2ABand, qi_mask: QIMask):
+    def _get_band_mask(self, band: L2ABand, qi_mask: BandQIMask):
         if self._band_masks_cache.get(qi_mask, {}).get(band) is None:
             mask_path = self.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
             if mask_path.suffix == ".jp2":
                 features = self._vectorize_raster_mask(mask_path)
                 # append detector ID for detector footprints
-                if qi_mask == QIMask.detector_footprints:
+                if qi_mask == BandQIMask.detector_footprints:
                     for f in features:
                         f["properties"]["detector_id"] = int(
                             f["properties"].pop("value")
@@ -487,7 +504,7 @@ class S2Metadata:
             else:
                 features = self._read_vector_mask(mask_path)
                 # append detector ID for detector footprints
-                if qi_mask == QIMask.detector_footprints:
+                if qi_mask == BandQIMask.detector_footprints:
                     for f in features:
                         detector_id = int(f["properties"]["gml_id"].split("-")[-2])
                         f["id"] = detector_id

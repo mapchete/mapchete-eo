@@ -32,10 +32,9 @@ def test_product_asset_cache(s2_stac_item, tmpdir):
     assert product.cache.path.ls()
 
 
-@pytest.mark.remote
-def test_product_brdf_cache(s2_l2a_earthsearch_remote_item, tmpdir):
+def test_product_brdf_cache(s2_stac_item, tmpdir):
     product = S2Product(
-        s2_l2a_earthsearch_remote_item,
+        s2_stac_item,
         cache_config=CacheConfig(
             path=MPath.from_inp(tmpdir), brdf=BRDFConfig(bands=["blue"])
         ),

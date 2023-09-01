@@ -8,7 +8,6 @@ from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
-from shapely.geometry import shape
 
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -150,6 +149,16 @@ def e84_cog_catalog_short():
         end_time="2022-06-03",
         bounds=[16, 46.4, 16.1, 46.5],
         collections=["sentinel-2-l2a"],
+    )
+
+
+@pytest.fixture(scope="session")
+def static_catalog_small(s2_stac_collection):
+    return STACStaticCatalog(
+        s2_stac_collection,
+        "2023-08-10",
+        "2023-08-11",
+        (15.71762, 46.22546, 15.78400, 46.27169),
     )
 
 

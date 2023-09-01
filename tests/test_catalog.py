@@ -1,10 +1,13 @@
-import pystac
 import pystac_client
 import pytest
 import rasterio
 from mapchete.io import fs_from_path, path_exists
+from mapchete.io.raster import rasterio_open
 from mapchete.io.vector import IndexedFeatures
+from mapchete.path import MPath
 
+from mapchete_eo.io.profiles import JP2LossyProfile
+from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACStaticCatalog
 
@@ -39,19 +42,17 @@ def test_pf_qa_eo_bands(pf_qa_stac_collection):
     assert len(catalog.eo_bands) > 0
 
 
-@pytest.mark.remote
-def test_write_static_catalog(e84_cog_catalog, tmp_path):
-    output_path = e84_cog_catalog.write_static_catalog(output_path=str(tmp_path))
+def test_write_static_catalog(static_catalog_small, tmp_path):
+    output_path = static_catalog_small.write_static_catalog(output_path=str(tmp_path))
     cat = pystac_client.Client.from_file(str(output_path))
     collections = list(cat.get_children())
     assert len(collections) == 1
     collection = collections[0]
-    assert len(list(collection.get_items())) == 18
+    assert len(list(collection.get_items())) == 1
 
 
-@pytest.mark.remote
-def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
-    output_path = e84_cog_catalog_short.write_static_catalog(
+def test_write_static_catalog_copy_assets(static_catalog_small, tmp_path):
+    output_path = static_catalog_small.write_static_catalog(
         output_path=str(tmp_path),
         assets=["granule_metadata"],
     )
@@ -67,11 +68,10 @@ def test_write_static_catalog_copy_assets(e84_cog_catalog_short, tmp_path):
         assert path_exists(item.assets["granule_metadata"].href)
 
 
-@pytest.mark.remote
-def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_short):
+def test_write_static_catalog_copy_assets_relative_output_path(static_catalog_small):
     tmp_path = "tmp_static_catalog"
     try:
-        output_path = e84_cog_catalog_short.write_static_catalog(
+        output_path = static_catalog_small.write_static_catalog(
             output_path=str(tmp_path),
             assets=["granule_metadata"],
         )
@@ -92,11 +92,10 @@ def test_write_static_catalog_copy_assets_relative_output_path(e84_cog_catalog_s
             pass
 
 
-@pytest.mark.remote
-def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
+def test_write_static_catalog_convert_assets(static_catalog_small, tmp_path):
     asset = "coastal"
     resolution = Resolution["120m"]
-    output_path = e84_cog_catalog_short.write_static_catalog(
+    output_path = static_catalog_small.write_static_catalog(
         output_path=str(tmp_path),
         assets=[asset],
         assets_dst_resolution=resolution.value,
@@ -113,3 +112,24 @@ def test_write_static_catalog_convert_assets(e84_cog_catalog_short, tmp_path):
         with rasterio.open(item.assets[asset].href) as src:
             assert src.meta["transform"][0] == resolution.value
             assert src.read(masked=True).any()
+
+
+def test_write_static_catalog_metadata_assets(static_catalog_small, tmp_path):
+    static_catalog_small.write_static_catalog(
+        output_path=tmp_path,
+        copy_metadata=True,
+        metadata_parser_classes=(S2Metadata,),
+    )
+    path = (
+        MPath.from_inp(tmp_path)
+        / "sentinel-2-l2a"
+        / "S2B_33TWM_20230810_0_L2A"
+        / "GRANULE"
+        / "L2A_T33TWM_A033567_20230810T095651"
+        / "QI_DATA"
+    )
+    assert path.ls()
+    for f in path.ls():
+        assert f.suffix == ".jp2"
+        with rasterio_open(f) as src:
+            assert src.meta

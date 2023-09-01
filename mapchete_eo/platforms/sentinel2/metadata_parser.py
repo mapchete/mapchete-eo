@@ -8,7 +8,7 @@ import xml.etree.ElementTree as etree
 from contextlib import contextmanager
 from functools import cached_property
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -21,15 +21,17 @@ from mapchete.path import MPath
 from mapchete.types import Bounds
 from pystac import Item
 from rasterio.crs import CRS
-from rasterio.features import geometry_mask, shapes
+from rasterio.features import rasterize, shapes
 from rasterio.fill import fillnodata
-from rasterio.transform import from_bounds
+from rasterio.transform import array_bounds, from_bounds
 from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
+from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
 from mapchete_eo.io import open_xml
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
@@ -150,7 +152,7 @@ class S2Metadata:
 
     @cached_property
     def xml_root(self):
-        if self._cached_xml_root is None:
+        if self._cached_xml_root is None:  # pragma: no cover
             self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
@@ -166,14 +168,6 @@ class S2Metadata:
     def _crs(self) -> CRS:
         crs_str = next(self.xml_root.iter("HORIZONTAL_CS_CODE")).text
         return CRS.from_string(crs_str)
-
-    @cached_property
-    def bands_dict(self) -> dict:
-        return {}
-
-    @cached_property
-    def masks_dict(self) -> dict:
-        return {}
 
     @cached_property
     def sun_angles(self) -> Dict:
@@ -233,7 +227,7 @@ class S2Metadata:
 
         return out
 
-    def shape(self, resolution: Resolution) -> Tuple:
+    def shape(self, resolution: Resolution) -> Shape:
         """
         Return grid shape for resolution.
 
@@ -310,7 +304,7 @@ class S2Metadata:
 
             if mask_path.endswith(".jp2"):
                 features = []
-                for f in self._vectorize_raster_mask(
+                for f in _vectorize_raster_mask(
                     mask_path,
                     indexes=[
                         i.value
@@ -329,7 +323,7 @@ class S2Metadata:
                         )
                     features.append(f)
             else:
-                features = self._read_vector_mask(mask_path)
+                features = _read_vector_mask(mask_path)
             self._cloud_masks_cache = features
         return [
             f
@@ -337,40 +331,45 @@ class S2Metadata:
             if f["properties"]["maskType"].lower() in mask_types_strings
         ]
 
-    def detector_footprints(self, band: L2ABand) -> List[Dict]:
+    def detector_footprints(
+        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+    ) -> ReferencedRaster:
         """
         Return detector footprints.
-
-        Paramerters
-        -----------
-        band_idx : int
-            L2ABand index.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
         """
-        footprints = self._get_band_mask(band, BandQIMask.detector_footprints)
-        if len(footprints) == 0:
+
+        def _get_detector_id(feature) -> int:
+            return int(feature["properties"]["gml_id"].split("-")[-2])
+
+        footprints = read_mask_as_raster(
+            self.path_mapper.band_qi_mask(
+                qi_mask=BandQIMask.detector_footprints, band=band
+            ),
+            out_crs=self.crs,
+            out_shape=self.shape(rasterize_resolution),
+            out_transform=self.transform(rasterize_resolution),
+            rasterize_value_func=_get_detector_id,
+        )
+        if not footprints.data.any():
             raise MissingAsset(
                 f"No detector footprints found for band {band} in {self}"
             )
         return footprints
 
-    def technical_quality_mask(self, band: L2ABand) -> List[Dict]:
+    def technical_quality_mask(
+        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+    ) -> ReferencedRaster:
         """
         Return technical quality mask.
-
-        Paramerters
-        -----------
-        band_idx : int
-            L2ABand index.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
         """
-        return self._get_band_mask(band, BandQIMask.technical_quality)
+        return read_mask_as_raster(
+            self.path_mapper.band_qi_mask(
+                qi_mask=BandQIMask.technical_quality, band=band
+            ),
+            out_crs=self.crs,
+            out_shape=self.shape(rasterize_resolution),
+            out_transform=self.transform(rasterize_resolution),
+        )
 
     def viewing_incidence_angles(self, band: L2ABand) -> Dict:
         """
@@ -428,8 +427,8 @@ class S2Metadata:
         bands: Union[List[L2ABand], L2ABand, None] = None,
         angle: ViewAngle = ViewAngle.zenith,
         resolution: Resolution = Resolution["120m"],
-        resampling="bilinear",
-        smoothing_iterations=10,
+        resampling: str = "bilinear",
+        smoothing_iterations: int = 10,
     ) -> np.ndarray:
         if bands is None:
             bands = list(L2ABand)
@@ -439,11 +438,14 @@ class S2Metadata:
         def _band_angles(band: L2ABand):
             detector_angles = self.viewing_incidence_angles(band)[angle]["detector"]
             band_angles = ma.masked_equal(
-                np.zeros(self.shape(resolution), dtype=np.float32), 0
+                np.zeros(self.shape(resolution), dtype=np.float16), 0
             )
-            # for detector in detectors.values():
-            for detector in self.detector_footprints(band):
-                detector_id = int(detector["id"])
+            detector_footprints = self.detector_footprints(
+                band, rasterize_resolution=resolution
+            )
+            detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
+
+            for detector_id in detector_ids:
                 # handle rare cases where detector geometries are available but no respective
                 # angle arrays:
                 if detector_id not in detector_angles:  # pragma: no cover
@@ -451,35 +453,32 @@ class S2Metadata:
                         f"no {angle} angles grid found for detector {detector_id}"
                     )
                     continue
-                detector_raster = detector_angles[detector_id]["raster"]
+                detector_angles_raster = detector_angles[detector_id]["raster"]
                 # interpolate missing nodata edges and return BRDF difference model
-                detector_raster.data = ma.masked_invalid(
+                detector_angles_raster.data = ma.masked_invalid(
                     fillnodata(
-                        detector_raster.data,
+                        detector_angles_raster.data,
                         smoothing_iterations=smoothing_iterations,
                     )
                 )
                 # resample detector angles to output resolution
                 detector_angle = resample_array(
-                    in_array=detector_raster.data,
-                    in_crs=detector_raster.crs,
-                    in_transform=detector_raster.transform,
+                    detector_angles_raster,
                     nodata=0,
                     dst_transform=self.transform(resolution),
                     dst_crs=self.crs,
                     dst_shape=self.shape(resolution),
                     resampling=resampling,
                 )
-                detector_mask = geometry_mask(
-                    [transform_geom(self.crs, self.crs, detector["geometry"])],
-                    self.shape(resolution),
-                    self.transform(resolution),
-                    all_touched=False,
-                    invert=False,
+                # select pixels which are covered by detector
+                detector_mask = np.where(
+                    detector_footprints.data == detector_id, True, False
                 )
+                if len(detector_footprints.data.shape) == 3:
+                    detector_mask = detector_mask[0]
                 # merge detector stripes
-                band_angles[~detector_mask] = detector_angle[~detector_mask]
-                band_angles.mask[~detector_mask] = detector_angle.mask[~detector_mask]
+                band_angles[detector_mask] = detector_angle[detector_mask]
+                band_angles.mask[detector_mask] = detector_angle.mask[detector_mask]
 
             return band_angles
 
@@ -490,11 +489,11 @@ class S2Metadata:
         )
         return mean
 
-    def _get_band_mask(self, band: L2ABand, qi_mask: BandQIMask):
+    def _read_mask_as_vector(self, band: L2ABand, qi_mask: BandQIMask) -> dict:
         if self._band_masks_cache.get(qi_mask, {}).get(band) is None:
             mask_path = self.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
             if mask_path.suffix == ".jp2":
-                features = self._vectorize_raster_mask(mask_path)
+                features = _vectorize_raster_mask(mask_path)
                 # append detector ID for detector footprints
                 if qi_mask == BandQIMask.detector_footprints:
                     for f in features:
@@ -502,7 +501,7 @@ class S2Metadata:
                             f["properties"].pop("value")
                         )
             else:
-                features = self._read_vector_mask(mask_path)
+                features = _read_vector_mask(mask_path)
                 # append detector ID for detector footprints
                 if qi_mask == BandQIMask.detector_footprints:
                     for f in features:
@@ -514,47 +513,99 @@ class S2Metadata:
 
         return self._band_masks_cache[qi_mask][band]
 
-    @staticmethod
-    def _read_vector_mask(mask_path):
-        logger.debug(f"open {mask_path} with Fiona")
+
+def default_rasterize_value_func(feature):
+    return feature["id"]
+
+
+def read_mask_as_raster(
+    path: MPath,
+    out_shape: Union[Shape, None] = None,
+    out_transform: Union[Affine, None] = None,
+    out_crs: Union[CRS, None] = None,
+    rasterize_value_func: Callable = default_rasterize_value_func,
+) -> ReferencedRaster:
+    if path.suffix in COMMON_RASTER_EXTENSIONS:
+        mask = ReferencedRaster.from_file(path)
+        if out_shape and out_transform:
+            return ReferencedRaster(
+                resample_array(
+                    mask,
+                    dst_transform=out_transform,
+                    dst_crs=out_crs,
+                    dst_shape=out_shape,
+                    resampling="nearest",
+                ),
+                transform=out_transform,
+                crs=out_crs,
+                bounds=Bounds(
+                    array_bounds(out_shape.height, out_shape.width, out_transform)
+                ),
+            )
+        else:
+            return mask
+
+    else:
+        if out_shape and out_transform:
+            features_values = [
+                (feature["geometry"], rasterize_value_func(feature))
+                for feature in _read_vector_mask(path)
+            ]
+            return ReferencedRaster(
+                data=rasterize(
+                    features_values, out_shape=out_shape, transform=out_transform
+                )
+                if features_values
+                else np.zeros(out_shape, dtype=np.uint8),
+                transform=out_transform,
+                crs=out_crs,
+                bounds=Bounds(
+                    array_bounds(out_shape.height, out_shape.width, out_transform)
+                ),
+            )
+        else:  # pragma: no cover
+            raise ValueError("out_shape and out_transform have to be provided.")
+
+
+def _read_vector_mask(mask_path):
+    logger.debug(f"open {mask_path} with Fiona")
+    with _cached_path(mask_path) as cached:
+        try:
+            with fiona_open(cached) as src:
+                return list([dict(f) for f in src])
+        except ValueError as e:
+            # this happens if GML file is empty
+            if str(
+                e
+            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
+                return []
+            else:  # pragma: no cover
+                raise
+
+
+# TODO: do we need this?
+def _vectorize_raster_mask(mask_path, indexes=[1]):
+    logger.debug(f"open {mask_path} with rasterio")
+
+    def _gen():
         with _cached_path(mask_path) as cached:
-            try:
-                with fiona_open(cached) as src:
-                    return list([dict(f) for f in src])
-            except ValueError as e:
-                # this happens if GML file is empty
-                if str(
-                    e
-                ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(
-                    e
-                ):
-                    return []
-                else:  # pragma: no cover
-                    raise
+            with rasterio_open(cached) as src:
+                for index in indexes:
+                    arr = src.read(index)
+                    mask = np.where(arr == 0, False, True)
+                    for id_, (polygon, value) in enumerate(
+                        shapes(arr, mask=mask, transform=src.transform), 1
+                    ):
+                        out = {
+                            "id": id_,
+                            "geometry": polygon,
+                            "properties": {"value": value},
+                        }
+                        if len(indexes) > 1:
+                            out["properties"]["_band_idx"] = index
+                        yield out
 
-    @staticmethod
-    def _vectorize_raster_mask(mask_path, indexes=[1]):
-        logger.debug(f"open {mask_path} with rasterio")
-
-        def _gen():
-            with _cached_path(mask_path) as cached:
-                with rasterio_open(cached) as src:
-                    for index in indexes:
-                        arr = src.read(index)
-                        mask = np.where(arr == 0, False, True)
-                        for id_, (polygon, value) in enumerate(
-                            shapes(arr, mask=mask, transform=src.transform), 1
-                        ):
-                            out = {
-                                "id": id_,
-                                "geometry": polygon,
-                                "properties": {"value": value},
-                            }
-                            if len(indexes) > 1:
-                                out["properties"]["_band_idx"] = index
-                            yield out
-
-        return list(_gen())
+    return list(_gen())
 
 
 @contextmanager
@@ -589,7 +640,7 @@ def _get_bounds_geoinfo(root):
                 height = int(item.text)
             elif item.tag == "NCOLS":
                 width = int(item.text)
-        geoinfo[resolution] = dict(shape=(height, width))
+        geoinfo[resolution] = dict(shape=Shape(height, width))
     for geoposition in root.iter("Geoposition"):
         resolution = Resolution[f"{geoposition.get('resolution')}m"]
         for item in geoposition:
@@ -618,7 +669,7 @@ def _get_bounds_geoinfo(root):
         x_size = geoinfo[Resolution["10m"]]["x_size"] * relation
         y_size = geoinfo[Resolution["10m"]]["y_size"] * relation
         geoinfo[resolution].update(
-            shape=(height, width),
+            shape=Shape(height, width),
             x_size=x_size,
             y_size=y_size,
             transform=from_bounds(left, bottom, right, top, width, height),

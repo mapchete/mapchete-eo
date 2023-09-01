@@ -1,14 +1,16 @@
 import logging
+from typing import Union
 
 import numpy as np
 import numpy.ma as ma
-from fiona.transform import transform_geom
-from rasterio.features import geometry_mask
+from affine import Affine
+from mapchete.io.raster import ReferencedRaster
+from rasterio.crs import CRS
 from rasterio.fill import fillnodata
-from shapely.geometry import box, mapping, shape
+from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
+from mapchete_eo.brdf.config import BRDFModels
 
 logger = logging.getLogger(__name__)
 
@@ -255,92 +257,39 @@ def get_corrected_band_reflectance(band, brdf_param, nodata=0):
 
 
 def get_brdf_param(
-    out_shape=None,
-    out_transform=None,
-    out_crs=None,
-    product_crs=None,
-    sun_azimuth_angle_array=None,
-    sun_zenith_angle_array=None,
-    detector_footprints=None,
-    viewing_zenith=None,
-    viewing_azimuth=None,
-    sun_zenith_angle=None,
-    f_band_params=None,
-    model=BRDFModels.default,
-    smoothing_iterations=10,
-):
+    out_shape: Shape,
+    out_transform: Affine,
+    product_crs: CRS,
+    sun_azimuth_angle_array: np.ndarray,
+    sun_zenith_angle_array: np.ndarray,
+    detector_footprints: ReferencedRaster,
+    viewing_zenith: dict,
+    viewing_azimuth: dict,
+    sun_zenith_angle: float,
+    f_band_params: list,
+    out_crs: Union[CRS, None] = None,
+    model: BRDFModels = BRDFModels.default,
+    smoothing_iterations: int = 10,
+) -> ma.MaskedArray:
     """
     Return BRDF parameters.
-
-    Parameters
-    ----------
-    out_shape : tuple
-        Shape of output model.
-    out_transform : affine.Affine
-        Output model geotransform.
-    product_crs : str
-        CRS of product.
-    sun_azimuth_angle_array : dict
-        Dictionary of Azimuth angle grids.
-    sun_zenith_angle_array : dict
-        Dictionary of Zenith angle grids.
-    detector_footprints : dict
-        Detector footprints by detector ID.
-    viewing_zenith : dict
-        Dictionary of Zenith incidence angles by detector ID.
-    viewing_azimuth : dict
-        Dictionary of Zenith incidence angles by detector ID.
-    sun_zenith_angle : float
-        Constant sun angle for product.
-    model : str
-        BRDF model to run.
-    smoothing_iterations : int
-        Smoothness of interpolated angle grids
-
-    Returns
-    -------
-    BRDF model parameters : np.ma.MaskedArray
     """
-    for param, name in [
-        (out_shape, "out_shape"),
-        (out_transform, "out_transform"),
-        (product_crs, "product_crs"),
-        (sun_azimuth_angle_array, "sun_azimuth_angle"),
-        (sun_zenith_angle_array, "sun_zenith_angle"),
-        (detector_footprints, "detector_footprints"),
-        (viewing_zenith, "viewing_zenith"),
-        (viewing_azimuth, "viewing_azimuth"),
-        (sun_zenith_angle, "sun_zenith_angle"),
-        (f_band_params, "f_band_params"),
-    ]:
-        if param is None:  # pragma: no cover
-            raise ValueError(f"{name} must be provided")
     out_crs = out_crs or product_crs
     # create output array
     model_params = ma.masked_equal(np.zeros(out_shape, dtype=np.float32), 0)
 
-    # determine output window
-    pixel_x_size, _, left, _, pixel_y_size, top, _, _, _ = out_transform
-    height, width = out_shape
-    out_footprint = shape(
-        transform_geom(
-            out_crs,
-            product_crs,
-            mapping(
-                box(left, top + height * pixel_y_size, left + width * pixel_x_size, top)
-            ),
-        )
-    )
+    detector_footprints = resample_array(
+        detector_footprints,
+        nodata=0,
+        dst_transform=out_transform,
+        dst_crs=out_crs,
+        dst_shape=out_shape,
+        resampling="nearest",
+    )[0]
+    detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
 
     # iterate through detector footprints and calculate BRDF for each one
-    for detector in detector_footprints:
-        # make compatible with list of GeoJSON mappings or dictionay
-        if isinstance(detector_footprints, dict):
-            detector_id = detector
-            detector_footprint = detector_footprints[detector]["geometry"]
-        else:
-            detector_id = detector["properties"]["detector_id"]
-            detector_footprint = detector["geometry"]
+    for detector_id in detector_ids:
         logger.debug(f"run on detector {detector_id}")
 
         # handle rare cases where detector geometries are available but no respective
@@ -352,10 +301,14 @@ def get_brdf_param(
             logger.debug(f"no azimuth angles grid found for detector {detector_id}")
             continue
 
+        # select pixels which are covered by detector
+        detector_mask = np.where(detector_footprints == detector_id, True, False)
+
         # skip if detector footprint does not intersect with output window
-        if not shape(detector_footprint).intersects(out_footprint):  # pragma: no cover
+        if not detector_mask.any():  # pragma: no cover
             logger.debug(f"detector {detector_id} does not intersect with band window")
             continue
+
         # run low resolution model
         detector_model = DirectionalModels(
             angles=(
@@ -376,7 +329,7 @@ def get_brdf_param(
 
         # resample model to output resolution
         detector_brdf = resample_array(
-            in_array=detector_brdf_param,
+            detector_brdf_param,
             in_transform=viewing_zenith[detector_id]["raster"].transform,
             in_crs=product_crs,
             nodata=0,
@@ -385,16 +338,9 @@ def get_brdf_param(
             dst_shape=out_shape,
             resampling="bilinear",
         )
-        detector_mask = geometry_mask(
-            [transform_geom(product_crs, out_crs, detector_footprint)],
-            out_shape,
-            out_transform,
-            all_touched=False,
-            invert=False,
-        )
         # merge detector stripes
-        model_params[~detector_mask] = detector_brdf[~detector_mask]
-        model_params.mask[~detector_mask] = detector_brdf.mask[~detector_mask]
+        model_params[detector_mask] = detector_brdf[detector_mask]
+        model_params.mask[detector_mask] = detector_brdf.mask[detector_mask]
 
     return model_params
 

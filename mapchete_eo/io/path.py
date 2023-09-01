@@ -14,6 +14,9 @@ from mapchete_eo.time import to_datetime
 logger = logging.getLogger(__name__)
 
 
+COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
+
+
 @retry(
     logger=logger,
     exceptions=(TimeoutError, FSTimeoutError),

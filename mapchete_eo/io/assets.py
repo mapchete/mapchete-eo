@@ -12,11 +12,10 @@ from mapchete.path import MPath
 from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
 from mapchete_eo.io.profiles import COGDeflateProfile
 
 logger = logging.getLogger(__name__)
-
-CONVERT_AVAILABLE_EXTENSIONS = [".tif", ".jp2"]
 
 
 def asset_mpath(
@@ -298,7 +297,7 @@ def should_be_converted(
     profile: Union[None, Profile] = None,
 ) -> bool:
     """Decide whether a raster file should be converted or not."""
-    if path.endswith(tuple(CONVERT_AVAILABLE_EXTENSIONS)):
+    if path.endswith(tuple(COMMON_RASTER_EXTENSIONS)):
         # see if it even pays off to convert based on resolution
         if resolution is not None:
             with rasterio_open(path) as src:

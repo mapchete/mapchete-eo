@@ -288,16 +288,14 @@ def _test_metadata_band_masks(metadata):
     # band_masks
     for band in bands:
         # detector footprints
-        assert metadata.detector_footprints(band)
-        for feature in metadata.detector_footprints(band):
-            detector_id = feature["properties"]["detector_id"]
-            assert isinstance(detector_id, int)
-            assert shape(feature["geometry"]).is_valid
+        mask = metadata.detector_footprints(band)
+        assert isinstance(mask, ReferencedRaster)
+        assert mask.data.any()
+        assert mask.data.max() < 10
 
         # technical quality mask
-        assert isinstance(metadata.technical_quality_mask(band), list)
-        for feature in metadata.technical_quality_mask(band):
-            assert shape(feature["geometry"]).is_valid
+        mask = metadata.technical_quality_mask(band)
+        assert isinstance(mask, ReferencedRaster)
 
 
 @pytest.mark.parametrize(
@@ -383,7 +381,7 @@ def _test_metadata_viewing_incidence_angles(metadata):
         footprints = len(items["detector"])
         assert footprints
         assert set(list(range(1, footprints + 1))) == set(
-            [i["properties"]["detector_id"] for i in metadata.detector_footprints(band)]
+            [x for x in np.unique(metadata.detector_footprints(band).data) if x != 0]
         )
         for detector_id, properties in items["detector"].items():
             assert isinstance(detector_id, int)

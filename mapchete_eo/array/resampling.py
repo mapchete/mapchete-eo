@@ -1,29 +1,49 @@
+from typing import Union
+
 import numpy as np
 import numpy.ma as ma
+from affine import Affine
+from mapchete.io.raster import ReferencedRaster
+from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.warp import reproject
+from tilematrix import Shape
 
 
 def resample_array(
-    in_array=None,
-    in_transform=None,
-    in_crs=None,
-    nodata=0,
-    dst_transform=None,
-    dst_crs=None,
-    dst_shape=None,
-    resampling="bilinear",
+    inp: Union[ReferencedRaster, np.ndarray],
+    in_transform: Union[Affine, None] = None,
+    in_crs: Union[CRS, None] = None,
+    nodata: int = 0,
+    dst_transform: Union[Affine, None] = None,
+    dst_crs: Union[CRS, None] = None,
+    dst_shape: Union[Shape, None] = None,
+    resampling: str = "bilinear",
 ) -> ma.MaskedArray:
     """Resample array and return as masked array"""
-    dst_data = np.empty(dst_shape, in_array.dtype)
+    if isinstance(inp, ReferencedRaster):
+        in_array = inp.data
+        in_transform = inp.transform
+        in_crs = inp.crs
+    elif isinstance(inp, np.ndarray):
+        in_array = inp
+    else:
+        raise TypeError(
+            f"input has to either be a mapchete.io.raster.ReferencedRaster or a NumPy array, not {type(inp)}."
+        )
+
+    if len(in_array.shape) == 3:
+        dst_shape = (in_array.shape[0],) + dst_shape if dst_shape else in_array.shape
+
+    dst_data = np.empty(dst_shape or in_array.shape, in_array.dtype)
     reproject(
         in_array,
         dst_data,
         src_transform=in_transform,
         src_crs=in_crs,
         src_nodata=nodata,
-        dst_transform=dst_transform,
-        dst_crs=dst_crs,
+        dst_transform=dst_transform or in_transform,
+        dst_crs=dst_crs or in_crs,
         dst_nodata=nodata,
         resampling=Resampling[resampling],
     )

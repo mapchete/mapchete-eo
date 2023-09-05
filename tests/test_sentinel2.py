@@ -20,6 +20,15 @@ def test_config():
 
 
 @pytest.mark.remote
-def test_s2_read_xarray(sentinel2_mapchete, test_tile):
-    with sentinel2_mapchete.process_mp(tile=test_tile).open("inp") as cube:
+def test_s2_read_xarray(sentinel2_mapchete):
+    with sentinel2_mapchete.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["red"]), xr.Dataset)
+
+
+def test_preprocessing(sentinel2_mapchete):
+    mp = sentinel2_mapchete.mp()
+    input_data = list(mp.config.inputs.values())[0]
+    assert input_data.products
+
+    tile_mp = sentinel2_mapchete.process_mp()
+    assert tile_mp.open("inp").products

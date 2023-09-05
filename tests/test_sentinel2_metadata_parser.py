@@ -12,7 +12,7 @@ from rasterio.crs import CRS
 from shapely.geometry import shape
 
 from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.platforms.sentinel2.base import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
     EarthSearchPathMapper,
     SinergisePathMapper,

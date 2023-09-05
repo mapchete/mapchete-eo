@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Tuple, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -266,7 +266,7 @@ def get_brdf_param(
     viewing_zenith: dict,
     viewing_azimuth: dict,
     sun_zenith_angle: float,
-    f_band_params: list,
+    f_band_params: Tuple[float, float, float],
     out_crs: Union[CRS, None] = None,
     model: BRDFModels = BRDFModels.default,
     smoothing_iterations: int = 10,

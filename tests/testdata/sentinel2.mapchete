@@ -4,7 +4,7 @@ input:
     format: Sentinel-2
     level: L2A
     start_time: 2022-04-01
-    end_time: 2022-04-01
+    end_time: 2022-04-03
 output:
   format: GTiff
   bands: 3

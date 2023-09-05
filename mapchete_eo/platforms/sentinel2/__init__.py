@@ -1,9 +1,7 @@
-from mapchete_eo.platforms.sentinel2.base import (
-    METADATA,
-    InputData,
-    InputTile,
-    S2Metadata,
-)
-from mapchete_eo.platforms.sentinel2.product import S2Product
+import pystac
+from mapchete.path import MPath
 
-__all__ = ["S2Metadata", "S2Product", "METADATA", "InputData", "InputTile"]
+from mapchete_eo.platforms.sentinel2.driver import METADATA, InputData, InputTile
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+
+__all__ = ["S2Metadata", "METADATA", "InputData", "InputTile"]

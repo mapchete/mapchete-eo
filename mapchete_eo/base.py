@@ -1,16 +1,82 @@
+from __future__ import annotations
+
 import datetime
-from typing import List, Union
+from typing import List, Protocol, Union
 
 import croniter
+import numpy.ma as ma
+import pystac
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.formats import base
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
+from mapchete.types import Bounds
+from rasterio.crs import CRS
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.io import MergeMethod, items_to_xarray
+from mapchete_eo.io import MergeMethod, item_to_xarray, items_to_xarray
+
+
+class EOProductProtocol(Protocol):
+    item: pystac.Item
+    bounds: Bounds
+    crs: CRS
+
+    @classmethod
+    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol:
+        ...
+
+    def read(
+        self,
+        assets: Union[List[str], None] = None,
+        eo_bands: Union[List[str], None] = None,
+        resampling: Union[List[str], str] = "nearest",
+        nodatavals: Union[List[float], List[None], float, None] = None,
+        x_axis_name: str = "x",
+        y_axis_name: str = "y",
+        **kwargs,
+    ) -> xr.Dataset:
+        ...
+
+
+class EOProduct(EOProductProtocol):
+    item: pystac.Item
+    bounds: Bounds
+    crs: CRS
+
+    def __init__(self, item: pystac.Item):
+        self.item = item
+
+    @classmethod
+    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:
+        return EOProduct(item)
+
+    def read(
+        self,
+        assets: Union[List[str], None] = None,
+        eo_bands: Union[List[str], None] = None,
+        resampling: Union[List[str], str] = "nearest",
+        nodatavals: Union[List[float], List[None], float, None] = None,
+        x_axis_name: str = "x",
+        y_axis_name: str = "y",
+        **kwargs,
+    ) -> xr.Dataset:
+        return item_to_xarray(
+            self.item,
+            assets=assets or [],
+            eo_bands=eo_bands or [],
+            resampling=resampling,
+            nodatavals=nodatavals,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+        )
+
+    def read_ma(
+        self, assets: Union[list, None] = None, resampling="nearest", **kwargs
+    ) -> ma.MaskedArray:
+        raise NotImplementedError
 
 
 class InputTile(base.InputTile):
@@ -32,6 +98,8 @@ class InputTile(base.InputTile):
         end_time: Union[str, datetime.datetime, None] = None,
         timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
         time_pattern: Union[str, None] = None,
+        merge_items_by: Union[str, None] = None,
+        merge_method: Union[str, MergeMethod] = MergeMethod.first,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -41,11 +109,11 @@ class InputTile(base.InputTile):
         -------
         data : xarray.Dataset
         """
-        # TODO: iterate through items, filter by time and read assets to window
+        # TODO: iterate through products, filter by time and read assets to window
         if any([start_time, end_time, timestamps]):
             raise NotImplementedError("time subsets are not yet implemented")
         if time_pattern:
-            # filter items by time pattern
+            # filter products by time pattern
             tz = tzutc()
             coord_time = [
                 t.replace(tzinfo=tz)
@@ -55,14 +123,37 @@ class InputTile(base.InputTile):
                     time_pattern,
                 )
             ]
-            items = [i for i in self.items if i.datetime in coord_time]
+            products = [
+                product
+                for product in self.products
+                if product.item.datetime in coord_time
+            ]
         else:
-            items = self.items
-        if len(items) == 0:
+            products = self.products
+        if len(products) == 0:
             return xr.Dataset()
-        return items_to_xarray(
-            items=items, eo_bands=eo_bands, assets=assets, tile=self.tile, **kwargs
+        return products_to_xarray(
+            products=products,
+            eo_bands=eo_bands,
+            assets=assets,
+            tile=self.tile,
+            **kwargs,
         )
+
+    def read_levelled(
+        self,
+        assets: List[str],
+        target_height: int,
+        eo_bands: List[str] = [],
+        start_time: Union[str, datetime.datetime, None] = None,
+        end_time: Union[str, datetime.datetime, None] = None,
+        timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
+        time_pattern: Union[str, None] = None,
+        merge_items_by: Union[str, None] = None,
+        merge_method: Union[MergeMethod, str] = MergeMethod.average,
+        **kwargs,
+    ) -> ma.MaskedArray:
+        raise NotImplementedError()
 
     def is_empty(self) -> bool:
         """

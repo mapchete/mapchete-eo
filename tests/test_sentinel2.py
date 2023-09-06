@@ -1,3 +1,4 @@
+import numpy.ma as ma
 import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
@@ -32,3 +33,28 @@ def test_preprocessing(sentinel2_mapchete):
 
     tile_mp = sentinel2_mapchete.process_mp()
     assert tile_mp.open("inp").products
+
+
+def test_read_ma(sentinel2_stac_mapchete):
+    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
+    cube = s2_src.read_ma(assets=["red", "green", "blue", "nir"])
+    assert isinstance(cube, ma.MaskedArray)
+
+
+def test_read_levelled_ma(sentinel2_stac_mapchete):
+    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
+    cube = s2_src.read_levelled_ma(["red", "green", "blue", "nir"])
+    assert cube.ndims == 4
+    assert isinstance(cube, ma.MaskedArray)
+
+
+def test_read(sentinel2_stac_mapchete):
+    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
+    cube = s2_src.read(assets=["red", "green", "blue", "nir"])
+    assert isinstance(cube, xr.Dataset)
+
+
+def test_read_levelled(sentinel2_stac_mapchete):
+    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
+    cube = s2_src.read_levelled(["red", "green", "blue", "nir"])
+    assert isinstance(cube, xr.Dataset)

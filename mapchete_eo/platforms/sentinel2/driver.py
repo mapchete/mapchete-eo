@@ -1,17 +1,21 @@
 import datetime
 from functools import cached_property
-from typing import List, Union
+from typing import Union
 
 import croniter
+import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
+from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
+from mapchete_eo.archives.base import Archive, StaticArchive
 from mapchete_eo.io import MergeMethod, items_to_xarray
 from mapchete_eo.platforms.sentinel2.config import DriverConfig, KnownArchives
 from mapchete_eo.platforms.sentinel2.product import S2Product
+from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
 # here is everything we need to configure and initialize the mapchete driver
@@ -52,30 +56,11 @@ class InputTile(base.InputTile):
         self.start_time = start_time
         self.end_time = end_time
 
-    def read(
-        self,
-        assets: List[str] = [],
-        eo_bands: List[str] = [],
-        start_time: Union[str, datetime.datetime, None] = None,
-        end_time: Union[str, datetime.datetime, None] = None,
-        timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
-        time_pattern: Union[str, None] = None,
-        merge_items_by: Union[str, None] = None,
-        merge_method: Union[MergeMethod, str] = MergeMethod.first,
-        **kwargs,
-    ) -> xr.Dataset:
-        """
-        Read reprojected & resampled input data.
-
-        Returns
-        -------
-        data : xarray.Dataset
-        """
-        raise NotImplementedError()
-
 
 class InputData(base.InputData):
     """In case this driver is used when being a readonly input to another process."""
+
+    archive: Archive
 
     def __init__(
         self,
@@ -91,9 +76,21 @@ class InputData(base.InputData):
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = format_params.start_time
         self.end_time = format_params.end_time
-        self.archive = format_params.archive(
-            self.start_time, self.end_time, self._bounds
-        )
+        if format_params.cat_baseurl:
+            self.archive = StaticArchive(
+                catalog=STACStaticCatalog(
+                    baseurl=MPath(format_params.cat_baseurl).absolute_path(
+                        base_dir=input_params["conf_dir"]
+                    ),
+                    bounds=self.bbox(out_crs="EPSG:4326").bounds,
+                    start_time=self.start_time,
+                    end_time=self.end_time,
+                )
+            )
+        else:
+            self.archive = format_params.archive(
+                self.start_time, self.end_time, self._bounds
+            )
         self.readonly = readonly
         self.input_key = input_key
         self.standalone = standalone

@@ -81,6 +81,7 @@ class DriverConfig(BaseModel, arbitrary_types_allowed=True):
     start_time: Union[datetime.datetime, datetime.date]
     end_time: Union[datetime.datetime, datetime.date]
     archive: Type[Archive] = KnownArchives.S2AWS_COG.value
+    cat_baseurl: Union[str, None] = None
     cloudmasks: Union[CloudmaskConfig, None] = CloudmaskConfig()
     max_cloud_percent: int = 100
     footprint_buffer: float = -500

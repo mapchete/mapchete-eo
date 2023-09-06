@@ -11,6 +11,7 @@ from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
+from mapchete_eo.base import EOProductProtocol
 from mapchete_eo.io import DEFAULT_FORMATS_SPECS
 from mapchete_eo.io.assets import get_assets
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
@@ -95,7 +96,7 @@ class Cache:
                 raise KeyError(f"BRDF grid for band {band} not configured")
 
 
-class S2Product:
+class S2Product(EOProductProtocol):
     item: pystac.Item
     metadata: S2Metadata
     cache: Union[Cache, None] = None
@@ -120,6 +121,7 @@ class S2Product:
         item: pystac.Item,
         cache_config: Union[CacheConfig, None] = None,
         cache_all: bool = False,
+        **kwargs,
     ) -> S2Product:
         s2product = S2Product(item, cache_config=cache_config)
 
@@ -149,7 +151,7 @@ class S2Product:
 
     def read(
         self,
-        indexes: Union[list, None] = None,
+        assets: Union[list, None] = None,
         resampling="nearest",
         brdf_corrected: bool = False,
         tile: Union[BufferedTile, None] = None,

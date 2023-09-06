@@ -2,14 +2,14 @@
 Contains all classes required to use the driver as mapchete input.
 """
 import datetime
-from typing import Union
+from typing import List, Union
 
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from pydantic import BaseModel
 
 from mapchete_eo import base
-from mapchete_eo.archives.base import Archive
+from mapchete_eo.archives.base import StaticArchive
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
@@ -19,11 +19,6 @@ METADATA: dict = {
     "mode": "r",
     "file_extensions": [],
 }
-
-
-class StaticArchive(Archive):
-    def __init__(self, catalog=None, **kwargs):
-        self.catalog = catalog
 
 
 class FormatParams(BaseModel):
@@ -48,7 +43,7 @@ class InputTile(base.InputTile):
     def __init__(
         self,
         tile: BufferedTile,
-        items: list,
+        products: List[base.EOProductProtocol],
         eo_bands: list,
         start_time: datetime.datetime,
         end_time: datetime.datetime,
@@ -56,7 +51,7 @@ class InputTile(base.InputTile):
     ) -> None:
         """Initialize."""
         self.tile = tile
-        self.items = items
+        self.products = products
         self.eo_bands = eo_bands
         self.start_time = to_datetime(start_time)
         self.end_time = to_datetime(end_time)

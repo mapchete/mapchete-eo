@@ -23,7 +23,7 @@ from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.time import to_datetime
-from mapchete_eo.types import MergeMethod, NodataVals
+from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 
 
 class BaseDriverConfig(BaseModel):
@@ -41,7 +41,7 @@ class InputTile(base.InputTile):
 
     default_read_merge_method: MergeMethod = MergeMethod.first
     default_read_merge_products_by: Union[str, None] = None
-    default_read_nodataval: Union[List[int], List[None], int, None] = None
+    default_read_nodataval: NodataVal = None
 
     tile: BufferedTile
     products: List[EOProductProtocol]

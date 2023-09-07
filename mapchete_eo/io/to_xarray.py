@@ -12,7 +12,7 @@ from mapchete.tile import BufferedTile
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.protocols import EOProductProtocol
-from mapchete_eo.types import MergeMethod
+from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def products_to_xarray(
     eo_bands: List[str] = [],
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodatavals: Union[List[float], None] = None,
+    nodatavals: NodataVals = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
@@ -186,7 +186,7 @@ def item_to_xarray(
     assets: List[str] = [],
     tile: BufferedTile = None,
     resampling: Union[List[str], str] = "nearest",
-    nodatavals: Union[List[float], List[None], float, None] = None,
+    nodatavals: NodataVals = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
     time_axis_name: str = "time",
@@ -231,7 +231,7 @@ def item_to_np_array(
     assets: List[str] = [],
     tile: BufferedTile = None,
     resampling: Union[List[str], str] = "nearest",
-    nodatavals: Union[List[float], List[None], float, None] = None,
+    nodatavals: NodataVals = None,
 ) -> ma.MaskedArray:
     """
     Read tile window of STAC Item and merge into a 3D ma.MaskedArray.
@@ -262,7 +262,7 @@ def asset_to_xarray(
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodataval: Union[float, None] = None,
+    nodataval: NodataVal = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.DataArray:
@@ -292,7 +292,7 @@ def asset_to_np_array(
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
     resampling: str = "nearest",
-    nodataval: Union[float, None] = None,
+    nodataval: NodataVal = None,
 ) -> ma.MaskedArray:
     """
     Read tile window of STAC Items and merge into a 2D ma.MaskedArray.

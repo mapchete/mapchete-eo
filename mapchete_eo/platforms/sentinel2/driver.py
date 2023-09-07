@@ -3,7 +3,7 @@ from typing import Union
 from mapchete_eo import base
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
-from mapchete_eo.types import MergeMethod
+from mapchete_eo.types import MergeMethod, NodataVal
 
 METADATA: dict = {
     "driver_name": "Sentinel-2",
@@ -16,7 +16,8 @@ METADATA: dict = {
 class InputTile(base.InputTile):
     # Sentinel-2 driver specific default values:
     default_read_merge_method: MergeMethod = MergeMethod.average
-    default_read_nodataval: Union[int, None] = 0
+    default_read_merge_products_by: Union[str, None] = "datastrip_id"
+    default_read_nodataval: NodataVal = 0
 
 
 class InputData(base.InputData):

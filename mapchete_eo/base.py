@@ -23,7 +23,7 @@ from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.time import to_datetime
-from mapchete_eo.types import MergeMethod
+from mapchete_eo.types import MergeMethod, NodataVals
 
 
 class BaseDriverConfig(BaseModel):
@@ -39,8 +39,9 @@ class BaseDriverConfig(BaseModel):
 class InputTile(base.InputTile):
     """Target Tile representation of input data."""
 
-    default_read_merge_method: MergeMethod = MergeMethod.average
-    default_read_nodataval: Union[int, None] = 0
+    default_read_merge_method: MergeMethod = MergeMethod.first
+    default_read_merge_products_by: Union[str, None] = None
+    default_read_nodataval: Union[List[int], List[None], int, None] = None
 
     tile: BufferedTile
     products: List[EOProductProtocol]
@@ -72,8 +73,9 @@ class InputTile(base.InputTile):
         end_time: Union[str, datetime.datetime, None] = None,
         timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
         time_pattern: Union[str, None] = None,
-        merge_items_by: Union[str, None] = None,
-        merge_method: Union[str, MergeMethod] = MergeMethod.first,
+        merge_products_by: Union[str, None] = None,
+        merge_method: Union[str, MergeMethod, None] = None,
+        nodatavals: NodataVals = None,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -111,7 +113,11 @@ class InputTile(base.InputTile):
             eo_bands=eo_bands,
             assets=assets,
             tile=self.tile,
-            **kwargs,
+            merge_products_by=merge_products_by or self.default_read_merge_products_by,
+            merge_method=merge_method or self.default_read_merge_method,
+            nodatavals=self.default_read_nodataval
+            if nodatavals is None
+            else nodatavals,
         )
 
     def read_levelled(

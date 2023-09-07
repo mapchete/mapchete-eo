@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List, Union
 
 
 class GeodataType(str, Enum):
@@ -11,3 +12,7 @@ class MergeMethod(str, Enum):
 
     first = "first"
     average = "average"
+
+
+NodataVal = Union[int, None]
+NodataVals = Union[List[NodataVal], NodataVal]

@@ -8,6 +8,8 @@ from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
+from mapchete_eo.types import NodataVals
+
 
 class EOProductProtocol(Protocol):
     item: pystac.Item
@@ -25,7 +27,7 @@ class EOProductProtocol(Protocol):
         eo_bands: Union[List[str], None] = None,
         tile: BufferedTile = None,
         resampling: Union[List[str], str] = "nearest",
-        nodatavals: Union[List[float], List[None], float, None] = None,
+        nodatavals: NodataVals = None,
         x_axis_name: str = "x",
         y_axis_name: str = "y",
         **kwargs,

@@ -13,6 +13,7 @@ from shapely.geometry import shape
 from mapchete_eo.io import get_item_property, item_to_np_array, item_to_xarray
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.types import NodataVals
 
 
 class EOProduct(EOProductProtocol):
@@ -37,7 +38,7 @@ class EOProduct(EOProductProtocol):
         eo_bands: Union[List[str], None] = None,
         tile: BufferedTile = None,
         resampling: Union[List[str], str] = "nearest",
-        nodatavals: Union[List[float], List[None], float, None] = None,
+        nodatavals: NodataVals = None,
         x_axis_name: str = "x",
         y_axis_name: str = "y",
         time_axis_name: str = "time",
@@ -61,7 +62,7 @@ class EOProduct(EOProductProtocol):
         eo_bands: Union[List[str], None] = None,
         tile: BufferedTile = None,
         resampling: Union[List[str], str] = "nearest",
-        nodatavals: Union[List[float], List[None], float, None] = None,
+        nodatavals: NodataVals = None,
         **kwargs,
     ) -> ma.MaskedArray:
         return item_to_np_array(

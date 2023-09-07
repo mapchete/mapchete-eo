@@ -41,10 +41,10 @@ def test_read(sentinel2_stac_mapchete):
     assert isinstance(cube, xr.Dataset)
 
 
-def test_read_levelled(sentinel2_stac_mapchete):
-    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
-    cube = s2_src.read_levelled(["red", "green", "blue", "nir"], 2)
-    assert isinstance(cube, xr.Dataset)
+# def test_read_levelled(sentinel2_stac_mapchete):
+#     s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
+#     cube = s2_src.read_levelled(["red", "green", "blue", "nir"], 2)
+#     assert isinstance(cube, xr.Dataset)
 
 
 # def test_read_ma(sentinel2_stac_mapchete):

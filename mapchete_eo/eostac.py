@@ -2,17 +2,15 @@
 Contains all classes required to use the driver as mapchete input.
 """
 import datetime
-from typing import List, Union
+from typing import Union
 
 from mapchete.path import MPath
-from mapchete.tile import BufferedTile
 from pydantic import BaseModel
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import StaticArchive
-from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
-from mapchete_eo.time import to_datetime
+from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 
 METADATA: dict = {
     "driver_name": "EOSTAC_DEV",
@@ -41,22 +39,6 @@ class InputTile(base.InputTile):
         driver specific parameters
     """
 
-    def __init__(
-        self,
-        tile: BufferedTile,
-        products: List[EOProductProtocol],
-        eo_bands: list,
-        start_time: datetime.datetime,
-        end_time: datetime.datetime,
-        **kwargs,
-    ) -> None:
-        """Initialize."""
-        self.tile = tile
-        self.products = products
-        self.eo_bands = eo_bands
-        self.start_time = to_datetime(start_time)
-        self.end_time = to_datetime(end_time)
-
 
 class InputData(base.InputData):
     """In case this driver is used when being a readonly input to another process."""
@@ -75,7 +57,7 @@ class InputData(base.InputData):
                 baseurl=MPath(format_params.cat_baseurl).absolute_path(
                     base_dir=input_params["conf_dir"]
                 ),
-                bounds=self.bbox(out_crs="EPSG:4326").bounds,
+                bounds=self.bbox(out_crs=DEFAULT_CATALOG_CRS).bounds,
                 start_time=self.start_time,
                 end_time=self.end_time,
                 time_pattern=format_params.pattern,

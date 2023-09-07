@@ -4,12 +4,10 @@ import xml.etree.ElementTree as etree
 from enum import Enum
 
 from fsspec.exceptions import FSTimeoutError
+from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
 from mapchete.path import MPath
 from pystac import Item
 from retry import retry
-
-from mapchete_eo.settings import MP_EO_IO_RETRY_SETTINGS
-from mapchete_eo.time import to_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 @retry(
     logger=logger,
     exceptions=(TimeoutError, FSTimeoutError),
-    **MP_EO_IO_RETRY_SETTINGS,
+    **MAPCHETE_IO_RETRY_SETTINGS,
 )
 def open_xml(path: MPath):
     logger.debug(f"open {path}")

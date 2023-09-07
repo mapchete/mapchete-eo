@@ -15,19 +15,38 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io import products_to_xarray
 from mapchete_eo.product import EOProduct
+from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.time import to_datetime
 from mapchete_eo.types import MergeMethod
 
 
 class InputTile(base.InputTile):
-    """
-    Target Tile representation of input data.
+    """Target Tile representation of input data."""
 
-    Parameters
-    ----------
-    tile : ``Tile``
-    kwargs : keyword arguments
-        driver specific parameters
-    """
+    default_read_merge_method: MergeMethod = MergeMethod.average
+    default_read_nodataval: Union[int, None] = 0
+
+    tile: BufferedTile
+    products: List[EOProductProtocol]
+    eo_bands: dict
+    start_time: Union[datetime.datetime, datetime.date]
+    end_time: Union[datetime.datetime, datetime.date]
+
+    def __init__(
+        self,
+        tile: BufferedTile,
+        products: List[EOProductProtocol],
+        eo_bands: dict,
+        start_time: Union[datetime.datetime, datetime.date],
+        end_time: Union[datetime.datetime, datetime.date],
+        **kwargs,
+    ) -> None:
+        """Initialize."""
+        self.tile = tile
+        self.products = products
+        self.eo_bands = eo_bands
+        self.start_time = start_time
+        self.end_time = end_time
 
     def read(
         self,
@@ -57,8 +76,8 @@ class InputTile(base.InputTile):
             coord_time = [
                 t.replace(tzinfo=tz)
                 for t in croniter.croniter_range(
-                    self.start_time,
-                    self.end_time,
+                    to_datetime(self.start_time),
+                    to_datetime(self.end_time),
                     time_pattern,
                 )
             ]
@@ -81,8 +100,8 @@ class InputTile(base.InputTile):
 
     def read_levelled(
         self,
-        assets: List[str],
         target_height: int,
+        assets: List[str] = [],
         eo_bands: List[str] = [],
         start_time: Union[str, datetime.datetime, None] = None,
         end_time: Union[str, datetime.datetime, None] = None,

@@ -1,21 +1,14 @@
-import datetime
 from functools import cached_property
 from typing import Union
 
-import croniter
-import numpy.ma as ma
-import xarray as xr
-from dateutil.tz import tzutc
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
-from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive, StaticArchive
-from mapchete_eo.platforms.sentinel2.config import DriverConfig, KnownArchives
+from mapchete_eo.platforms.sentinel2.config import DriverConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.search.stac_static import STACStaticCatalog
-from mapchete_eo.time import to_datetime
 from mapchete_eo.types import MergeMethod
 
 # here is everything we need to configure and initialize the mapchete driver
@@ -40,21 +33,8 @@ class InputTile(base.InputTile):
         driver specific parameters
     """
 
-    def __init__(
-        self,
-        tile: BufferedTile,
-        products: list,
-        eo_bands: list,
-        start_time: Union[datetime.datetime, datetime.date],
-        end_time: Union[datetime.datetime, datetime.date],
-        **kwargs,
-    ) -> None:
-        """Initialize."""
-        self.tile = tile
-        self.products = products
-        self.eo_bands = eo_bands
-        self.start_time = start_time
-        self.end_time = end_time
+    default_read_merge_method: MergeMethod = MergeMethod.average
+    default_read_nodataval: Union[int, None] = 0
 
 
 class InputData(base.InputData):

@@ -26,7 +26,7 @@ from mapchete_eo.time import to_datetime
 from mapchete_eo.types import MergeMethod
 
 
-class FormatParams(BaseModel):
+class BaseDriverConfig(BaseModel):
     format: str
     start_time: Union[datetime.date, datetime.datetime]
     end_time: Union[datetime.date, datetime.datetime]
@@ -162,8 +162,8 @@ class InputTile(base.InputTile):
 
 class InputData(base.InputData):
     default_product_cls = EOProduct
-    driver_parameter_model: Type[FormatParams] = FormatParams
-    params: FormatParams
+    driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
+    params: BaseDriverConfig
     archive: Archive
 
     def __init__(
@@ -180,7 +180,7 @@ class InputData(base.InputData):
         self.input_key = input_key
         self.standalone = standalone
 
-        self.params = self.driver_parameter_model(**input_params["abstract"])
+        self.params = self.driver_config_model(**input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self.start_time = self.params.start_time
         self.end_time = self.params.end_time

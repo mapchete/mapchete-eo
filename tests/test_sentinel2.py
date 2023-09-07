@@ -3,7 +3,7 @@ import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
 
-from mapchete_eo.platforms.sentinel2.config import DriverConfig
+from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
@@ -12,7 +12,7 @@ def test_format_available():
 
 
 def test_config():
-    conf = DriverConfig(
+    conf = Sentinel2DriverConfig(
         format="Sentinel-2",
         start_time="2022-04-01",
         end_time="2022-04-10",

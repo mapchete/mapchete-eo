@@ -6,7 +6,7 @@ from mapchete.path import MPath
 from pydantic import BaseModel
 
 from mapchete_eo.archives.base import Archive
-from mapchete_eo.base import FormatParams
+from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 from mapchete_eo.io.path import ProductPathGenerationMethod
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
@@ -77,7 +77,7 @@ class CacheConfig(BaseModel, arbitrary_types_allowed=True):
     cached_files_validation: bool = False
 
 
-class DriverConfig(FormatParams, arbitrary_types_allowed=True):
+class Sentinel2DriverConfig(BaseDriverConfig, arbitrary_types_allowed=True):
     format: str = "Sentinel-2"
     start_time: Union[datetime.datetime, datetime.date]
     end_time: Union[datetime.datetime, datetime.date]

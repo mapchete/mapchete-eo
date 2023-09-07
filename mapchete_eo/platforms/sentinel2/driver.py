@@ -1,7 +1,7 @@
 from typing import Union
 
 from mapchete_eo import base
-from mapchete_eo.platforms.sentinel2.config import DriverConfig
+from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.types import MergeMethod
 
@@ -22,4 +22,4 @@ class InputTile(base.InputTile):
 class InputData(base.InputData):
     # Sentinel-2 driver specific parameters:
     default_product_cls = S2Product
-    driver_parameter_model = DriverConfig
+    driver_config_model = Sentinel2DriverConfig

@@ -5,12 +5,10 @@ from typing import Union
 
 import numpy as np
 import pystac
-import xarray as xr
 from mapchete.io.raster import read_raster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
-from mapchete.types import Bounds
-from rasterio.crs import CRS
+from rasterio.enums import Resampling
 
 from mapchete_eo.io import DEFAULT_FORMATS_SPECS
 from mapchete_eo.io.assets import get_assets
@@ -148,7 +146,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def read_brdf_grid(
         self,
         band: L2ABand,
-        resampling="nearest",
+        resampling: Resampling = Resampling.nearest,
         tile: Union[BufferedTile, None] = None,
         brdf_config: BRDFConfig = BRDFConfig(),
     ) -> np.ndarray:
@@ -165,7 +163,9 @@ class S2Product(EOProduct, EOProductProtocol):
         ).read(tile=tile, resampling=resampling)
 
     def read_cloudmask(
-        self, resampling="nearest", tile: Union[BufferedTile, None] = None
+        self,
+        resampling: Resampling = Resampling.nearest,
+        tile: Union[BufferedTile, None] = None,
     ) -> np.ndarray:
         # TODO: read different cloud mask types: L1C, new raster cloud masks, SCL, sinergise s2cloudless(?)
         raise NotImplementedError()

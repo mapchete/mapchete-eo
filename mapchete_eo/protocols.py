@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Protocol, Union
+from typing import Any, Dict, List, Protocol, Union
 
 import pystac
 import xarray as xr
@@ -13,6 +13,7 @@ class EOProductProtocol(Protocol):
     item: pystac.Item
     bounds: Bounds
     crs: CRS
+    __geo_interface__: Union[Dict[str, Any], None]
 
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol:

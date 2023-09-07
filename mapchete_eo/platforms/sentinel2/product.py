@@ -99,11 +99,8 @@ class Cache:
 
 
 class S2Product(EOProduct, EOProductProtocol):
-    item: pystac.Item
     metadata: S2Metadata
     cache: Union[Cache, None] = None
-    bounds: Bounds
-    crs: CRS
 
     def __init__(
         self,
@@ -114,6 +111,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.item = item
         self.metadata = metadata or S2Metadata.from_stac_item(self.item)
         self.cache = Cache(self.item, cache_config) if cache_config else None
+        self.__geo_interface__ = self.metadata.__geo_interface__
         self.bounds = self.metadata.bounds
         self.crs = self.metadata.crs
 
@@ -136,10 +134,6 @@ class S2Product(EOProduct, EOProductProtocol):
 
         return s2product
 
-    @property
-    def __geo_interface__(self):
-        return self.metadata.__geo_interface__
-
     def __repr__(self):
         return f"<S2Product product_id={self.item.id}>"
 
@@ -150,23 +144,6 @@ class S2Product(EOProduct, EOProductProtocol):
     def cache_brdf_grids(self) -> None:
         if self.cache is not None:
             self.cache.cache_brdf_grids(self.metadata)
-
-    # def read(
-    #     self,
-    #     assets: Union[List[str], None] = None,
-    #     eo_bands: Union[List[str], None] = None,
-    #     tile: BufferedTile = None,
-    #     resampling: Union[List[str], str] = "nearest",
-    #     nodatavals: Union[List[float], List[None], float, None] = None,
-    #     x_axis_name: str = "x",
-    #     y_axis_name: str = "y",
-    #     time_axis_name: str = "time",
-    #     **kwargs,
-    # ) -> xr.Dataset:
-    #     if self.cache:
-    #         # get asset hrefs from Cache
-    #         pass
-    #     raise NotImplementedError()
 
     def read_brdf_grid(
         self,

@@ -8,20 +8,24 @@ import xarray as xr
 from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
+from shapely.geometry import shape
 
 from mapchete_eo.io import get_item_property, item_to_np_array, item_to_xarray
 from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 
 
 class EOProduct(EOProductProtocol):
     """Wrapper class around a pystac.Item which provides read functions."""
 
-    item: pystac.Item
-    bounds: Bounds
-    crs: CRS
-
     def __init__(self, item: pystac.Item):
         self.item = item
+        self.__geo_interface__ = self.item.geometry
+        self.bounds = Bounds.from_inp(shape(self))
+        self.crs = DEFAULT_CATALOG_CRS
+
+    def __repr__(self):
+        return f"<EOProduct product_id={self.item.id}>"
 
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:

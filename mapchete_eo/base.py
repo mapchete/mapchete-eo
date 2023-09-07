@@ -1,23 +1,39 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Union
+from functools import cached_property
+from typing import Any, List, Type, Union
 
 import croniter
 import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.formats import base
-from mapchete.io.vector import reproject_geometry
+from mapchete.io.vector import IndexedFeatures, reproject_geometry
+from mapchete.path import MPath
 from mapchete.tile import BufferedTile
+from pydantic import BaseModel
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.archives.base import Archive, StaticArchive
 from mapchete_eo.io import products_to_xarray
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.time import to_datetime
 from mapchete_eo.types import MergeMethod
+
+
+class FormatParams(BaseModel):
+    format: str
+    start_time: Union[datetime.date, datetime.datetime]
+    end_time: Union[datetime.date, datetime.datetime]
+    cat_baseurl: Union[str, None] = None
+    archive: Union[Type[Archive], None] = None
+    pattern: dict = {}
+    cache: Any = None
 
 
 class InputTile(base.InputTile):
@@ -145,22 +161,61 @@ class InputTile(base.InputTile):
 
 
 class InputData(base.InputData):
-    """In case this driver is used when being a readonly input to another process."""
+    default_product_cls = EOProduct
+    driver_parameter_model: Type[FormatParams] = FormatParams
+    params: FormatParams
+    archive: Archive
+
+    def __init__(
+        self,
+        input_params: dict,
+        readonly: bool = False,
+        input_key: Union[str, None] = None,
+        standalone: bool = False,
+        **kwargs,
+    ) -> None:
+        """Initialize."""
+        super().__init__(input_params, **kwargs)
+        self.readonly = readonly
+        self.input_key = input_key
+        self.standalone = standalone
+
+        self.params = self.driver_parameter_model(**input_params["abstract"])
+        self._bounds = input_params["delimiters"]["effective_bounds"]
+        self.start_time = self.params.start_time
+        self.end_time = self.params.end_time
+
+        # set archive
+        if self.params.cat_baseurl:
+            self.archive = StaticArchive(
+                catalog=STACStaticCatalog(
+                    baseurl=MPath(self.params.cat_baseurl).absolute_path(
+                        base_dir=input_params["conf_dir"]
+                    ),
+                    bounds=self.bbox(out_crs=DEFAULT_CATALOG_CRS).bounds,
+                    start_time=self.start_time,
+                    end_time=self.end_time,
+                )
+            )
+        elif self.params.archive:
+            self.archive = self.params.archive(
+                self.start_time, self.end_time, self._bounds
+            )
+
+        if not self.readonly:
+            for item in self.archive.catalog.items:
+                self.add_preprocessing_task(
+                    self.default_product_cls.from_stac_item,
+                    fargs=(item,),
+                    fkwargs=dict(cache_config=self.params.cache, cache_all=True),
+                    key=item.id,
+                    geometry=reproject_geometry(
+                        item.geometry, src_crs=DEFAULT_CATALOG_CRS, dst_crs=self.crs
+                    ),
+                )
 
     def bbox(self, out_crs: Union[str, None] = None) -> BaseGeometry:
-        """
-        Return data bounding box.
-
-        Parameters
-        ----------
-        out_crs : ``rasterio.crs.CRS``
-            rasterio CRS object (default: CRS of process pyramid)
-
-        Returns
-        -------
-        bounding box : geometry
-            Shapely geometry object
-        """
+        """Return data bounding box."""
         return reproject_geometry(
             box(*self._bounds),
             src_crs=self.pyramid.crs,
@@ -168,31 +223,29 @@ class InputData(base.InputData):
             segmentize_on_clip=True,
         )
 
-    def open(self, tile: BufferedTile, **kwargs) -> InputTile:
+    @cached_property
+    def products(self) -> IndexedFeatures:
+        """Hold preprocessed S2Products in an IndexedFeatures container."""
+        if self.readonly:
+            return IndexedFeatures([])
+        if self.standalone:
+            raise NotImplementedError()
+        return IndexedFeatures(
+            [
+                self.get_preprocessing_task_result(item.id)
+                for item in self.archive.catalog.items
+            ],
+            crs=self.crs,
+        )
+
+    def open(self, tile, **kwargs) -> InputTile:
         """
         Return InputTile object.
-
-        Parameters
-        ----------
-        tile : ``Tile``
-
-        Returns
-        -------
-        input tile : ``InputTile``
-            tile view of input data
         """
-        return self.input_tile_cls(
+        return InputTile(
             tile,
-            products=[
-                EOProduct.from_stac_item(item)
-                for item in self.archive.catalog.items.filter(
-                    bounds=reproject_geometry(
-                        tile.bbox, src_crs=tile.crs, dst_crs="EPSG:4326"
-                    ).bounds
-                )
-            ],
+            products=self.products.filter(tile.bounds),
             eo_bands=self.archive.catalog.eo_bands,
             start_time=self.start_time,
             end_time=self.end_time,
-            **kwargs,
         )

@@ -18,7 +18,7 @@ def resample_array(
     dst_transform: Union[Affine, None] = None,
     dst_crs: Union[CRS, None] = None,
     dst_shape: Union[Shape, None] = None,
-    resampling: str = "bilinear",
+    resampling: Resampling = Resampling.nearest,
 ) -> ma.MaskedArray:
     """Resample array and return as masked array"""
     if isinstance(inp, ReferencedRaster):
@@ -45,7 +45,7 @@ def resample_array(
         dst_transform=dst_transform or in_transform,
         dst_crs=dst_crs or in_crs,
         dst_nodata=nodata,
-        resampling=Resampling[resampling],
+        resampling=resampling,
     )
     return ma.masked_array(
         data=np.nan_to_num(dst_data, nan=nodata),

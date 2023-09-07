@@ -7,7 +7,7 @@ import pystac
 import xarray as xr
 from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
-from rasterio.crs import CRS
+from rasterio.enums import Resampling
 from shapely.geometry import shape
 
 from mapchete_eo.io import get_item_property, item_to_np_array, item_to_xarray
@@ -37,7 +37,7 @@ class EOProduct(EOProductProtocol):
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
         tile: BufferedTile = None,
-        resampling: Union[List[str], str] = "nearest",
+        resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",
         y_axis_name: str = "y",
@@ -61,7 +61,7 @@ class EOProduct(EOProductProtocol):
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
         tile: BufferedTile = None,
-        resampling: Union[List[str], str] = "nearest",
+        resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         **kwargs,
     ) -> ma.MaskedArray:

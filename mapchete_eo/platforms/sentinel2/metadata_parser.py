@@ -21,6 +21,7 @@ from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
 from mapchete.types import Bounds
 from rasterio.crs import CRS
+from rasterio.enums import Resampling
 from rasterio.features import rasterize, shapes
 from rasterio.fill import fillnodata
 from rasterio.transform import array_bounds, from_bounds
@@ -476,7 +477,7 @@ class S2Metadata:
         bands: Union[List[L2ABand], L2ABand, None] = None,
         angle: ViewAngle = ViewAngle.zenith,
         resolution: Resolution = Resolution["120m"],
-        resampling: str = "bilinear",
+        resampling: Resampling = Resampling.nearest,
         smoothing_iterations: int = 10,
     ) -> np.ndarray:
         if bands is None:
@@ -583,7 +584,7 @@ def read_mask_as_raster(
                     dst_transform=out_transform,
                     dst_crs=out_crs,
                     dst_shape=out_shape,
-                    resampling="nearest",
+                    resampling=Resampling.nearest,
                 ),
                 transform=out_transform,
                 crs=out_crs,

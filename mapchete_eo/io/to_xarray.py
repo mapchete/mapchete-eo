@@ -8,6 +8,7 @@ import pystac
 import xarray as xr
 from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
+from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
@@ -22,7 +23,7 @@ def products_to_xarray(
     assets: List[str] = [],
     eo_bands: List[str] = [],
     tile: BufferedTile = None,
-    resampling: str = "nearest",
+    resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
@@ -185,7 +186,7 @@ def item_to_xarray(
     eo_bands: List[str] = [],
     assets: List[str] = [],
     tile: BufferedTile = None,
-    resampling: Union[List[str], str] = "nearest",
+    resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
@@ -230,7 +231,7 @@ def item_to_np_array(
     eo_bands: List[str] = [],
     assets: List[str] = [],
     tile: BufferedTile = None,
-    resampling: Union[List[str], str] = "nearest",
+    resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
 ) -> ma.MaskedArray:
     """
@@ -261,7 +262,7 @@ def asset_to_xarray(
     asset: str,
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
-    resampling: str = "nearest",
+    resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
@@ -291,7 +292,7 @@ def asset_to_np_array(
     asset: str,
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
-    resampling: str = "nearest",
+    resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
 ) -> ma.MaskedArray:
     """
@@ -302,7 +303,7 @@ def asset_to_np_array(
         item.assets[asset].href,
         indexes=indexes,
         tile=tile,
-        resampling=resampling,
+        resampling=resampling.name,
         dst_nodata=nodataval,
     )
 

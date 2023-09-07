@@ -145,26 +145,6 @@ class InputTile(base.InputTile):
         """
         return len(self.items) == 0
 
-    def _get_assets(self, indexes: Union[int, str, List[Union[int, str]], None] = None):
-        if indexes is None:
-            return list(range(len(self.eo_bands)))
-        out = []
-        for idx in indexes if isinstance(indexes, list) else [indexes]:
-            if isinstance(idx, str):
-                for band in self.eo_bands:
-                    if idx == band.get("name"):
-                        out.append(band.get("name"))
-                        break
-                else:
-                    raise ValueError(f"cannot find eo:band asset name {idx}")
-            elif isinstance(idx, int):
-                out.append(self.eo_bands[idx - 1].get("name"))
-            else:
-                raise TypeError(
-                    f"band index must either be an integer or a string: {idx}"
-                )
-        return out
-
 
 class InputData(base.InputData):
     default_product_cls = EOProduct
@@ -248,7 +228,7 @@ class InputData(base.InputData):
         """
         Return InputTile object.
         """
-        return InputTile(
+        return self.input_tile_cls(
             tile,
             products=self.products.filter(tile.bounds),
             eo_bands=self.archive.catalog.eo_bands,

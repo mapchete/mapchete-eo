@@ -16,7 +16,7 @@ METADATA: dict = {
 class InputTile(base.InputTile):
     # Sentinel-2 driver specific default values:
     default_read_merge_method: MergeMethod = MergeMethod.average
-    default_read_merge_products_by: Union[str, None] = "datastrip_id"
+    default_read_merge_products_by: Union[str, None] = "s2:datastrip_id"
     default_read_nodataval: NodataVal = 0
 
 
@@ -24,3 +24,4 @@ class InputData(base.InputData):
     # Sentinel-2 driver specific parameters:
     default_product_cls = S2Product
     driver_config_model = Sentinel2DriverConfig
+    input_tile_cls = InputTile

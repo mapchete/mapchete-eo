@@ -36,10 +36,11 @@ def test_preprocessing(sentinel2_mapchete):
 
 
 def test_read(sentinel2_stac_mapchete):
-    s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
-    cube = s2_src.read(assets=["red", "green", "blue", "nir"])
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        cube = src.read(assets=["red", "green", "blue", "nir"])
     assert isinstance(cube, xr.Dataset)
     assert cube.to_array().any()
+    assert cube.dims["s2:datastrip_id"] == 2
 
 
 # def test_read_levelled(sentinel2_stac_mapchete):

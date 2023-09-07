@@ -7,10 +7,11 @@ from mapchete_eo.io import (
     asset_to_xarray,
     eo_bands_to_assets_indexes,
     get_item_property,
-    group_items_per_property,
+    group_products_per_property,
     item_to_xarray,
-    items_to_xarray,
+    products_to_xarray,
 )
+from mapchete_eo.product import EOProduct
 
 
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
@@ -49,8 +50,11 @@ def test_s2_item_to_xarray(s2_stac_item, test_tile):
 
 def test_s2_items_to_xarray(s2_stac_item, test_tile):
     assets = ["red", "green", "blue"]
-    ds = items_to_xarray(
-        items=[s2_stac_item], assets=assets, tile=test_tile, nodatavals=[0, 0, 0]
+    ds = products_to_xarray(
+        products=[EOProduct.from_stac_item(s2_stac_item)],
+        assets=assets,
+        tile=test_tile,
+        nodatavals=[0, 0, 0],
     )
     assert isinstance(ds, xr.Dataset)
     assert set(ds.data_vars) == set([s2_stac_item.id])
@@ -67,10 +71,13 @@ def test_s2_item_to_xarray_eo_bands(s2_stac_item, test_tile):
     assert ds.any()
 
 
-def test_s2_items_to_xarray_eo_bands(s2_stac_item, test_tile):
+def test_s2_products_to_xarray_eo_bands(s2_stac_item, test_tile):
     eo_bands = ["red", "green", "blue"]
-    ds = items_to_xarray(
-        items=[s2_stac_item], eo_bands=eo_bands, tile=test_tile, nodatavals=[0, 0, 0]
+    ds = products_to_xarray(
+        products=[EOProduct(s2_stac_item)],
+        eo_bands=eo_bands,
+        tile=test_tile,
+        nodatavals=[0, 0, 0],
     )
     assert isinstance(ds, xr.Dataset)
     assert set(ds.data_vars) == set([s2_stac_item.id])
@@ -116,21 +123,23 @@ def test_get_item_property_extra_fields(s2_stac_item):
     assert isinstance(get_item_property(s2_stac_item, "stac_extensions"), list)
 
 
-def test_group_items_per_property_day(s2_stac_items):
-    grouped = group_items_per_property(s2_stac_items, "day")
-    for property, items in grouped.items():
-        assert len(items) > 1
-        for item in items:
-            assert property == item.datetime.day
+def test_group_products_per_property_day(s2_stac_items):
+    grouped = group_products_per_property(
+        [EOProduct.from_stac_item(item) for item in s2_stac_items], "day"
+    )
+    for property, products in grouped.items():
+        assert len(products) > 1
+        for product in products:
+            assert property == product.item.datetime.day
 
 
-def test_s2_items_to_xarray_merge_date(s2_stac_items, test_tile):
+def test_s2_products_to_xarray_merge_date(s2_stac_items, test_tile):
     eo_bands = ["red", "green", "blue"]
-    ds = items_to_xarray(
-        items=s2_stac_items,
+    ds = products_to_xarray(
+        products=[EOProduct.from_stac_item(item) for item in s2_stac_items],
         eo_bands=eo_bands,
         tile=test_tile,
-        merge_items_by="date",
+        merge_products_by="date",
     )
     assert len(ds.data_vars) == 2
     assert isinstance(ds, xr.Dataset)
@@ -140,13 +149,15 @@ def test_s2_items_to_xarray_merge_date(s2_stac_items, test_tile):
     "merge_method",
     ["first", "average"],
 )
-def test_s2_items_to_xarray_merge_datastrip_id(s2_stac_items, test_tile, merge_method):
+def test_s2_products_to_xarray_merge_datastrip_id(
+    s2_stac_items, test_tile, merge_method
+):
     eo_bands = ["red", "green", "blue"]
-    ds = items_to_xarray(
-        items=s2_stac_items,
+    ds = products_to_xarray(
+        products=[EOProduct.from_stac_item(item) for item in s2_stac_items],
         eo_bands=eo_bands,
         tile=test_tile,
-        merge_items_by="s2:datastrip_id",
+        merge_products_by="s2:datastrip_id",
         merge_method=merge_method,
     )
     assert len(ds) == 2

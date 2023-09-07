@@ -11,7 +11,6 @@ from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
-from mapchete_eo.base import EOProductProtocol
 from mapchete_eo.io import DEFAULT_FORMATS_SPECS
 from mapchete_eo.io.assets import get_assets
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
@@ -19,6 +18,8 @@ from mapchete_eo.platforms.sentinel2.brdf import correction_grid, correction_gri
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import L2ABand
+from mapchete_eo.product import EOProduct
+from mapchete_eo.protocols import EOProductProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class Cache:
                 raise KeyError(f"BRDF grid for band {band} not configured")
 
 
-class S2Product(EOProductProtocol):
+class S2Product(EOProduct, EOProductProtocol):
     item: pystac.Item
     metadata: S2Metadata
     cache: Union[Cache, None] = None
@@ -152,9 +153,11 @@ class S2Product(EOProductProtocol):
     def read(
         self,
         assets: Union[list, None] = None,
+        eo_bands: Union[list, None] = None,
         resampling="nearest",
         brdf_corrected: bool = False,
         tile: Union[BufferedTile, None] = None,
+        **kwargs,
     ) -> np.ndarray:
         if self.cache:
             # get asset hrefs from Cache

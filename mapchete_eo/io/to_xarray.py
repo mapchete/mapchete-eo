@@ -1,6 +1,5 @@
 import logging
 from collections import defaultdict
-from enum import Enum
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -11,15 +10,11 @@ from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
 
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
-from mapchete_eo.base import EOProductProtocol
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
+from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.types import MergeMethod
 
 logger = logging.getLogger(__name__)
-
-
-class MergeMethod(str, Enum):
-    first = "first"
-    average = "average"
 
 
 def products_to_xarray(

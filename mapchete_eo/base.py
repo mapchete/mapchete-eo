@@ -1,82 +1,21 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Protocol, Union
+from typing import List, Union
 
 import croniter
 import numpy.ma as ma
-import pystac
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.formats import base
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTile
-from mapchete.types import Bounds
-from rasterio.crs import CRS
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.io import MergeMethod, item_to_xarray, items_to_xarray
-
-
-class EOProductProtocol(Protocol):
-    item: pystac.Item
-    bounds: Bounds
-    crs: CRS
-
-    @classmethod
-    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol:
-        ...
-
-    def read(
-        self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
-        resampling: Union[List[str], str] = "nearest",
-        nodatavals: Union[List[float], List[None], float, None] = None,
-        x_axis_name: str = "x",
-        y_axis_name: str = "y",
-        **kwargs,
-    ) -> xr.Dataset:
-        ...
-
-
-class EOProduct(EOProductProtocol):
-    item: pystac.Item
-    bounds: Bounds
-    crs: CRS
-
-    def __init__(self, item: pystac.Item):
-        self.item = item
-
-    @classmethod
-    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:
-        return EOProduct(item)
-
-    def read(
-        self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
-        resampling: Union[List[str], str] = "nearest",
-        nodatavals: Union[List[float], List[None], float, None] = None,
-        x_axis_name: str = "x",
-        y_axis_name: str = "y",
-        **kwargs,
-    ) -> xr.Dataset:
-        return item_to_xarray(
-            self.item,
-            assets=assets or [],
-            eo_bands=eo_bands or [],
-            resampling=resampling,
-            nodatavals=nodatavals,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-        )
-
-    def read_ma(
-        self, assets: Union[list, None] = None, resampling="nearest", **kwargs
-    ) -> ma.MaskedArray:
-        raise NotImplementedError
+from mapchete_eo.io import products_to_xarray
+from mapchete_eo.product import EOProduct
+from mapchete_eo.types import MergeMethod
 
 
 class InputTile(base.InputTile):
@@ -225,11 +164,14 @@ class InputData(base.InputData):
         """
         return self.input_tile_cls(
             tile,
-            items=self.archive.catalog.items.filter(
-                bounds=reproject_geometry(
-                    tile.bbox, src_crs=tile.crs, dst_crs="EPSG:4326"
-                ).bounds
-            ),
+            products=[
+                EOProduct.from_stac_item(item)
+                for item in self.archive.catalog.items.filter(
+                    bounds=reproject_geometry(
+                        tile.bbox, src_crs=tile.crs, dst_crs="EPSG:4326"
+                    ).bounds
+                )
+            ],
             eo_bands=self.archive.catalog.eo_bands,
             start_time=self.start_time,
             end_time=self.end_time,

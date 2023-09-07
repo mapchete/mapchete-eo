@@ -12,11 +12,11 @@ from mapchete.tile import BufferedTile
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import Archive, StaticArchive
-from mapchete_eo.io import MergeMethod, items_to_xarray
 from mapchete_eo.platforms.sentinel2.config import DriverConfig, KnownArchives
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
+from mapchete_eo.types import MergeMethod
 
 # here is everything we need to configure and initialize the mapchete driver
 ############################################################################

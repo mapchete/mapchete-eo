@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import StaticArchive
+from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.time import to_datetime
 
@@ -43,7 +44,7 @@ class InputTile(base.InputTile):
     def __init__(
         self,
         tile: BufferedTile,
-        products: List[base.EOProductProtocol],
+        products: List[EOProductProtocol],
         eo_bands: list,
         start_time: datetime.datetime,
         end_time: datetime.datetime,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Protocol, Union
+from typing import Any, List, Protocol, Union
 
 import pystac
 import xarray as xr
@@ -29,4 +29,7 @@ class EOProductProtocol(Protocol):
         y_axis_name: str = "y",
         **kwargs,
     ) -> xr.Dataset:
+        ...
+
+    def get_property(self, property: str) -> Any:
         ...

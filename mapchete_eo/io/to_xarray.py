@@ -147,20 +147,7 @@ def merge_products(
     return out
 
 
-def item_to_xarray(
-    item: pystac.Item,
-    eo_bands: List[str] = [],
-    assets: List[str] = [],
-    tile: BufferedTile = None,
-    resampling: Union[List[str], str] = "nearest",
-    nodatavals: Union[List[float], List[None], float, None] = None,
-    x_axis_name: str = "x",
-    y_axis_name: str = "y",
-    time_axis_name: str = "time",
-) -> xr.Dataset:
-    """
-    Read tile window of STAC Item and merge into a 3D xarray.
-    """
+def _check_params(item, eo_bands, assets, resampling, nodatavals):
     if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
         raise ValueError("either assets or eo_bands have to be provided")
     if eo_bands:
@@ -184,6 +171,36 @@ def item_to_xarray(
         if isinstance(nodatavals, list)
         else [nodatavals for _ in range(len(assets_indexes))]
     )
+    return (
+        assets_indexes,
+        data_var_names,
+        attrs,
+        expanded_resamplings,
+        expanded_nodatavals,
+    )
+
+
+def item_to_xarray(
+    item: pystac.Item,
+    eo_bands: List[str] = [],
+    assets: List[str] = [],
+    tile: BufferedTile = None,
+    resampling: Union[List[str], str] = "nearest",
+    nodatavals: Union[List[float], List[None], float, None] = None,
+    x_axis_name: str = "x",
+    y_axis_name: str = "y",
+    time_axis_name: str = "time",
+) -> xr.Dataset:
+    """
+    Read tile window of STAC Item and merge into a 3D xarray.
+    """
+    (
+        assets_indexes,
+        data_var_names,
+        attrs,
+        expanded_resamplings,
+        expanded_nodatavals,
+    ) = _check_params(item, eo_bands, assets, resampling, nodatavals)
     return xr.Dataset(
         data_vars={
             data_var_name: asset_to_xarray(
@@ -208,6 +225,37 @@ def item_to_xarray(
     )
 
 
+def item_to_np_array(
+    item: pystac.Item,
+    eo_bands: List[str] = [],
+    assets: List[str] = [],
+    tile: BufferedTile = None,
+    resampling: Union[List[str], str] = "nearest",
+    nodatavals: Union[List[float], List[None], float, None] = None,
+) -> ma.MaskedArray:
+    """
+    Read tile window of STAC Item and merge into a 3D ma.MaskedArray.
+    """
+    assets_indexes, _, _, expanded_resamplings, expanded_nodatavals = _check_params(
+        item, eo_bands, assets, resampling, nodatavals
+    )
+    return ma.stack(
+        [
+            asset_to_np_array(
+                item,
+                asset,
+                indexes=index,
+                tile=tile,
+                resampling=expanded_resampling,
+                nodataval=nodataval,
+            )
+            for (asset, index), expanded_resampling, nodataval in zip(
+                assets_indexes, expanded_resamplings, expanded_nodatavals
+            )
+        ]
+    )
+
+
 def asset_to_xarray(
     item: pystac.Item,
     asset: str,
@@ -221,20 +269,41 @@ def asset_to_xarray(
     """
     Read tile window of STAC Items and merge into a 2D xarray.
     """
-    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
     return masked_to_xarr(
-        read_raster_window(
-            item.assets[asset].href,
+        asset_to_np_array(
+            item,
+            asset,
             indexes=indexes,
             tile=tile,
             resampling=resampling,
-            dst_nodata=nodataval,
+            nodataval=nodataval,
         ),
         nodataval=nodataval,
         x_axis_name=x_axis_name,
         y_axis_name=y_axis_name,
         name=asset,
         attrs=dict(item_id=item.id),
+    )
+
+
+def asset_to_np_array(
+    item: pystac.Item,
+    asset: str,
+    indexes: Union[list, int] = 1,
+    tile: BufferedTile = None,
+    resampling: str = "nearest",
+    nodataval: Union[float, None] = None,
+) -> ma.MaskedArray:
+    """
+    Read tile window of STAC Items and merge into a 2D ma.MaskedArray.
+    """
+    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
+    return read_raster_window(
+        item.assets[asset].href,
+        indexes=indexes,
+        tile=tile,
+        resampling=resampling,
+        dst_nodata=nodataval,
     )
 
 
@@ -305,5 +374,5 @@ def group_products_per_property(
     """Group products per given property."""
     out = defaultdict(list)
     for product in products:
-        out[get_item_property(product.item, property)].append(product)
+        out[product.get_property(property)].append(product)
     return out

@@ -5,6 +5,7 @@ from typing import Union
 
 import numpy as np
 import pystac
+import xarray as xr
 from mapchete.io.raster import read_raster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
@@ -150,19 +151,22 @@ class S2Product(EOProduct, EOProductProtocol):
         if self.cache is not None:
             self.cache.cache_brdf_grids(self.metadata)
 
-    def read(
-        self,
-        assets: Union[list, None] = None,
-        eo_bands: Union[list, None] = None,
-        resampling="nearest",
-        brdf_corrected: bool = False,
-        tile: Union[BufferedTile, None] = None,
-        **kwargs,
-    ) -> np.ndarray:
-        if self.cache:
-            # get asset hrefs from Cache
-            pass
-        raise NotImplementedError()
+    # def read(
+    #     self,
+    #     assets: Union[List[str], None] = None,
+    #     eo_bands: Union[List[str], None] = None,
+    #     tile: BufferedTile = None,
+    #     resampling: Union[List[str], str] = "nearest",
+    #     nodatavals: Union[List[float], List[None], float, None] = None,
+    #     x_axis_name: str = "x",
+    #     y_axis_name: str = "y",
+    #     time_axis_name: str = "time",
+    #     **kwargs,
+    # ) -> xr.Dataset:
+    #     if self.cache:
+    #         # get asset hrefs from Cache
+    #         pass
+    #     raise NotImplementedError()
 
     def read_brdf_grid(
         self,

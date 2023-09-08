@@ -17,6 +17,7 @@ from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
+from mapchete_eo.exceptions import PreprocessingNotFinished
 from mapchete_eo.io import products_to_xarray
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
@@ -44,7 +45,6 @@ class InputTile(base.InputTile):
     default_read_nodataval: NodataVal = None
 
     tile: BufferedTile
-    products: List[EOProductProtocol]
     eo_bands: dict
     start_time: Union[datetime.datetime, datetime.date]
     end_time: Union[datetime.datetime, datetime.date]
@@ -52,18 +52,33 @@ class InputTile(base.InputTile):
     def __init__(
         self,
         tile: BufferedTile,
-        products: List[EOProductProtocol],
+        products: Union[List[EOProductProtocol], None],
         eo_bands: dict,
         start_time: Union[datetime.datetime, datetime.date],
         end_time: Union[datetime.datetime, datetime.date],
+        input_key: Union[str, None] = None,
         **kwargs,
     ) -> None:
         """Initialize."""
         self.tile = tile
-        self.products = products
+        self._products = products
         self.eo_bands = eo_bands
         self.start_time = start_time
         self.end_time = end_time
+        self.input_key = input_key
+
+    @cached_property
+    def products(self) -> IndexedFeatures[EOProductProtocol]:
+        # during task graph processing, the products have to be fetched as preprocessing task results
+        if self._products is None:
+            if not self.preprocessing_tasks_results:
+                raise ValueError("no preprocessing results available")
+            return IndexedFeatures(
+                self.preprocessing_tasks_results.values(), crs=self.tile.crs
+            )
+
+        # just return the prouducts as is
+        return IndexedFeatures(self._products, crs=self.tile.crs)
 
     def read(
         self,
@@ -88,6 +103,7 @@ class InputTile(base.InputTile):
         # TODO: iterate through products, filter by time and read assets to window
         if any([start_time, end_time, timestamps]):
             raise NotImplementedError("time subsets are not yet implemented")
+
         if time_pattern:
             # filter products by time pattern
             tz = tzutc()
@@ -106,8 +122,10 @@ class InputTile(base.InputTile):
             ]
         else:
             products = self.products
+
         if len(products) == 0:
             return xr.Dataset()
+
         return products_to_xarray(
             products=products,
             eo_bands=eo_bands,
@@ -171,6 +189,9 @@ class InputData(base.InputData):
         self.start_time = self.params.start_time
         self.end_time = self.params.end_time
 
+        if self.readonly:
+            return
+
         # set archive
         if self.params.cat_baseurl:
             self.archive = StaticArchive(
@@ -188,17 +209,16 @@ class InputData(base.InputData):
                 self.start_time, self.end_time, self._bounds
             )
 
-        if not self.readonly:
-            for item in self.archive.catalog.items:
-                self.add_preprocessing_task(
-                    self.default_product_cls.from_stac_item,
-                    fargs=(item,),
-                    fkwargs=dict(cache_config=self.params.cache, cache_all=True),
-                    key=item.id,
-                    geometry=reproject_geometry(
-                        item.geometry, src_crs=DEFAULT_CATALOG_CRS, dst_crs=self.crs
-                    ),
-                )
+        for item in self.archive.catalog.items:
+            self.add_preprocessing_task(
+                self.default_product_cls.from_stac_item,
+                fargs=(item,),
+                fkwargs=dict(cache_config=self.params.cache, cache_all=True),
+                key=item.id,
+                geometry=reproject_geometry(
+                    item.geometry, src_crs=DEFAULT_CATALOG_CRS, dst_crs=self.crs
+                ),
+            )
 
     def bbox(self, out_crs: Union[str, None] = None) -> BaseGeometry:
         """Return data bounding box."""
@@ -212,26 +232,45 @@ class InputData(base.InputData):
     @cached_property
     def products(self) -> IndexedFeatures:
         """Hold preprocessed S2Products in an IndexedFeatures container."""
-        if self.readonly:
+
+        # nothing to index here
+        if self.readonly or not self.preprocessing_tasks:
             return IndexedFeatures([])
-        if self.standalone:
+
+        # TODO: copied it from mapchete_satellite, not yet sure which use case this is
+        elif self.standalone:
             raise NotImplementedError()
-        return IndexedFeatures(
-            [
-                self.get_preprocessing_task_result(item.id)
-                for item in self.archive.catalog.items
-            ],
-            crs=self.crs,
-        )
+
+        # if preprocessing tasks are ready, index them for further use
+        elif self.preprocessing_tasks_results:
+            return IndexedFeatures(
+                [
+                    self.get_preprocessing_task_result(item.id)
+                    for item in self.archive.catalog.items
+                ],
+                crs=self.crs,
+            )
+
+        # this happens on task graph execution when preprocessing task results are not ready
+        else:
+            raise PreprocessingNotFinished(
+                f"products are not ready yet because {len(self.preprocessing_tasks)} preprocessing task(s) were not executed."
+            )
 
     def open(self, tile, **kwargs) -> InputTile:
         """
         Return InputTile object.
         """
+        try:
+            tile_products = self.products.filter(tile.bounds)
+        except PreprocessingNotFinished:
+            tile_products = None
         return self.input_tile_cls(
             tile,
-            products=self.products.filter(tile.bounds),
+            products=tile_products,
             eo_bands=self.archive.catalog.eo_bands,
             start_time=self.start_time,
             end_time=self.end_time,
+            # passing on the input key is essential so dependent preprocessing tasks can be found!
+            input_key=self.input_key,
         )

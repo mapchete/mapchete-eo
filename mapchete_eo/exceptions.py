@@ -43,3 +43,7 @@ class BRDFError(Exception):
 
 class MissingAsset(Exception):
     """Raised when a product asset should contain data but is empty."""
+
+
+class PreprocessingNotFinished(Exception):
+    """Raised when preprocessing tasks have not been fully executed."""

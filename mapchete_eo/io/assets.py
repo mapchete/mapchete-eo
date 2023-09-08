@@ -63,7 +63,6 @@ def get_assets(
             )
             continue
 
-        logger.warn("cannot convert asset with suffix %s, copy instead", path.suffix)
         # copy
         item = copy_asset(
             item,

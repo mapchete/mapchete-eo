@@ -1,6 +1,6 @@
 import pytest
 
-from mapchete_eo.platforms.sentinel2.base import AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
 
 
 @pytest.mark.remote

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Union
 
@@ -6,23 +8,17 @@ import pystac
 from mapchete.io.raster import read_raster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
-from mapchete.types import Bounds
-from rasterio.crs import CRS
+from rasterio.enums import Resampling
 
 from mapchete_eo.io import DEFAULT_FORMATS_SPECS
 from mapchete_eo.io.assets import get_assets
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
-
-# NOTE: it is important to import S2Metadata from base and _not_ from metadata_parser
-# because of the custom path mapper guesser function!
-from mapchete_eo.platforms.sentinel2.base import S2Metadata
-from mapchete_eo.platforms.sentinel2.brdf import (
-    BRDFConfig,
-    correction_grid,
-    correction_grids,
-)
-from mapchete_eo.platforms.sentinel2.config import CacheConfig
+from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import L2ABand
+from mapchete_eo.product import EOProduct
+from mapchete_eo.protocols import EOProductProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +33,9 @@ class Cache:
         self.config = config
         # TODO: maybe move this function here
         self.path = get_product_cache_path(
-            self.item, self.config.path, self.config.product_path_generation_method
+            self.item,
+            MPath.from_inp(self.config.path),
+            self.config.product_path_generation_method,
         )
         self.path.makedirs()
         self._brdf_grid_cache: dict = dict()
@@ -66,29 +64,31 @@ class Cache:
             return self.item
 
     def cache_brdf_grids(self, metadata: S2Metadata):
-        if self.config.brdf is None:
-            raise ValueError("BRDF grid caching is not configured")
+        if self.config.brdf:
+            out_profile = dict(DEFAULT_FORMATS_SPECS["COG"])
+            resolution = self.config.brdf.resolution
+            model = self.config.brdf.model
 
-        out_profile = dict(DEFAULT_FORMATS_SPECS["COG"])
-        resolution = self.config.brdf.resolution
-        model = self.config.brdf.model
-
-        logger.debug(
-            f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
-        )
-        out_paths = [
-            self.path / f"brdf_{model}_{band}_{resolution}.tif"
-            for band in self._brdf_bands
-        ]
-        for band, out_path, grid in zip(
-            self._brdf_bands,
-            out_paths,
-            correction_grids(metadata, self._brdf_bands, model, resolution),
-        ):
-            if out_path not in self._existing_files:
-                logger.debug(f"cache BRDF correction grid to {out_path}")
-                grid.to_file(out_path, **dict(grid.meta, **out_profile))
-            self._brdf_grid_cache[band] = out_path
+            logger.debug(
+                f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
+            )
+            sun_zenith_angle = None
+            for band in self._brdf_bands:
+                out_path = self.path / f"brdf_{model}_{band}_{resolution}.tif"
+                # TODO: do check with _existing_files again to reduce S3 requests
+                if not out_path.exists():
+                    if sun_zenith_angle is None:
+                        sun_zenith_angle = get_sun_zenith_angle(metadata)
+                    grid = correction_grid(
+                        metadata,
+                        band,
+                        sun_zenith_angle,
+                        model=model,
+                        resolution=resolution,
+                    )
+                    logger.debug(f"cache BRDF correction grid to {out_path}")
+                    grid.to_file(out_path, **dict(grid.meta, **out_profile))
+                self._brdf_grid_cache[band] = out_path
 
     def get_brdf_grid(self, band: L2ABand):
         try:
@@ -100,12 +100,9 @@ class Cache:
                 raise KeyError(f"BRDF grid for band {band} not configured")
 
 
-class S2Product:
-    item: pystac.Item
+class S2Product(EOProduct, EOProductProtocol):
     metadata: S2Metadata
     cache: Union[Cache, None] = None
-    bounds: Bounds
-    crs: CRS
 
     def __init__(
         self,
@@ -116,41 +113,44 @@ class S2Product:
         self.item = item
         self.metadata = metadata or S2Metadata.from_stac_item(self.item)
         self.cache = Cache(self.item, cache_config) if cache_config else None
+        self.__geo_interface__ = self.metadata.__geo_interface__
         self.bounds = self.metadata.bounds
         self.crs = self.metadata.crs
 
-    @property
-    def __geo_interface__(self):
-        return self.metadata.__geo_interface__
-
-    def cache_assets(self):
-        if self.cache is None:
-            raise ValueError("caching assets is only possible if cache is configured")
-        self.cache.cache_assets()
-
-    def cache_brdf_grids(self):
-        if self.cache is None:
-            raise ValueError(
-                "BRDF grid caching is only possible if cache is configured"
-            )
-        self.cache.cache_brdf_grids(self.metadata)
-
-    def read(
+    @classmethod
+    def from_stac_item(
         self,
-        indexes: Union[list, None] = None,
-        resampling="nearest",
-        brdf_corrected: bool = False,
-        tile: Union[BufferedTile, None] = None,
-    ) -> np.ndarray:
-        if self.cache:
-            # get asset hrefs from Cache
-            pass
-        raise NotImplementedError()
+        item: pystac.Item,
+        cache_config: Union[CacheConfig, None] = None,
+        cache_all: bool = False,
+        **kwargs,
+    ) -> S2Product:
+        s2product = S2Product(item, cache_config=cache_config)
+
+        if cache_all:
+            # cache assets if configured
+            s2product.cache_assets()
+
+            # cache BRDF grids if configured
+            s2product.cache_brdf_grids()
+
+        return s2product
+
+    def __repr__(self):
+        return f"<S2Product product_id={self.item.id}>"
+
+    def cache_assets(self) -> None:
+        if self.cache is not None:
+            self.cache.cache_assets()
+
+    def cache_brdf_grids(self) -> None:
+        if self.cache is not None:
+            self.cache.cache_brdf_grids(self.metadata)
 
     def read_brdf_grid(
         self,
         band: L2ABand,
-        resampling="nearest",
+        resampling: Resampling = Resampling.nearest,
         tile: Union[BufferedTile, None] = None,
         brdf_config: BRDFConfig = BRDFConfig(),
     ) -> np.ndarray:
@@ -167,7 +167,9 @@ class S2Product:
         ).read(tile=tile, resampling=resampling)
 
     def read_cloudmask(
-        self, resampling="nearest", tile: Union[BufferedTile, None] = None
+        self,
+        resampling: Resampling = Resampling.nearest,
+        tile: Union[BufferedTile, None] = None,
     ) -> np.ndarray:
         # TODO: read different cloud mask types: L1C, new raster cloud masks, SCL, sinergise s2cloudless(?)
         raise NotImplementedError()

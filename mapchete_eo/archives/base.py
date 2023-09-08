@@ -20,3 +20,8 @@ class Archive(ABC):
             bounds=bounds,
             **kwargs
         )
+
+
+class StaticArchive(Archive):
+    def __init__(self, catalog=None, **kwargs):
+        self.catalog = catalog

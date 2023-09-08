@@ -1,11 +1,12 @@
 import logging
-from typing import Union
+from typing import Tuple, Union
 
 import numpy as np
 import numpy.ma as ma
 from affine import Affine
 from mapchete.io.raster import ReferencedRaster
 from rasterio.crs import CRS
+from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 from tilematrix import Shape
 
@@ -266,7 +267,7 @@ def get_brdf_param(
     viewing_zenith: dict,
     viewing_azimuth: dict,
     sun_zenith_angle: float,
-    f_band_params: list,
+    f_band_params: Tuple[float, float, float],
     out_crs: Union[CRS, None] = None,
     model: BRDFModels = BRDFModels.default,
     smoothing_iterations: int = 10,
@@ -284,7 +285,7 @@ def get_brdf_param(
         dst_transform=out_transform,
         dst_crs=out_crs,
         dst_shape=out_shape,
-        resampling="nearest",
+        resampling=Resampling.nearest,
     )[0]
     detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
 
@@ -336,7 +337,7 @@ def get_brdf_param(
             dst_transform=out_transform,
             dst_crs=out_crs,
             dst_shape=out_shape,
-            resampling="bilinear",
+            resampling=Resampling.bilinear,
         )
         # merge detector stripes
         model_params[detector_mask] = detector_brdf[detector_mask]

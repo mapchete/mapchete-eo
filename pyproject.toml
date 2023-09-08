@@ -24,10 +24,11 @@ dependencies = [
     "click",
     "croniter",
     "lxml",
-    "mapchete>=2023.8.1",
+    "mapchete>=2023.9.0",
     "pydantic",
     "pystac[urllib3]==1.8.2",
     "pystac-client==0.7.2",
+    "rtree",
     "tqdm",
     "xarray",
 ]

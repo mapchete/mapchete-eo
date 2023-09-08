@@ -3,8 +3,7 @@ from mapchete.path import MPath
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
-from mapchete_eo.platforms.sentinel2.brdf import BRDFConfig
-from mapchete_eo.platforms.sentinel2.config import CacheConfig
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 
 

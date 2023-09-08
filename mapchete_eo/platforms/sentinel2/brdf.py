@@ -1,5 +1,4 @@
 import logging
-from enum import Enum
 from typing import Iterator, List, Union
 
 import numpy as np
@@ -9,9 +8,10 @@ from mapchete.io.raster import ReferencedRaster
 from pydantic import BaseModel
 
 from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array
-from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
+from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.exceptions import BRDFError
-from mapchete_eo.platforms.sentinel2 import S2Metadata
+from mapchete_eo.platforms.sentinel2.config import L2ABandFParams
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     L2ABand,
     Resolution,
@@ -20,21 +20,6 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class L2ABandFParams(Enum):
-    B01 = F_MODIS_PARAMS[1]
-    B02 = F_MODIS_PARAMS[2]
-    B03 = F_MODIS_PARAMS[3]
-    B04 = F_MODIS_PARAMS[4]
-    B05 = F_MODIS_PARAMS[5]
-    B06 = F_MODIS_PARAMS[6]
-    B07 = F_MODIS_PARAMS[7]
-    B08 = F_MODIS_PARAMS[8]
-    B8A = F_MODIS_PARAMS[9]
-    B09 = F_MODIS_PARAMS[10]
-    B11 = F_MODIS_PARAMS[11]
-    B12 = F_MODIS_PARAMS[12]
 
 
 def get_sun_zenith_angle(s2_metadata: S2Metadata):
@@ -49,12 +34,6 @@ def get_sun_zenith_angle(s2_metadata: S2Metadata):
         max_lat=top,
         shape=s2_metadata.sun_angles[SunAngle.zenith]["raster"].data.shape,
     )
-
-
-class BRDFConfig(BaseModel):
-    model: BRDFModels = BRDFModels.HLS
-    bands: List[str] = ["blue", "green", "red", "nir"]
-    resolution: Resolution = Resolution["60m"]
 
 
 def correction_grid(

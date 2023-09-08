@@ -1,6 +1,5 @@
 import logging
 from collections import defaultdict
-from enum import Enum
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -9,44 +8,41 @@ import pystac
 import xarray as xr
 from mapchete.io.raster import read_raster_window
 from mapchete.tile import BufferedTile
+from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
+from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 
 logger = logging.getLogger(__name__)
 
 
-class MergeMethod(str, Enum):
-    first = "first"
-    average = "average"
-
-
-def items_to_xarray(
-    items: List[pystac.Item] = [],
+def products_to_xarray(
+    products: List[EOProductProtocol] = [],
     assets: List[str] = [],
     eo_bands: List[str] = [],
     tile: BufferedTile = None,
-    resampling: str = "nearest",
-    nodatavals: Union[List[float], None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
     time_axis_name: str = "time",
-    merge_items_by: Union[str, None] = None,
+    merge_products_by: Union[str, None] = None,
     merge_method: Union[MergeMethod, str] = MergeMethod.first,
 ) -> xr.Dataset:
-    """Read tile window of STAC Items and merge into a 4D xarray."""
+    """Read tile window of EOProducts and merge into a 4D xarray."""
 
-    if len(items) == 0:
-        raise ValueError("no items to read")
+    if len(products) == 0:
+        raise ValueError("no products to read")
 
-    # don't merge items
-    if merge_items_by is None:
-        logger.debug("reading %s items...", len(items))
+    # don't merge products
+    if merge_products_by is None:
+        logger.debug("reading %s products...", len(products))
         return xr.Dataset(
             data_vars={
-                item.id: item_to_xarray(
-                    item=item,
+                product.item.id: product.read(
                     assets=assets,
                     eo_bands=eo_bands,
                     tile=tile,
@@ -58,29 +54,31 @@ def items_to_xarray(
                 ).to_stacked_array(
                     new_dim=band_axis_name,
                     sample_dims=(x_axis_name, y_axis_name),
-                    name=item.id,
+                    name=product.item.id,
                 )
-                for item in items
+                for product in products
             },
             coords={
                 time_axis_name: np.array(
-                    [i.datetime for i in items], dtype=np.datetime64
+                    [product.item.datetime for product in products], dtype=np.datetime64
                 )
             },
         ).transpose(time_axis_name, band_axis_name, x_axis_name, y_axis_name)
 
-    # merge items
+    # merge products
     else:
-        items_per_property = group_items_per_property(items, merge_items_by)
+        products_per_property = group_products_per_property(products, merge_products_by)
         logger.debug(
-            "reading %s items in %s groups...", len(items), len(items_per_property)
+            "reading %s products in %s groups...",
+            len(products),
+            len(products_per_property),
         )
         return xr.Dataset(
             data_vars={
-                data_var_name: merge_items(
-                    items=items,
+                data_var_name: merge_products(
+                    products=products,
                     merge_method=merge_method,
-                    item_to_xarray_kwargs=dict(
+                    product_read_kwargs=dict(
                         assets=assets,
                         eo_bands=eo_bands,
                         tile=tile,
@@ -95,36 +93,36 @@ def items_to_xarray(
                     sample_dims=(x_axis_name, y_axis_name),
                     name=data_var_name,
                 )
-                for data_var_name, items in items_per_property.items()
+                for data_var_name, products in products_per_property.items()
             },
-            coords={merge_items_by: list(items_per_property.keys())},
-        ).transpose(merge_items_by, band_axis_name, x_axis_name, y_axis_name)
+            coords={merge_products_by: list(products_per_property.keys())},
+        ).transpose(merge_products_by, band_axis_name, x_axis_name, y_axis_name)
 
 
-def merge_items(
-    items: List[pystac.Item] = [],
+def merge_products(
+    products: List[EOProductProtocol] = [],
     merge_method: Union[MergeMethod, str] = MergeMethod.first,
-    item_to_xarray_kwargs: dict = {},
+    product_read_kwargs: dict = {},
 ) -> xr.Dataset:
     merge_method = (
         merge_method
         if isinstance(merge_method, MergeMethod)
         else MergeMethod[merge_method]
     )
-    if len(items) == 0:
-        raise ValueError("no items to merge")
-    out = item_to_xarray(items[0], **item_to_xarray_kwargs)
+    if len(products) == 0:
+        raise ValueError("no products to merge")
+    out = products[0].read(**product_read_kwargs)
     # delete attributes because dataset is a merge of multiple items
     out.attrs = dict()
 
     # nothing to merge here
-    if len(items) == 1:
+    if len(products) == 1:
         return out
 
     # first pixels first
     if merge_method == MergeMethod.first:
-        for item in items[1:]:
-            xr = item_to_xarray(item=item, **item_to_xarray_kwargs)
+        for product in products[1:]:
+            xr = product.read(**product_read_kwargs)
             # replace masked values with values from freshly read xarray
             for variable in out.variables:
                 out[variable] = out[variable].where(
@@ -135,7 +133,7 @@ def merge_items(
     elif merge_method == MergeMethod.average:
         full_stack = [
             out,
-            *[item_to_xarray(item=item, **item_to_xarray_kwargs) for item in items[1:]],
+            *[product.read(**product_read_kwargs) for product in products[1:]],
         ]
         for variable in out.variables:
             out[variable] = masked_to_xarr(
@@ -150,20 +148,7 @@ def merge_items(
     return out
 
 
-def item_to_xarray(
-    item: pystac.Item,
-    eo_bands: List[str] = [],
-    assets: List[str] = [],
-    tile: BufferedTile = None,
-    resampling: Union[List[str], str] = "nearest",
-    nodatavals: Union[List[float], List[None], float, None] = None,
-    x_axis_name: str = "x",
-    y_axis_name: str = "y",
-    time_axis_name: str = "time",
-) -> xr.Dataset:
-    """
-    Read tile window of STAC Item and merge into a 3D xarray.
-    """
+def _check_params(item, eo_bands, assets, resampling, nodatavals):
     if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
         raise ValueError("either assets or eo_bands have to be provided")
     if eo_bands:
@@ -187,6 +172,36 @@ def item_to_xarray(
         if isinstance(nodatavals, list)
         else [nodatavals for _ in range(len(assets_indexes))]
     )
+    return (
+        assets_indexes,
+        data_var_names,
+        attrs,
+        expanded_resamplings,
+        expanded_nodatavals,
+    )
+
+
+def item_to_xarray(
+    item: pystac.Item,
+    eo_bands: List[str] = [],
+    assets: List[str] = [],
+    tile: BufferedTile = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
+    x_axis_name: str = "x",
+    y_axis_name: str = "y",
+    time_axis_name: str = "time",
+) -> xr.Dataset:
+    """
+    Read tile window of STAC Item and merge into a 3D xarray.
+    """
+    (
+        assets_indexes,
+        data_var_names,
+        attrs,
+        expanded_resamplings,
+        expanded_nodatavals,
+    ) = _check_params(item, eo_bands, assets, resampling, nodatavals)
     return xr.Dataset(
         data_vars={
             data_var_name: asset_to_xarray(
@@ -211,33 +226,85 @@ def item_to_xarray(
     )
 
 
+def item_to_np_array(
+    item: pystac.Item,
+    eo_bands: List[str] = [],
+    assets: List[str] = [],
+    tile: BufferedTile = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
+) -> ma.MaskedArray:
+    """
+    Read tile window of STAC Item and merge into a 3D ma.MaskedArray.
+    """
+    assets_indexes, _, _, expanded_resamplings, expanded_nodatavals = _check_params(
+        item, eo_bands, assets, resampling, nodatavals
+    )
+    return ma.stack(
+        [
+            asset_to_np_array(
+                item,
+                asset,
+                indexes=index,
+                tile=tile,
+                resampling=expanded_resampling,
+                nodataval=nodataval,
+            )
+            for (asset, index), expanded_resampling, nodataval in zip(
+                assets_indexes, expanded_resamplings, expanded_nodatavals
+            )
+        ]
+    )
+
+
 def asset_to_xarray(
     item: pystac.Item,
     asset: str,
     indexes: Union[list, int] = 1,
     tile: BufferedTile = None,
-    resampling: str = "nearest",
-    nodataval: Union[float, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodataval: NodataVal = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.DataArray:
     """
     Read tile window of STAC Items and merge into a 2D xarray.
     """
-    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
     return masked_to_xarr(
-        read_raster_window(
-            item.assets[asset].href,
+        asset_to_np_array(
+            item,
+            asset,
             indexes=indexes,
             tile=tile,
             resampling=resampling,
-            dst_nodata=nodataval,
+            nodataval=nodataval,
         ),
         nodataval=nodataval,
         x_axis_name=x_axis_name,
         y_axis_name=y_axis_name,
         name=asset,
         attrs=dict(item_id=item.id),
+    )
+
+
+def asset_to_np_array(
+    item: pystac.Item,
+    asset: str,
+    indexes: Union[list, int] = 1,
+    tile: BufferedTile = None,
+    resampling: Resampling = Resampling.nearest,
+    nodataval: NodataVal = None,
+) -> ma.MaskedArray:
+    """
+    Read tile window of STAC Items and merge into a 2D ma.MaskedArray.
+    """
+    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
+    return read_raster_window(
+        item.assets[asset].href,
+        indexes=indexes,
+        tile=tile,
+        resampling=resampling.name,
+        dst_nodata=nodataval,
     )
 
 
@@ -302,9 +369,11 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
         )
 
 
-def group_items_per_property(items: List[pystac.Item], property: str) -> Dict:
-    """Group items per given property."""
+def group_products_per_property(
+    products: List[EOProductProtocol], property: str
+) -> Dict:
+    """Group products per given property."""
     out = defaultdict(list)
-    for item in items:
-        out[get_item_property(item, property)].append(item)
+    for product in products:
+        out[product.get_property(property)].append(product)
     return out

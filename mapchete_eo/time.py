@@ -7,7 +7,7 @@ _time = {"min": datetime.datetime.min.time(), "max": datetime.datetime.max.time(
 
 
 def to_datetime(
-    t: Union[datetime.datetime, str], append_time="min"
+    t: Union[datetime.datetime, datetime.date, str], append_time="min"
 ) -> datetime.datetime:
     """Convert input into datetime object."""
     if isinstance(t, datetime.datetime):

@@ -52,16 +52,6 @@ from mapchete_eo.platforms.sentinel2.types import (
 logger = logging.getLogger(__name__)
 
 
-def _default_from_stac_item_constructor(
-    item: pystac.Item,
-    **kwargs,
-) -> "S2Metadata":
-    return S2Metadata.from_metadata_xml(
-        metadata_xml=item.assets["metadata"].href,
-        **kwargs,
-    )
-
-
 def s2metadata_from_stac_item(
     item: pystac.Item,
     metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
@@ -85,7 +75,7 @@ def s2metadata_from_stac_item(
         if metadata_asset in item.assets:
             metadata_path = MPath(item.assets[metadata_asset].href)
             break
-    else:
+    else:  # pragma: no cover
         raise KeyError(
             f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
         )
@@ -480,10 +470,8 @@ class S2Metadata:
         resampling: Resampling = Resampling.nearest,
         smoothing_iterations: int = 10,
     ) -> np.ndarray:
-        if bands is None:
-            bands = list(L2ABand)
-        if isinstance(bands, L2ABand):
-            bands = [bands]
+        bands = list(L2ABand) if bands is None else bands
+        bands = [bands] if isinstance(bands, L2ABand) else bands
 
         def _band_angles(band: L2ABand):
             detector_angles = self.viewing_incidence_angles(band)[angle]["detector"]
@@ -564,16 +552,12 @@ class S2Metadata:
         return self._band_masks_cache[qi_mask][band]
 
 
-def default_rasterize_value_func(feature):
-    return feature["id"]
-
-
 def read_mask_as_raster(
     path: MPath,
     out_shape: Union[Shape, None] = None,
     out_transform: Union[Affine, None] = None,
     out_crs: Union[CRS, None] = None,
-    rasterize_value_func: Callable = default_rasterize_value_func,
+    rasterize_value_func: Callable = lambda feature: feature["id"],
 ) -> ReferencedRaster:
     if path.suffix in COMMON_RASTER_EXTENSIONS:
         mask = ReferencedRaster.from_file(path)

@@ -10,9 +10,9 @@ from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from rasterio.enums import Resampling
 
-from mapchete_eo.io import DEFAULT_FORMATS_SPECS
 from mapchete_eo.io.assets import get_assets
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
+from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -65,7 +65,6 @@ class Cache:
 
     def cache_brdf_grids(self, metadata: S2Metadata):
         if self.config.brdf:
-            out_profile = dict(DEFAULT_FORMATS_SPECS["COG"])
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
 
@@ -87,7 +86,7 @@ class Cache:
                         resolution=resolution,
                     )
                     logger.debug(f"cache BRDF correction grid to {out_path}")
-                    grid.to_file(out_path, **dict(grid.meta, **out_profile))
+                    grid.to_file(out_path, **COGDeflateProfile(grid.meta))
                 self._brdf_grid_cache[band] = out_path
 
     def get_brdf_grid(self, band: L2ABand):

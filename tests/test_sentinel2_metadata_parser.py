@@ -453,9 +453,10 @@ def test_from_stac_item(item_url):
 @pytest.mark.parametrize(
     "item",
     [
-        lazy_fixture("stac_item_pb_l1c_0204"),
-        lazy_fixture("stac_item_pb_l1c_0205"),
-        lazy_fixture("stac_item_pb_l1c_0206"),
+        # these tests burn requests, slow down test suite and are not essential
+        # lazy_fixture("stac_item_pb_l1c_0204"),
+        # lazy_fixture("stac_item_pb_l1c_0205"),
+        # lazy_fixture("stac_item_pb_l1c_0206"),
         lazy_fixture("stac_item_pb0207"),
         lazy_fixture("stac_item_pb0208"),
         lazy_fixture("stac_item_pb0209"),

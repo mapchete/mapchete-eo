@@ -86,7 +86,6 @@ def copy_asset(
     ignore_if_exists: bool = False,
 ) -> pystac.Item:
     """Copy asset from one place to another."""
-
     src_path = asset_mpath(item, asset, fs=src_fs)
     output_path = dst_dir / src_path.name
 

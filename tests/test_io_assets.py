@@ -1,5 +1,6 @@
 import pytest
 import rasterio
+from mapchete.io import copy
 from mapchete.path import MPath
 
 from mapchete_eo.io.assets import (
@@ -87,6 +88,15 @@ def test_copy_asset(s2_stac_item, tmp_mpath):
     # don't raise error if ignore flag is activated
     copy_asset(s2_stac_item, asset, tmp_mpath, ignore_if_exists=True)
 
+
+def test_copy_asset_overwrite(s2_stac_item, tmp_mpath):
+    asset = "red"
+    assert not tmp_mpath.ls()
+
+    # copy asset the first time
+    src_path = MPath(s2_stac_item.assets[asset].href)
+    copy(src_path, tmp_mpath / src_path.name)
+
     # also don't raise error if overwrite flag is activated
     copy_asset(s2_stac_item, asset, tmp_mpath, overwrite=True)
 
@@ -105,6 +115,31 @@ def test_convert_asset(s2_stac_item, tmp_mpath):
 
     # don't raise error if ignore flag is activated
     convert_asset(s2_stac_item, asset, tmp_mpath, ignore_if_exists=True)
+
+    # also don't raise error if overwrite flag is activated
+    convert_asset(s2_stac_item, asset, tmp_mpath, overwrite=True)
+
+
+def test_convert_asset_ignore_existing(s2_stac_item, tmp_mpath):
+    asset = "red"
+    assert not tmp_mpath.ls()
+
+    # copy asset the first time
+    convert_asset(s2_stac_item, asset, tmp_mpath)
+    assert tmp_mpath.ls()
+
+    # don't raise error if ignore flag is activated
+    convert_asset(s2_stac_item, asset, tmp_mpath, ignore_if_exists=True)
+
+
+def test_convert_asset_overwrite(s2_stac_item, tmp_mpath):
+    asset = "red"
+    assert not tmp_mpath.ls()
+
+    # copy asset the first time
+    src_path = MPath(s2_stac_item.assets[asset].href)
+    copy(src_path, tmp_mpath / src_path.name)
+    assert tmp_mpath.ls()
 
     # also don't raise error if overwrite flag is activated
     convert_asset(s2_stac_item, asset, tmp_mpath, overwrite=True)

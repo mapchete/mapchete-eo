@@ -167,6 +167,8 @@ def convert_raster(
 ) -> None:
     with rasterio_open(src_path, "r") as src:
         meta = src.meta.copy()
+        if profile:
+            meta.update(**profile)
         src_transform = src.transform
         if resolution:
             logger.debug(
@@ -194,7 +196,6 @@ def convert_raster(
                 width=dst_width,
                 height=dst_height,
             )
-        meta.update(profile)
         logger.debug("convert %s to %s with settings %s", src_path, dst_path, meta)
         with rasterio_open(dst_path, "w", **meta) as dst:
             with WarpedVRT(
@@ -301,7 +302,7 @@ def should_be_converted(
         if resolution is not None:
             with rasterio_open(path) as src:
                 src_resolution = src.transform[0]
-            if src_resolution < resolution:
+            if src_resolution != resolution:
                 return True
 
         # when profile is given, convert anyways

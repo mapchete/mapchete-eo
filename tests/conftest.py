@@ -14,6 +14,11 @@ from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
 
+@pytest.fixture
+def tmp_mpath(tmp_path):
+    return MPath.from_inp(tmp_path)
+
+
 @pytest.fixture(scope="session")
 def testdata_dir():
     return MPath(os.path.dirname(os.path.realpath(__file__))) / "testdata"

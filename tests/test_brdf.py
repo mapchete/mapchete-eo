@@ -74,8 +74,7 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
     )
     corrected = get_brdf_param(
         f_band_params=L2ABandFParams[band.name].value,
-        out_shape=metadata.shape(Resolution["60m"]),
-        out_transform=metadata.transform(Resolution["60m"]),
+        grid=metadata.grid(Resolution["60m"]),
         product_crs=metadata.crs,
         sun_azimuth_angle_array=metadata.sun_angles[SunAngle.azimuth],
         sun_zenith_angle_array=metadata.sun_angles[SunAngle.zenith],

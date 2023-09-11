@@ -43,6 +43,8 @@ from mapchete_eo.platforms.sentinel2.types import (
     SunAngle,
     ViewAngle,
 )
+from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +126,10 @@ class S2Metadata:
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
-        self.bounds, self._geoinfo = _get_bounds_geoinfo(self.xml_root)
-        self.footprint = shape(self.bounds)
         self.crs = self._crs
+        self._grids = _get_grids(self.xml_root, self.crs)
+        self.bounds = self._grids[Resolution["10m"]].bounds
+        self.footprint = shape(self.bounds)
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
@@ -262,6 +265,9 @@ class S2Metadata:
 
         return out
 
+    def grid(self, resolution: Resolution) -> Grid:
+        return self._grids[resolution]
+
     def shape(self, resolution: Resolution) -> Shape:
         """
         Return grid shape for resolution.
@@ -275,37 +281,7 @@ class S2Metadata:
         -------
         tuple of (height, width)
         """
-        return self._geoinfo[resolution]["shape"]
-
-    def pixel_x_size(self, resolution: Resolution) -> float:
-        """
-        Return horizontal pixel size for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        float
-        """
-        return self._geoinfo[resolution]["x_size"]
-
-    def pixel_y_size(self, resolution: Resolution) -> float:
-        """
-        Return vertical pixel size for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        float
-        """
-        return self._geoinfo[resolution]["y_size"]
+        return self._grids[resolution].shape
 
     def transform(self, resolution: Resolution) -> Affine:
         """
@@ -320,14 +296,16 @@ class S2Metadata:
         -------
         Affine()
         """
-        return self._geoinfo[resolution]["transform"]
+        return self._grids[resolution].transform
 
     def cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
-        rasterize_resolution: Resolution = Resolution["20m"],
+        dst_grid: Union[GridProtocol, Resolution] = Resolution["20m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
         if cloud_type == CloudType.all:
             indexes = [
                 ClassificationBandIndex[CloudType.cirrus.name].value,
@@ -340,9 +318,7 @@ class S2Metadata:
         return read_mask_as_raster(
             self.path_mapper.classification_mask(),
             indexes=indexes,
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
-            out_crs=self.crs,
+            dst_grid=dst_grid,
             rasterize_feature_filter=lambda feature: feature["properties"][
                 "maskType"
             ].lower()
@@ -351,20 +327,24 @@ class S2Metadata:
             rasterize_out_dtype=bool,
         )
 
-    def snow_ice_mask(self, rasterize_resolution: Resolution = Resolution["20m"]):
+    def snow_ice_mask(
+        self, dst_grid: Union[GridProtocol, Resolution] = Resolution["20m"]
+    ):
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
         return read_mask_as_raster(
             self.path_mapper.classification_mask(),
             indexes=[ClassificationBandIndex.snow_ice.value],
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
-            out_crs=self.crs,
+            dst_grid=dst_grid,
             rasterize_feature_filter=lambda feature: False,
             rasterize_value_func=lambda feature: True,
             rasterize_out_dtype=bool,
         )
 
     def detector_footprints(
-        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+        self,
+        band: L2ABand,
+        dst_grid: Union[GridProtocol, Resolution] = Resolution["60m"],
     ) -> ReferencedRaster:
         """
         Return detector footprints.
@@ -373,13 +353,14 @@ class S2Metadata:
         def _get_detector_id(feature) -> int:
             return int(feature["properties"]["gml_id"].split("-")[-2])
 
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+
         footprints = read_mask_as_raster(
             self.path_mapper.band_qi_mask(
                 qi_mask=BandQIMask.detector_footprints, band=band
             ),
-            out_crs=self.crs,
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
+            dst_grid=dst_grid,
             rasterize_value_func=_get_detector_id,
         )
         if not footprints.data.any():
@@ -389,18 +370,20 @@ class S2Metadata:
         return footprints
 
     def technical_quality_mask(
-        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+        self,
+        band: L2ABand,
+        dst_grid: Union[GridProtocol, Resolution] = Resolution["60m"],
     ) -> ReferencedRaster:
         """
         Return technical quality mask.
         """
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
         return read_mask_as_raster(
             self.path_mapper.band_qi_mask(
                 qi_mask=BandQIMask.technical_quality, band=band
             ),
-            out_crs=self.crs,
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
+            dst_grid=dst_grid,
         )
 
     def viewing_incidence_angles(self, band: L2ABand) -> Dict:
@@ -470,9 +453,7 @@ class S2Metadata:
             band_angles = ma.masked_equal(
                 np.zeros(self.shape(resolution), dtype=np.float16), 0
             )
-            detector_footprints = self.detector_footprints(
-                band, rasterize_resolution=resolution
-            )
+            detector_footprints = self.detector_footprints(band, dst_grid=resolution)
             detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
 
             for detector_id in detector_ids:
@@ -495,9 +476,7 @@ class S2Metadata:
                 detector_angle = resample_array(
                     detector_angles_raster,
                     nodata=0,
-                    dst_transform=self.transform(resolution),
-                    dst_crs=self.crs,
-                    dst_shape=self.shape(resolution),
+                    grid=self.grid(resolution),
                     resampling=resampling,
                 )
                 # select pixels which are covered by detector
@@ -520,12 +499,11 @@ class S2Metadata:
         return mean
 
 
-def _get_bounds_geoinfo(root):
+def _get_grids(root, crs):
     geoinfo = {
-        Resolution["10m"]: {},
-        Resolution["20m"]: {},
-        Resolution["60m"]: {},
-        Resolution["120m"]: {},
+        Resolution["10m"]: dict(crs=crs),
+        Resolution["20m"]: dict(crs=crs),
+        Resolution["60m"]: dict(crs=crs),
     }
     for size in root.iter("Size"):
         resolution = Resolution[f"{size.get('resolution')}m"]
@@ -534,7 +512,8 @@ def _get_bounds_geoinfo(root):
                 height = int(item.text)
             elif item.tag == "NCOLS":
                 width = int(item.text)
-        geoinfo[resolution] = dict(shape=Shape(height, width))
+        geoinfo[resolution].update(height=height, width=width)
+
     for geoposition in root.iter("Geoposition"):
         resolution = Resolution[f"{geoposition.get('resolution')}m"]
         for item in geoposition:
@@ -548,27 +527,20 @@ def _get_bounds_geoinfo(root):
                 y_size = float(item.text)
         right = left + width * x_size
         bottom = top + height * y_size
-        bounds = (left, bottom, right, top)
         geoinfo[resolution].update(
-            x_size=x_size,
-            y_size=y_size,
             transform=from_bounds(left, bottom, right, top, width, height),
         )
+    out_grids = {k: Grid(**v) for k, v in geoinfo.items()}
     for additional_resolution in [120]:
         resolution = Resolution[f"{additional_resolution}m"]
-        width_10m, height_10m = geoinfo[Resolution["10m"]]["shape"]
+        grid_10m = out_grids[Resolution["10m"]]
         relation = additional_resolution // 10
-        width = width_10m // relation
-        height = height_10m // relation
-        x_size = geoinfo[Resolution["10m"]]["x_size"] * relation
-        y_size = geoinfo[Resolution["10m"]]["y_size"] * relation
-        geoinfo[resolution].update(
-            shape=Shape(height, width),
-            x_size=x_size,
-            y_size=y_size,
-            transform=from_bounds(left, bottom, right, top, width, height),
+        width = grid_10m.width // relation
+        height = grid_10m.height // relation
+        out_grids[resolution] = Grid(
+            from_bounds(left, bottom, right, top, width, height), height, width, crs
         )
-    return Bounds(*bounds), geoinfo
+    return out_grids
 
 
 def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:

@@ -9,15 +9,15 @@ from rasterio.enums import Resampling
 from rasterio.warp import reproject
 from tilematrix import Shape
 
+from mapchete_eo.protocols import GridProtocol
+
 
 def resample_array(
     inp: Union[ReferencedRaster, np.ndarray],
+    grid: GridProtocol,
     in_transform: Union[Affine, None] = None,
     in_crs: Union[CRS, None] = None,
     nodata: int = 0,
-    dst_transform: Union[Affine, None] = None,
-    dst_crs: Union[CRS, None] = None,
-    dst_shape: Union[Shape, None] = None,
     resampling: Resampling = Resampling.nearest,
 ) -> ma.MaskedArray:
     """Resample array and return as masked array"""
@@ -33,7 +33,9 @@ def resample_array(
         )
 
     if len(in_array.shape) == 3:
-        dst_shape = (in_array.shape[0],) + dst_shape if dst_shape else in_array.shape
+        dst_shape = (in_array.shape[0],) + grid.shape
+    else:
+        dst_shape = grid.shape
 
     dst_data = np.empty(dst_shape or in_array.shape, in_array.dtype)
     reproject(
@@ -42,8 +44,8 @@ def resample_array(
         src_transform=in_transform,
         src_crs=in_crs,
         src_nodata=nodata,
-        dst_transform=dst_transform or in_transform,
-        dst_crs=dst_crs or in_crs,
+        dst_transform=grid.transform,
+        dst_crs=grid.crs,
         dst_nodata=nodata,
         resampling=resampling,
     )

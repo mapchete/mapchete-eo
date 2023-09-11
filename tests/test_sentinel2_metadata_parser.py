@@ -29,6 +29,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     SunAngle,
     ViewAngle,
 )
+from mapchete_eo.types import Grid
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):
@@ -175,19 +176,14 @@ def test_remote_metadata_bounds(metadata):
 
 
 def _test_metadata_geoinfo(metadata, resolution):
+    # grid
+    assert isinstance(metadata.grid(resolution), Grid)
+
     # shape
     assert isinstance(metadata.shape(resolution), tuple)
     assert len(metadata.shape(resolution)) == 2
     for i in metadata.shape(resolution):
         assert isinstance(i, int)
-
-    # x_size
-    assert isinstance(metadata.pixel_x_size(resolution), float)
-    assert metadata.pixel_x_size(resolution) >= 0.0
-
-    # y_size
-    assert isinstance(metadata.pixel_y_size(resolution), float)
-    assert metadata.pixel_y_size(resolution) <= 0.0
 
     # transform
     assert isinstance(metadata.transform(resolution), Affine)

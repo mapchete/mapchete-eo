@@ -24,6 +24,7 @@ from tilematrix import Shape
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
+from mapchete_eo.protocols import GridProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -341,9 +342,7 @@ def _read_vector_mask(mask_path):
 def read_mask_as_raster(
     path: MPath,
     indexes: Union[List[int], None] = None,
-    out_shape: Union[Shape, None] = None,
-    out_transform: Union[Affine, None] = None,
-    out_crs: Union[CRS, None] = None,
+    dst_grid: Union[GridProtocol, None] = None,
     rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
     rasterize_feature_filter: Callable = lambda feature: True,
     rasterize_out_dtype: Union[DTypeLike, None] = None,
@@ -356,20 +355,16 @@ def read_mask_as_raster(
                 bounds=src.bounds,
                 crs=src.crs,
             )
-        if out_shape and out_transform:
+        if dst_grid:
             mask = ReferencedRaster(
                 resample_array(
                     mask,
-                    dst_transform=out_transform,
-                    dst_crs=out_crs,
-                    dst_shape=out_shape,
+                    dst_grid,
                     resampling=Resampling.nearest,
                 ),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
+                transform=dst_grid.transform,
+                crs=dst_grid.crs,
+                bounds=dst_grid.bounds,
             )
         # make sure output has correct dtype
         if rasterize_out_dtype:
@@ -377,7 +372,7 @@ def read_mask_as_raster(
         return mask
 
     else:
-        if out_shape and out_transform:
+        if dst_grid:
             features = [
                 feature
                 for feature in _read_vector_mask(path)
@@ -389,15 +384,15 @@ def read_mask_as_raster(
             ]
             return ReferencedRaster(
                 data=rasterize(
-                    features_values, out_shape=tuple(out_shape), transform=out_transform
+                    features_values,
+                    out_shape=dst_grid.shape,
+                    transform=dst_grid.transform,
                 ).astype(rasterize_out_dtype)
                 if features_values
-                else np.zeros(out_shape, dtype=rasterize_out_dtype),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
+                else np.zeros(dst_grid.shape, dtype=rasterize_out_dtype),
+                transform=dst_grid.transform,
+                crs=dst_grid.crs,
+                bounds=dst_grid.bounds,
             )
         else:  # pragma: no cover
             raise ValueError("out_shape and out_transform have to be provided.")

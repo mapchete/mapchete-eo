@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Protocol, Union
+from typing import Any, Dict, List, Protocol, Tuple, Union
 
 import pystac
 import xarray as xr
+from affine import Affine
 from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
@@ -37,3 +38,12 @@ class EOProductProtocol(Protocol):
 
     def get_property(self, property: str) -> Any:
         ...
+
+
+class GridProtocol(Protocol):
+    transform: Affine
+    width: int
+    height: int
+    shape: Tuple[int, int]
+    bounds: Bounds
+    crs: CRS

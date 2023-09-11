@@ -169,27 +169,23 @@ class S2Product(EOProduct, EOProductProtocol):
             resolution=brdf_config.resolution,
         ).read(tile=tile, resampling=resampling)
 
-    def read_cloudmask(
-        self,
-        resampling: Resampling = Resampling.nearest,
-        tile: Union[BufferedTile, None] = None,
-    ) -> np.ndarray:
-        # TODO: read different cloud mask types: L1C, new raster cloud masks, SCL, sinergise s2cloudless(?)
-        raise NotImplementedError()
-
-    # def cloud_mask(self, cloud_type: CloudType = CloudType.all) -> ReferencedRaster:
+    # def read_cloud_mask(
+    #     self,
+    #     tile: Union[BufferedTile, None] = None,
+    #     cloud_type: CloudType = CloudType.all,
+    # ) -> ReferencedRaster:
     #     """Return classification cloud mask."""
     #     if cloud_type == CloudType.all:
     #         indexes = [
     #             ClassificationBandIndex[CloudType.cirrus.name].value,
-    #             ClassificationBandIndex[CloudType.opaque.name].value
+    #             ClassificationBandIndex[CloudType.opaque.name].value,
     #         ]
     #     else:
-    #         indexes = [ClassificationBandIndex[cloud_type.name].value]
+    #         [ClassificationBandIndex[cloud_type.name].value]
     #     read_mask_as_raster(
     #         self.metadata.path_mapper.classification_mask(),
-
     #     )
+
     #     with rasterio_open(self.path_mapper.classification_mask()) as src:
     #         return ReferencedRaster(
     #             src.read(indexes).sum(axis=0).astype(bool),

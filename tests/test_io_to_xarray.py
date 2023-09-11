@@ -5,28 +5,12 @@ from shapely.geometry import shape
 
 from mapchete_eo.io import (
     asset_to_xarray,
-    eo_bands_to_assets_indexes,
     get_item_property,
     group_products_per_property,
     item_to_xarray,
     products_to_xarray,
 )
 from mapchete_eo.product import EOProduct
-
-
-def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
-    eo_bands = ["red", "green", "blue"]
-    assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
-        assert eo_band == asset
-        assert index == 1
-
-
-def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
-    eo_bands = ["foo"]
-    with pytest.raises(KeyError):
-        eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
 
 
 def test_s2_asset_to_xarray(s2_stac_item, test_tile):
@@ -163,20 +147,6 @@ def test_s2_products_to_xarray_merge_datastrip_id(
     assert len(ds) == 2
     assert isinstance(ds, xr.Dataset)
     assert "s2:datastrip_id" in ds.coords
-
-
-# TODO:
-# --> PF Elias:
-# DataSet
-# per band 1 DataArray
-# each DataArray has 3 dimensions: time, x, y
-def test_pf_eo_bands_to_assets_indexes(pf_sr_stac_item):
-    eo_bands = ["B3", "B2", "B4"]
-    assets_indexes = eo_bands_to_assets_indexes(pf_sr_stac_item, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for band_index, (asset, index) in zip([1, 2, 4], assets_indexes):
-        assert asset == "bands"
-        assert band_index == index
 
 
 def test_pf_item_to_xarray_eo_bands(pf_sr_stac_item):

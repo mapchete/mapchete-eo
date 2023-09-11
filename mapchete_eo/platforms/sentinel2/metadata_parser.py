@@ -5,9 +5,7 @@ sun angles, quality masks, etc.
 
 import logging
 import xml.etree.ElementTree as etree
-from contextlib import contextmanager
 from functools import cached_property
-from tempfile import TemporaryDirectory
 from typing import Any, Callable, Dict, List, Union
 
 import numpy as np
@@ -16,23 +14,20 @@ import pystac
 from affine import Affine
 from fiona.transform import transform_geom
 from mapchete import Timer
-from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
-from rasterio.features import rasterize, shapes
 from rasterio.fill import fillnodata
-from rasterio.transform import array_bounds, from_bounds
+from rasterio.transform import from_bounds
 from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.io import open_xml
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
+from mapchete_eo.io import open_xml, read_mask_as_raster
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
@@ -327,49 +322,34 @@ class S2Metadata:
         """
         return self._geoinfo[resolution]["transform"]
 
-    def cloud_mask(self, mask_type: CloudType = CloudType.all) -> List[Dict]:
-        """
-        Return cloud mask.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
-        """
-        if mask_type == CloudType.all:
-            mask_types_strings = [i.value for i in CloudType if i != CloudType.all]
+    def cloud_mask(
+        self,
+        cloud_type: CloudType = CloudType.all,
+        rasterize_resolution: Resolution = Resolution["20m"],
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        if cloud_type == CloudType.all:
+            indexes = [
+                ClassificationBandIndex[CloudType.cirrus.name].value,
+                ClassificationBandIndex[CloudType.opaque.name].value,
+            ]
+            cloud_types = [CloudType.cirrus.name, CloudType.opaque.name]
         else:
-            mask_types_strings = [mask_type.value]
-        if self._cloud_masks_cache is None:
-            mask_path = self.path_mapper.classification_mask()
-
-            if mask_path.endswith(".jp2"):
-                features = []
-                for f in _vectorize_raster_mask(
-                    mask_path,
-                    indexes=[
-                        i.value
-                        for i in ClassificationBandIndex
-                        if i.value in mask_types_strings
-                    ],
-                ):
-                    band_idx = f["properties"].pop("_band_idx")
-                    for cloud_type_index in ClassificationBandIndex:
-                        if band_idx == cloud_type_index.value:
-                            f["properties"]["maskType"] = cloud_type_index.name
-                            break
-                    else:
-                        raise KeyError(
-                            f"unknown band index {band_idx} for cloud bands: {list(CloudType)}"
-                        )
-                    features.append(f)
-            else:
-                features = _read_vector_mask(mask_path)
-            self._cloud_masks_cache = features
-        return [
-            f
-            for f in self._cloud_masks_cache
-            if f["properties"]["maskType"].lower() in mask_types_strings
-        ]
+            indexes = [ClassificationBandIndex[cloud_type.name].value]
+            cloud_types = [cloud_type.name]
+        return read_mask_as_raster(
+            self.path_mapper.classification_mask(),
+            indexes=indexes,
+            out_shape=self.shape(rasterize_resolution),
+            out_transform=self.transform(rasterize_resolution),
+            out_crs=self.crs,
+            rasterize_feature_filter=lambda feature: feature["properties"][
+                "maskType"
+            ].lower()
+            in cloud_types,
+            rasterize_value_func=lambda feature: True,
+            rasterize_out_dtype=bool,
+        )
 
     def detector_footprints(
         self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
@@ -526,138 +506,6 @@ class S2Metadata:
             "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
         return mean
-
-    def _read_mask_as_vector(self, band: L2ABand, qi_mask: BandQIMask) -> dict:
-        if self._band_masks_cache.get(qi_mask, {}).get(band) is None:
-            mask_path = self.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
-            if mask_path.suffix == ".jp2":
-                features = _vectorize_raster_mask(mask_path)
-                # append detector ID for detector footprints
-                if qi_mask == BandQIMask.detector_footprints:
-                    for f in features:
-                        f["properties"]["detector_id"] = int(
-                            f["properties"].pop("value")
-                        )
-            else:
-                features = _read_vector_mask(mask_path)
-                # append detector ID for detector footprints
-                if qi_mask == BandQIMask.detector_footprints:
-                    for f in features:
-                        detector_id = int(f["properties"]["gml_id"].split("-")[-2])
-                        f["id"] = detector_id
-                        f["properties"]["detector_id"] = detector_id
-
-            self._band_masks_cache[qi_mask][band] = features
-
-        return self._band_masks_cache[qi_mask][band]
-
-
-def read_mask_as_raster(
-    path: MPath,
-    out_shape: Union[Shape, None] = None,
-    out_transform: Union[Affine, None] = None,
-    out_crs: Union[CRS, None] = None,
-    rasterize_value_func: Callable = lambda feature: feature["id"],
-) -> ReferencedRaster:
-    if path.suffix in COMMON_RASTER_EXTENSIONS:
-        mask = ReferencedRaster.from_file(path)
-        if out_shape and out_transform:
-            return ReferencedRaster(
-                resample_array(
-                    mask,
-                    dst_transform=out_transform,
-                    dst_crs=out_crs,
-                    dst_shape=out_shape,
-                    resampling=Resampling.nearest,
-                ),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
-            )
-        else:
-            return mask
-
-    else:
-        if out_shape and out_transform:
-            features_values = [
-                (feature["geometry"], rasterize_value_func(feature))
-                for feature in _read_vector_mask(path)
-            ]
-            return ReferencedRaster(
-                data=rasterize(
-                    features_values, out_shape=out_shape, transform=out_transform
-                )
-                if features_values
-                else np.zeros(out_shape, dtype=np.uint8),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
-            )
-        else:  # pragma: no cover
-            raise ValueError("out_shape and out_transform have to be provided.")
-
-
-def _read_vector_mask(mask_path):
-    logger.debug(f"open {mask_path} with Fiona")
-    with _cached_path(mask_path) as cached:
-        try:
-            with fiona_open(cached) as src:
-                return list([dict(f) for f in src])
-        except ValueError as e:
-            # this happens if GML file is empty
-            if str(
-                e
-            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
-                return []
-            else:  # pragma: no cover
-                raise
-
-
-# TODO: do we need this?
-def _vectorize_raster_mask(mask_path, indexes=[1]):
-    logger.debug(f"open {mask_path} with rasterio")
-
-    def _gen():
-        with _cached_path(mask_path) as cached:
-            with rasterio_open(cached) as src:
-                for index in indexes:
-                    arr = src.read(index)
-                    mask = np.where(arr == 0, False, True)
-                    for id_, (polygon, value) in enumerate(
-                        shapes(arr, mask=mask, transform=src.transform), 1
-                    ):
-                        out = {
-                            "id": id_,
-                            "geometry": polygon,
-                            "properties": {"value": value},
-                        }
-                        if len(indexes) > 1:
-                            out["properties"]["_band_idx"] = index
-                        yield out
-
-    return list(_gen())
-
-
-@contextmanager
-def _cached_path(
-    path: MPath, timeout=5, requester_payer="requester", region="eu-central-1"
-):
-    """If path is remote, download to temporary directory and return path."""
-    if path.is_remote():
-        with TemporaryDirectory() as tempdir:
-            tempfile = MPath(tempdir) / path.name
-            logger.debug(f"{path} is remote, download to {tempfile}")
-            copy(
-                path,
-                tempfile,
-            )
-            yield tempfile
-    else:
-        yield path
 
 
 def _get_bounds_geoinfo(root):

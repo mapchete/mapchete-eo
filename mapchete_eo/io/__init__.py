@@ -1,4 +1,9 @@
-from mapchete_eo.io.assets import convert_asset, copy_asset, get_assets
+from mapchete_eo.io.assets import (
+    convert_asset,
+    copy_asset,
+    get_assets,
+    read_mask_as_raster,
+)
 from mapchete_eo.io.path import get_product_cache_path, open_xml, path_in_paths
 from mapchete_eo.io.to_xarray import (
     asset_to_np_array,
@@ -26,4 +31,5 @@ __all__ = [
     "open_xml",
     "get_product_cache_path",
     "path_in_paths",
+    "read_mask_as_raster",
 ]

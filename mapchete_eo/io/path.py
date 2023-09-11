@@ -1,9 +1,12 @@
 import hashlib
 import logging
 import xml.etree.ElementTree as etree
+from contextlib import contextmanager
 from enum import Enum
+from tempfile import TemporaryDirectory
 
 from fsspec.exceptions import FSTimeoutError
+from mapchete.io import copy
 from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
 from mapchete.path import MPath
 from pystac import Item
@@ -102,3 +105,19 @@ def path_in_paths(path, existing_paths) -> bool:
                 return True
         else:
             return False
+
+
+@contextmanager
+def cached_path(path: MPath) -> MPath:
+    """If path is remote, download to temporary directory and return path."""
+    if path.is_remote():
+        with TemporaryDirectory() as tempdir:
+            tempfile = MPath(tempdir) / path.name
+            logger.debug(f"{path} is remote, download to {tempfile}")
+            copy(
+                path,
+                tempfile,
+            )
+            yield tempfile
+    else:
+        yield path

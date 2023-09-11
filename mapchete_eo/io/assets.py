@@ -1,18 +1,28 @@
 import logging
 import math
 from collections import defaultdict
-from typing import List, Union
+from typing import Callable, List, Union
 
 import fsspec
+import numpy as np
 import pystac
 from affine import Affine
 from mapchete import Timer
-from mapchete.io import copy, rasterio_open
+from mapchete.io import copy, fiona_open, rasterio_open
+from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
+from mapchete.types import Bounds
+from numpy.typing import DTypeLike
+from rasterio.crs import CRS
+from rasterio.enums import Resampling
+from rasterio.features import rasterize
 from rasterio.profiles import Profile
+from rasterio.transform import array_bounds
 from rasterio.vrt import WarpedVRT
+from tilematrix import Shape
 
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
+from mapchete_eo.array.resampling import resample_array
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 
 logger = logging.getLogger(__name__)
@@ -310,3 +320,84 @@ def should_be_converted(
             return True
 
     return False
+
+
+def _read_vector_mask(mask_path):
+    logger.debug(f"open {mask_path} with Fiona")
+    with cached_path(mask_path) as cached:
+        try:
+            with fiona_open(cached) as src:
+                return list([dict(f) for f in src])
+        except ValueError as e:
+            # this happens if GML file is empty
+            if str(
+                e
+            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
+                return []
+            else:  # pragma: no cover
+                raise
+
+
+def read_mask_as_raster(
+    path: MPath,
+    indexes: Union[List[int], None] = None,
+    out_shape: Union[Shape, None] = None,
+    out_transform: Union[Affine, None] = None,
+    out_crs: Union[CRS, None] = None,
+    rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
+    rasterize_feature_filter: Callable = lambda feature: True,
+    rasterize_out_dtype: Union[DTypeLike, None] = None,
+) -> ReferencedRaster:
+    if path.suffix in COMMON_RASTER_EXTENSIONS:
+        with rasterio_open(path) as src:
+            mask = ReferencedRaster(
+                src.read(indexes).sum(axis=0),
+                transform=src.transform,
+                bounds=src.bounds,
+                crs=src.crs,
+            )
+        if out_shape and out_transform:
+            mask = ReferencedRaster(
+                resample_array(
+                    mask,
+                    dst_transform=out_transform,
+                    dst_crs=out_crs,
+                    dst_shape=out_shape,
+                    resampling=Resampling.nearest,
+                ),
+                transform=out_transform,
+                crs=out_crs,
+                bounds=Bounds(
+                    array_bounds(out_shape.height, out_shape.width, out_transform)
+                ),
+            )
+        # make sure output has correct dtype
+        if rasterize_out_dtype:
+            mask.data = mask.data.astype(rasterize_out_dtype)
+        return mask
+
+    else:
+        if out_shape and out_transform:
+            features = [
+                feature
+                for feature in _read_vector_mask(path)
+                if rasterize_feature_filter(feature)
+            ]
+            features_values = [
+                (feature["geometry"], rasterize_value_func(feature))
+                for feature in features
+            ]
+            return ReferencedRaster(
+                data=rasterize(
+                    features_values, out_shape=tuple(out_shape), transform=out_transform
+                ).astype(rasterize_out_dtype)
+                if features_values
+                else np.zeros(out_shape, dtype=rasterize_out_dtype),
+                transform=out_transform,
+                crs=out_crs,
+                bounds=Bounds(
+                    array_bounds(out_shape.height, out_shape.width, out_transform)
+                ),
+            )
+        else:  # pragma: no cover
+            raise ValueError("out_shape and out_transform have to be provided.")

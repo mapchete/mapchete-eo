@@ -42,3 +42,7 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
     assert not product.cache.path.ls()
     product.cache_brdf_grids()
     assert product.cache.path.ls()
+
+
+def test_product_mask_clouds():
+    1 / 0

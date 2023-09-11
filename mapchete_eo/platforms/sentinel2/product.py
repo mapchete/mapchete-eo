@@ -5,18 +5,22 @@ from typing import Union
 
 import numpy as np
 import pystac
-from mapchete.io.raster import read_raster
+from mapchete.io.raster import ReferencedRaster, read_raster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from rasterio.enums import Resampling
 
-from mapchete_eo.io.assets import get_assets
+from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import L2ABand
+from mapchete_eo.platforms.sentinel2.types import (
+    ClassificationBandIndex,
+    CloudType,
+    L2ABand,
+)
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
 
@@ -172,6 +176,37 @@ class S2Product(EOProduct, EOProductProtocol):
     ) -> np.ndarray:
         # TODO: read different cloud mask types: L1C, new raster cloud masks, SCL, sinergise s2cloudless(?)
         raise NotImplementedError()
+
+    # def cloud_mask(self, cloud_type: CloudType = CloudType.all) -> ReferencedRaster:
+    #     """Return classification cloud mask."""
+    #     if cloud_type == CloudType.all:
+    #         indexes = [
+    #             ClassificationBandIndex[CloudType.cirrus.name].value,
+    #             ClassificationBandIndex[CloudType.opaque.name].value
+    #         ]
+    #     else:
+    #         indexes = [ClassificationBandIndex[cloud_type.name].value]
+    #     read_mask_as_raster(
+    #         self.metadata.path_mapper.classification_mask(),
+
+    #     )
+    #     with rasterio_open(self.path_mapper.classification_mask()) as src:
+    #         return ReferencedRaster(
+    #             src.read(indexes).sum(axis=0).astype(bool),
+    #             transform=src.transform,
+    #             bounds=src.bounds,
+    #             crs=src.crs
+    #         )
+
+    # def snow_ice_mask(self) -> ReferencedRaster:
+    #     """Return classification snow and ice mask."""
+    #     with rasterio_open(self.path_mapper.classification_mask()) as src:
+    #         return ReferencedRaster(
+    #             src.read(ClassificationBandIndex.snow_ice.value).astype(bool),
+    #             transform=src.transform,
+    #             bounds=src.bounds,
+    #             crs=src.crs
+    #         )
 
 
 def uncached_files(existing_files=None, out_paths=None):

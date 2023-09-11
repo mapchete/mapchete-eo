@@ -21,6 +21,7 @@ from mapchete_eo.platforms.sentinel2.path_mappers import (
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 from mapchete_eo.platforms.sentinel2.types import (
     BandQIMask,
+    CloudType,
     L2ABand,
     ProductQIMask,
     ProductQIMaskResolution,
@@ -256,6 +257,22 @@ def test_remote_metadata_footprint(metadata):
     _test_metadata_footprint(metadata)
 
 
+def _test_metadata_cloud_mask(metadata):
+    combined = metadata.cloud_mask()
+    assert isinstance(combined, ReferencedRaster)
+    assert combined.data.dtype == bool
+
+    cirrus = metadata.cloud_mask(CloudType.cirrus)
+    assert isinstance(cirrus, ReferencedRaster)
+    assert cirrus.data.dtype == bool
+
+    opaque = metadata.cloud_mask(CloudType.opaque)
+    assert isinstance(opaque, ReferencedRaster)
+    assert opaque.data.dtype == bool
+
+    assert np.array_equal((cirrus.data + opaque.data).astype(bool), combined.data)
+
+
 @pytest.mark.parametrize(
     "metadata",
     [
@@ -265,7 +282,7 @@ def test_remote_metadata_footprint(metadata):
 )
 def test_metadata_cloud_mask(metadata):
     # cloud mask
-    assert isinstance(metadata.cloud_mask(), list)
+    _test_metadata_cloud_mask(metadata)
 
 
 @pytest.mark.remote
@@ -280,7 +297,7 @@ def test_metadata_cloud_mask(metadata):
 )
 def test_remote_metadata_cloud_mask(metadata):
     # cloud mask
-    assert isinstance(metadata.cloud_mask(), list)
+    _test_metadata_cloud_mask(metadata)
 
 
 def _test_metadata_band_masks(metadata):

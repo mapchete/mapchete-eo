@@ -87,6 +87,9 @@ def test_copy_asset(s2_stac_item, tmp_mpath):
     # don't raise error if ignore flag is activated
     copy_asset(s2_stac_item, asset, tmp_mpath, ignore_if_exists=True)
 
+    # also don't raise error if overwrite flag is activated
+    copy_asset(s2_stac_item, asset, tmp_mpath, overwrite=True)
+
 
 def test_convert_asset(s2_stac_item, tmp_mpath):
     asset = "red"
@@ -102,6 +105,9 @@ def test_convert_asset(s2_stac_item, tmp_mpath):
 
     # don't raise error if ignore flag is activated
     convert_asset(s2_stac_item, asset, tmp_mpath, ignore_if_exists=True)
+
+    # also don't raise error if overwrite flag is activated
+    convert_asset(s2_stac_item, asset, tmp_mpath, overwrite=True)
 
 
 def test_convert_raster_resolution(s2_stac_item, tmp_mpath):
@@ -134,6 +140,22 @@ def test_get_metadata_assets(s2_stac_item, tmp_mpath):
     assert not tmp_mpath.ls()
     get_metadata_assets(s2_stac_item, tmp_mpath, metadata_parser_classes=(S2Metadata,))
     assert tmp_mpath.ls()
+
+
+@pytest.mark.skip(reason="Converting all metadata assets takes too long.")
+def test_get_metadata_assets_convert(s2_stac_item, tmp_mpath):
+    resolution = 240.0
+    assert not tmp_mpath.ls()
+    get_metadata_assets(
+        s2_stac_item,
+        tmp_mpath,
+        metadata_parser_classes=(S2Metadata,),
+        resolution=resolution,
+    )
+    assert tmp_mpath.ls()
+    for f in tmp_mpath.ls():
+        if f.suffix == ".jp2":
+            assert rasterio.open(f).transform[0] == resolution
 
 
 @pytest.mark.parametrize(

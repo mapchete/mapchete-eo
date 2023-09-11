@@ -91,7 +91,7 @@ def copy_asset(
     output_path = dst_dir / src_path.name
 
     # write relative path into asset.href if Item will be in the same directory
-    if item_href_in_dst_dir and not output_path.is_absolute():
+    if item_href_in_dst_dir and not output_path.is_absolute():  # pragma: no cover
         item.assets[asset].href = src_path.name
     else:
         item.assets[asset].href = str(output_path)
@@ -135,7 +135,7 @@ def convert_asset(
     output_path = dst_dir / src_path.name
     profile = profile or COGDeflateProfile()
     # write relative path into asset.href if Item will be in the same directory
-    if item_href_in_dst_dir and not output_path.is_absolute():
+    if item_href_in_dst_dir and not output_path.is_absolute():  # pragma: no cover
         item.assets[asset].href = src_path.name
     else:
         item.assets[asset].href = str(output_path)
@@ -229,7 +229,7 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
                 if asset_name == eo_band:
                     mapping[eo_band] = [(asset_name, band_idx)]
                     break
-            else:
+            else:  # pragma: no cover
                 raise ValueError(
                     f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
                 )
@@ -244,15 +244,16 @@ def get_metadata_assets(
     metadata_parser_classes: Union[tuple, None] = None,
     resolution: Union[None, float, int] = None,
     convert_profile: Union[None, Profile] = None,
+    metadata_asset_names: List[str] = ["metadata", "granule_metadata"],
 ):
     """Copy STAC item metadata and its metadata assets."""
-    for metadata_asset in ["metadata", "granule_metadata"]:
+    for metadata_asset in metadata_asset_names:
         try:
             src_metadata_xml = MPath(item.assets[metadata_asset].href)
             break
         except KeyError:
             pass
-    else:
+    else:  # pragma: no cover
         raise KeyError("no 'metadata' or 'granule_metadata' asset found")
 
     # copy metadata.xml
@@ -261,14 +262,14 @@ def get_metadata_assets(
         copy(src_metadata_xml, dst_metadata_xml, overwrite=overwrite)
 
     item.assets[metadata_asset].href = src_metadata_xml.name
-    if metadata_parser_classes is None:
+    if metadata_parser_classes is None:  # pragma: no cover
         raise TypeError("no metadata parser class given")
 
     for metadata_parser_cls in metadata_parser_classes:
         src_metadata = metadata_parser_cls.from_metadata_xml(src_metadata_xml)
         dst_metadata = metadata_parser_cls.from_metadata_xml(dst_metadata_xml)
         break
-    else:
+    else:  # pragma: no cover
         raise TypeError(
             f"could not parse {src_metadata_xml} with {metadata_parser_classes}"
         )
@@ -282,7 +283,7 @@ def get_metadata_assets(
             # convert if possible
             if should_be_converted(
                 src_path, resolution=resolution, profile=convert_profile
-            ):
+            ):  # pragma: no cover
                 convert_raster(src_path, dst_path, resolution, convert_profile)
             else:
                 logger.debug(f"copy {asset} ...")

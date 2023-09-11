@@ -44,5 +44,6 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
     assert product.cache.path.ls()
 
 
+@pytest.mark.skip(reason="TODO")
 def test_product_mask_clouds():
     1 / 0

@@ -351,6 +351,18 @@ class S2Metadata:
             rasterize_out_dtype=bool,
         )
 
+    def snow_ice_mask(self, rasterize_resolution: Resolution = Resolution["20m"]):
+        return read_mask_as_raster(
+            self.path_mapper.classification_mask(),
+            indexes=[ClassificationBandIndex.snow_ice.value],
+            out_shape=self.shape(rasterize_resolution),
+            out_transform=self.transform(rasterize_resolution),
+            out_crs=self.crs,
+            rasterize_feature_filter=lambda feature: False,
+            rasterize_value_func=lambda feature: True,
+            rasterize_out_dtype=bool,
+        )
+
     def detector_footprints(
         self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
     ) -> ReferencedRaster:

@@ -281,7 +281,6 @@ def _test_metadata_cloud_mask(metadata):
     ],
 )
 def test_metadata_cloud_mask(metadata):
-    # cloud mask
     _test_metadata_cloud_mask(metadata)
 
 
@@ -296,8 +295,38 @@ def test_metadata_cloud_mask(metadata):
     ],
 )
 def test_remote_metadata_cloud_mask(metadata):
-    # cloud mask
     _test_metadata_cloud_mask(metadata)
+
+
+def _test_metadata_snow_ice_mask(metadata):
+    snow_ice = metadata.snow_ice_mask()
+    assert isinstance(snow_ice, ReferencedRaster)
+    assert snow_ice.data.dtype == bool
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_safe_metadata"),
+    ],
+)
+def test_metadata_snow_ice_mask(metadata):
+    _test_metadata_snow_ice_mask(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
+    ],
+)
+def test_remote_metadata_snow_ice_mask(metadata):
+    _test_metadata_snow_ice_mask(metadata)
 
 
 def _test_metadata_band_masks(metadata):

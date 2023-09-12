@@ -122,3 +122,19 @@ def test_product_read_snow_probability_mask_tile(s2_stac_item):
     assert isinstance(snow_probability_mask, ReferencedRaster)
     assert not isinstance(snow_probability_mask.data, ma.MaskedArray)
     assert snow_probability_mask.data.dtype == np.uint8
+
+
+def test_product_read_scl_mask(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    scl_mask = product.read_scl_mask()
+    assert isinstance(scl_mask, ReferencedRaster)
+    assert isinstance(scl_mask.data, ma.MaskedArray)
+    assert scl_mask.data.dtype == np.uint8
+
+
+def test_product_read_scl_mask_tile(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    scl_mask = product.read_scl_mask(tile=_get_product_tile(product))
+    assert isinstance(scl_mask, ReferencedRaster)
+    assert isinstance(scl_mask.data, ma.MaskedArray)
+    assert scl_mask.data.dtype == np.uint8

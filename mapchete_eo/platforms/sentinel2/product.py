@@ -5,7 +5,7 @@ from typing import Union
 
 import numpy as np
 import pystac
-from mapchete.io.raster import ReferencedRaster, read_raster
+from mapchete.io.raster import ReferencedRaster, read_raster, read_raster_window
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from rasterio.enums import Resampling
@@ -201,6 +201,16 @@ class S2Product(EOProduct, EOProductProtocol):
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         return self.metadata.snow_probability_mask(dst_grid=tile, resampling=resampling)
+
+    def read_scl_mask(
+        self,
+        tile: Union[BufferedTile, None] = None,
+    ) -> ReferencedRaster:
+        return read_raster(
+            MPath(self.item.assets["scl"].href),
+            tile=tile,
+            resampling=Resampling.nearest.name,
+        )
 
 
 def uncached_files(existing_files=None, out_paths=None):

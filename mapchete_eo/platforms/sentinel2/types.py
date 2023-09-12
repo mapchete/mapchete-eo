@@ -86,3 +86,20 @@ class SunAngle(str, Enum):
 class ViewAngle(str, Enum):
     zenith = "Zenith"
     azimuth = "Azimuth"
+
+
+class SceneClassification(int, Enum):
+    """Mapping of pixel values to class in SCL bands."""
+
+    nodata = 0
+    saturated_or_defected = 1
+    dark_area_pixels = 2
+    cloud_shadows = 3
+    vegetation = 4
+    not_vegetated = 5
+    water = 6
+    unclassified = 7
+    cloud_medium_probability = 8
+    cloud_high_probability = 9
+    thin_cirrus = 10
+    snow = 11

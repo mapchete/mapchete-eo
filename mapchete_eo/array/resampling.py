@@ -20,8 +20,7 @@ def resample_array(
     in_crs: Union[CRS, None] = None,
     nodata: int = 0,
     resampling: Resampling = Resampling.nearest,
-    masked: bool = True,
-) -> Union[np.ndarray, ma.MaskedArray]:
+) -> ma.MaskedArray:
     """Resample array and return as masked array"""
     grid = Grid.from_obj(grid)
     if isinstance(inp, ReferencedRaster):
@@ -51,10 +50,8 @@ def resample_array(
         dst_nodata=nodata,
         resampling=resampling,
     )
-    if masked:
-        return ma.masked_array(
-            data=np.nan_to_num(dst_data, nan=nodata),
-            mask=ma.masked_invalid(dst_data).mask,
-            fill_value=nodata,
-        )
-    return np.nan_to_num(dst_data, nan=nodata)
+    return ma.masked_array(
+        data=np.nan_to_num(dst_data, nan=nodata),
+        mask=ma.masked_invalid(dst_data).mask,
+        fill_value=nodata,
+    )

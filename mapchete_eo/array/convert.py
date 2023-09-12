@@ -49,8 +49,7 @@ def masked_to_xarr(
     # a usual NumPy array, replacing the masked values with np.nan.
     # However, this also seems to change the dtype to float32 which
     # is not desirable.
-    #
-    #
+
     nodataval = masked_arr.fill_value if nodataval is None else nodataval
     attrs = dict() if attrs is None else attrs
     return xr.DataArray(

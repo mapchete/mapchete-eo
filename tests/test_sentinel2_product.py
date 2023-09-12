@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.ma as ma
 import pytest
+import xarray as xr
 from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
@@ -8,9 +9,9 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
-from mapchete_eo.platforms.sentinel2.types import Resolution
+from mapchete_eo.platforms.sentinel2.types import Resolution, SceneClassification
 
 
 def test_product(s2_stac_item):
@@ -164,26 +165,101 @@ def test_footprint_nodata_mask_tile(s2_stac_item_half_footprint):
     footprint_nodata_mask = product.footprint_nodata_mask(_get_product_tile(product))
     assert isinstance(footprint_nodata_mask, ReferencedRaster)
     assert not isinstance(footprint_nodata_mask.data, ma.MaskedArray)
-    assert footprint_nodata_mask.data.all()
+    assert not footprint_nodata_mask.data.any()
     assert footprint_nodata_mask.data.dtype == bool
     assert footprint_nodata_mask.data.ndim == 2
 
 
 @pytest.mark.parametrize(
-    "kwargs",
+    "mask_config",
     [
-        dict(cloud=True),
-        dict(snow_ice=True),
-        dict(cloud_probability=True),
-        dict(snow_probability=True),
-        dict(scl=True),
+        MaskConfig(cloud=True),
+        MaskConfig(snow_ice=True),
+        MaskConfig(cloud_probability=True),
+        MaskConfig(snow_probability=True),
+        MaskConfig(scl=True),
     ],
 )
-def test_get_mask(s2_stac_item_half_footprint, kwargs):
+def test_get_mask(s2_stac_item_half_footprint, mask_config):
     product = S2Product(s2_stac_item_half_footprint)
-    mask = product.get_mask(Resolution["120m"], **kwargs)
+    mask = product.get_mask(Resolution["120m"], mask_config)
     assert isinstance(mask, ReferencedRaster)
     assert not isinstance(mask.data, ma.MaskedArray)
     assert mask.data.any()
     assert mask.data.dtype == bool
     assert mask.data.ndim == 2
+
+
+def test_read(s2_stac_item_half_footprint):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item_half_footprint)
+    rgb = product.read(assets=assets, tile=_get_product_tile(product))
+    assert isinstance(rgb, xr.Dataset)
+    for asset in assets:
+        assert asset in rgb.data_vars
+
+
+def test_read_masked(s2_stac_item):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item)
+    rgb_unmasked = product.read(assets=assets, tile=_get_product_tile(product))
+    rgb = product.read(
+        assets=assets,
+        tile=_get_product_tile(product),
+        mask_config=MaskConfig(
+            footprint=True,
+            cloud=True,
+            snow_ice=True,
+            cloud_probability=True,
+            cloud_probability_threshold=50,
+            snow_probability=True,
+            snow_probability_threshold=50,
+            scl=True,
+            scl_classes=[
+                SceneClassification.vegetation,
+                SceneClassification.thin_cirrus,
+            ],
+        ),
+    )
+    assert isinstance(rgb, xr.Dataset)
+    for asset in assets:
+        assert not (rgb_unmasked[asset] == rgb[asset]).all()
+
+
+def test_read_np(s2_stac_item_half_footprint):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product)
+    rgb = product.read_np_array(assets=assets, tile=tile)
+    assert isinstance(rgb, ma.MaskedArray)
+    assert rgb.shape == (len(assets), tile.height, tile.width)
+    assert rgb.dtype == np.uint16
+
+
+def test_read_np_masked(s2_stac_item):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item)
+    tile = _get_product_tile(product)
+    rgb_unmasked = product.read_np_array(
+        assets=assets,
+        tile=tile,
+    )
+    rgb = product.read_np_array(
+        assets=assets,
+        tile=tile,
+        mask_config=MaskConfig(
+            footprint=True,
+            cloud=True,
+            snow_ice=True,
+            cloud_probability=True,
+            cloud_probability_threshold=50,
+            snow_probability=True,
+            snow_probability_threshold=50,
+            scl=True,
+            scl_classes=[
+                SceneClassification.vegetation,
+                SceneClassification.thin_cirrus,
+            ],
+        ),
+    )
+    assert rgb_unmasked.mask.sum() < rgb.mask.sum()

@@ -11,15 +11,11 @@ from mapchete import Timer
 from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
-from mapchete.types import Bounds
 from numpy.typing import DTypeLike
-from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
-from rasterio.transform import array_bounds
 from rasterio.vrt import WarpedVRT
-from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
@@ -363,8 +359,9 @@ def read_mask_as_raster(
         # TODO: this can be replaced by using the updated mapchete.io.raster.read_raster_window()
         # function which will be able to handle the GridProtocol.
         if dst_grid:
+            arr = resample_array(mask, dst_grid, resampling=resampling)
             mask = ReferencedRaster(
-                resample_array(mask, dst_grid, resampling=resampling, masked=masked),
+                arr if masked else arr.data,
                 transform=dst_grid.transform,
                 crs=dst_grid.crs,
                 bounds=dst_grid.bounds,

@@ -41,7 +41,7 @@ class FSSpecStacIO(StacApiIO):
         path = MPath.from_inp(dest)
         path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
-            return dst.write(json.dumps(json_dict))
+            return dst.write(json.dumps(json_dict, indent=2))
 
 
 class Catalog(ABC):

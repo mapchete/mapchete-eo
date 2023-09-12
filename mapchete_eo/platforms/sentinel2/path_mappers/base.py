@@ -4,9 +4,9 @@ from mapchete.path import MPath
 
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
 )
 
@@ -27,7 +27,7 @@ class S2PathMapper(ABC):
     @abstractmethod
     def product_qi_mask(
         self,
-        qi_mask: ProductQIMask,
+        qi_mask: ProductQI,
         resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         ...
@@ -49,7 +49,7 @@ class S2PathMapper(ABC):
         ...
 
     @abstractmethod
-    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+    def band_qi_mask(self, qi_mask: BandQI, band: L2ABand) -> MPath:
         ...
 
     @abstractmethod

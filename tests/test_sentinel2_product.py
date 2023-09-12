@@ -94,62 +94,58 @@ def test_product_read_snow_ice_mask_tile(s2_stac_item):
     assert snow_ice_mask.data.ndim == 2
 
 
-def test_product_read_cloud_probability_mask(s2_stac_item):
+def test_product_read_cloud_probability(s2_stac_item):
     product = S2Product(s2_stac_item)
-    cloud_probability_mask = product.read_cloud_probability_mask()
-    assert isinstance(cloud_probability_mask, ReferencedRaster)
-    assert not isinstance(cloud_probability_mask.data, ma.MaskedArray)
-    assert cloud_probability_mask.data.dtype == np.uint8
-    assert cloud_probability_mask.data.ndim == 2
+    cloud_probability = product.read_cloud_probability()
+    assert isinstance(cloud_probability, ReferencedRaster)
+    assert not isinstance(cloud_probability.data, ma.MaskedArray)
+    assert cloud_probability.data.dtype == np.uint8
+    assert cloud_probability.data.ndim == 2
 
 
-def test_product_read_cloud_probability_mask_tile(s2_stac_item):
+def test_product_read_cloud_probability_tile(s2_stac_item):
     product = S2Product(s2_stac_item)
-    cloud_probability_mask = product.read_cloud_probability_mask(
-        _get_product_tile(product)
-    )
-    assert isinstance(cloud_probability_mask, ReferencedRaster)
-    assert not isinstance(cloud_probability_mask.data, ma.MaskedArray)
-    assert cloud_probability_mask.data.dtype == np.uint8
-    assert cloud_probability_mask.data.ndim == 2
+    cloud_probability = product.read_cloud_probability(_get_product_tile(product))
+    assert isinstance(cloud_probability, ReferencedRaster)
+    assert not isinstance(cloud_probability.data, ma.MaskedArray)
+    assert cloud_probability.data.dtype == np.uint8
+    assert cloud_probability.data.ndim == 2
 
 
-def test_product_read_snow_probability_mask(s2_stac_item):
+def test_product_read_snow_probability(s2_stac_item):
     product = S2Product(s2_stac_item)
-    snow_probability_mask = product.read_snow_probability_mask()
-    assert isinstance(snow_probability_mask, ReferencedRaster)
-    assert not isinstance(snow_probability_mask.data, ma.MaskedArray)
-    assert snow_probability_mask.data.dtype == np.uint8
-    assert snow_probability_mask.data.ndim == 2
+    snow_probability = product.read_snow_probability()
+    assert isinstance(snow_probability, ReferencedRaster)
+    assert not isinstance(snow_probability.data, ma.MaskedArray)
+    assert snow_probability.data.dtype == np.uint8
+    assert snow_probability.data.ndim == 2
 
 
-def test_product_read_snow_probability_mask_tile(s2_stac_item):
+def test_product_read_snow_probability_tile(s2_stac_item):
     product = S2Product(s2_stac_item)
-    snow_probability_mask = product.read_snow_probability_mask(
-        _get_product_tile(product)
-    )
-    assert isinstance(snow_probability_mask, ReferencedRaster)
-    assert not isinstance(snow_probability_mask.data, ma.MaskedArray)
-    assert snow_probability_mask.data.dtype == np.uint8
-    assert snow_probability_mask.data.ndim == 2
+    snow_probability = product.read_snow_probability(_get_product_tile(product))
+    assert isinstance(snow_probability, ReferencedRaster)
+    assert not isinstance(snow_probability.data, ma.MaskedArray)
+    assert snow_probability.data.dtype == np.uint8
+    assert snow_probability.data.ndim == 2
 
 
-def test_product_read_scl_mask(s2_stac_item):
+def test_product_read_scl(s2_stac_item):
     product = S2Product(s2_stac_item)
-    scl_mask = product.read_scl_mask()
-    assert isinstance(scl_mask, ReferencedRaster)
-    assert isinstance(scl_mask.data, ma.MaskedArray)
-    assert scl_mask.data.dtype == np.uint8
-    assert scl_mask.data.ndim == 2
+    scl = product.read_scl()
+    assert isinstance(scl, ReferencedRaster)
+    assert isinstance(scl.data, ma.MaskedArray)
+    assert scl.data.dtype == np.uint8
+    assert scl.data.ndim == 2
 
 
-def test_product_read_scl_mask_tile(s2_stac_item):
+def test_product_read_scl_tile(s2_stac_item):
     product = S2Product(s2_stac_item)
-    scl_mask = product.read_scl_mask(_get_product_tile(product))
-    assert isinstance(scl_mask, ReferencedRaster)
-    assert isinstance(scl_mask.data, ma.MaskedArray)
-    assert scl_mask.data.dtype == np.uint8
-    assert scl_mask.data.ndim == 2
+    scl = product.read_scl(_get_product_tile(product))
+    assert isinstance(scl, ReferencedRaster)
+    assert isinstance(scl.data, ma.MaskedArray)
+    assert scl.data.dtype == np.uint8
+    assert scl.data.ndim == 2
 
 
 def test_footprint_nodata_mask(s2_stac_item_half_footprint):

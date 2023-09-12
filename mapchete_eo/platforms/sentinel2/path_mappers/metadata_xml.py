@@ -13,9 +13,9 @@ from mapchete_eo.io import open_xml
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
 )
 
@@ -59,7 +59,7 @@ class XMLMapper(S2PathMapper):
 
     def product_qi_mask(
         self,
-        qi_mask: ProductQIMask,
+        qi_mask: ProductQI,
         resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         """Determine product QI mask from metadata.xml."""
@@ -67,7 +67,7 @@ class XMLMapper(S2PathMapper):
         for i in self.xml_root.iter():
             if i.tag == "MASK_FILENAME" and i.get("type") == qi_mask_type:
                 path = self._metadata_dir / i.text
-                if qi_mask == ProductQIMask.classification:
+                if qi_mask == ProductQI.classification:
                     return path
                 else:
                     if resolution.name in path.name:
@@ -76,23 +76,19 @@ class XMLMapper(S2PathMapper):
             raise KeyError(f"no {qi_mask_type} with item found in metadata")
 
     def classification_mask(self) -> MPath:
-        return self.product_qi_mask(ProductQIMask.classification)
+        return self.product_qi_mask(ProductQI.classification)
 
     def cloud_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(
-            ProductQIMask.cloud_probability, resolution=resolution
-        )
+        return self.product_qi_mask(ProductQI.cloud_probability, resolution=resolution)
 
     def snow_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(
-            ProductQIMask.snow_probability, resolution=resolution
-        )
+        return self.product_qi_mask(ProductQI.snow_probability, resolution=resolution)
 
-    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+    def band_qi_mask(self, qi_mask: BandQI, band: L2ABand) -> MPath:
         """Determine band QI mask from metadata.xml."""
         if qi_mask.name not in dict(self.processing_baseline.band_mask_types).keys():
             raise DeprecationWarning(
@@ -121,7 +117,7 @@ class XMLMapper(S2PathMapper):
             )
 
     def technical_quality_mask(self, band: L2ABand) -> MPath:
-        return self.band_qi_mask(BandQIMask.technical_quality, band)
+        return self.band_qi_mask(BandQI.technical_quality, band)
 
     def detector_footprints(self, band: L2ABand) -> MPath:
-        return self.band_qi_mask(BandQIMask.detector_footprints, band)
+        return self.band_qi_mask(BandQI.detector_footprints, band)

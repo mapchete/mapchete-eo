@@ -197,27 +197,25 @@ class S2Product(EOProduct, EOProductProtocol):
         logger.debug("read classification snow and ice mask for %s", str(self))
         return self.metadata.snow_ice_mask(dst_grid=tile)
 
-    def read_cloud_probability_mask(
+    def read_cloud_probability(
         self,
         tile: Union[BufferedTile, None] = None,
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
-        return self.metadata.cloud_probability_mask(
-            dst_grid=tile, resampling=resampling
-        )
+        return self.metadata.cloud_probability(dst_grid=tile, resampling=resampling)
 
-    def read_snow_probability_mask(
+    def read_snow_probability(
         self,
         tile: Union[BufferedTile, None] = None,
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))
-        return self.metadata.snow_probability_mask(dst_grid=tile, resampling=resampling)
+        return self.metadata.snow_probability(dst_grid=tile, resampling=resampling)
 
-    def read_scl_mask(
+    def read_scl(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
     ) -> ReferencedRaster:
@@ -292,11 +290,11 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += self.read_cloud_mask(grid, cloud_type).data
                 _check_full(out)
             if cloud_probability:
-                cld_prb = self.read_cloud_probability_mask(grid).data
+                cld_prb = self.read_cloud_probability(grid).data
                 out += np.where(cld_prb >= cloud_probability_threshold, True, False)
                 _check_full(out)
             if scl:
-                scl_arr = self.read_scl_mask(grid).data
+                scl_arr = self.read_scl(grid).data
                 # convert SCL classes to pixel values
                 scl_values = [scl.value for scl in scl_classes or []]
                 # mask out specific pixel values
@@ -306,7 +304,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += self.read_snow_ice_mask(grid).data
                 _check_full(out)
             if snow_probability:
-                snw_prb = self.read_snow_probability_mask(grid).data
+                snw_prb = self.read_snow_probability(grid).data
                 out += np.where(snw_prb >= snow_probability_threshold, True, False)
                 _check_full(out)
         except AllMasked:

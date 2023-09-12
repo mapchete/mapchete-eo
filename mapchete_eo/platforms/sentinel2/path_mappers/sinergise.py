@@ -5,9 +5,9 @@ from mapchete.path import MPath
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
 )
 
@@ -26,18 +26,18 @@ class SinergisePathMapper(S2PathMapper):
     """
 
     _PRE_0400_MASK_PATHS = {
-        ProductQIMask.classification: "MSK_CLOUDS_B00.gml",
-        ProductQIMask.cloud_probability: "CLD_{resolution}.jp2",  # are they really there?
-        ProductQIMask.snow_probability: "SNW_{resolution}.jp2",  # are they really there?
-        BandQIMask.detector_footprints: "MSK_DETFOO_{band_identifier}.gml",
-        BandQIMask.technical_quality: "MSK_TECQUA_{band_identifier}.gml",
+        ProductQI.classification: "MSK_CLOUDS_B00.gml",
+        ProductQI.cloud_probability: "CLD_{resolution}.jp2",  # are they really there?
+        ProductQI.snow_probability: "SNW_{resolution}.jp2",  # are they really there?
+        BandQI.detector_footprints: "MSK_DETFOO_{band_identifier}.gml",
+        BandQI.technical_quality: "MSK_TECQUA_{band_identifier}.gml",
     }
     _POST_0400_MASK_PATHS = {
-        ProductQIMask.classification: "CLASSI_B00.jp2",
-        ProductQIMask.cloud_probability: "CLD_{resolution}.jp2",
-        ProductQIMask.snow_probability: "SNW_{resolution}.jp2",
-        BandQIMask.detector_footprints: "DETFOO_{band_identifier}.jp2",
-        BandQIMask.technical_quality: "QUALIT_{band_identifier}.jp2",
+        ProductQI.classification: "CLASSI_B00.jp2",
+        ProductQI.cloud_probability: "CLD_{resolution}.jp2",
+        ProductQI.snow_probability: "SNW_{resolution}.jp2",
+        BandQI.detector_footprints: "DETFOO_{band_identifier}.jp2",
+        BandQI.technical_quality: "QUALIT_{band_identifier}.jp2",
     }
 
     def __init__(
@@ -62,7 +62,7 @@ class SinergisePathMapper(S2PathMapper):
 
     def product_qi_mask(
         self,
-        qi_mask: ProductQIMask,
+        qi_mask: ProductQI,
         resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         """Determine product QI mask according to Sinergise bucket schema."""
@@ -74,23 +74,19 @@ class SinergisePathMapper(S2PathMapper):
         return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
     def classification_mask(self) -> MPath:
-        return self.product_qi_mask(ProductQIMask.classification)
+        return self.product_qi_mask(ProductQI.classification)
 
     def cloud_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(
-            ProductQIMask.cloud_probability, resolution=resolution
-        )
+        return self.product_qi_mask(ProductQI.cloud_probability, resolution=resolution)
 
     def snow_probability_mask(
         self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
-        return self.product_qi_mask(
-            ProductQIMask.snow_probability, resolution=resolution
-        )
+        return self.product_qi_mask(ProductQI.snow_probability, resolution=resolution)
 
-    def band_qi_mask(self, qi_mask: BandQIMask, band: L2ABand) -> MPath:
+    def band_qi_mask(self, qi_mask: BandQI, band: L2ABand) -> MPath:
         """Determine product QI mask according to Sinergise bucket schema."""
         try:
             if self.processing_baseline.version < "04.00":
@@ -105,7 +101,7 @@ class SinergisePathMapper(S2PathMapper):
         return MPath.from_inp(f"{self._protocol}://{self._baseurl}/{key}")
 
     def technical_quality_mask(self, band: L2ABand) -> MPath:
-        return self.band_qi_mask(BandQIMask.technical_quality, band)
+        return self.band_qi_mask(BandQI.technical_quality, band)
 
     def detector_footprints(self, band: L2ABand) -> MPath:
-        return self.band_qi_mask(BandQIMask.detector_footprints, band)
+        return self.band_qi_mask(BandQI.detector_footprints, band)

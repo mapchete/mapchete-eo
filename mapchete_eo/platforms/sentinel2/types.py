@@ -63,13 +63,17 @@ class ProcessingLevel(Enum):
     level2a = "L2A"
 
 
-class ProductQIMask(str, Enum):
+class ProductQI(str, Enum):
+    """Product specific quality indicators."""
+
     classification = "classification"
     cloud_probability = "cloud_probability"
     snow_probability = "snow_probability"
 
 
-class BandQIMask(str, Enum):
+class BandQI(str, Enum):
+    """Band specific quality indicators."""
+
     detector_footprints = "detector_footprints"
     technical_quality = "technical_quality"
     # the following masks are deprecated:

@@ -33,11 +33,11 @@ from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
     ClassificationBandIndex,
     CloudType,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
     Resolution,
     SunAngle,
@@ -121,7 +121,7 @@ class S2Metadata:
         self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQIMask}
+        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
         self._cloud_masks_cache: Union[List, None] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
@@ -244,8 +244,8 @@ class S2Metadata:
         Mapping of all available metadata assets such as QI bands
         """
         out = dict()
-        for product_qi_mask in ProductQIMask:
-            if product_qi_mask == ProductQIMask.classification:
+        for product_qi_mask in ProductQI:
+            if product_qi_mask == ProductQI.classification:
                 out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
                     product_qi_mask
                 )
@@ -257,7 +257,7 @@ class S2Metadata:
                         product_qi_mask, resolution=resolution
                     )
 
-        for band_qi_mask in BandQIMask:
+        for band_qi_mask in BandQI:
             for band in L2ABand:
                 out[f"{band_qi_mask.name}-{band.name}"] = self.path_mapper.band_qi_mask(
                     qi_mask=band_qi_mask, band=band
@@ -266,47 +266,34 @@ class S2Metadata:
         return out
 
     def grid(self, resolution: Resolution) -> Grid:
+        """
+        Return grid for resolution.
+        """
         return self._grids[resolution]
 
     def shape(self, resolution: Resolution) -> Shape:
         """
         Return grid shape for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        tuple of (height, width)
         """
         return self._grids[resolution].shape
 
     def transform(self, resolution: Resolution) -> Affine:
         """
         Return Affine object for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        Affine()
         """
         return self._grids[resolution].transform
 
-    ####################
-    # product QI masks #
-    ####################
+    #####################
+    # product QI layers #
+    #####################
     def cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
     ) -> ReferencedRaster:
-        """Return classification cloud mask."""
+        """
+        Return classification cloud mask.
+        """
         dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
@@ -346,7 +333,7 @@ class S2Metadata:
             masked=False,
         )
 
-    def cloud_probability_mask(
+    def cloud_probability(
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
@@ -364,7 +351,7 @@ class S2Metadata:
             masked=False,
         )
 
-    def snow_probability_mask(
+    def snow_probability(
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
@@ -402,7 +389,7 @@ class S2Metadata:
 
         footprints = read_mask_as_raster(
             self.path_mapper.band_qi_mask(
-                qi_mask=BandQIMask.detector_footprints, band=band
+                qi_mask=BandQI.detector_footprints, band=band
             ),
             dst_grid=dst_grid,
             rasterize_value_func=_get_detector_id,
@@ -424,9 +411,7 @@ class S2Metadata:
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
         return read_mask_as_raster(
-            self.path_mapper.band_qi_mask(
-                qi_mask=BandQIMask.technical_quality, band=band
-            ),
+            self.path_mapper.band_qi_mask(qi_mask=BandQI.technical_quality, band=band),
             dst_grid=dst_grid,
         )
 

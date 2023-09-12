@@ -10,6 +10,7 @@ from rasterio.warp import reproject
 from tilematrix import Shape
 
 from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 
 def resample_array(
@@ -19,8 +20,10 @@ def resample_array(
     in_crs: Union[CRS, None] = None,
     nodata: int = 0,
     resampling: Resampling = Resampling.nearest,
-) -> ma.MaskedArray:
+    masked: bool = True,
+) -> Union[np.ndarray, ma.MaskedArray]:
     """Resample array and return as masked array"""
+    grid = Grid.from_obj(grid)
     if isinstance(inp, ReferencedRaster):
         in_array = inp.data
         in_transform = inp.transform
@@ -32,12 +35,11 @@ def resample_array(
             f"input has to either be a mapchete.io.raster.ReferencedRaster or a NumPy array, not {type(inp)}."
         )
 
+    dst_shape: tuple = grid.shape
     if len(in_array.shape) == 3:
-        dst_shape = (in_array.shape[0],) + grid.shape
-    else:
-        dst_shape = grid.shape
+        dst_shape = (in_array.shape[0], *grid.shape)
 
-    dst_data = np.empty(dst_shape or in_array.shape, in_array.dtype)
+    dst_data = np.empty(dst_shape, in_array.dtype)
     reproject(
         in_array,
         dst_data,
@@ -49,8 +51,10 @@ def resample_array(
         dst_nodata=nodata,
         resampling=resampling,
     )
-    return ma.masked_array(
-        data=np.nan_to_num(dst_data, nan=nodata),
-        mask=ma.masked_invalid(dst_data).mask,
-        fill_value=nodata,
-    )
+    if masked:
+        return ma.masked_array(
+            data=np.nan_to_num(dst_data, nan=nodata),
+            mask=ma.masked_invalid(dst_data).mask,
+            fill_value=nodata,
+        )
+    return np.nan_to_num(dst_data, nan=nodata)

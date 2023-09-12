@@ -33,6 +33,10 @@ class Grid:
         self.bounds = Bounds(*array_bounds(self.height, self.width, self.transform))
         self.shape = Shape(self.height, self.width)
 
-    @classmethod
+    @staticmethod
     def from_obj(obj):
-        return Grid(obj.transform, obj.height, obj.width, obj.crs)
+        if hasattr(obj, "transform"):
+            transform = obj.transform
+        else:
+            transform = obj.affine
+        return Grid(transform, obj.height, obj.width, obj.crs)

@@ -160,7 +160,7 @@ class S2Product(EOProduct, EOProductProtocol):
         # read cached file if configured
         if self.cache:
             grid_path = self.cache.get_brdf_grid(band)
-            return read_raster(grid_path, tile=tile, resampling=resampling)
+            return read_raster(grid_path, tile=tile, resampling=resampling).data
         # calculate on the fly
         return correction_grid(
             self.metadata,
@@ -169,40 +169,19 @@ class S2Product(EOProduct, EOProductProtocol):
             resolution=brdf_config.resolution,
         ).read(tile=tile, resampling=resampling)
 
-    # def read_cloud_mask(
-    #     self,
-    #     tile: Union[BufferedTile, None] = None,
-    #     cloud_type: CloudType = CloudType.all,
-    # ) -> ReferencedRaster:
-    #     """Return classification cloud mask."""
-    #     if cloud_type == CloudType.all:
-    #         indexes = [
-    #             ClassificationBandIndex[CloudType.cirrus.name].value,
-    #             ClassificationBandIndex[CloudType.opaque.name].value,
-    #         ]
-    #     else:
-    #         [ClassificationBandIndex[cloud_type.name].value]
-    #     read_mask_as_raster(
-    #         self.metadata.path_mapper.classification_mask(),
-    #     )
+    def read_cloud_mask(
+        self,
+        tile: Union[BufferedTile, None] = None,
+        cloud_type: CloudType = CloudType.all,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        return self.metadata.cloud_mask(cloud_type, dst_grid=tile)
 
-    #     with rasterio_open(self.path_mapper.classification_mask()) as src:
-    #         return ReferencedRaster(
-    #             src.read(indexes).sum(axis=0).astype(bool),
-    #             transform=src.transform,
-    #             bounds=src.bounds,
-    #             crs=src.crs
-    #         )
-
-    # def snow_ice_mask(self) -> ReferencedRaster:
-    #     """Return classification snow and ice mask."""
-    #     with rasterio_open(self.path_mapper.classification_mask()) as src:
-    #         return ReferencedRaster(
-    #             src.read(ClassificationBandIndex.snow_ice.value).astype(bool),
-    #             transform=src.transform,
-    #             bounds=src.bounds,
-    #             crs=src.crs
-    #         )
+    def read_snow_ice_mask(
+        self, tile: Union[BufferedTile, None] = None
+    ) -> ReferencedRaster:
+        """Return classification snow and ice mask."""
+        return self.metadata.snow_ice_mask(dst_grid=tile)
 
 
 def uncached_files(existing_files=None, out_paths=None):

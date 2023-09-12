@@ -25,6 +25,7 @@ from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -346,11 +347,14 @@ def read_mask_as_raster(
     rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
     rasterize_feature_filter: Callable = lambda feature: True,
     rasterize_out_dtype: Union[DTypeLike, None] = None,
+    masked: bool = True,
 ) -> ReferencedRaster:
+    if dst_grid:
+        dst_grid = Grid.from_obj(dst_grid)
     if path.suffix in COMMON_RASTER_EXTENSIONS:
         with rasterio_open(path) as src:
             mask = ReferencedRaster(
-                src.read(indexes).sum(axis=0),
+                src.read(indexes, masked=masked).sum(axis=0),
                 transform=src.transform,
                 bounds=src.bounds,
                 crs=src.crs,
@@ -358,9 +362,7 @@ def read_mask_as_raster(
         if dst_grid:
             mask = ReferencedRaster(
                 resample_array(
-                    mask,
-                    dst_grid,
-                    resampling=Resampling.nearest,
+                    mask, dst_grid, resampling=Resampling.nearest, masked=masked
                 ),
                 transform=dst_grid.transform,
                 crs=dst_grid.crs,

@@ -301,9 +301,10 @@ class S2Metadata:
     def cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
-        dst_grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
+        dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
         if cloud_type == CloudType.all:
@@ -325,11 +326,11 @@ class S2Metadata:
             in cloud_types,
             rasterize_value_func=lambda feature: True,
             rasterize_out_dtype=bool,
+            masked=False,
         )
 
-    def snow_ice_mask(
-        self, dst_grid: Union[GridProtocol, Resolution] = Resolution["20m"]
-    ):
+    def snow_ice_mask(self, dst_grid: Union[GridProtocol, Resolution, None] = None):
+        dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
         return read_mask_as_raster(
@@ -339,6 +340,7 @@ class S2Metadata:
             rasterize_feature_filter=lambda feature: False,
             rasterize_value_func=lambda feature: True,
             rasterize_out_dtype=bool,
+            masked=False,
         )
 
     def detector_footprints(

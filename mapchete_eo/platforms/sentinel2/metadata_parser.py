@@ -298,6 +298,9 @@ class S2Metadata:
         """
         return self._grids[resolution].transform
 
+    ####################
+    # product QI masks #
+    ####################
     def cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
@@ -325,7 +328,7 @@ class S2Metadata:
             ].lower()
             in cloud_types,
             rasterize_value_func=lambda feature: True,
-            rasterize_out_dtype=bool,
+            dtype=bool,
             masked=False,
         )
 
@@ -339,10 +342,49 @@ class S2Metadata:
             dst_grid=dst_grid,
             rasterize_feature_filter=lambda feature: False,
             rasterize_value_func=lambda feature: True,
-            rasterize_out_dtype=bool,
+            dtype=bool,
             masked=False,
         )
 
+    def cloud_probability_mask(
+        self,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        # TODO: determine whether to read the 20m or the 60m file
+        return read_mask_as_raster(
+            self.path_mapper.cloud_probability_mask(),
+            dst_grid=dst_grid,
+            resampling=resampling,
+            rasterize_value_func=lambda feature: True,
+            masked=False,
+        )
+
+    def snow_probability_mask(
+        self,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        # TODO: determine whether to read the 20m or the 60m file
+        return read_mask_as_raster(
+            self.path_mapper.snow_probability_mask(),
+            dst_grid=dst_grid,
+            resampling=resampling,
+            rasterize_value_func=lambda feature: True,
+            masked=False,
+        )
+
+    ##############
+    # band masks #
+    ##############
     def detector_footprints(
         self,
         band: L2ABand,

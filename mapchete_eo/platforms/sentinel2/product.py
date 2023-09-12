@@ -178,10 +178,29 @@ class S2Product(EOProduct, EOProductProtocol):
         return self.metadata.cloud_mask(cloud_type, dst_grid=tile)
 
     def read_snow_ice_mask(
-        self, tile: Union[BufferedTile, None] = None
+        self,
+        tile: Union[BufferedTile, None] = None,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         return self.metadata.snow_ice_mask(dst_grid=tile)
+
+    def read_cloud_probability_mask(
+        self,
+        tile: Union[BufferedTile, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return cloud probability mask."""
+        return self.metadata.cloud_probability_mask(
+            dst_grid=tile, resampling=resampling
+        )
+
+    def read_snow_probability_mask(
+        self,
+        tile: Union[BufferedTile, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification snow and ice mask."""
+        return self.metadata.snow_probability_mask(dst_grid=tile, resampling=resampling)
 
 
 def uncached_files(existing_files=None, out_paths=None):

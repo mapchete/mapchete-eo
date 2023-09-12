@@ -344,9 +344,10 @@ def read_mask_as_raster(
     path: MPath,
     indexes: Union[List[int], None] = None,
     dst_grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
     rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
     rasterize_feature_filter: Callable = lambda feature: True,
-    rasterize_out_dtype: Union[DTypeLike, None] = None,
+    dtype: Union[DTypeLike, None] = None,
     masked: bool = True,
 ) -> ReferencedRaster:
     if dst_grid:
@@ -354,23 +355,23 @@ def read_mask_as_raster(
     if path.suffix in COMMON_RASTER_EXTENSIONS:
         with rasterio_open(path) as src:
             mask = ReferencedRaster(
-                src.read(indexes, masked=masked).sum(axis=0),
+                src.read(indexes, masked=masked).sum(axis=0, dtype=src.dtypes[0]),
                 transform=src.transform,
                 bounds=src.bounds,
                 crs=src.crs,
             )
+        # TODO: this can be replaced by using the updated mapchete.io.raster.read_raster_window()
+        # function which will be able to handle the GridProtocol.
         if dst_grid:
             mask = ReferencedRaster(
-                resample_array(
-                    mask, dst_grid, resampling=Resampling.nearest, masked=masked
-                ),
+                resample_array(mask, dst_grid, resampling=resampling, masked=masked),
                 transform=dst_grid.transform,
                 crs=dst_grid.crs,
                 bounds=dst_grid.bounds,
             )
         # make sure output has correct dtype
-        if rasterize_out_dtype:
-            mask.data = mask.data.astype(rasterize_out_dtype)
+        if dtype:
+            mask.data = mask.data.astype(dtype)
         return mask
 
     else:
@@ -389,9 +390,9 @@ def read_mask_as_raster(
                     features_values,
                     out_shape=dst_grid.shape,
                     transform=dst_grid.transform,
-                ).astype(rasterize_out_dtype)
+                ).astype(dtype)
                 if features_values
-                else np.zeros(dst_grid.shape, dtype=rasterize_out_dtype),
+                else np.zeros(dst_grid.shape, dtype=dtype),
                 transform=dst_grid.transform,
                 crs=dst_grid.crs,
                 bounds=dst_grid.bounds,

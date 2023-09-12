@@ -1,4 +1,6 @@
+import numpy as np
 import numpy.ma as ma
+from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
@@ -44,37 +46,79 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
     assert product.cache.path.ls()
 
 
-def test_product_read_cloud_mask(s2_stac_item):
-    product = S2Product(s2_stac_item)
-    cloud_mask = product.read_cloud_mask()
-    assert not isinstance(cloud_mask.data, ma.MaskedArray)
-    assert cloud_mask.data.any()
-    assert not cloud_mask.data.all()
-
-
 def _get_product_tile(product):
     tp = BufferedTilePyramid("geodetic")
     centroid = reproject_geometry(product, product.crs, tp.crs).centroid
     return tp.tile_from_xy(centroid.x, centroid.y, 13)
 
 
-def test_product_read_cloud_mask_tile(s2_stac_item):
+def test_product_read_cloud_mask(s2_stac_item):
     product = S2Product(s2_stac_item)
-    tile = _get_product_tile(product)
-    cloud_mask = product.read_cloud_mask(tile=tile)
+    cloud_mask = product.read_cloud_mask()
+    assert isinstance(cloud_mask, ReferencedRaster)
     assert not isinstance(cloud_mask.data, ma.MaskedArray)
     assert cloud_mask.data.any()
     assert not cloud_mask.data.all()
+    assert cloud_mask.data.dtype == bool
+
+
+def test_product_read_cloud_mask_tile(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    cloud_mask = product.read_cloud_mask(tile=_get_product_tile(product))
+    assert isinstance(cloud_mask, ReferencedRaster)
+    assert not isinstance(cloud_mask.data, ma.MaskedArray)
+    assert cloud_mask.data.any()
+    assert not cloud_mask.data.all()
+    assert cloud_mask.data.dtype == bool
 
 
 def test_product_read_snow_ice_mask(s2_stac_item):
     product = S2Product(s2_stac_item)
     snow_ice_mask = product.read_snow_ice_mask()
+    assert isinstance(snow_ice_mask, ReferencedRaster)
     assert not isinstance(snow_ice_mask.data, ma.MaskedArray)
+    assert snow_ice_mask.data.dtype == bool
 
 
 def test_product_read_snow_ice_mask_tile(s2_stac_item):
     product = S2Product(s2_stac_item)
-    tile = _get_product_tile(product)
-    snow_ice_mask = product.read_snow_ice_mask(tile=tile)
+    snow_ice_mask = product.read_snow_ice_mask(tile=_get_product_tile(product))
+    assert isinstance(snow_ice_mask, ReferencedRaster)
     assert not isinstance(snow_ice_mask.data, ma.MaskedArray)
+    assert snow_ice_mask.data.dtype == bool
+
+
+def test_product_read_cloud_probability_mask(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    cloud_probability_mask = product.read_cloud_probability_mask()
+    assert isinstance(cloud_probability_mask, ReferencedRaster)
+    assert not isinstance(cloud_probability_mask.data, ma.MaskedArray)
+    assert cloud_probability_mask.data.dtype == np.uint8
+
+
+def test_product_read_cloud_probability_mask_tile(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    cloud_probability_mask = product.read_cloud_probability_mask(
+        tile=_get_product_tile(product)
+    )
+    assert isinstance(cloud_probability_mask, ReferencedRaster)
+    assert not isinstance(cloud_probability_mask.data, ma.MaskedArray)
+    assert cloud_probability_mask.data.dtype == np.uint8
+
+
+def test_product_read_snow_probability_mask(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    snow_probability_mask = product.read_snow_probability_mask()
+    assert isinstance(snow_probability_mask, ReferencedRaster)
+    assert not isinstance(snow_probability_mask.data, ma.MaskedArray)
+    assert snow_probability_mask.data.dtype == np.uint8
+
+
+def test_product_read_snow_probability_mask_tile(s2_stac_item):
+    product = S2Product(s2_stac_item)
+    snow_probability_mask = product.read_snow_probability_mask(
+        tile=_get_product_tile(product)
+    )
+    assert isinstance(snow_probability_mask, ReferencedRaster)
+    assert not isinstance(snow_probability_mask.data, ma.MaskedArray)
+    assert snow_probability_mask.data.dtype == np.uint8

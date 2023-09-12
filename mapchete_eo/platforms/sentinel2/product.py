@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 import pystac
-from mapchete.io.raster import ReferencedRaster, read_raster, read_raster_window
+from mapchete.io.raster import ReferencedRaster, read_raster
+from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
+from mapchete.types import Bounds
 from rasterio.enums import Resampling
+from rasterio.features import rasterize
+from shapely.geometry import shape
 
+from mapchete_eo.exceptions import AllMasked
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import get_product_cache_path, path_in_paths
 from mapchete_eo.io.profiles import COGDeflateProfile
@@ -17,12 +22,15 @@ from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
-    ClassificationBandIndex,
     CloudType,
     L2ABand,
+    Resolution,
+    SceneClassification,
 )
 from mapchete_eo.product import EOProduct
-from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -114,11 +122,14 @@ class S2Product(EOProduct, EOProductProtocol):
         cache_config: Union[CacheConfig, None] = None,
     ):
         self.item = item
+        self.id = self.item.id
+
         self.metadata = metadata or S2Metadata.from_stac_item(self.item)
         self.cache = Cache(self.item, cache_config) if cache_config else None
-        self.__geo_interface__ = self.metadata.__geo_interface__
-        self.bounds = self.metadata.bounds
-        self.crs = self.metadata.crs
+
+        self.__geo_interface__ = self.item.geometry
+        self.bounds = Bounds.from_inp(shape(self))
+        self.crs = DEFAULT_CATALOG_CRS
 
     @classmethod
     def from_stac_item(
@@ -175,6 +186,7 @@ class S2Product(EOProduct, EOProductProtocol):
         cloud_type: CloudType = CloudType.all,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
+        logger.debug("read classification cloud mask for %s", str(self))
         return self.metadata.cloud_mask(cloud_type, dst_grid=tile)
 
     def read_snow_ice_mask(
@@ -182,6 +194,7 @@ class S2Product(EOProduct, EOProductProtocol):
         tile: Union[BufferedTile, None] = None,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
+        logger.debug("read classification snow and ice mask for %s", str(self))
         return self.metadata.snow_ice_mask(dst_grid=tile)
 
     def read_cloud_probability_mask(
@@ -190,6 +203,7 @@ class S2Product(EOProduct, EOProductProtocol):
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
+        logger.debug("read cloud probability mask for %s", str(self))
         return self.metadata.cloud_probability_mask(
             dst_grid=tile, resampling=resampling
         )
@@ -200,17 +214,107 @@ class S2Product(EOProduct, EOProductProtocol):
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
+        logger.debug("read snow probability mask for %s", str(self))
         return self.metadata.snow_probability_mask(dst_grid=tile, resampling=resampling)
 
     def read_scl_mask(
         self,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
     ) -> ReferencedRaster:
-        return read_raster(
-            MPath(self.item.assets["scl"].href),
-            tile=tile,
-            resampling=Resampling.nearest.name,
+        """Return SCL mask."""
+        logger.debug("read SCL mask for %s", str(self))
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
         )
+        return read_mask_as_raster(
+            MPath(self.item.assets["scl"].href),
+            dst_grid=grid,
+            resampling=Resampling.nearest,
+            masked=True,
+        )
+
+    def footprint_nodata_mask(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["10m"],
+    ) -> ReferencedRaster:
+        """Return rasterized footprint mask."""
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+        return ReferencedRaster(
+            rasterize(
+                [reproject_geometry(self, self.crs, grid.crs)],
+                out_shape=grid.shape,
+                transform=grid.transform,
+                all_touched=True,
+            ).astype(bool),
+            transform=grid.transform,
+            bounds=grid.bounds,
+            crs=grid.crs,
+        )
+
+    def get_mask(
+        self,
+        grid: Union[GridProtocol, Resolution, None] = None,
+        footprint: bool = True,
+        cloud: bool = False,
+        cloud_type: CloudType = CloudType.all,
+        snow_ice: bool = False,
+        cloud_probability: bool = False,
+        cloud_probability_threshold: int = 100,
+        snow_probability: bool = False,
+        snow_probability_threshold: int = 100,
+        scl: bool = False,
+        scl_classes: Union[List[SceneClassification], None] = None,
+    ) -> ReferencedRaster:
+        """Merge masks into one 2D array."""
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+
+        def _check_full(arr):
+            if arr.all():
+                raise AllMasked()
+
+        out = np.zeros(shape=grid.shape, dtype=bool)
+        try:
+            _check_full(out)
+            if footprint:
+                out += self.footprint_nodata_mask(grid).data
+                _check_full(out)
+            if cloud:
+                out += self.read_cloud_mask(grid, cloud_type).data
+                _check_full(out)
+            if cloud_probability:
+                cld_prb = self.read_cloud_probability_mask(grid).data
+                out += np.where(cld_prb >= cloud_probability_threshold, True, False)
+                _check_full(out)
+            if scl:
+                scl_arr = self.read_scl_mask(grid).data
+                # convert SCL classes to pixel values
+                scl_values = [scl.value for scl in scl_classes or []]
+                # mask out specific pixel values
+                out += np.where(scl_arr in scl_values, True, False)
+                _check_full(out)
+            if snow_ice:
+                out += self.read_snow_ice_mask(grid).data
+                _check_full(out)
+            if snow_probability:
+                snw_prb = self.read_snow_probability_mask(grid).data
+                out += np.where(snw_prb >= snow_probability_threshold, True, False)
+                _check_full(out)
+        except AllMasked:
+            logger.debug(
+                "mask for product %s already full, skip reading other masks", self.id
+            )
+
+        return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
 
 
 def uncached_files(existing_files=None, out_paths=None):

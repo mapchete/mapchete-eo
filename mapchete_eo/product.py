@@ -5,7 +5,6 @@ from typing import Any, List, Union
 import numpy.ma as ma
 import pystac
 import xarray as xr
-from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.enums import Resampling
 from shapely.geometry import shape
@@ -13,7 +12,7 @@ from shapely.geometry import shape
 from mapchete_eo.array.convert import masked_to_xarr
 from mapchete_eo.io import get_item_property, item_to_np_array
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
-from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.types import NodataVals
 
@@ -38,7 +37,7 @@ class EOProduct(EOProductProtocol):
         self,
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
-        tile: BufferedTile = None,
+        grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",
@@ -67,7 +66,7 @@ class EOProduct(EOProductProtocol):
                     self.read_np_array(
                         assets=assets,
                         eo_bands=eo_bands,
-                        tile=tile,
+                        grid=grid,
                         resampling=resampling,
                         nodatavals=nodatavals,
                         **kwargs,
@@ -87,7 +86,7 @@ class EOProduct(EOProductProtocol):
         self,
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
-        tile: BufferedTile = None,
+        grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         **kwargs,
@@ -96,7 +95,7 @@ class EOProduct(EOProductProtocol):
             self.item,
             assets=assets or [],
             eo_bands=eo_bands or [],
-            tile=tile,
+            grid=grid,
             resampling=resampling,
             nodatavals=nodatavals,
         )

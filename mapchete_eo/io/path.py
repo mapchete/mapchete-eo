@@ -5,11 +5,11 @@ from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
 
+import pystac
 from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
 from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
 from mapchete.path import MPath
-from pystac import Item
 from retry import retry
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class ProductPathGenerationMethod(str, Enum):
 
 
 def get_product_cache_path(
-    item: Item,
+    item: pystac.Item,
     basepath: MPath,
     path_generation_method: ProductPathGenerationMethod = ProductPathGenerationMethod.product_id,
 ) -> MPath:
@@ -121,3 +121,9 @@ def cached_path(path: MPath) -> MPath:
             yield tempfile
     else:
         yield path
+
+
+def absolute_asset_path(item: pystac.Item, asset: str) -> MPath:
+    item_dir = MPath.from_inp(item.get_self_href()).parent
+    asset_path = MPath(item.assets[asset].href)
+    return asset_path.absolute_path(item_dir)

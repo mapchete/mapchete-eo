@@ -193,7 +193,7 @@ def test_get_mask(s2_stac_item_half_footprint, mask_config):
 def test_read(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
-    rgb = product.read(assets=assets, tile=_get_product_tile(product))
+    rgb = product.read(assets=assets, grid=_get_product_tile(product))
     assert isinstance(rgb, xr.Dataset)
     for asset in assets:
         assert asset in rgb.data_vars
@@ -202,10 +202,10 @@ def test_read(s2_stac_item_half_footprint):
 def test_read_masked(s2_stac_item):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item)
-    rgb_unmasked = product.read(assets=assets, tile=_get_product_tile(product))
+    rgb_unmasked = product.read(assets=assets, grid=_get_product_tile(product))
     rgb = product.read(
         assets=assets,
-        tile=_get_product_tile(product),
+        grid=_get_product_tile(product),
         mask_config=MaskConfig(
             footprint=True,
             cloud=True,
@@ -223,14 +223,14 @@ def test_read_masked(s2_stac_item):
     )
     assert isinstance(rgb, xr.Dataset)
     for asset in assets:
-        assert not (rgb_unmasked[asset] == rgb[asset]).all()
+        assert (rgb_unmasked[asset] != rgb[asset]).any()
 
 
 def test_read_np(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
     tile = _get_product_tile(product)
-    rgb = product.read_np_array(assets=assets, tile=tile)
+    rgb = product.read_np_array(assets=assets, grid=tile)
     assert isinstance(rgb, ma.MaskedArray)
     assert rgb.shape == (len(assets), tile.height, tile.width)
     assert rgb.dtype == np.uint16
@@ -242,11 +242,11 @@ def test_read_np_masked(s2_stac_item):
     tile = _get_product_tile(product)
     rgb_unmasked = product.read_np_array(
         assets=assets,
-        tile=tile,
+        grid=tile,
     )
     rgb = product.read_np_array(
         assets=assets,
-        tile=tile,
+        grid=tile,
         mask_config=MaskConfig(
             footprint=True,
             cloud=True,

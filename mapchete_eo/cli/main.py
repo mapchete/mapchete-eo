@@ -1,12 +1,21 @@
 from typing import Union
 
 import click
+import numpy as np
+import pystac
 import tqdm
 from mapchete.cli.options import opt_bounds, opt_debug
+from mapchete.io import rasterio_open
 
+from mapchete_eo.image_operations import scale
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2 import S2Metadata
-from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.config import (
+    AWSL2ACOGv1,
+    MaskConfig,
+    SceneClassification,
+)
+from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 
@@ -41,6 +50,43 @@ def _str_to_resolution(_, __, value):
 def _str_to_rio_profile(_, __, value):
     if value:
         return rio_profiles[value]
+
+
+arg_stac_item = click.argument("stac-item", type=click.Path())
+arg_dst = click.argument("dst", type=click.Path())
+opt_assets = click.option(
+    "--assets", "-a", type=click.STRING, nargs=3, default=["red", "green", "blue"]
+)
+opt_resolution = click.option(
+    "--resolution",
+    type=click.Choice(list(Resolution.__members__.keys())),
+    default="original",
+    show_default=True,
+    callback=_str_to_resolution,
+    help="Resample assets to this resolution in meter.",
+)
+opt_rio_profile = click.option(
+    "--rio-profile",
+    type=click.Choice(list(rio_profiles.keys())),
+    default="cog_deflate",
+    callback=_str_to_rio_profile,
+    help="Available rasterio profiles for raster assets.",
+)
+opt_mask_footprint = click.option("--mask-footprint", is_flag=True)
+opt_mask_clouds = click.option("--mask-clouds", is_flag=True)
+opt_mask_snow_ice = click.option("--mask-snow-ice", is_flag=True)
+opt_mask_cloud_probability_threshold = click.option(
+    "--mask-cloud-probability-threshold", type=click.INT, default=100
+)
+opt_mask_snow_probability_threshold = click.option(
+    "--mask-snow-probability-threshold", type=click.INT, default=100
+)
+opt_mask_scl_classes = click.option(
+    "--mask-scl-classes",
+    type=click.STRING,
+    callback=_str_to_list,
+    help=f"Available classes: {', '.join([scene_class.name for scene_class in SceneClassification])}",
+)
 
 
 @click.group(help="Tools around mapchete EO package.")
@@ -183,3 +229,126 @@ def static_catalog(
         )
 
     click.echo(f"Catalog successfully written to {catalog_json}")
+
+
+@eo.command()
+@arg_stac_item
+@arg_dst
+@opt_assets
+@opt_resolution
+@opt_rio_profile
+@opt_mask_footprint
+@opt_mask_clouds
+@opt_mask_snow_ice
+@opt_mask_cloud_probability_threshold
+@opt_mask_snow_probability_threshold
+@opt_mask_scl_classes
+@opt_debug
+def s2_rgb(
+    stac_item,
+    dst,
+    assets=None,
+    resolution=None,
+    rio_profile=None,
+    mask_footprint=False,
+    mask_clouds=False,
+    mask_snow_ice=False,
+    mask_cloud_probability_threshold=100,
+    mask_snow_probability_threshold=100,
+    mask_scl_classes=None,
+    **_,
+):
+    item = pystac.Item.from_file(stac_item)
+    product = S2Product.from_stac_item(item)
+    grid = product.metadata.grid(resolution)
+    click.echo(product)
+    mask_config = MaskConfig(
+        footprint=mask_footprint,
+        cloud=mask_clouds,
+        snow_ice=mask_snow_ice,
+        cloud_probability=mask_cloud_probability_threshold != 100,
+        cloud_probability_threshold=mask_cloud_probability_threshold,
+        snow_probability=mask_snow_probability_threshold != 100,
+        snow_probability_threshold=mask_snow_probability_threshold,
+        scl=bool(mask_scl_classes),
+        scl_classes=[
+            SceneClassification[scene_class] for scene_class in mask_scl_classes
+        ]
+        if bool(mask_scl_classes)
+        else None,
+    )
+    rgb = product.read_np_array(assets=assets, grid=grid, mask_config=mask_config)
+    with rasterio_open(
+        dst,
+        mode="w",
+        crs=grid.crs,
+        transform=grid.transform,
+        width=grid.width,
+        height=grid.height,
+        dtype=np.uint8,
+        count=len(assets),
+        nodata=0,
+        **rio_profile,
+    ) as dst:
+        dst.write(scale(rgb))
+
+
+@eo.command()
+@arg_stac_item
+@arg_dst
+@opt_resolution
+@opt_rio_profile
+@opt_mask_footprint
+@opt_mask_clouds
+@opt_mask_snow_ice
+@opt_mask_cloud_probability_threshold
+@opt_mask_snow_probability_threshold
+@opt_mask_scl_classes
+@opt_debug
+def s2_mask(
+    stac_item,
+    dst,
+    resolution=None,
+    rio_profile=None,
+    mask_footprint=False,
+    mask_clouds=False,
+    mask_snow_ice=False,
+    mask_cloud_probability_threshold=100,
+    mask_snow_probability_threshold=100,
+    mask_scl_classes=None,
+    **_,
+):
+    item = pystac.Item.from_file(stac_item)
+    product = S2Product.from_stac_item(item)
+    grid = product.metadata.grid(resolution)
+    click.echo(product)
+    mask_config = MaskConfig(
+        footprint=mask_footprint,
+        cloud=mask_clouds,
+        snow_ice=mask_snow_ice,
+        cloud_probability=mask_cloud_probability_threshold != 100,
+        cloud_probability_threshold=mask_cloud_probability_threshold,
+        snow_probability=mask_snow_probability_threshold != 100,
+        snow_probability_threshold=mask_snow_probability_threshold,
+        scl=bool(mask_scl_classes),
+        scl_classes=[
+            SceneClassification[scene_class] for scene_class in mask_scl_classes
+        ]
+        if bool(mask_scl_classes)
+        else None,
+    )
+    mask = product.get_mask(mask_config=mask_config).data
+    rgb = np.stack([mask * 255, mask, mask])
+    with rasterio_open(
+        dst,
+        mode="w",
+        crs=grid.crs,
+        transform=grid.transform,
+        width=grid.width,
+        height=grid.height,
+        dtype=np.uint8,
+        count=3,
+        nodata=0,
+        **rio_profile,
+    ) as dst:
+        dst.write(rgb)

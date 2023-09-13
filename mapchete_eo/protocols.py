@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Protocol, Tuple, Union
 import pystac
 import xarray as xr
 from affine import Affine
-from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
@@ -27,7 +26,7 @@ class EOProductProtocol(Protocol):
         self,
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
-        tile: BufferedTile = None,
+        grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",

@@ -9,7 +9,6 @@ import pystac
 from mapchete.io.raster import ReferencedRaster, read_raster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
-from mapchete.tile import BufferedTile
 from mapchete.types import Bounds
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
@@ -17,7 +16,7 @@ from shapely.geometry import shape
 
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
-from mapchete_eo.io.path import get_product_cache_path
+from mapchete_eo.io.path import absolute_asset_path, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
@@ -158,24 +157,31 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
-        tile: BufferedTile = None,
+        grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         mask_config: MaskConfig = MaskConfig(),
+        fill_value: int = 0,
         **kwargs,
     ) -> ma.MaskedArray:
-        mask = self.get_mask(tile, mask_config).data
+        if grid is None:
+            grid = self.metadata.grid(Resolution["10m"])
+        elif isinstance(grid, Resolution):
+            grid = self.metadata.grid(grid)
+        mask = self.get_mask(grid, mask_config).data
         if mask.all():
-            raise EmptyProductException(f"{self} is empty over {tile}")
+            raise EmptyProductException(f"{self} is empty over {grid}")
         arr = super().read_np_array(
             assets=assets,
             eo_bands=eo_bands,
-            tile=tile,
+            grid=grid,
             resampling=resampling,
-            nodatavals=nodatavals,
         )
         # bring mask to same shape as data array
-        arr.mask = np.repeat(np.expand_dims(mask, axis=0), arr.shape[0], axis=0)
+        expanded_mask = np.repeat(np.expand_dims(mask, axis=0), arr.shape[0], axis=0)
+        arr.set_fill_value(fill_value)
+        arr[expanded_mask] = fill_value
+        arr[expanded_mask] = ma.masked
         return arr
 
     def cache_assets(self) -> None:
@@ -190,55 +196,55 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         band: L2ABand,
         resampling: Resampling = Resampling.nearest,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         brdf_config: BRDFConfig = BRDFConfig(),
     ) -> np.ndarray:
         # read cached file if configured
         if self.cache:
             grid_path = self.cache.get_brdf_grid(band)
-            return read_raster(grid_path, tile=tile, resampling=resampling).data
+            return read_raster(grid_path, grid=grid, resampling=resampling).data
         # calculate on the fly
         return correction_grid(
             self.metadata,
             band,
             model=brdf_config.model,
             resolution=brdf_config.resolution,
-        ).read(tile=tile, resampling=resampling)
+        ).read(grid=grid, resampling=resampling)
 
     def read_cloud_mask(
         self,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         cloud_type: CloudType = CloudType.all,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         logger.debug("read classification cloud mask for %s", str(self))
-        return self.metadata.cloud_mask(cloud_type, dst_grid=tile)
+        return self.metadata.cloud_mask(cloud_type, dst_grid=grid)
 
     def read_snow_ice_mask(
         self,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read classification snow and ice mask for %s", str(self))
-        return self.metadata.snow_ice_mask(dst_grid=tile)
+        return self.metadata.snow_ice_mask(dst_grid=grid)
 
     def read_cloud_probability(
         self,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
-        return self.metadata.cloud_probability(dst_grid=tile, resampling=resampling)
+        return self.metadata.cloud_probability(dst_grid=grid, resampling=resampling)
 
     def read_snow_probability(
         self,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))
-        return self.metadata.snow_probability(dst_grid=tile, resampling=resampling)
+        return self.metadata.snow_probability(dst_grid=grid, resampling=resampling)
 
     def read_scl(
         self,
@@ -252,7 +258,7 @@ class S2Product(EOProduct, EOProductProtocol):
             else Grid.from_obj(grid)
         )
         return read_mask_as_raster(
-            MPath(self.item.assets["scl"].href),
+            absolute_asset_path(self.item, "scl"),
             dst_grid=grid,
             resampling=Resampling.nearest,
             masked=True,

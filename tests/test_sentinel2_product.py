@@ -49,8 +49,8 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
     assert product.cache.path.ls()
 
 
-def _get_product_tile(product):
-    tp = BufferedTilePyramid("geodetic")
+def _get_product_tile(product, metatiling=1):
+    tp = BufferedTilePyramid("geodetic", metatiling=metatiling)
     centroid = reproject_geometry(product, product.crs, tp.crs).centroid
     return tp.tile_from_xy(centroid.x, centroid.y, 13)
 
@@ -193,37 +193,41 @@ def test_get_mask(s2_stac_item_half_footprint, mask_config):
 def test_read(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
+
     rgb = product.read(assets=assets, grid=_get_product_tile(product))
+
     assert isinstance(rgb, xr.Dataset)
     for asset in assets:
         assert asset in rgb.data_vars
 
 
-def test_read_masked(s2_stac_item):
+def test_read_masked(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
-    product = S2Product(s2_stac_item)
-    rgb_unmasked = product.read(assets=assets, grid=_get_product_tile(product))
-    rgb = product.read(
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    unmasked = product.read(assets=assets, grid=tile)
+    masked = product.read(
         assets=assets,
-        grid=_get_product_tile(product),
+        grid=tile,
         mask_config=MaskConfig(
             footprint=True,
-            cloud=True,
             snow_ice=True,
             cloud_probability=True,
-            cloud_probability_threshold=50,
+            cloud_probability_threshold=10,
             snow_probability=True,
-            snow_probability_threshold=50,
+            snow_probability_threshold=10,
             scl=True,
             scl_classes=[
                 SceneClassification.vegetation,
-                SceneClassification.thin_cirrus,
             ],
         ),
     )
-    assert isinstance(rgb, xr.Dataset)
+
+    assert isinstance(masked, xr.Dataset)
     for asset in assets:
-        assert (rgb_unmasked[asset] != rgb[asset]).any()
+        assert masked[asset].any()
+        assert (unmasked[asset] != masked[asset]).any()
 
 
 def test_read_np(s2_stac_item_half_footprint):

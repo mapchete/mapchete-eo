@@ -6,13 +6,15 @@ import numpy as np
 import numpy.ma as ma
 import pystac
 import xarray as xr
-from mapchete.io.raster import read_raster_window
-from mapchete.tile import BufferedTile
+from mapchete.io import rasterio_open
+from mapchete.path import MPath
 from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
-from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.io.mapchete_io_raster import read_raster
+from mapchete_eo.io.path import absolute_asset_path
+from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ def products_to_xarray(
     products: List[EOProductProtocol] = [],
     assets: List[str] = [],
     eo_bands: List[str] = [],
-    tile: BufferedTile = None,
+    grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     band_axis_name: str = "bands",
@@ -32,7 +34,7 @@ def products_to_xarray(
     merge_products_by: Union[str, None] = None,
     merge_method: Union[MergeMethod, str] = MergeMethod.first,
 ) -> xr.Dataset:
-    """Read tile window of EOProducts and merge into a 4D xarray."""
+    """Read grid window of EOProducts and merge into a 4D xarray."""
 
     if len(products) == 0:
         raise ValueError("no products to read")
@@ -45,7 +47,7 @@ def products_to_xarray(
                 product.item.id: product.read(
                     assets=assets,
                     eo_bands=eo_bands,
-                    tile=tile,
+                    grid=grid,
                     resampling=resampling,
                     nodatavals=nodatavals,
                     x_axis_name=x_axis_name,
@@ -81,7 +83,7 @@ def products_to_xarray(
                     product_read_kwargs=dict(
                         assets=assets,
                         eo_bands=eo_bands,
-                        tile=tile,
+                        grid=grid,
                         resampling=resampling,
                         nodatavals=nodatavals,
                         x_axis_name=x_axis_name,
@@ -185,7 +187,7 @@ def item_to_xarray(
     item: pystac.Item,
     eo_bands: List[str] = [],
     assets: List[str] = [],
-    tile: BufferedTile = None,
+    grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     x_axis_name: str = "x",
@@ -193,7 +195,7 @@ def item_to_xarray(
     time_axis_name: str = "time",
 ) -> xr.Dataset:
     """
-    Read tile window of STAC Item and merge into a 3D xarray.
+    Read grid window of STAC Item and merge into a 3D xarray.
     """
     (
         assets_indexes,
@@ -208,7 +210,7 @@ def item_to_xarray(
                 item=item,
                 asset=asset,
                 indexes=index,
-                tile=tile,
+                grid=grid,
                 resampling=expanded_resampling,
                 nodataval=nodataval,
                 x_axis_name=x_axis_name,
@@ -230,12 +232,13 @@ def item_to_np_array(
     item: pystac.Item,
     eo_bands: List[str] = [],
     assets: List[str] = [],
-    tile: BufferedTile = None,
+    grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
+    fill_value: int = 0,
 ) -> ma.MaskedArray:
     """
-    Read tile window of STAC Item and merge into a 3D ma.MaskedArray.
+    Read window of STAC Item and merge into a 3D ma.MaskedArray.
     """
     assets_indexes, _, _, expanded_resamplings, expanded_nodatavals = _check_params(
         item, eo_bands, assets, resampling, nodatavals
@@ -246,7 +249,7 @@ def item_to_np_array(
                 item,
                 asset,
                 indexes=index,
-                tile=tile,
+                grid=grid,
                 resampling=expanded_resampling,
                 nodataval=nodataval,
             )
@@ -261,21 +264,21 @@ def asset_to_xarray(
     item: pystac.Item,
     asset: str,
     indexes: Union[list, int] = 1,
-    tile: BufferedTile = None,
+    grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.DataArray:
     """
-    Read tile window of STAC Items and merge into a 2D xarray.
+    Read grid window of STAC Items and merge into a 2D xarray.
     """
     return masked_to_xarr(
         asset_to_np_array(
             item,
             asset,
             indexes=indexes,
-            tile=tile,
+            grid=grid,
             resampling=resampling,
             nodataval=nodataval,
         ),
@@ -291,21 +294,21 @@ def asset_to_np_array(
     item: pystac.Item,
     asset: str,
     indexes: Union[list, int] = 1,
-    tile: BufferedTile = None,
+    grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
 ) -> ma.MaskedArray:
     """
-    Read tile window of STAC Items and merge into a 2D ma.MaskedArray.
+    Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
     """
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
-    return read_raster_window(
-        item.assets[asset].href,
+    return read_raster(
+        inp=absolute_asset_path(item, asset),
         indexes=indexes,
-        tile=tile,
+        grid=grid,
         resampling=resampling.name,
         dst_nodata=nodataval,
-    )
+    ).data
 
 
 def get_item_property(item: pystac.Item, property: str) -> Any:

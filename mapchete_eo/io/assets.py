@@ -1,19 +1,27 @@
 import logging
 import math
 from collections import defaultdict
-from typing import List, Union
+from typing import Callable, List, Union
 
 import fsspec
+import numpy as np
 import pystac
 from affine import Affine
 from mapchete import Timer
-from mapchete.io import copy, rasterio_open
+from mapchete.io import copy, fiona_open, rasterio_open
+from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
+from numpy.typing import DTypeLike
+from rasterio.enums import Resampling
+from rasterio.features import rasterize
 from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
+from mapchete_eo.array.resampling import resample_array
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
+from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -310,3 +318,81 @@ def should_be_converted(
             return True
 
     return False
+
+
+def _read_vector_mask(mask_path):
+    logger.debug(f"open {mask_path} with Fiona")
+    with cached_path(mask_path) as cached:
+        try:
+            with fiona_open(cached) as src:
+                return list([dict(f) for f in src])
+        except ValueError as e:
+            # this happens if GML file is empty
+            if str(
+                e
+            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
+                return []
+            else:  # pragma: no cover
+                raise
+
+
+def read_mask_as_raster(
+    path: MPath,
+    indexes: Union[List[int], None] = None,
+    dst_grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
+    rasterize_feature_filter: Callable = lambda feature: True,
+    dtype: Union[DTypeLike, None] = None,
+    masked: bool = True,
+) -> ReferencedRaster:
+    if dst_grid:
+        dst_grid = Grid.from_obj(dst_grid)
+    if path.suffix in COMMON_RASTER_EXTENSIONS:
+        with rasterio_open(path) as src:
+            mask = ReferencedRaster(
+                src.read(indexes, masked=masked).sum(axis=0, dtype=src.dtypes[0]),
+                transform=src.transform,
+                bounds=src.bounds,
+                crs=src.crs,
+            )
+        # TODO: this can be replaced by using the updated mapchete.io.raster.read_raster_window()
+        # function which will be able to handle the GridProtocol.
+        if dst_grid:
+            arr = resample_array(mask, dst_grid, resampling=resampling)
+            mask = ReferencedRaster(
+                arr if masked else arr.data,
+                transform=dst_grid.transform,
+                crs=dst_grid.crs,
+                bounds=dst_grid.bounds,
+            )
+        # make sure output has correct dtype
+        if dtype:
+            mask.data = mask.data.astype(dtype)
+        return mask
+
+    else:
+        if dst_grid:
+            features = [
+                feature
+                for feature in _read_vector_mask(path)
+                if rasterize_feature_filter(feature)
+            ]
+            features_values = [
+                (feature["geometry"], rasterize_value_func(feature))
+                for feature in features
+            ]
+            return ReferencedRaster(
+                data=rasterize(
+                    features_values,
+                    out_shape=dst_grid.shape,
+                    transform=dst_grid.transform,
+                ).astype(dtype)
+                if features_values
+                else np.zeros(dst_grid.shape, dtype=dtype),
+                transform=dst_grid.transform,
+                crs=dst_grid.crs,
+                bounds=dst_grid.bounds,
+            )
+        else:  # pragma: no cover
+            raise ValueError("out_shape and out_transform have to be provided.")

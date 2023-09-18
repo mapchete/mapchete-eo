@@ -47,3 +47,7 @@ class MissingAsset(Exception):
 
 class PreprocessingNotFinished(Exception):
     """Raised when preprocessing tasks have not been fully executed."""
+
+
+class AllMasked(Exception):
+    """Raised when an array is fully masked."""

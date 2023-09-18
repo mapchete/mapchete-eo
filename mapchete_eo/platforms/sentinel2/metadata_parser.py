@@ -5,9 +5,7 @@ sun angles, quality masks, etc.
 
 import logging
 import xml.etree.ElementTree as etree
-from contextlib import contextmanager
 from functools import cached_property
-from tempfile import TemporaryDirectory
 from typing import Any, Callable, Dict, List, Union
 
 import numpy as np
@@ -16,38 +14,37 @@ import pystac
 from affine import Affine
 from fiona.transform import transform_geom
 from mapchete import Timer
-from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
-from rasterio.features import rasterize, shapes
 from rasterio.fill import fillnodata
-from rasterio.transform import array_bounds, from_bounds
+from rasterio.transform import from_bounds
 from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import MissingAsset
-from mapchete_eo.io import open_xml
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS
+from mapchete_eo.io import open_xml, read_mask_as_raster
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
     ClassificationBandIndex,
     CloudType,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
 )
+from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -124,14 +121,15 @@ class S2Metadata:
         self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQIMask}
+        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
         self._cloud_masks_cache: Union[List, None] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
-        self.bounds, self._geoinfo = _get_bounds_geoinfo(self.xml_root)
-        self.footprint = shape(self.bounds)
         self.crs = self._crs
+        self._grids = _get_grids(self.xml_root, self.crs)
+        self.bounds = self._grids[Resolution["10m"]].bounds
+        self.footprint = shape(self.bounds)
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
@@ -246,8 +244,8 @@ class S2Metadata:
         Mapping of all available metadata assets such as QI bands
         """
         out = dict()
-        for product_qi_mask in ProductQIMask:
-            if product_qi_mask == ProductQIMask.classification:
+        for product_qi_mask in ProductQI:
+            if product_qi_mask == ProductQI.classification:
                 out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
                     product_qi_mask
                 )
@@ -259,7 +257,7 @@ class S2Metadata:
                         product_qi_mask, resolution=resolution
                     )
 
-        for band_qi_mask in BandQIMask:
+        for band_qi_mask in BandQI:
             for band in L2ABand:
                 out[f"{band_qi_mask.name}-{band.name}"] = self.path_mapper.band_qi_mask(
                     qi_mask=band_qi_mask, band=band
@@ -267,112 +265,117 @@ class S2Metadata:
 
         return out
 
+    def grid(self, resolution: Resolution) -> Grid:
+        """
+        Return grid for resolution.
+        """
+        return self._grids[resolution]
+
     def shape(self, resolution: Resolution) -> Shape:
         """
         Return grid shape for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        tuple of (height, width)
         """
-        return self._geoinfo[resolution]["shape"]
-
-    def pixel_x_size(self, resolution: Resolution) -> float:
-        """
-        Return horizontal pixel size for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        float
-        """
-        return self._geoinfo[resolution]["x_size"]
-
-    def pixel_y_size(self, resolution: Resolution) -> float:
-        """
-        Return vertical pixel size for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        float
-        """
-        return self._geoinfo[resolution]["y_size"]
+        return self._grids[resolution].shape
 
     def transform(self, resolution: Resolution) -> Affine:
         """
         Return Affine object for resolution.
-
-        Parameters
-        ----------
-        resolution : str
-            Either '10m', '20m' or '60m'.
-
-        Returns
-        -------
-        Affine()
         """
-        return self._geoinfo[resolution]["transform"]
+        return self._grids[resolution].transform
 
-    def cloud_mask(self, mask_type: CloudType = CloudType.all) -> List[Dict]:
+    #####################
+    # product QI layers #
+    #####################
+    def cloud_mask(
+        self,
+        cloud_type: CloudType = CloudType.all,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+    ) -> ReferencedRaster:
         """
-        Return cloud mask.
-
-        Returns
-        -------
-        List of GeoJSON mappings.
+        Return classification cloud mask.
         """
-        if mask_type == CloudType.all:
-            mask_types_strings = [i.value for i in CloudType if i != CloudType.all]
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        if cloud_type == CloudType.all:
+            indexes = [
+                ClassificationBandIndex[CloudType.cirrus.name].value,
+                ClassificationBandIndex[CloudType.opaque.name].value,
+            ]
+            cloud_types = [CloudType.cirrus.name, CloudType.opaque.name]
         else:
-            mask_types_strings = [mask_type.value]
-        if self._cloud_masks_cache is None:
-            mask_path = self.path_mapper.classification_mask()
+            indexes = [ClassificationBandIndex[cloud_type.name].value]
+            cloud_types = [cloud_type.name]
+        return read_mask_as_raster(
+            self.path_mapper.classification_mask(),
+            indexes=indexes,
+            dst_grid=dst_grid,
+            rasterize_feature_filter=lambda feature: feature["properties"][
+                "maskType"
+            ].lower()
+            in cloud_types,
+            rasterize_value_func=lambda feature: True,
+            dtype=bool,
+            masked=False,
+        )
 
-            if mask_path.endswith(".jp2"):
-                features = []
-                for f in _vectorize_raster_mask(
-                    mask_path,
-                    indexes=[
-                        i.value
-                        for i in ClassificationBandIndex
-                        if i.value in mask_types_strings
-                    ],
-                ):
-                    band_idx = f["properties"].pop("_band_idx")
-                    for cloud_type_index in ClassificationBandIndex:
-                        if band_idx == cloud_type_index.value:
-                            f["properties"]["maskType"] = cloud_type_index.name
-                            break
-                    else:
-                        raise KeyError(
-                            f"unknown band index {band_idx} for cloud bands: {list(CloudType)}"
-                        )
-                    features.append(f)
-            else:
-                features = _read_vector_mask(mask_path)
-            self._cloud_masks_cache = features
-        return [
-            f
-            for f in self._cloud_masks_cache
-            if f["properties"]["maskType"].lower() in mask_types_strings
-        ]
+    def snow_ice_mask(self, dst_grid: Union[GridProtocol, Resolution, None] = None):
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        return read_mask_as_raster(
+            self.path_mapper.classification_mask(),
+            indexes=[ClassificationBandIndex.snow_ice.value],
+            dst_grid=dst_grid,
+            rasterize_feature_filter=lambda feature: False,
+            rasterize_value_func=lambda feature: True,
+            dtype=bool,
+            masked=False,
+        )
 
+    def cloud_probability(
+        self,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        # TODO: determine whether to read the 20m or the 60m file
+        return read_mask_as_raster(
+            self.path_mapper.cloud_probability_mask(),
+            dst_grid=dst_grid,
+            resampling=resampling,
+            rasterize_value_func=lambda feature: True,
+            masked=False,
+        )
+
+    def snow_probability(
+        self,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        dst_grid = dst_grid or Resolution["20m"]
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+        # TODO: determine whether to read the 20m or the 60m file
+        return read_mask_as_raster(
+            self.path_mapper.snow_probability_mask(),
+            dst_grid=dst_grid,
+            resampling=resampling,
+            rasterize_value_func=lambda feature: True,
+            masked=False,
+        )
+
+    ##############
+    # band masks #
+    ##############
     def detector_footprints(
-        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+        self,
+        band: L2ABand,
+        dst_grid: Union[GridProtocol, Resolution] = Resolution["60m"],
     ) -> ReferencedRaster:
         """
         Return detector footprints.
@@ -381,13 +384,14 @@ class S2Metadata:
         def _get_detector_id(feature) -> int:
             return int(feature["properties"]["gml_id"].split("-")[-2])
 
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
+
         footprints = read_mask_as_raster(
             self.path_mapper.band_qi_mask(
-                qi_mask=BandQIMask.detector_footprints, band=band
+                qi_mask=BandQI.detector_footprints, band=band
             ),
-            out_crs=self.crs,
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
+            dst_grid=dst_grid,
             rasterize_value_func=_get_detector_id,
         )
         if not footprints.data.any():
@@ -397,18 +401,18 @@ class S2Metadata:
         return footprints
 
     def technical_quality_mask(
-        self, band: L2ABand, rasterize_resolution: Resolution = Resolution["60m"]
+        self,
+        band: L2ABand,
+        dst_grid: Union[GridProtocol, Resolution] = Resolution["60m"],
     ) -> ReferencedRaster:
         """
         Return technical quality mask.
         """
+        if isinstance(dst_grid, Resolution):
+            dst_grid = self.grid(dst_grid)
         return read_mask_as_raster(
-            self.path_mapper.band_qi_mask(
-                qi_mask=BandQIMask.technical_quality, band=band
-            ),
-            out_crs=self.crs,
-            out_shape=self.shape(rasterize_resolution),
-            out_transform=self.transform(rasterize_resolution),
+            self.path_mapper.band_qi_mask(qi_mask=BandQI.technical_quality, band=band),
+            dst_grid=dst_grid,
         )
 
     def viewing_incidence_angles(self, band: L2ABand) -> Dict:
@@ -478,9 +482,7 @@ class S2Metadata:
             band_angles = ma.masked_equal(
                 np.zeros(self.shape(resolution), dtype=np.float16), 0
             )
-            detector_footprints = self.detector_footprints(
-                band, rasterize_resolution=resolution
-            )
+            detector_footprints = self.detector_footprints(band, dst_grid=resolution)
             detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
 
             for detector_id in detector_ids:
@@ -503,9 +505,7 @@ class S2Metadata:
                 detector_angle = resample_array(
                     detector_angles_raster,
                     nodata=0,
-                    dst_transform=self.transform(resolution),
-                    dst_crs=self.crs,
-                    dst_shape=self.shape(resolution),
+                    grid=self.grid(resolution),
                     resampling=resampling,
                 )
                 # select pixels which are covered by detector
@@ -527,145 +527,12 @@ class S2Metadata:
         )
         return mean
 
-    def _read_mask_as_vector(self, band: L2ABand, qi_mask: BandQIMask) -> dict:
-        if self._band_masks_cache.get(qi_mask, {}).get(band) is None:
-            mask_path = self.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band)
-            if mask_path.suffix == ".jp2":
-                features = _vectorize_raster_mask(mask_path)
-                # append detector ID for detector footprints
-                if qi_mask == BandQIMask.detector_footprints:
-                    for f in features:
-                        f["properties"]["detector_id"] = int(
-                            f["properties"].pop("value")
-                        )
-            else:
-                features = _read_vector_mask(mask_path)
-                # append detector ID for detector footprints
-                if qi_mask == BandQIMask.detector_footprints:
-                    for f in features:
-                        detector_id = int(f["properties"]["gml_id"].split("-")[-2])
-                        f["id"] = detector_id
-                        f["properties"]["detector_id"] = detector_id
 
-            self._band_masks_cache[qi_mask][band] = features
-
-        return self._band_masks_cache[qi_mask][band]
-
-
-def read_mask_as_raster(
-    path: MPath,
-    out_shape: Union[Shape, None] = None,
-    out_transform: Union[Affine, None] = None,
-    out_crs: Union[CRS, None] = None,
-    rasterize_value_func: Callable = lambda feature: feature["id"],
-) -> ReferencedRaster:
-    if path.suffix in COMMON_RASTER_EXTENSIONS:
-        mask = ReferencedRaster.from_file(path)
-        if out_shape and out_transform:
-            return ReferencedRaster(
-                resample_array(
-                    mask,
-                    dst_transform=out_transform,
-                    dst_crs=out_crs,
-                    dst_shape=out_shape,
-                    resampling=Resampling.nearest,
-                ),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
-            )
-        else:
-            return mask
-
-    else:
-        if out_shape and out_transform:
-            features_values = [
-                (feature["geometry"], rasterize_value_func(feature))
-                for feature in _read_vector_mask(path)
-            ]
-            return ReferencedRaster(
-                data=rasterize(
-                    features_values, out_shape=out_shape, transform=out_transform
-                )
-                if features_values
-                else np.zeros(out_shape, dtype=np.uint8),
-                transform=out_transform,
-                crs=out_crs,
-                bounds=Bounds(
-                    array_bounds(out_shape.height, out_shape.width, out_transform)
-                ),
-            )
-        else:  # pragma: no cover
-            raise ValueError("out_shape and out_transform have to be provided.")
-
-
-def _read_vector_mask(mask_path):
-    logger.debug(f"open {mask_path} with Fiona")
-    with _cached_path(mask_path) as cached:
-        try:
-            with fiona_open(cached) as src:
-                return list([dict(f) for f in src])
-        except ValueError as e:
-            # this happens if GML file is empty
-            if str(
-                e
-            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
-                return []
-            else:  # pragma: no cover
-                raise
-
-
-# TODO: do we need this?
-def _vectorize_raster_mask(mask_path, indexes=[1]):
-    logger.debug(f"open {mask_path} with rasterio")
-
-    def _gen():
-        with _cached_path(mask_path) as cached:
-            with rasterio_open(cached) as src:
-                for index in indexes:
-                    arr = src.read(index)
-                    mask = np.where(arr == 0, False, True)
-                    for id_, (polygon, value) in enumerate(
-                        shapes(arr, mask=mask, transform=src.transform), 1
-                    ):
-                        out = {
-                            "id": id_,
-                            "geometry": polygon,
-                            "properties": {"value": value},
-                        }
-                        if len(indexes) > 1:
-                            out["properties"]["_band_idx"] = index
-                        yield out
-
-    return list(_gen())
-
-
-@contextmanager
-def _cached_path(
-    path: MPath, timeout=5, requester_payer="requester", region="eu-central-1"
-):
-    """If path is remote, download to temporary directory and return path."""
-    if path.is_remote():
-        with TemporaryDirectory() as tempdir:
-            tempfile = MPath(tempdir) / path.name
-            logger.debug(f"{path} is remote, download to {tempfile}")
-            copy(
-                path,
-                tempfile,
-            )
-            yield tempfile
-    else:
-        yield path
-
-
-def _get_bounds_geoinfo(root):
+def _get_grids(root, crs):
     geoinfo = {
-        Resolution["10m"]: {},
-        Resolution["20m"]: {},
-        Resolution["60m"]: {},
-        Resolution["120m"]: {},
+        Resolution["10m"]: dict(crs=crs),
+        Resolution["20m"]: dict(crs=crs),
+        Resolution["60m"]: dict(crs=crs),
     }
     for size in root.iter("Size"):
         resolution = Resolution[f"{size.get('resolution')}m"]
@@ -674,7 +541,8 @@ def _get_bounds_geoinfo(root):
                 height = int(item.text)
             elif item.tag == "NCOLS":
                 width = int(item.text)
-        geoinfo[resolution] = dict(shape=Shape(height, width))
+        geoinfo[resolution].update(height=height, width=width)
+
     for geoposition in root.iter("Geoposition"):
         resolution = Resolution[f"{geoposition.get('resolution')}m"]
         for item in geoposition:
@@ -688,27 +556,20 @@ def _get_bounds_geoinfo(root):
                 y_size = float(item.text)
         right = left + width * x_size
         bottom = top + height * y_size
-        bounds = (left, bottom, right, top)
         geoinfo[resolution].update(
-            x_size=x_size,
-            y_size=y_size,
             transform=from_bounds(left, bottom, right, top, width, height),
         )
+    out_grids = {k: Grid(**v) for k, v in geoinfo.items()}
     for additional_resolution in [120]:
         resolution = Resolution[f"{additional_resolution}m"]
-        width_10m, height_10m = geoinfo[Resolution["10m"]]["shape"]
+        grid_10m = out_grids[Resolution["10m"]]
         relation = additional_resolution // 10
-        width = width_10m // relation
-        height = height_10m // relation
-        x_size = geoinfo[Resolution["10m"]]["x_size"] * relation
-        y_size = geoinfo[Resolution["10m"]]["y_size"] * relation
-        geoinfo[resolution].update(
-            shape=Shape(height, width),
-            x_size=x_size,
-            y_size=y_size,
-            transform=from_bounds(left, bottom, right, top, width, height),
+        width = grid_10m.width // relation
+        height = grid_10m.height // relation
+        out_grids[resolution] = Grid(
+            from_bounds(left, bottom, right, top, width, height), height, width, crs
         )
-    return Bounds(*bounds), geoinfo
+    return out_grids
 
 
 def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:

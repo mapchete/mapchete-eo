@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Protocol, Union
+from typing import Any, Dict, List, Protocol, Tuple, Union
 
 import pystac
 import xarray as xr
-from mapchete.tile import BufferedTile
+from affine import Affine
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
@@ -26,7 +26,7 @@ class EOProductProtocol(Protocol):
         self,
         assets: Union[List[str], None] = None,
         eo_bands: Union[List[str], None] = None,
-        tile: BufferedTile = None,
+        grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",
@@ -37,3 +37,12 @@ class EOProductProtocol(Protocol):
 
     def get_property(self, property: str) -> Any:
         ...
+
+
+class GridProtocol(Protocol):
+    transform: Affine
+    width: int
+    height: int
+    shape: Tuple[int, int]
+    bounds: Bounds
+    crs: CRS

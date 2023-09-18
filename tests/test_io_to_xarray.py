@@ -15,7 +15,7 @@ from mapchete_eo.product import EOProduct
 
 def test_s2_asset_to_xarray(s2_stac_item, test_tile):
     asset = "blue"
-    darr = asset_to_xarray(item=s2_stac_item, asset=asset, tile=test_tile, nodataval=0)
+    darr = asset_to_xarray(item=s2_stac_item, asset=asset, grid=test_tile, nodataval=0)
     assert isinstance(darr, xr.DataArray)
     assert darr.attrs.get("_FillValue") == 0
     assert darr.name == "blue"
@@ -25,7 +25,7 @@ def test_s2_asset_to_xarray(s2_stac_item, test_tile):
 def test_s2_item_to_xarray(s2_stac_item, test_tile):
     assets = ["red", "green", "blue"]
     ds = item_to_xarray(
-        item=s2_stac_item, assets=assets, tile=test_tile, nodatavals=[0, 0, 0]
+        item=s2_stac_item, assets=assets, grid=test_tile, nodatavals=[0, 0, 0]
     )
     assert isinstance(ds, xr.Dataset)
     assert set(ds.data_vars) == set(assets)
@@ -37,7 +37,7 @@ def test_s2_items_to_xarray(s2_stac_item, test_tile):
     ds = products_to_xarray(
         products=[EOProduct.from_stac_item(s2_stac_item)],
         assets=assets,
-        tile=test_tile,
+        grid=test_tile,
         nodatavals=[0, 0, 0],
     )
     assert isinstance(ds, xr.Dataset)
@@ -48,7 +48,7 @@ def test_s2_items_to_xarray(s2_stac_item, test_tile):
 def test_s2_item_to_xarray_eo_bands(s2_stac_item, test_tile):
     eo_bands = ["red", "green", "blue"]
     ds = item_to_xarray(
-        item=s2_stac_item, eo_bands=eo_bands, tile=test_tile, nodatavals=[0, 0, 0]
+        item=s2_stac_item, eo_bands=eo_bands, grid=test_tile, nodatavals=[0, 0, 0]
     )
     assert isinstance(ds, xr.Dataset)
     assert set(ds.data_vars) == set(eo_bands)
@@ -60,7 +60,7 @@ def test_s2_products_to_xarray_eo_bands(s2_stac_item, test_tile):
     ds = products_to_xarray(
         products=[EOProduct(s2_stac_item)],
         eo_bands=eo_bands,
-        tile=test_tile,
+        grid=test_tile,
         nodatavals=[0, 0, 0],
     )
     assert isinstance(ds, xr.Dataset)
@@ -122,7 +122,7 @@ def test_s2_products_to_xarray_merge_date(s2_stac_items, test_tile):
     ds = products_to_xarray(
         products=[EOProduct.from_stac_item(item) for item in s2_stac_items],
         eo_bands=eo_bands,
-        tile=test_tile,
+        grid=test_tile,
         merge_products_by="date",
     )
     assert len(ds.data_vars) == 2
@@ -140,7 +140,7 @@ def test_s2_products_to_xarray_merge_datastrip_id(
     ds = products_to_xarray(
         products=[EOProduct.from_stac_item(item) for item in s2_stac_items],
         eo_bands=eo_bands,
-        tile=test_tile,
+        grid=test_tile,
         merge_products_by="s2:datastrip_id",
         merge_method=merge_method,
     )
@@ -154,7 +154,7 @@ def test_pf_item_to_xarray_eo_bands(pf_sr_stac_item):
     tile = BufferedTilePyramid("geodetic").tile_from_xy(point.x, point.y, zoom=13)
     eo_bands = ["B4", "B3", "B2"]
     ds = item_to_xarray(
-        item=pf_sr_stac_item, eo_bands=eo_bands, tile=tile, nodatavals=[0, 0, 0]
+        item=pf_sr_stac_item, eo_bands=eo_bands, grid=tile, nodatavals=[0, 0, 0]
     )
     assert isinstance(ds, xr.Dataset)
     assert set(ds.data_vars) == set(eo_bands)

@@ -63,13 +63,17 @@ class ProcessingLevel(Enum):
     level2a = "L2A"
 
 
-class ProductQIMask(str, Enum):
+class ProductQI(str, Enum):
+    """Product specific quality indicators."""
+
     classification = "classification"
     cloud_probability = "cloud_probability"
     snow_probability = "snow_probability"
 
 
-class BandQIMask(str, Enum):
+class BandQI(str, Enum):
+    """Band specific quality indicators."""
+
     detector_footprints = "detector_footprints"
     technical_quality = "technical_quality"
     # the following masks are deprecated:
@@ -86,3 +90,20 @@ class SunAngle(str, Enum):
 class ViewAngle(str, Enum):
     zenith = "Zenith"
     azimuth = "Azimuth"
+
+
+class SceneClassification(int, Enum):
+    """Mapping of pixel values to class in SCL bands."""
+
+    nodata = 0
+    saturated_or_defected = 1
+    dark_area_pixels = 2
+    cloud_shadows = 3
+    vegetation = 4
+    not_vegetated = 5
+    water = 6
+    unclassified = 7
+    cloud_medium_probability = 8
+    cloud_high_probability = 9
+    thin_cirrus = 10
+    snow = 11

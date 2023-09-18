@@ -1,24 +1,36 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import List, Union
 
 import numpy as np
+import numpy.ma as ma
 import pystac
-from mapchete.io.raster import read_raster
+from mapchete.io.raster import ReferencedRaster, read_raster
+from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
-from mapchete.tile import BufferedTile
+from mapchete.types import Bounds
 from rasterio.enums import Resampling
+from rasterio.features import rasterize
+from shapely.geometry import shape
 
-from mapchete_eo.io.assets import get_assets
-from mapchete_eo.io.path import get_product_cache_path, path_in_paths
+from mapchete_eo.exceptions import AllMasked, EmptyProductException
+from mapchete_eo.io.assets import get_assets, read_mask_as_raster
+from mapchete_eo.io.path import absolute_asset_path, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import L2ABand
+from mapchete_eo.platforms.sentinel2.types import (
+    CloudType,
+    L2ABand,
+    Resolution,
+    SceneClassification,
+)
 from mapchete_eo.product import EOProduct
-from mapchete_eo.protocols import EOProductProtocol
+from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.types import Grid, NodataVals
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +122,14 @@ class S2Product(EOProduct, EOProductProtocol):
         cache_config: Union[CacheConfig, None] = None,
     ):
         self.item = item
+        self.id = self.item.id
+
         self.metadata = metadata or S2Metadata.from_stac_item(self.item)
         self.cache = Cache(self.item, cache_config) if cache_config else None
-        self.__geo_interface__ = self.metadata.__geo_interface__
-        self.bounds = self.metadata.bounds
-        self.crs = self.metadata.crs
+
+        self.__geo_interface__ = self.item.geometry
+        self.bounds = Bounds.from_inp(shape(self))
+        self.crs = DEFAULT_CATALOG_CRS
 
     @classmethod
     def from_stac_item(
@@ -138,6 +153,37 @@ class S2Product(EOProduct, EOProductProtocol):
     def __repr__(self):
         return f"<S2Product product_id={self.item.id}>"
 
+    def read_np_array(
+        self,
+        assets: Union[List[str], None] = None,
+        eo_bands: Union[List[str], None] = None,
+        grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
+        resampling: Resampling = Resampling.nearest,
+        nodatavals: NodataVals = None,
+        mask_config: MaskConfig = MaskConfig(),
+        fill_value: int = 0,
+        **kwargs,
+    ) -> ma.MaskedArray:
+        if grid is None:
+            grid = self.metadata.grid(Resolution["10m"])
+        elif isinstance(grid, Resolution):
+            grid = self.metadata.grid(grid)
+        mask = self.get_mask(grid, mask_config).data
+        if mask.all():
+            raise EmptyProductException(f"{self} is empty over {grid}")
+        arr = super().read_np_array(
+            assets=assets,
+            eo_bands=eo_bands,
+            grid=grid,
+            resampling=resampling,
+        )
+        # bring mask to same shape as data array
+        expanded_mask = np.repeat(np.expand_dims(mask, axis=0), arr.shape[0], axis=0)
+        arr.set_fill_value(fill_value)
+        arr[expanded_mask] = fill_value
+        arr[expanded_mask] = ma.masked
+        return arr
+
     def cache_assets(self) -> None:
         if self.cache is not None:
             self.cache.cache_assets()
@@ -150,56 +196,151 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         band: L2ABand,
         resampling: Resampling = Resampling.nearest,
-        tile: Union[BufferedTile, None] = None,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         brdf_config: BRDFConfig = BRDFConfig(),
     ) -> np.ndarray:
         # read cached file if configured
         if self.cache:
             grid_path = self.cache.get_brdf_grid(band)
-            return read_raster(grid_path, tile=tile, resampling=resampling)
+            return read_raster(grid_path, grid=grid, resampling=resampling).data
         # calculate on the fly
         return correction_grid(
             self.metadata,
             band,
             model=brdf_config.model,
             resolution=brdf_config.resolution,
-        ).read(tile=tile, resampling=resampling)
+        ).read(grid=grid, resampling=resampling)
 
-    def read_cloudmask(
+    def read_cloud_mask(
         self,
-        resampling: Resampling = Resampling.nearest,
-        tile: Union[BufferedTile, None] = None,
-    ) -> np.ndarray:
-        # TODO: read different cloud mask types: L1C, new raster cloud masks, SCL, sinergise s2cloudless(?)
-        raise NotImplementedError()
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        cloud_type: CloudType = CloudType.all,
+    ) -> ReferencedRaster:
+        """Return classification cloud mask."""
+        logger.debug("read classification cloud mask for %s", str(self))
+        return self.metadata.cloud_mask(cloud_type, dst_grid=grid)
 
+    def read_snow_ice_mask(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+    ) -> ReferencedRaster:
+        """Return classification snow and ice mask."""
+        logger.debug("read classification snow and ice mask for %s", str(self))
+        return self.metadata.snow_ice_mask(dst_grid=grid)
 
-def uncached_files(existing_files=None, out_paths=None):
-    """
-    Check if paths provided in out_paths exist in existing_files.
+    def read_cloud_probability(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return cloud probability mask."""
+        logger.debug("read cloud probability mask for %s", str(self))
+        return self.metadata.cloud_probability(dst_grid=grid, resampling=resampling)
 
-    Parameters
-    ----------
-    existing_files : list
-        List of existing files
-    out_paths : dict
-        Mapping of {foo: out_path} for files to check
-    remove_invalid : bool
-        Validate existing raster files and remove them if required.
+    def read_snow_probability(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        resampling: Resampling = Resampling.bilinear,
+    ) -> ReferencedRaster:
+        """Return classification snow and ice mask."""
+        logger.debug("read snow probability mask for %s", str(self))
+        return self.metadata.snow_probability(dst_grid=grid, resampling=resampling)
 
-    Returns
-    -------
-    Subset of out_paths for files which currently do not exist.
-    """
-    if isinstance(out_paths, str):
-        out_paths = {None: out_paths}
-    uncached = {}
-    for band_idx, out_path in out_paths.items():
-        if path_in_paths(out_path, existing_files):
-            logger.debug("%s already cached", out_path)
-        else:
-            uncached[band_idx] = out_path
-    return uncached
+    def read_scl(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+    ) -> ReferencedRaster:
+        """Return SCL mask."""
+        logger.debug("read SCL mask for %s", str(self))
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+        return read_mask_as_raster(
+            absolute_asset_path(self.item, "scl"),
+            dst_grid=grid,
+            resampling=Resampling.nearest,
+            masked=True,
+        )
+
+    def footprint_nodata_mask(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["10m"],
+    ) -> ReferencedRaster:
+        """Return rasterized footprint mask."""
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+        return ReferencedRaster(
+            rasterize(
+                [reproject_geometry(self, self.crs, grid.crs)],
+                out_shape=grid.shape,
+                transform=grid.transform,
+                all_touched=True,
+                fill=1,
+                default_value=0,
+            ).astype(bool),
+            transform=grid.transform,
+            bounds=grid.bounds,
+            crs=grid.crs,
+        )
+
+    def get_mask(
+        self,
+        grid: Union[GridProtocol, Resolution] = Resolution["10m"],
+        mask_config: MaskConfig = MaskConfig(),
+    ) -> ReferencedRaster:
+        """Merge masks into one 2D array."""
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+
+        def _check_full(arr):
+            if arr.all():
+                raise AllMasked()
+
+        out = np.zeros(shape=grid.shape, dtype=bool)
+        try:
+            _check_full(out)
+            if mask_config.footprint:
+                out += self.footprint_nodata_mask(grid).data
+                _check_full(out)
+            if mask_config.cloud:
+                out += self.read_cloud_mask(grid, mask_config.cloud_type).data
+                _check_full(out)
+            if mask_config.cloud_probability:
+                cld_prb = self.read_cloud_probability(grid).data
+                out += np.where(
+                    cld_prb >= mask_config.cloud_probability_threshold, True, False
+                )
+                _check_full(out)
+            if mask_config.scl:
+                scl_arr = self.read_scl(grid).data
+                # convert SCL classes to pixel values
+                scl_values = [scl.value for scl in mask_config.scl_classes or []]
+                # mask out specific pixel values
+                out += np.isin(scl_arr, scl_values)
+                _check_full(out)
+            if mask_config.snow_ice:
+                out += self.read_snow_ice_mask(grid).data
+                _check_full(out)
+            if mask_config.snow_probability:
+                snw_prb = self.read_snow_probability(grid).data
+                out += np.where(
+                    snw_prb >= mask_config.snow_probability_threshold, True, False
+                )
+                _check_full(out)
+        except AllMasked:
+            logger.debug(
+                "mask for product %s already full, skip reading other masks", self.id
+            )
+
+        return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
 
 
 def asset_name_to_band(item: pystac.Item, asset_name: str) -> L2ABand:

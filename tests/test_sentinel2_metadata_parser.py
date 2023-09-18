@@ -20,14 +20,16 @@ from mapchete_eo.platforms.sentinel2.path_mappers import (
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 from mapchete_eo.platforms.sentinel2.types import (
-    BandQIMask,
+    BandQI,
+    CloudType,
     L2ABand,
-    ProductQIMask,
+    ProductQI,
     ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
 )
+from mapchete_eo.types import Grid
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):
@@ -39,16 +41,16 @@ def test_xml_mapper(s2_l2a_metadata_xml):
         )
         band = L2ABand.B01
 
-        for qi_mask in ProductQIMask:
+        for qi_mask in ProductQI:
             for resolution in ProductQIMaskResolution:
                 path = path_mapper.product_qi_mask(
                     qi_mask=qi_mask, resolution=resolution
                 )
                 assert path.exists()
-                if qi_mask != ProductQIMask.classification:
+                if qi_mask != ProductQI.classification:
                     assert resolution.name in path.name
 
-        for qi_mask in BandQIMask:
+        for qi_mask in BandQI:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
@@ -63,15 +65,15 @@ def test_xml_mapper(s2_l2a_metadata_xml):
 def test_sinergise_mapper(tileinfo, baseline_version):
     path_mapper = SinergisePathMapper(tileinfo, baseline_version=baseline_version)
 
-    for qi_mask in ProductQIMask:
+    for qi_mask in ProductQI:
         for resolution in ProductQIMaskResolution:
             path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
             assert path.exists()
-            if qi_mask != ProductQIMask.classification:
+            if qi_mask != ProductQI.classification:
                 assert resolution.name in path.name
 
     band = L2ABand.B01
-    for qi_mask in BandQIMask:
+    for qi_mask in BandQI:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
@@ -79,15 +81,15 @@ def test_sinergise_mapper(tileinfo, baseline_version):
 def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
 
-    for qi_mask in ProductQIMask:
+    for qi_mask in ProductQI:
         for resolution in ProductQIMaskResolution:
             path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
             assert path.exists()
-            if qi_mask != ProductQIMask.classification:
+            if qi_mask != ProductQI.classification:
                 assert resolution.name in path.name
 
     band = L2ABand.B01
-    for qi_mask in BandQIMask:
+    for qi_mask in BandQI:
         assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 
@@ -174,19 +176,14 @@ def test_remote_metadata_bounds(metadata):
 
 
 def _test_metadata_geoinfo(metadata, resolution):
+    # grid
+    assert isinstance(metadata.grid(resolution), Grid)
+
     # shape
     assert isinstance(metadata.shape(resolution), tuple)
     assert len(metadata.shape(resolution)) == 2
     for i in metadata.shape(resolution):
         assert isinstance(i, int)
-
-    # x_size
-    assert isinstance(metadata.pixel_x_size(resolution), float)
-    assert metadata.pixel_x_size(resolution) >= 0.0
-
-    # y_size
-    assert isinstance(metadata.pixel_y_size(resolution), float)
-    assert metadata.pixel_y_size(resolution) <= 0.0
 
     # transform
     assert isinstance(metadata.transform(resolution), Affine)
@@ -256,6 +253,22 @@ def test_remote_metadata_footprint(metadata):
     _test_metadata_footprint(metadata)
 
 
+def _test_metadata_cloud_mask(metadata):
+    combined = metadata.cloud_mask()
+    assert isinstance(combined, ReferencedRaster)
+    assert combined.data.dtype == bool
+
+    cirrus = metadata.cloud_mask(CloudType.cirrus)
+    assert isinstance(cirrus, ReferencedRaster)
+    assert cirrus.data.dtype == bool
+
+    opaque = metadata.cloud_mask(CloudType.opaque)
+    assert isinstance(opaque, ReferencedRaster)
+    assert opaque.data.dtype == bool
+
+    assert np.array_equal((cirrus.data + opaque.data).astype(bool), combined.data)
+
+
 @pytest.mark.parametrize(
     "metadata",
     [
@@ -264,8 +277,7 @@ def test_remote_metadata_footprint(metadata):
     ],
 )
 def test_metadata_cloud_mask(metadata):
-    # cloud mask
-    assert isinstance(metadata.cloud_mask(), list)
+    _test_metadata_cloud_mask(metadata)
 
 
 @pytest.mark.remote
@@ -279,8 +291,38 @@ def test_metadata_cloud_mask(metadata):
     ],
 )
 def test_remote_metadata_cloud_mask(metadata):
-    # cloud mask
-    assert isinstance(metadata.cloud_mask(), list)
+    _test_metadata_cloud_mask(metadata)
+
+
+def _test_metadata_snow_ice_mask(metadata):
+    snow_ice = metadata.snow_ice_mask()
+    assert isinstance(snow_ice, ReferencedRaster)
+    assert snow_ice.data.dtype == bool
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata"),
+        lazy_fixture("s2_l2a_safe_metadata"),
+    ],
+)
+def test_metadata_snow_ice_mask(metadata):
+    _test_metadata_snow_ice_mask(metadata)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        lazy_fixture("s2_l2a_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_remote"),
+        lazy_fixture("s2_l2a_roda_metadata_jp2_masks_remote"),
+        lazy_fixture("s2_l2a_earthsearch_remote"),
+    ],
+)
+def test_remote_metadata_snow_ice_mask(metadata):
+    _test_metadata_snow_ice_mask(metadata)
 
 
 def _test_metadata_band_masks(metadata):
@@ -491,17 +533,17 @@ def test_from_stac_item_backwards(item):
     assert s2_metadata.reflectance_offset == offset
 
     # see if paths exist on prior versions
-    for qi_mask in ProductQIMask:
+    for qi_mask in ProductQI:
         for resolution in ProductQIMaskResolution:
             path = s2_metadata.path_mapper.product_qi_mask(
                 qi_mask=qi_mask, resolution=resolution
             )
             assert path.exists()
-            if qi_mask != ProductQIMask.classification:
+            if qi_mask != ProductQI.classification:
                 assert resolution.name in path.name
 
     band = L2ABand.B01
-    for qi_mask in BandQIMask:
+    for qi_mask in BandQI:
         assert s2_metadata.path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
 

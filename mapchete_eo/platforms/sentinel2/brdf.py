@@ -46,8 +46,7 @@ def correction_grid(
     with Timer() as t:
         brdf_params = get_brdf_param(
             f_band_params=L2ABandFParams[band.name].value,
-            out_shape=s2_metadata.shape(resolution),
-            out_transform=s2_metadata.transform(resolution),
+            grid=s2_metadata.grid(resolution),
             product_crs=s2_metadata.crs,
             sun_azimuth_angle_array=s2_metadata.sun_angles[SunAngle.azimuth],
             sun_zenith_angle_array=s2_metadata.sun_angles[SunAngle.zenith],

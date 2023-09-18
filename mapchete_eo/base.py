@@ -130,7 +130,7 @@ class InputTile(base.InputTile):
             products=products,
             eo_bands=eo_bands,
             assets=assets,
-            tile=self.tile,
+            grid=self.tile,
             merge_products_by=merge_products_by or self.default_read_merge_products_by,
             merge_method=merge_method or self.default_read_merge_method,
             nodatavals=self.default_read_nodataval

@@ -1,17 +1,17 @@
 import logging
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import numpy.ma as ma
-from affine import Affine
 from mapchete.io.raster import ReferencedRaster
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
-from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.brdf.config import BRDFModels
+from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -258,9 +258,8 @@ def get_corrected_band_reflectance(band, brdf_param, nodata=0):
 
 
 def get_brdf_param(
-    out_shape: Shape,
-    out_transform: Affine,
     product_crs: CRS,
+    grid: GridProtocol,
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
     detector_footprints: ReferencedRaster,
@@ -268,23 +267,19 @@ def get_brdf_param(
     viewing_azimuth: dict,
     sun_zenith_angle: float,
     f_band_params: Tuple[float, float, float],
-    out_crs: Union[CRS, None] = None,
     model: BRDFModels = BRDFModels.default,
     smoothing_iterations: int = 10,
 ) -> ma.MaskedArray:
     """
     Return BRDF parameters.
     """
-    out_crs = out_crs or product_crs
     # create output array
-    model_params = ma.masked_equal(np.zeros(out_shape, dtype=np.float32), 0)
+    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float32), 0)
 
     detector_footprints = resample_array(
         detector_footprints,
+        grid=grid,
         nodata=0,
-        dst_transform=out_transform,
-        dst_crs=out_crs,
-        dst_shape=out_shape,
         resampling=Resampling.nearest,
     )[0]
     detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
@@ -331,12 +326,10 @@ def get_brdf_param(
         # resample model to output resolution
         detector_brdf = resample_array(
             detector_brdf_param,
+            grid=grid,
             in_transform=viewing_zenith[detector_id]["raster"].transform,
             in_crs=product_crs,
             nodata=0,
-            dst_transform=out_transform,
-            dst_crs=out_crs,
-            dst_shape=out_shape,
             resampling=Resampling.bilinear,
         )
         # merge detector stripes
@@ -406,13 +399,10 @@ def apply_brdf_correction(
     ]:
         if param is None:  # pragma: no cover
             raise ValueError(f"{name} must be provided")
-
     return get_corrected_band_reflectance(
         band=band,
         brdf_param=get_brdf_param(
-            out_shape=band.shape,
-            out_transform=band_transform,
-            out_crs=band_crs,
+            grid=Grid(band_transform, band.shape[0], band.shape[1], crs=band_crs),
             product_crs=product_crs,
             sun_azimuth_angle_array=sun_azimuth_angle_array,
             sun_zenith_angle_array=sun_zenith_angle_array,

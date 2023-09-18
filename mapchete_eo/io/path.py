@@ -1,12 +1,15 @@
 import hashlib
 import logging
 import xml.etree.ElementTree as etree
+from contextlib import contextmanager
 from enum import Enum
+from tempfile import TemporaryDirectory
 
+import pystac
 from fsspec.exceptions import FSTimeoutError
+from mapchete.io import copy
 from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
 from mapchete.path import MPath
-from pystac import Item
 from retry import retry
 
 logger = logging.getLogger(__name__)
@@ -42,7 +45,7 @@ class ProductPathGenerationMethod(str, Enum):
 
 
 def get_product_cache_path(
-    item: Item,
+    item: pystac.Item,
     basepath: MPath,
     path_generation_method: ProductPathGenerationMethod = ProductPathGenerationMethod.product_id,
 ) -> MPath:
@@ -102,3 +105,25 @@ def path_in_paths(path, existing_paths) -> bool:
                 return True
         else:
             return False
+
+
+@contextmanager
+def cached_path(path: MPath) -> MPath:
+    """If path is remote, download to temporary directory and return path."""
+    if path.is_remote():
+        with TemporaryDirectory() as tempdir:
+            tempfile = MPath(tempdir) / path.name
+            logger.debug(f"{path} is remote, download to {tempfile}")
+            copy(
+                path,
+                tempfile,
+            )
+            yield tempfile
+    else:
+        yield path
+
+
+def absolute_asset_path(item: pystac.Item, asset: str) -> MPath:
+    item_dir = MPath.from_inp(item.get_self_href()).parent
+    asset_path = MPath(item.assets[asset].href)
+    return asset_path.absolute_path(item_dir)

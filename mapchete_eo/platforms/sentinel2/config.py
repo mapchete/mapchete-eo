@@ -11,7 +11,12 @@ from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 from mapchete_eo.io.path import ProductPathGenerationMethod
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
-from mapchete_eo.platforms.sentinel2.types import CloudType, ProcessingLevel, Resolution
+from mapchete_eo.platforms.sentinel2.types import (
+    CloudType,
+    ProcessingLevel,
+    Resolution,
+    SceneClassification,
+)
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import GeodataType
 
@@ -92,3 +97,16 @@ class Sentinel2DriverConfig(BaseDriverConfig, arbitrary_types_allowed=True):
     with_scl: bool = False
     brdf: Union[BRDFConfig, None] = None
     cache: Union[CacheConfig, None] = None
+
+
+class MaskConfig(BaseModel):
+    footprint: bool = True
+    cloud: bool = False
+    cloud_type: CloudType = CloudType.all
+    snow_ice: bool = False
+    cloud_probability: bool = False
+    cloud_probability_threshold: int = 100
+    snow_probability: bool = False
+    snow_probability_threshold: int = 100
+    scl: bool = False
+    scl_classes: Union[List[SceneClassification], None] = None

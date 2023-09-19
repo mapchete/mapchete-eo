@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 import pystac
 from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
-from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
+from mapchete.io.settings import IORetrySettings
 from mapchete.path import MPath
 from retry import retry
 
@@ -21,7 +21,7 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 @retry(
     logger=logger,
     exceptions=(TimeoutError, FSTimeoutError),
-    **MAPCHETE_IO_RETRY_SETTINGS,
+    **dict(IORetrySettings()),
 )
 def open_xml(path: MPath):
     logger.debug(f"open {path}")

@@ -24,7 +24,7 @@ dependencies = [
     "click",
     "croniter",
     "lxml",
-    "mapchete>=2023.9.0",
+    "mapchete>=2023.9.1",
     "pydantic",
     "pystac[urllib3]==1.8.2",
     "pystac-client==0.7.2",

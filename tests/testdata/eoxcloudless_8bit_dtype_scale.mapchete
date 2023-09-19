@@ -1,0 +1,24 @@
+process: mapchete_eo.processes.dtype_scale
+input:
+  inp: eoxcloudless/2022_rgbnir/
+output:
+  format: GTiff
+  bands: 4
+  path: eoxcloudless/8bit_dtype_scale/
+  dtype: uint8
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+# tmx bounds 13 1879 8938
+bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]
+
+processing_parameters:
+  bands: [1, 2, 3, 4]
+  resampling: nearest
+  matching_method: min
+  matching_max_zoom: 13
+  matching_precision: 12
+  fallback_to_higher_zoom: false
+  out_dtype: uint8
+  max_source_value: 10000
+  max_output_value: null

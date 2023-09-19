@@ -48,6 +48,9 @@ eo = "mapchete_eo.cli.main:eo"
 eostac_dev = "mapchete_eo.eostac"
 sentinel2 = "mapchete_eo.platforms.sentinel2"
 
+[project.entry-points."mapchete.processes"]
+dtype_scale = "mapchete_eo.processes.dtype_scale"
+
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"
 

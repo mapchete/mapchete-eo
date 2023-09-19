@@ -13,7 +13,7 @@ from mapchete.io.raster import (
     _prepare_masked,
     rasterio_open,
 )
-from mapchete.io.settings import MAPCHETE_IO_RETRY_SETTINGS
+from mapchete.io.settings import IORetrySettings
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from numpy.typing import DTypeLike
@@ -282,7 +282,7 @@ def _get_warped_array(
         raise
 
 
-@retry(logger=logger, exceptions=RasterioIOError, **MAPCHETE_IO_RETRY_SETTINGS)
+@retry(logger=logger, exceptions=RasterioIOError, **dict(IORetrySettings()))
 def _rasterio_read(
     input_file=None,
     indexes=None,

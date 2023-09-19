@@ -7,7 +7,7 @@ import tqdm
 from mapchete.cli.options import opt_bounds, opt_debug
 from mapchete.io import rasterio_open
 
-from mapchete_eo.image_operations import scale
+from mapchete_eo.image_operations import linear_normalization
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.config import (
@@ -290,7 +290,7 @@ def s2_rgb(
         nodata=0,
         **rio_profile,
     ) as dst:
-        dst.write(scale(rgb))
+        dst.write(linear_normalization(rgb))
 
 
 @eo.command()

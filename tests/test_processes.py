@@ -8,5 +8,5 @@ def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_ma
     tile = next(mp.get_process_tiles(zoom))
     output = mp.execute(tile)
     assert isinstance(output, ma.MaskedArray)
-    assert not output.any()
+    assert not output.mask.any()
     assert ma.mean(output) < 100

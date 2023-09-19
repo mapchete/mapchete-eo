@@ -30,6 +30,11 @@ def s2_testdata_dir(testdata_dir):
 
 
 @pytest.fixture(scope="session")
+def eoxcloudless_testdata_dir(testdata_dir):
+    return testdata_dir / "eoxcloudless"
+
+
+@pytest.fixture(scope="session")
 def s2_stac_collection(s2_testdata_dir):
     return s2_testdata_dir / "full_products" / "catalog.json"
 
@@ -112,6 +117,15 @@ def s2_stac_item_half_footprint(s2_stac_collection):
 def stac_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "stac.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
+def eoxcloudless_8bit_dtype_scale_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_8bit_dtype_scale.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example

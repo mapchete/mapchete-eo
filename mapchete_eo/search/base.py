@@ -7,13 +7,16 @@ from typing import Callable, List, Union
 import pystac
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
+from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
 from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
 from rasterio.profiles import Profile
+from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.assets import get_assets, get_metadata_assets
+from mapchete_eo.types import DateTimeLike
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,16 @@ class FSSpecStacIO(StacApiIO):
 
 class Catalog(ABC):
     client: Client
+
+    def __init__(
+        self,
+        collections: List[str],
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
+        bounds: Union[Bounds, None] = None,
+        area: Union[BaseGeometry, None] = None,
+    ):
+        ...
 
     @property
     @abstractmethod

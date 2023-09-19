@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from typing import List, Union
 
@@ -22,6 +23,7 @@ class MergeMethod(str, Enum):
 
 NodataVal = Union[int, None]
 NodataVals = Union[List[NodataVal], NodataVal]
+DateTimeLike = Union[str, datetime.datetime, datetime.date]
 
 
 class Grid:

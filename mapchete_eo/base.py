@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 from functools import cached_property
 from typing import Any, List, Type, Union
 
@@ -24,13 +23,13 @@ from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.time import to_datetime
-from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
+from mapchete_eo.types import DateTimeLike, MergeMethod, NodataVal, NodataVals
 
 
 class BaseDriverConfig(BaseModel):
     format: str
-    start_time: Union[datetime.date, datetime.datetime]
-    end_time: Union[datetime.date, datetime.datetime]
+    start_time: DateTimeLike
+    end_time: DateTimeLike
     cat_baseurl: Union[str, None] = None
     archive: Union[Type[Archive], None] = None
     pattern: dict = {}
@@ -46,16 +45,16 @@ class InputTile(base.InputTile):
 
     tile: BufferedTile
     eo_bands: dict
-    start_time: Union[datetime.datetime, datetime.date]
-    end_time: Union[datetime.datetime, datetime.date]
+    start_time: DateTimeLike
+    end_time: DateTimeLike
 
     def __init__(
         self,
         tile: BufferedTile,
         products: Union[List[EOProductProtocol], None],
         eo_bands: dict,
-        start_time: Union[datetime.datetime, datetime.date],
-        end_time: Union[datetime.datetime, datetime.date],
+        start_time: DateTimeLike,
+        end_time: DateTimeLike,
         input_key: Union[str, None] = None,
         **kwargs,
     ) -> None:
@@ -84,9 +83,9 @@ class InputTile(base.InputTile):
         self,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        start_time: Union[str, datetime.datetime, None] = None,
-        end_time: Union[str, datetime.datetime, None] = None,
-        timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
+        timestamps: Union[List[DateTimeLike], None] = None,
         time_pattern: Union[str, None] = None,
         merge_products_by: Union[str, None] = None,
         merge_method: Union[str, MergeMethod, None] = None,
@@ -143,9 +142,9 @@ class InputTile(base.InputTile):
         target_height: int,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        start_time: Union[str, datetime.datetime, None] = None,
-        end_time: Union[str, datetime.datetime, None] = None,
-        timestamps: Union[List[Union[str, datetime.datetime]], None] = None,
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
+        timestamps: Union[List[DateTimeLike], None] = None,
         time_pattern: Union[str, None] = None,
         merge_items_by: Union[str, None] = None,
         merge_method: Union[MergeMethod, str] = MergeMethod.average,
@@ -186,6 +185,7 @@ class InputData(base.InputData):
 
         self.params = self.driver_config_model(**input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
+        self._area = input_params["delimiters"]["effective_area"]
         self.start_time = self.params.start_time
         self.end_time = self.params.end_time
 
@@ -206,7 +206,10 @@ class InputData(base.InputData):
             )
         elif self.params.archive:
             self.archive = self.params.archive(
-                self.start_time, self.end_time, self._bounds
+                start_time=self.start_time,
+                end_time=self.end_time,
+                bounds=self._bounds,
+                area=self.area,
             )
 
         for item in self.archive.catalog.items:

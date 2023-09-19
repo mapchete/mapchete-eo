@@ -1,4 +1,3 @@
-import datetime
 import logging
 import warnings
 from functools import cached_property
@@ -11,6 +10,7 @@ from tilematrix import Bounds
 
 from mapchete_eo.search.base import Catalog, FSSpecStacIO
 from mapchete_eo.time import time_ranges_intersect
+from mapchete_eo.types import DateTimeLike
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,8 @@ class STACStaticCatalog(Catalog):
     def __init__(
         self,
         baseurl: str,
-        start_time: Union[datetime.date, datetime.datetime, None] = None,
-        end_time: Union[datetime.date, datetime.datetime, None] = None,
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
         bounds: Bounds = None,
         **kwargs,
     ) -> None:

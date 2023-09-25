@@ -7,11 +7,13 @@ import tqdm
 from mapchete.cli.options import opt_bounds, opt_debug
 from mapchete.io import rasterio_open
 
+from mapchete_eo.brdf.models import BRDFModels
 from mapchete_eo.image_operations import linear_normalization
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.config import (
     AWSL2ACOGv1,
+    BRDFConfig,
     MaskConfig,
     SceneClassification,
 )
@@ -52,6 +54,14 @@ def _str_to_rio_profile(_, __, value):
         return rio_profiles[value]
 
 
+def _brdf_model_str_to_brdf(_, __, value):
+    if value:
+        if value == "none":
+            return None
+        else:
+            return BRDFModels[value]
+
+
 arg_stac_item = click.argument("stac-item", type=click.Path())
 arg_dst = click.argument("dst", type=click.Path())
 opt_assets = click.option(
@@ -86,6 +96,13 @@ opt_mask_scl_classes = click.option(
     type=click.STRING,
     callback=_str_to_list,
     help=f"Available classes: {', '.join([scene_class.name for scene_class in SceneClassification])}",
+)
+opt_brdf_model = click.option(
+    "--brdf-model",
+    type=click.Choice((["none", *[model.name for model in BRDFModels]])),
+    default="none",
+    callback=_brdf_model_str_to_brdf,
+    help="BRDF model.",
 )
 
 
@@ -243,6 +260,7 @@ def static_catalog(
 @opt_mask_cloud_probability_threshold
 @opt_mask_snow_probability_threshold
 @opt_mask_scl_classes
+@opt_brdf_model
 @opt_debug
 def s2_rgb(
     stac_item,
@@ -256,6 +274,7 @@ def s2_rgb(
     mask_cloud_probability_threshold=100,
     mask_snow_probability_threshold=100,
     mask_scl_classes=None,
+    brdf_model=None,
     **_,
 ):
     item = pystac.Item.from_file(stac_item)
@@ -277,7 +296,12 @@ def s2_rgb(
         if bool(mask_scl_classes)
         else None,
     )
-    rgb = product.read_np_array(assets=assets, grid=grid, mask_config=mask_config)
+    rgb = product.read_np_array(
+        assets=assets,
+        grid=grid,
+        mask_config=mask_config,
+        brdf_config=BRDFConfig(bands=assets, model=brdf_model) if brdf_model else None,
+    )
     with rasterio_open(
         dst,
         mode="w",

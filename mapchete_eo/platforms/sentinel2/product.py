@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
 import pystac
-from mapchete.io.raster import ReferencedRaster, read_raster
+import xarray as xr
+from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.types import Bounds
@@ -14,8 +15,11 @@ from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
+from mapchete_eo.array.resampling import resample_array
+from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
+from mapchete_eo.io.mapchete_io_raster import read_raster_window
 from mapchete_eo.io.path import absolute_asset_path, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
@@ -113,13 +117,13 @@ class Cache:
 
 class S2Product(EOProduct, EOProductProtocol):
     metadata: S2Metadata
-    cache: Union[Cache, None] = None
+    cache: Optional[Cache] = None
 
     def __init__(
         self,
         item: pystac.Item,
-        metadata: Union[S2Metadata, None] = None,
-        cache_config: Union[CacheConfig, None] = None,
+        metadata: Optional[S2Metadata] = None,
+        cache_config: Optional[CacheConfig] = None,
     ):
         self.item = item
         self.id = self.item.id
@@ -135,7 +139,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def from_stac_item(
         self,
         item: pystac.Item,
-        cache_config: Union[CacheConfig, None] = None,
+        cache_config: Optional[CacheConfig] = None,
         cache_all: bool = False,
         **kwargs,
     ) -> S2Product:
@@ -155,15 +159,18 @@ class S2Product(EOProduct, EOProductProtocol):
 
     def read_np_array(
         self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         mask_config: MaskConfig = MaskConfig(),
+        brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
         **kwargs,
     ) -> ma.MaskedArray:
+        if eo_bands:
+            raise NotImplementedError("please use asset names for now")
         if grid is None:
             grid = self.metadata.grid(Resolution["10m"])
         elif isinstance(grid, Resolution):
@@ -182,6 +189,18 @@ class S2Product(EOProduct, EOProductProtocol):
         arr.set_fill_value(fill_value)
         arr[expanded_mask] = fill_value
         arr[expanded_mask] = ma.masked
+        # apply BRDF config if required
+        if brdf_config:
+            for band_idx, asset in zip(range(len(arr)), assets):
+                arr[band_idx] = get_corrected_band_reflectance(
+                    arr[band_idx],
+                    self.read_brdf_grid(
+                        asset_name_to_band(self.item, asset),
+                        resampling=resampling,
+                        grid=grid,
+                        brdf_config=brdf_config,
+                    ),
+                )
         return arr
 
     def cache_assets(self) -> None:
@@ -199,17 +218,29 @@ class S2Product(EOProduct, EOProductProtocol):
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         brdf_config: BRDFConfig = BRDFConfig(),
     ) -> np.ndarray:
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
         # read cached file if configured
         if self.cache:
-            grid_path = self.cache.get_brdf_grid(band)
-            return read_raster(grid_path, grid=grid, resampling=resampling).data
+            return read_raster_window(
+                self.cache.get_brdf_grid(band),
+                grid=grid,
+                resampling=resampling,
+            )
         # calculate on the fly
-        return correction_grid(
-            self.metadata,
-            band,
-            model=brdf_config.model,
-            resolution=brdf_config.resolution,
-        ).read(grid=grid, resampling=resampling)
+        return resample_array(
+            correction_grid(
+                self.metadata,
+                band,
+                model=brdf_config.model,
+                resolution=brdf_config.resolution,
+            ),
+            grid=grid,
+            resampling=resampling,
+        )
 
     def read_cloud_mask(
         self,

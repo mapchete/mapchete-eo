@@ -1,4 +1,3 @@
-import datetime
 import logging
 from functools import cached_property
 from typing import Dict, List, Union
@@ -10,9 +9,11 @@ from mapchete.types import Bounds
 from mapchete.validate import validate_bounds
 from pystac_client import Client
 from shapely.geometry import box
+from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import StacSearchConfig
+from mapchete_eo.types import DateTimeLike
 
 logger = logging.getLogger(__name__)
 
@@ -22,21 +23,33 @@ class STACSearchCatalog(Catalog):
 
     def __init__(
         self,
+        collections: List[str],
         endpoint: Union[str, MPath, None] = None,
-        start_time: Union[datetime.date, datetime.datetime, None] = None,
-        end_time: Union[datetime.date, datetime.datetime, None] = None,
-        collections: List[str] = [],
-        bounds: Bounds = None,
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
+        bounds: Union[Bounds, None] = None,
+        area: Union[BaseGeometry, None] = None,
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> None:
         self._collection_items: Dict = {}
-        self.bounds = bounds
+
+        if area:
+            self.area = area
+            self.bounds = None
+        elif bounds:
+            self.bounds = bounds
+            self.area = None
+        else:
+            raise ValueError("either bounds or area have to be given")
+
         self.start_time = start_time
         self.end_time = end_time
         self.client = Client.open(endpoint or self.endpoint)
+
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
+
         self.collections = collections
         self.config = config
 
@@ -57,7 +70,7 @@ class STACSearchCatalog(Catalog):
                 )
                 searches = (self._search(bounds=chunk) for chunk in spatial_chunks)
             else:
-                searches = [search]
+                searches = (search,)
 
             for search in searches:
                 yield from search.items()
@@ -82,7 +95,8 @@ class STACSearchCatalog(Catalog):
     def default_search_params(self):
         return {
             "collections": self.collections,
-            "bbox": ",".join(map(str, self.bounds)),
+            "bbox": ",".join(map(str, self.bounds)) if self.bounds else None,
+            "intersects": self.area if self.area else None,
             "datetime": f"{self.start_time}/{self.end_time}",
             "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
         }

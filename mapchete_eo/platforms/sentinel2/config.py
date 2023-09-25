@@ -1,4 +1,3 @@
-import datetime
 from enum import Enum
 from typing import List, Type, Union
 
@@ -18,7 +17,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     SceneClassification,
 )
 from mapchete_eo.search.config import StacSearchConfig
-from mapchete_eo.types import GeodataType
+from mapchete_eo.types import DateTimeLike, GeodataType
 
 
 class AWSL2ACOGv1(Archive):
@@ -84,8 +83,8 @@ class CacheConfig(BaseModel, arbitrary_types_allowed=True):
 
 class Sentinel2DriverConfig(BaseDriverConfig, arbitrary_types_allowed=True):
     format: str = "Sentinel-2"
-    start_time: Union[datetime.datetime, datetime.date]
-    end_time: Union[datetime.datetime, datetime.date]
+    start_time: DateTimeLike
+    end_time: DateTimeLike
     archive: Type[Archive] = KnownArchives.S2AWS_COG.value
     cat_baseurl: Union[str, None] = None
     cloudmasks: Union[CloudmaskConfig, None] = CloudmaskConfig()

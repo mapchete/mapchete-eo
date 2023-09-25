@@ -1,14 +1,14 @@
 import datetime
-from typing import Tuple, Union
+from typing import Tuple
 
 import dateutil.parser
+
+from mapchete_eo.types import DateTimeLike
 
 _time = {"min": datetime.datetime.min.time(), "max": datetime.datetime.max.time()}
 
 
-def to_datetime(
-    t: Union[datetime.datetime, datetime.date, str], append_time="min"
-) -> datetime.datetime:
+def to_datetime(t: DateTimeLike, append_time="min") -> datetime.datetime:
     """Convert input into datetime object."""
     if isinstance(t, datetime.datetime):
         return t
@@ -19,8 +19,8 @@ def to_datetime(
 
 
 def time_ranges_intersect(
-    t1: Tuple[Union[datetime.datetime, str], Union[datetime.datetime, str]],
-    t2: Tuple[Union[datetime.datetime, str], Union[datetime.datetime, str]],
+    t1: Tuple[DateTimeLike, DateTimeLike],
+    t2: Tuple[DateTimeLike, DateTimeLike],
 ) -> bool:
     """Check if two time ranges intersect."""
     t1_start = to_datetime(t1[0], "min").replace(tzinfo=None)

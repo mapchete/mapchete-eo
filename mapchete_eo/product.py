@@ -44,6 +44,10 @@ class EOProduct(EOProductProtocol):
         y_axis_name: str = "y",
         **kwargs,
     ) -> xr.Dataset:
+        """Read bands and assets into xarray."""
+        # developer info: all fancy stuff for special platforms like Sentinel-2
+        # should be implemented in the respective read_np_array() methods which get
+        # called by this method. No need to apply masks etc. here too.
         if eo_bands:
             assets_indexes = self.eo_bands_to_assets_indexes(eo_bands)
             data_var_names = eo_bands

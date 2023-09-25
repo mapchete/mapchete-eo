@@ -230,6 +230,22 @@ def test_read_masked(s2_stac_item_half_footprint):
         assert (unmasked[asset] != masked[asset]).any()
 
 
+def test_read_brdf(s2_stac_item_half_footprint):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    uncorrected = product.read(assets=assets, grid=tile)
+    corrected = product.read(
+        assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
+    )
+
+    assert isinstance(corrected, xr.Dataset)
+    for asset in assets:
+        assert corrected[asset].any()
+        assert (uncorrected[asset] != corrected[asset]).any()
+
+
 def test_read_np(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
@@ -267,3 +283,17 @@ def test_read_np_masked(s2_stac_item):
         ),
     )
     assert rgb_unmasked.mask.sum() < rgb.mask.sum()
+
+
+def test_read_np_brdf(s2_stac_item):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item)
+    tile = _get_product_tile(product)
+    rgb_uncorrected = product.read_np_array(
+        assets=assets,
+        grid=tile,
+    )
+    rgb_corrected = product.read_np_array(
+        assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
+    )
+    assert (rgb_uncorrected != rgb_corrected).any()

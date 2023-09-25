@@ -3,6 +3,7 @@ import warnings
 from functools import cached_property
 from typing import Union
 
+import pystac
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from pystac.stac_io import StacIO
 from pystac_client import Client
@@ -37,13 +38,14 @@ class STACStaticCatalog(Catalog):
     def items(self) -> IndexedFeatures:
         def _gen_items():
             logger.debug("iterate through children")
-            for item in _all_intersecting_items(
-                self.client,
-                bounds=self.bounds,
-                timespan=(self.start_time, self.end_time),
-            ):
-                item.make_asset_hrefs_absolute()
-                yield item
+            for collection in self.client.get_collections():
+                for item in _all_intersecting_items(
+                    collection,
+                    bounds=self.bounds,
+                    timespan=(self.start_time, self.end_time),
+                ):
+                    item.make_asset_hrefs_absolute()
+                    yield item
 
         items = list(_gen_items())
         logger.debug("%s items found", len(items))
@@ -98,7 +100,9 @@ def _get_first_item(collections):
         raise ValueError("collections contain no items")
 
 
-def _all_intersecting_items(collection, **kwargs):
+def _all_intersecting_items(
+    collection: Union[pystac.Catalog, pystac.Collection], **kwargs
+):
     # collection items
     logger.debug("checking items...")
     for item in collection.get_items():

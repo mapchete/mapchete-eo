@@ -3,9 +3,9 @@ click
 croniter
 lxml
 mapchete>=2023.9.1
-pydantic
-pystac[urllib3]==1.8.2
-pystac-client==0.7.2
+pydantic>=2.0.0
+pystac[urllib3]==1.8.3
+pystac-client==0.7.5
 requests
 tqdm
 xarray

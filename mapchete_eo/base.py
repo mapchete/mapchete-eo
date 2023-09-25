@@ -209,7 +209,7 @@ class InputData(base.InputData):
                 start_time=self.start_time,
                 end_time=self.end_time,
                 bounds=self._bounds,
-                area=self.area,
+                area=self._area,
             )
 
         for item in self.archive.catalog.items:

@@ -1,5 +1,6 @@
 import pytest
 from mapchete.tile import BufferedTilePyramid
+from shapely.geometry import shape
 from shapely.ops import unary_union
 
 from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
@@ -31,5 +32,7 @@ def test_s2_archives_multipolygon_search(archive_cls):
         [pyramid.tile_from_xy(16, 46, 13).bbox, pyramid.tile_from_xy(17, 47, 13).bbox]
     )
     archive = archive_cls(start_time=start_time, end_time=end_time, area=area)
-    breakpoint()
-    assert len(archive.catalog.items)
+    items = list(archive.catalog.items)
+    assert items
+    for item in items:
+        assert shape(item.geometry).intersects(area)

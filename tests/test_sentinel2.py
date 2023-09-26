@@ -3,7 +3,12 @@ import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
 
-from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
+from mapchete_eo.platforms.sentinel2.config import (
+    BRDFConfig,
+    MaskConfig,
+    SceneClassification,
+    Sentinel2DriverConfig,
+)
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
@@ -37,10 +42,70 @@ def test_preprocessing(sentinel2_mapchete):
 
 def test_read(sentinel2_stac_mapchete):
     with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
-        cube = src.read(assets=["red", "green", "blue", "nir"])
+        cube = src.read(assets=["red"])
     assert isinstance(cube, xr.Dataset)
     assert cube.to_array().any()
     assert cube.dims["s2:datastrip_id"] == 2
+
+
+def test_read_masked(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 1980, 8906)).open("inp") as src:
+        unmasked = src.read(assets=["red"])
+        masked = src.read(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+                scl=True,
+                scl_classes=[
+                    SceneClassification.vegetation,
+                ],
+            ),
+        )
+    datastrip = "S2B_OPER_MSI_L2A_DS_2BPS_20230813T130536_S20230813T100712_N05.09"
+    assert masked[datastrip].any()
+    assert (unmasked[datastrip] != masked[datastrip]).any()
+
+
+def test_read_brdf(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        uncorrected = src.read(assets=["red"])
+        corrected = src.read(assets=["red"], brdf_config=BRDFConfig())
+    for datastrip in corrected:
+        assert corrected[datastrip].any()
+        assert (uncorrected[datastrip] != corrected[datastrip]).any()
+
+
+def test_read_np(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        cube = src.read_np_array(assets=["red"])
+    assert isinstance(cube, ma.MaskedArray)
+    assert cube.any()
+    assert cube.shape[0] == 2
+
+
+def test_read_np_masked(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 1980, 8906)).open("inp") as src:
+        unmasked = src.read_np_array(assets=["red"])
+        masked = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+                scl=True,
+                scl_classes=[
+                    SceneClassification.vegetation,
+                ],
+            ),
+        )
+    assert masked.any()
+    assert (unmasked.mask != masked.mask).any()
+
+
+def test_read_np_brdf(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        uncorrected = src.read_np_array(assets=["red"])
+        corrected = src.read_np_array(assets=["red"], brdf_config=BRDFConfig())
+    assert corrected.any()
+    assert (uncorrected != corrected).any()
 
 
 # def test_read_levelled(sentinel2_stac_mapchete):

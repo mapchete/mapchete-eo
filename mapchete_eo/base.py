@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Any, List, Type, Union
+from typing import Any, List, Optional, Type, Union
 
 import croniter
 import numpy.ma as ma
@@ -30,10 +30,10 @@ class BaseDriverConfig(BaseModel):
     format: str
     start_time: DateTimeLike
     end_time: DateTimeLike
-    cat_baseurl: Union[str, None] = None
-    archive: Union[Type[Archive], None] = None
+    cat_baseurl: Optional[str] = None
+    archive: Optional[Type[Archive]] = None
     pattern: dict = {}
-    cache: Any = None
+    cache: Optional[Any] = None
 
 
 class InputTile(base.InputTile):
@@ -55,7 +55,7 @@ class InputTile(base.InputTile):
         eo_bands: dict,
         start_time: DateTimeLike,
         end_time: DateTimeLike,
-        input_key: Union[str, None] = None,
+        input_key: Optional[str] = None,
         **kwargs,
     ) -> None:
         """Initialize."""
@@ -83,12 +83,12 @@ class InputTile(base.InputTile):
         self,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
-        timestamps: Union[List[DateTimeLike], None] = None,
-        time_pattern: Union[str, None] = None,
-        merge_products_by: Union[str, None] = None,
-        merge_method: Union[str, MergeMethod, None] = None,
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+        merge_products_by: Optional[str] = None,
+        merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
         **kwargs,
     ) -> xr.Dataset:
@@ -99,32 +99,16 @@ class InputTile(base.InputTile):
         -------
         data : xarray.Dataset
         """
-        # TODO: iterate through products, filter by time and read assets to window
-        if any([start_time, end_time, timestamps]):
-            raise NotImplementedError("time subsets are not yet implemented")
-
-        if time_pattern:
-            # filter products by time pattern
-            tz = tzutc()
-            coord_time = [
-                t.replace(tzinfo=tz)
-                for t in croniter.croniter_range(
-                    to_datetime(self.start_time),
-                    to_datetime(self.end_time),
-                    time_pattern,
-                )
-            ]
-            products = [
-                product
-                for product in self.products
-                if product.item.datetime in coord_time
-            ]
-        else:
-            products = self.products
+        products = self.filter_products(
+            start_time=start_time,
+            end_time=end_time,
+            timestamps=timestamps,
+            time_pattern=time_pattern,
+        )
+        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
 
         if len(products) == 0:
             raise EmptyStackException()
-            return xr.Dataset()
 
         return products_to_xarray(
             products=products,
@@ -133,9 +117,7 @@ class InputTile(base.InputTile):
             grid=self.tile,
             merge_products_by=merge_products_by or self.default_read_merge_products_by,
             merge_method=merge_method or self.default_read_merge_method,
-            nodatavals=self.default_read_nodataval
-            if nodatavals is None
-            else nodatavals,
+            nodatavals=nodatavals,
             product_read_kwargs=kwargs,
         )
 
@@ -143,16 +125,62 @@ class InputTile(base.InputTile):
         self,
         assets: List[str] = [],
         eo_bands: List[str] = [],
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
-        timestamps: Union[List[DateTimeLike], None] = None,
-        time_pattern: Union[str, None] = None,
-        merge_products_by: Union[str, None] = None,
-        merge_method: Union[str, MergeMethod, None] = None,
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+        merge_products_by: Optional[str] = None,
+        merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
         **kwargs,
     ) -> ma.MaskedArray:
-        # TODO: iterate through products, filter by time and read assets to window
+        products = self.filter_products(
+            start_time=start_time,
+            end_time=end_time,
+            timestamps=timestamps,
+            time_pattern=time_pattern,
+        )
+        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
+
+        if len(products) == 0:
+            raise EmptyStackException()
+
+        return products_to_np_array(
+            products=products,
+            eo_bands=eo_bands,
+            assets=assets,
+            grid=self.tile,
+            merge_products_by=merge_products_by or self.default_read_merge_products_by,
+            merge_method=merge_method or self.default_read_merge_method,
+            nodatavals=nodatavals,
+            product_read_kwargs=kwargs,
+        )
+
+    def read_levelled(
+        self,
+        target_height: int,
+        assets: List[str] = [],
+        eo_bands: List[str] = [],
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+        merge_items_by: Optional[str] = None,
+        merge_method: Union[MergeMethod, str] = MergeMethod.average,
+        **kwargs,
+    ) -> ma.MaskedArray:
+        raise NotImplementedError()
+
+    def filter_products(
+        self,
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+    ):
+        """
+        Return a filtered list of input products.
+        """
         if any([start_time, end_time, timestamps]):
             raise NotImplementedError("time subsets are not yet implemented")
 
@@ -167,43 +195,13 @@ class InputTile(base.InputTile):
                     time_pattern,
                 )
             ]
-            products = [
+            return [
                 product
                 for product in self.products
                 if product.item.datetime in coord_time
             ]
         else:
-            products = self.products
-
-        if len(products) == 0:
-            raise EmptyStackException()
-        return products_to_np_array(
-            products=products,
-            eo_bands=eo_bands,
-            assets=assets,
-            grid=self.tile,
-            merge_products_by=merge_products_by or self.default_read_merge_products_by,
-            merge_method=merge_method or self.default_read_merge_method,
-            nodatavals=self.default_read_nodataval
-            if nodatavals is None
-            else nodatavals,
-            product_read_kwargs=kwargs,
-        )
-
-    def read_levelled(
-        self,
-        target_height: int,
-        assets: List[str] = [],
-        eo_bands: List[str] = [],
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
-        timestamps: Union[List[DateTimeLike], None] = None,
-        time_pattern: Union[str, None] = None,
-        merge_items_by: Union[str, None] = None,
-        merge_method: Union[MergeMethod, str] = MergeMethod.average,
-        **kwargs,
-    ) -> ma.MaskedArray:
-        raise NotImplementedError()
+            return self.products
 
     def is_empty(self) -> bool:
         """

@@ -23,7 +23,7 @@ def products_to_np_array(
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     merge_products_by: Union[str, None] = None,
-    merge_method: Union[MergeMethod, str] = MergeMethod.first,
+    merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
@@ -77,23 +77,23 @@ def products_to_np_array(
 
 def merge_products(
     products: List[EOProductProtocol] = [],
-    merge_method: Union[MergeMethod, str] = MergeMethod.first,
+    merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
 ) -> ma.MaskedArray:
-    merge_method = (
-        merge_method
-        if isinstance(merge_method, MergeMethod)
-        else MergeMethod[merge_method]
-    )
+    """
+    Merge given products into one array.
+    """
     if len(products) == 0:
         raise ValueError("no products to merge")
+
+    # read first product
     out = products[0].read_np_array(**product_read_kwargs)
 
     # nothing to merge here
     if len(products) == 1:
         return out
 
-    # first pixels first
+    # fill in gaps sequentially, product by product
     elif merge_method == MergeMethod.first:
         for product in products[1:]:
             new = product.read_np_array(**product_read_kwargs)

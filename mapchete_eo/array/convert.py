@@ -41,7 +41,7 @@ def masked_to_xarr(
     y_axis_name: str = "y",
     attrs: dict = dict(),
 ) -> xr.DataArray:
-    """Convert ma.MaskedArray to xr.DataArray."""
+    """Convert 2D ma.MaskedArray to xr.DataArray."""
 
     # nodata handling is weird.
     #
@@ -64,17 +64,14 @@ def masked_to_xarr_ds(
     masked_arr: ma.MaskedArray,
     slice_var_names: List[str],
     data_var_names: List[str],
-    first_axis_name: str = "time",
     coords: Optional[dict] = None,
     slices_attrs: Optional[List[Union[dict, None]]] = None,
+    first_axis_name: str = "time",
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.Dataset:
     """Convert a 4D masked array to a xr.Dataset."""
-
-    if slices_attrs is None:
-        slices_attrs = [None for _ in slice_var_names]
     return xr.Dataset(
         data_vars={
             # every slice gets its own xarray Dataset
@@ -98,7 +95,11 @@ def masked_to_xarr_ds(
                 name=slice_var_name,
             )
             for slice_var_name, slice_attrs, product_array in zip(
-                slice_var_names, slices_attrs, masked_arr
+                slice_var_names,
+                [None for _ in slice_var_names]
+                if slices_attrs is None
+                else slices_attrs,
+                masked_arr,
             )
         },
         coords=coords,

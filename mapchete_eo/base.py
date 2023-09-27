@@ -16,8 +16,8 @@ from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
-from mapchete_eo.exceptions import PreprocessingNotFinished
-from mapchete_eo.io import products_to_xarray
+from mapchete_eo.exceptions import EmptyStackException, PreprocessingNotFinished
+from mapchete_eo.io import products_to_np_array, products_to_xarray
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
@@ -123,6 +123,7 @@ class InputTile(base.InputTile):
             products = self.products
 
         if len(products) == 0:
+            raise EmptyStackException()
             return xr.Dataset()
 
         return products_to_xarray(
@@ -135,6 +136,58 @@ class InputTile(base.InputTile):
             nodatavals=self.default_read_nodataval
             if nodatavals is None
             else nodatavals,
+            product_read_kwargs=kwargs,
+        )
+
+    def read_np_array(
+        self,
+        assets: List[str] = [],
+        eo_bands: List[str] = [],
+        start_time: Union[DateTimeLike, None] = None,
+        end_time: Union[DateTimeLike, None] = None,
+        timestamps: Union[List[DateTimeLike], None] = None,
+        time_pattern: Union[str, None] = None,
+        merge_products_by: Union[str, None] = None,
+        merge_method: Union[str, MergeMethod, None] = None,
+        nodatavals: NodataVals = None,
+        **kwargs,
+    ) -> ma.MaskedArray:
+        # TODO: iterate through products, filter by time and read assets to window
+        if any([start_time, end_time, timestamps]):
+            raise NotImplementedError("time subsets are not yet implemented")
+
+        if time_pattern:
+            # filter products by time pattern
+            tz = tzutc()
+            coord_time = [
+                t.replace(tzinfo=tz)
+                for t in croniter.croniter_range(
+                    to_datetime(self.start_time),
+                    to_datetime(self.end_time),
+                    time_pattern,
+                )
+            ]
+            products = [
+                product
+                for product in self.products
+                if product.item.datetime in coord_time
+            ]
+        else:
+            products = self.products
+
+        if len(products) == 0:
+            raise EmptyStackException()
+        return products_to_np_array(
+            products=products,
+            eo_bands=eo_bands,
+            assets=assets,
+            grid=self.tile,
+            merge_products_by=merge_products_by or self.default_read_merge_products_by,
+            merge_method=merge_method or self.default_read_merge_method,
+            nodatavals=self.default_read_nodataval
+            if nodatavals is None
+            else nodatavals,
+            product_read_kwargs=kwargs,
         )
 
     def read_levelled(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Protocol, Tuple, Union
 
+import numpy.ma as ma
 import pystac
 import xarray as xr
 from affine import Affine
@@ -33,6 +34,17 @@ class EOProductProtocol(Protocol):
         y_axis_name: str = "y",
         **kwargs,
     ) -> xr.Dataset:
+        ...
+
+    def read_np_array(
+        self,
+        assets: Union[List[str], None] = None,
+        eo_bands: Union[List[str], None] = None,
+        grid: Union[GridProtocol, None] = None,
+        resampling: Resampling = Resampling.nearest,
+        nodatavals: NodataVals = None,
+        **kwargs,
+    ) -> ma.MaskedArray:
         ...
 
     def get_property(self, property: str) -> Any:

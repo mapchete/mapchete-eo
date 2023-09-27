@@ -370,7 +370,6 @@ class S2Product(EOProduct, EOProductProtocol):
             logger.debug(
                 "mask for product %s already full, skip reading other masks", self.id
             )
-
         return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
 
 

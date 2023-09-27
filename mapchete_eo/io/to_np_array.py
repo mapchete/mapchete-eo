@@ -1,15 +1,10 @@
 import logging
 from typing import List, Union
 
-import numpy as np
 import numpy.ma as ma
 import pystac
-import xarray as xr
-from mapchete.io import rasterio_open
-from mapchete.path import MPath
 from rasterio.enums import Resampling
 
-from mapchete_eo.array.convert import masked_to_xarr, xarr_to_masked
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.io.mapchete_io_raster import read_raster
 from mapchete_eo.io.path import absolute_asset_path
@@ -104,8 +99,10 @@ def merge_products(
             new = product.read_np_array(**product_read_kwargs)
             out[~out.mask] = new[~out.mask]
             out.mask[~out.mask] = new.mask[~out.mask]
+            # if whole output array is filled, there is no point in reading more data
             if not out.mask.any():
                 return out
+        return out
 
     # read all and average
     elif merge_method == MergeMethod.average:
@@ -126,37 +123,15 @@ def merge_products(
     raise NotImplementedError(f"unknown merge method: {merge_method}")
 
 
-def _check_params(item, eo_bands, assets, resampling, nodatavals):
-    if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
-        raise ValueError("either assets or eo_bands have to be provided")
-    if eo_bands:
-        assets_indexes = eo_bands_to_assets_indexes(item, eo_bands)
-        data_var_names = eo_bands
-    else:
-        assets_indexes = [(asset, 1) for asset in assets]
-        data_var_names = assets
-    logger.debug("reading %s assets from item %s...", len(assets_indexes), item.id)
-    attrs = dict(
-        item.properties,
-        id=item.id,
-    )
-    expanded_resamplings = (
-        resampling
-        if isinstance(resampling, list)
-        else [resampling for _ in range(len(assets_indexes))]
-    )
-    expanded_nodatavals = (
-        nodatavals
-        if isinstance(nodatavals, list)
-        else [nodatavals for _ in range(len(assets_indexes))]
-    )
-    return (
-        assets_indexes,
-        data_var_names,
-        attrs,
-        expanded_resamplings,
-        expanded_nodatavals,
-    )
+def expand_params(param, length):
+    """
+    Expand parameters if they are not a list.
+    """
+    if isinstance(param, list):
+        if len(param) != length:
+            raise ValueError(f"length of {param} must be {length} but is {len(param)}")
+        return param
+    return [param for _ in range(length)]
 
 
 def item_to_np_array(
@@ -171,9 +146,15 @@ def item_to_np_array(
     """
     Read window of STAC Item and merge into a 3D ma.MaskedArray.
     """
-    assets_indexes, _, _, expanded_resamplings, expanded_nodatavals = _check_params(
-        item, eo_bands, assets, resampling, nodatavals
+    if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
+        raise ValueError("either assets or eo_bands have to be provided")
+    # determine array location either by assets or eo_bands
+    assets_indexes = (
+        eo_bands_to_assets_indexes(item, eo_bands)
+        if eo_bands
+        else [(asset, 1) for asset in assets]
     )
+    logger.debug("reading %s assets from item %s...", len(assets_indexes), item.id)
     return ma.stack(
         [
             asset_to_np_array(
@@ -185,7 +166,9 @@ def item_to_np_array(
                 nodataval=nodataval,
             )
             for (asset, index), expanded_resampling, nodataval in zip(
-                assets_indexes, expanded_resamplings, expanded_nodatavals
+                assets_indexes,
+                expand_params(resampling, len(assets_indexes)),
+                expand_params(nodatavals, len(assets_indexes)),
             )
         ]
     )

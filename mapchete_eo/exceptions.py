@@ -1,5 +1,7 @@
 """Custom exceptions."""
 
+from mapchete.errors import MapcheteNodataTile
+
 
 class EmptyFootprintException(Exception):
     """Raised when footprint is empty."""
@@ -13,7 +15,7 @@ class EmptySliceException(Exception):
     """Raised when slice is empty."""
 
 
-class EmptyStackException(Exception):
+class EmptyStackException(MapcheteNodataTile):
     """Raised when whole stack is empty."""
 
 

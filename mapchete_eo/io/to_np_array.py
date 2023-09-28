@@ -103,7 +103,7 @@ def products_to_np_array(
     if merge_products_by is None:
         logger.debug("reading %s products...", len(products))
 
-        def _read_products(products: list[EOProductProtocol]):
+        def _read_products(products: List[EOProductProtocol]):
             """Read products but skip empty ones if raise_empty is active."""
             for product in products:
                 try:

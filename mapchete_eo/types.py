@@ -1,7 +1,7 @@
 import datetime
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Union
 
 from affine import Affine
 from mapchete.types import Bounds
@@ -50,5 +50,5 @@ class BandLocation:
     """A class representing the location of a specific band."""
 
     asset_name: str
-    band_index: Optional[int] = 1
-    nodataval: Optional[float] = 0
+    band_index: int = 1
+    nodataval: float = 0

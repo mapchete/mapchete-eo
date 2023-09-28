@@ -480,7 +480,7 @@ class S2Metadata:
         def _band_angles(band: L2ABand):
             detector_angles = self.viewing_incidence_angles(band)[angle]["detector"]
             band_angles = ma.masked_equal(
-                np.zeros(self.shape(resolution), dtype=np.float16), 0
+                np.zeros(self.shape(resolution), dtype=np.float32), 0
             )
             detector_footprints = self.detector_footprints(band, dst_grid=resolution)
             detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]

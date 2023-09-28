@@ -40,7 +40,7 @@ def get_sun_angle_array(min_lat=None, max_lat=None, shape=None):
 
     # expand column to output shape width
     return np.radians(
-        np.array([[i for _ in range(width)] for i in angles], dtype=np.float16)
+        np.array([[i for _ in range(width)] for i in angles], dtype=np.float32)
     )
 
 

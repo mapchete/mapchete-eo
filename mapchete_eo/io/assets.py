@@ -1,6 +1,5 @@
 import logging
 import math
-from collections import defaultdict
 from typing import Callable, List, Union
 
 import fsspec
@@ -212,36 +211,6 @@ def convert_raster(
                 transform=meta["transform"],
             ) as warped:
                 dst.write(warped.read())
-
-
-def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
-    """
-    Find out location (asset and band index) of EO band.
-    """
-    mapping = defaultdict(list)
-    for eo_band in eo_bands:
-        for asset_name, asset in item.assets.items():
-            asset_eo_bands = asset.extra_fields.get("eo:bands")
-            if asset_eo_bands:
-                for band_idx, band_info in enumerate(asset_eo_bands, 1):
-                    if eo_band == band_info.get("name"):
-                        mapping[eo_band].append((asset_name, band_idx))
-
-    for eo_band in eo_bands:
-        if eo_band not in mapping:
-            raise KeyError(f"EO band {eo_band} not found in item assets")
-        found = mapping[eo_band]
-        if len(found) > 1:
-            for asset_name, band_idx in found:
-                if asset_name == eo_band:
-                    mapping[eo_band] = [(asset_name, band_idx)]
-                    break
-            else:  # pragma: no cover
-                raise ValueError(
-                    f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
-                )
-
-    return [mapping[eo_band][0] for eo_band in eo_bands]
 
 
 def get_metadata_assets(

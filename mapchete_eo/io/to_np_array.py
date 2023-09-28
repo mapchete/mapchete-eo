@@ -10,14 +10,75 @@ from mapchete_eo.exceptions import (
     EmptyStackException,
     NoSourceProducts,
 )
-from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.io.mapchete_io_raster import read_raster
 from mapchete_eo.io.path import absolute_asset_path
 from mapchete_eo.io.products import group_products_per_property
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
-from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
+from mapchete_eo.types import BandLocation, MergeMethod, NodataVal, NodataVals
 
 logger = logging.getLogger(__name__)
+
+
+def asset_to_np_array(
+    item: pystac.Item,
+    asset: str,
+    indexes: Union[List[int], int] = 1,
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodataval: NodataVal = None,
+) -> ma.MaskedArray:
+    """
+    Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
+
+    This is the main read method which is one way or the other being called from everywhere
+    whenever a band is being read!
+    """
+    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
+    return read_raster(
+        inp=absolute_asset_path(item, asset),
+        indexes=indexes,
+        grid=grid,
+        resampling=resampling.name,
+        dst_nodata=nodataval,
+    ).data
+
+
+def item_to_np_array(
+    item: pystac.Item,
+    band_locations: List[BandLocation],
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
+    raise_empty: bool = False,
+) -> ma.MaskedArray:
+    """
+    Read window of STAC Item and merge into a 3D ma.MaskedArray.
+    """
+    logger.debug("reading %s assets from item %s...", len(band_locations), item.id)
+    out = ma.stack(
+        [
+            asset_to_np_array(
+                item,
+                band_location.asset_name,
+                indexes=band_location.band_index,
+                grid=grid,
+                resampling=expanded_resampling,
+                nodataval=nodataval,
+            )
+            for band_location, expanded_resampling, nodataval in zip(
+                band_locations,
+                expand_params(resampling, len(band_locations)),
+                expand_params(nodatavals, len(band_locations)),
+            )
+        ]
+    )
+
+    if raise_empty and out.mask.all():
+        raise EmptyProductException(
+            f"all required assets of {item} over grid {grid} are empty."
+        )
+
+    return out
 
 
 def products_to_np_array(
@@ -145,74 +206,3 @@ def expand_params(param, length):
             raise ValueError(f"length of {param} must be {length} but is {len(param)}")
         return param
     return [param for _ in range(length)]
-
-
-def item_to_np_array(
-    item: pystac.Item,
-    eo_bands: List[str] = [],
-    assets: List[str] = [],
-    grid: Union[GridProtocol, None] = None,
-    resampling: Resampling = Resampling.nearest,
-    nodatavals: NodataVals = None,
-    raise_empty: bool = False,
-) -> ma.MaskedArray:
-    """
-    Read window of STAC Item and merge into a 3D ma.MaskedArray.
-    """
-    if (len(eo_bands) and len(assets)) or (not len(eo_bands) and not len(assets)):
-        raise ValueError("either assets or eo_bands have to be provided")
-    # determine array location either by assets or eo_bands
-    assets_indexes = (
-        eo_bands_to_assets_indexes(item, eo_bands)
-        if eo_bands
-        else [(asset, 1) for asset in assets]
-    )
-    logger.debug("reading %s assets from item %s...", len(assets_indexes), item.id)
-    out = ma.stack(
-        [
-            asset_to_np_array(
-                item,
-                asset,
-                indexes=index,
-                grid=grid,
-                resampling=expanded_resampling,
-                nodataval=nodataval,
-            )
-            for (asset, index), expanded_resampling, nodataval in zip(
-                assets_indexes,
-                expand_params(resampling, len(assets_indexes)),
-                expand_params(nodatavals, len(assets_indexes)),
-            )
-        ]
-    )
-
-    if raise_empty and out.mask.all():
-        raise EmptyProductException(
-            f"all required assets of {item} over grid {grid} are empty."
-        )
-
-    return out
-
-
-def asset_to_np_array(
-    item: pystac.Item,
-    asset: str,
-    indexes: Union[list, int] = 1,
-    grid: Union[GridProtocol, None] = None,
-    resampling: Resampling = Resampling.nearest,
-    nodataval: NodataVal = None,
-) -> ma.MaskedArray:
-    """
-    Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
-
-    This is the main read method which is one way or the other being called from everywhere
-    whenever a band is being read!
-    """
-    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
-    return read_raster(
-        inp=absolute_asset_path(item, asset),
-        indexes=indexes,
-        grid=grid,
-        resampling=resampling.name,
-        dst_nodata=nodataval,
-    ).data

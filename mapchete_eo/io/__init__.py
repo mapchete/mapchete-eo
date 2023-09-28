@@ -1,7 +1,6 @@
 from mapchete_eo.io.assets import (
     convert_asset,
     copy_asset,
-    eo_bands_to_assets_indexes,
     get_assets,
     read_mask_as_raster,
 )
@@ -17,7 +16,6 @@ __all__ = [
     "item_to_np_array",
     "products_to_xarray",
     "products_to_np_array",
-    "eo_bands_to_assets_indexes",
     "group_products_per_property",
     "get_item_property",
     "open_xml",

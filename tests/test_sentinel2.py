@@ -10,6 +10,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     SceneClassification,
     Sentinel2DriverConfig,
 )
+from mapchete_eo.product import eo_bands_to_assets_indexes
 
 
 def test_format_available():
@@ -23,6 +24,21 @@ def test_config():
         end_time="2022-04-10",
     )
     assert conf.dict()
+
+
+def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
+    eo_bands = ["red", "green", "blue"]
+    assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
+    assert len(eo_bands) == len(assets_indexes)
+    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
+        assert eo_band == asset
+        assert index == 1
+
+
+def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
+    eo_bands = ["foo"]
+    with pytest.raises(KeyError):
+        eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
 
 
 @pytest.mark.remote

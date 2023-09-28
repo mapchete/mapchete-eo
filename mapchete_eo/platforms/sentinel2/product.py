@@ -57,7 +57,8 @@ class Cache:
         self._brdf_grid_cache: dict = dict()
         if self.config.brdf:
             self._brdf_bands = [
-                asset_name_to_band(self.item, band) for band in self.config.brdf.bands
+                asset_name_to_l2a_band(self.item, band)
+                for band in self.config.brdf.bands
             ]
         else:
             self._brdf_bands = []
@@ -218,7 +219,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 arr[band_idx] = get_corrected_band_reflectance(
                     arr[band_idx],
                     self.read_brdf_grid(
-                        asset_name_to_band(self.item, asset),
+                        asset_name_to_l2a_band(self.item, asset),
                         resampling=resampling,
                         grid=grid,
                         brdf_config=brdf_config,
@@ -396,7 +397,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
 
 
-def asset_name_to_band(item: pystac.Item, asset_name: str) -> L2ABand:
+def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:
     asset = item.assets[asset_name]
     asset_path = MPath(asset.href)
     band_name = asset_path.name.split(".")[0]

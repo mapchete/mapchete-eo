@@ -8,42 +8,12 @@ from mapchete_eo.io.assets import (
     convert_asset,
     convert_raster,
     copy_asset,
-    eo_bands_to_assets_indexes,
     get_assets,
     get_metadata_assets,
     should_be_converted,
 )
 from mapchete_eo.io.profiles import COGDeflateProfile, JP2LossyProfile
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-
-
-def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
-    eo_bands = ["red", "green", "blue"]
-    assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
-        assert eo_band == asset
-        assert index == 1
-
-
-def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
-    eo_bands = ["foo"]
-    with pytest.raises(KeyError):
-        eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
-
-
-# TODO:
-# --> PF Elias:
-# DataSet
-# per band 1 DataArray
-# each DataArray has 3 dimensions: time, x, y
-def test_pf_eo_bands_to_assets_indexes(pf_sr_stac_item):
-    eo_bands = ["B3", "B2", "B4"]
-    assets_indexes = eo_bands_to_assets_indexes(pf_sr_stac_item, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for band_index, (asset, index) in zip([1, 2, 4], assets_indexes):
-        assert asset == "bands"
-        assert band_index == index
 
 
 def test_asset_mpath(s2_stac_item):

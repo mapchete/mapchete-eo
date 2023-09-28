@@ -102,7 +102,7 @@ class Cache:
                         model=model,
                         resolution=resolution,
                     )
-                    logger.debug(f"cache BRDF correction grid to {out_path}")
+                    logger.debug("cache BRDF correction grid to %s", out_path)
                     grid.to_file(out_path, **COGDeflateProfile(grid.meta))
                 self._brdf_grid_cache[band] = out_path
 

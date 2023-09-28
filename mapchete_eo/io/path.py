@@ -24,7 +24,7 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
     **dict(IORetrySettings()),
 )
 def open_xml(path: MPath):
-    logger.debug(f"open {path}")
+    logger.debug("open %s", path)
     return etree.fromstring(path.read_text())
 
 
@@ -113,7 +113,7 @@ def cached_path(path: MPath) -> MPath:
     if path.is_remote():
         with TemporaryDirectory() as tempdir:
             tempfile = MPath(tempdir) / path.name
-            logger.debug(f"{path} is remote, download to {tempfile}")
+            logger.debug("%s is remote, download to %s", path, tempfile)
             copy(
                 path,
                 tempfile,

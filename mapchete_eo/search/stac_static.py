@@ -107,18 +107,18 @@ def _all_intersecting_items(
     logger.debug("checking items...")
     for item in collection.get_items():
         # yield item if it intersects with extent
-        logger.debug(f"item {item.id}")
+        logger.debug("item %s", item.id)
         if _item_extent_intersects(item, **kwargs):
-            logger.debug(f"item {item.id} within search parameters")
+            logger.debug("item %s within search parameters", item.id)
             yield item
 
     # collection children
     logger.debug("checking collections...")
     for child in collection.get_children():
         # yield collection if it intersects with extent
-        logger.debug(f"collection {collection.id}")
+        logger.debug("collection %s", collection.id)
         if _collection_extent_intersects(child, **kwargs):
-            logger.debug(f"found catalog {child.id} with intersecting items")
+            logger.debug("found catalog %s with intersecting items", child.id)
             yield from _all_intersecting_items(child, **kwargs)
 
 

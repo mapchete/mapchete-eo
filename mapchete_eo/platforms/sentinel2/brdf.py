@@ -81,7 +81,9 @@ def correction_grids(
     resolution: Resolution = Resolution["60m"],  # TODO use 120m?
 ) -> Iterator[ReferencedRaster]:
     for band in bands:
-        logger.debug(f"run BRDF for product {s2_metadata.product_id} band {band.value}")
+        logger.debug(
+            "run BRDF for product %s band %s", s2_metadata.product_id, band.value
+        )
         yield correction_grid(
             s2_metadata,
             band,

@@ -369,7 +369,7 @@ def read_raster(
     inp: MPathLike, grid: Union[GridProtocol, None] = None, **kwargs
 ) -> ReferencedRaster:
     inp = MPath.from_inp(inp)
-    logger.debug(f"reading {str(inp)} into memory")
+    logger.debug("reading %s into memory", str(inp))
     if grid:
         # if grid is a tile, we need to wrap it to get the transform attribute
         if isinstance(grid, BufferedTile):

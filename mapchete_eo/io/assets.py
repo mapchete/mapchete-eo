@@ -262,7 +262,7 @@ def get_metadata_assets(
             ):  # pragma: no cover
                 convert_raster(src_path, dst_path, resolution, convert_profile)
             else:
-                logger.debug(f"copy {asset} ...")
+                logger.debug("copy %s ...", asset)
                 copy(src_path, dst_path, overwrite=overwrite)
 
     return item
@@ -290,7 +290,7 @@ def should_be_converted(
 
 
 def _read_vector_mask(mask_path):
-    logger.debug(f"open {mask_path} with Fiona")
+    logger.debug("open %s with Fiona", mask_path)
     with cached_path(mask_path) as cached:
         try:
             with fiona_open(cached) as src:

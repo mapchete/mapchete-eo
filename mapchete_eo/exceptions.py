@@ -55,5 +55,5 @@ class AllMasked(Exception):
     """Raised when an array is fully masked."""
 
 
-class NoSourceProducts(ValueError):
+class NoSourceProducts(MapcheteNodataTile, ValueError):
     """Raised when no products are available."""

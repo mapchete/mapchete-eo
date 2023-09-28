@@ -58,7 +58,7 @@ class DirectionalModels:
         return ma.masked_array(
             data=out_param_arr,
             mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
-        ).astype(np.float32, copy=False)
+        ).astype(np.float16, copy=False)
 
     def get_corrected_band_reflectance(self, band):
         return get_corrected_band_reflectance(band, self.get_band_param())
@@ -274,7 +274,7 @@ def get_brdf_param(
     Return BRDF parameters.
     """
     # create output array
-    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float32), 0)
+    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float16), 0)
 
     detector_footprints = resample_array(
         detector_footprints,

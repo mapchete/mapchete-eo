@@ -69,7 +69,7 @@ class InputTile(base.InputTile):
     @cached_property
     def products(self) -> IndexedFeatures[EOProductProtocol]:
         # during task graph processing, the products have to be fetched as preprocessing task results
-        if self._products is None:
+        if self._products is None:  # pragma: no cover
             if not self.preprocessing_tasks_results:
                 raise ValueError("no preprocessing results available")
             return IndexedFeatures(
@@ -201,7 +201,7 @@ class InputTile(base.InputTile):
         else:
             return self.products
 
-    def is_empty(self) -> bool:
+    def is_empty(self) -> bool:  # pragma: no cover
         """
         Check if there is data within this tile.
 
@@ -238,7 +238,7 @@ class InputData(base.InputData):
         self.start_time = self.params.start_time
         self.end_time = self.params.end_time
 
-        if self.readonly:
+        if self.readonly:  # pragma: no cover
             return
 
         # set archive

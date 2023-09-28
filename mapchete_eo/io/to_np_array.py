@@ -7,6 +7,7 @@ from rasterio.enums import Resampling
 
 from mapchete_eo.exceptions import (
     EmptyProductException,
+    EmptySliceException,
     EmptyStackException,
     NoSourceProducts,
 )
@@ -101,20 +102,28 @@ def products_to_np_array(
     # don't merge products
     if merge_products_by is None:
         logger.debug("reading %s products...", len(products))
-        out = ma.stack(
-            [
-                product.read_np_array(
-                    assets=assets,
-                    eo_bands=eo_bands,
-                    grid=grid,
-                    resampling=resampling,
-                    nodatavals=nodatavals,
-                    raise_empty=False,
-                    **product_read_kwargs,
-                )
-                for product in products
-            ]
-        )
+
+        def _read_products(products: list[EOProductProtocol]):
+            """Read products but skip empty ones if raise_empty is active."""
+            for product in products:
+                try:
+                    yield product.read_np_array(
+                        assets=assets,
+                        eo_bands=eo_bands,
+                        grid=grid,
+                        resampling=resampling,
+                        nodatavals=nodatavals,
+                        raise_empty=raise_empty,
+                        **product_read_kwargs,
+                    )
+                except EmptyProductException:
+                    pass
+
+        products_arrays = list(_read_products(products))
+        if products_arrays:
+            out = ma.stack(products_arrays)
+        else:
+            raise EmptyStackException("all products are empty")
 
     # merge products
     else:
@@ -124,27 +133,36 @@ def products_to_np_array(
             len(products),
             len(products_per_property),
         )
-        out = ma.stack(
-            [
-                merge_products(
-                    products=products,
-                    merge_method=merge_method,
-                    product_read_kwargs=dict(
-                        product_read_kwargs,
-                        assets=assets,
-                        eo_bands=eo_bands,
-                        grid=grid,
-                        resampling=resampling,
-                        nodatavals=nodatavals,
-                        raise_empty=False,
-                    ),
-                )
-                for products in products_per_property.values()
-            ]
-        )
+
+        def _merge_products(products_per_property: dict):
+            for products in products_per_property.values():
+                try:
+                    yield merge_products(
+                        products=products,
+                        merge_method=merge_method,
+                        product_read_kwargs=dict(
+                            product_read_kwargs,
+                            assets=assets,
+                            eo_bands=eo_bands,
+                            grid=grid,
+                            resampling=resampling,
+                            nodatavals=nodatavals,
+                            raise_empty=raise_empty,
+                        ),
+                        raise_empty=raise_empty,
+                    )
+                except EmptySliceException:
+                    pass
+
+        slices = list(_merge_products(products_per_property))
+
+        if slices:
+            out = ma.stack(slices)
+        else:
+            raise EmptyStackException("all slices are empty")
 
     if raise_empty and out.mask.all():
-        raise EmptyStackException("all products are empty")
+        raise EmptyStackException("the whole stack is masked")
 
     return out
 
@@ -153,6 +171,7 @@ def merge_products(
     products: List[EOProductProtocol],
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
+    raise_empty: bool = True,
 ) -> ma.MaskedArray:
     """
     Merge given products into one array.
@@ -160,12 +179,15 @@ def merge_products(
     if len(products) == 0:
         raise NoSourceProducts("no products to merge")
 
+    # we need to deactivate raising the EmptyProductException
+    product_read_kwargs.update(raise_empty=False)
+
     # read first product
     out = products[0].read_np_array(**product_read_kwargs)
 
     # nothing to merge here
     if len(products) == 1:
-        return out
+        pass
 
     # fill in gaps sequentially, product by product
     elif merge_method == MergeMethod.first:
@@ -176,11 +198,10 @@ def merge_products(
             # if whole output array is filled, there is no point in reading more data
             if not out.mask.any():
                 return out
-        return out
 
     # read all and average
     elif merge_method == MergeMethod.average:
-        return (
+        out = (
             ma.stack(
                 [
                     out,
@@ -193,8 +214,15 @@ def merge_products(
             .mean(axis=0)
             .astype(out.dtype, copy=False)
         )
+    else:
+        raise NotImplementedError(f"unknown merge method: {merge_method}")
 
-    raise NotImplementedError(f"unknown merge method: {merge_method}")
+    if raise_empty and out.mask.all():
+        raise EmptySliceException(
+            f"slice is empty after combining {len(products)} products"
+        )
+
+    return out
 
 
 def expand_params(param, length):

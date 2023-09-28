@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def products_to_xarray(
-    products: List[EOProductProtocol] = [],
-    assets: List[str] = [],
-    eo_bands: List[str] = [],
+    products: List[EOProductProtocol],
+    assets: Optional[List[str]] = None,
+    eo_bands: Optional[List[str]] = None,
     grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
@@ -29,9 +29,12 @@ def products_to_xarray(
     y_axis_name: str = "y",
     merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
+    raise_empty: bool = True,
     product_read_kwargs: dict = {},
 ) -> xr.Dataset:
     """Read grid window of EOProducts and merge into a 4D xarray."""
+    assets = assets or []
+    eo_bands = eo_bands or []
     data_var_names = eo_bands or assets
 
     # merge products
@@ -51,6 +54,7 @@ def products_to_xarray(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
                 product_read_kwargs=product_read_kwargs,
+                raise_empty=raise_empty,
             ),
             slice_var_names,
             data_var_names,
@@ -82,6 +86,7 @@ def products_to_xarray(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
                 product_read_kwargs=product_read_kwargs,
+                raise_empty=raise_empty,
             ),
             slice_var_names,
             data_var_names,

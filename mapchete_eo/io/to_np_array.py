@@ -1,10 +1,15 @@
 import logging
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy.ma as ma
 import pystac
 from rasterio.enums import Resampling
 
+from mapchete_eo.exceptions import (
+    EmptyProductException,
+    EmptyStackException,
+    NoSourceProducts,
+)
 from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.io.mapchete_io_raster import read_raster
 from mapchete_eo.io.path import absolute_asset_path
@@ -16,25 +21,26 @@ logger = logging.getLogger(__name__)
 
 
 def products_to_np_array(
-    products: List[EOProductProtocol] = [],
-    assets: List[str] = [],
-    eo_bands: List[str] = [],
+    products: List[EOProductProtocol],
+    assets: Optional[List[str]] = None,
+    eo_bands: Optional[List[str]] = None,
     grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     merge_products_by: Union[str, None] = None,
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
+    raise_empty: bool = True,
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
 
     if len(products) == 0:
-        raise ValueError("no products to read")
+        raise NoSourceProducts("no products to read")
 
     # don't merge products
     if merge_products_by is None:
         logger.debug("reading %s products...", len(products))
-        return ma.stack(
+        out = ma.stack(
             [
                 product.read_np_array(
                     assets=assets,
@@ -42,6 +48,7 @@ def products_to_np_array(
                     grid=grid,
                     resampling=resampling,
                     nodatavals=nodatavals,
+                    raise_empty=False,
                     **product_read_kwargs,
                 )
                 for product in products
@@ -56,7 +63,7 @@ def products_to_np_array(
             len(products),
             len(products_per_property),
         )
-        return ma.stack(
+        out = ma.stack(
             [
                 merge_products(
                     products=products,
@@ -68,11 +75,17 @@ def products_to_np_array(
                         grid=grid,
                         resampling=resampling,
                         nodatavals=nodatavals,
+                        raise_empty=False,
                     ),
                 )
                 for products in products_per_property.values()
             ]
         )
+
+    if raise_empty and out.mask.all():
+        raise EmptyStackException("all products are empty")
+
+    return out
 
 
 def merge_products(
@@ -84,7 +97,7 @@ def merge_products(
     Merge given products into one array.
     """
     if len(products) == 0:
-        raise ValueError("no products to merge")
+        raise NoSourceProducts("no products to merge")
 
     # read first product
     out = products[0].read_np_array(**product_read_kwargs)
@@ -141,7 +154,7 @@ def item_to_np_array(
     grid: Union[GridProtocol, None] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
-    fill_value: int = 0,
+    raise_empty: bool = False,
 ) -> ma.MaskedArray:
     """
     Read window of STAC Item and merge into a 3D ma.MaskedArray.
@@ -155,7 +168,7 @@ def item_to_np_array(
         else [(asset, 1) for asset in assets]
     )
     logger.debug("reading %s assets from item %s...", len(assets_indexes), item.id)
-    return ma.stack(
+    out = ma.stack(
         [
             asset_to_np_array(
                 item,
@@ -173,6 +186,13 @@ def item_to_np_array(
         ]
     )
 
+    if raise_empty and out.mask.all():
+        raise EmptyProductException(
+            f"all required assets of {item} over grid {grid} are empty."
+        )
+
+    return out
+
 
 def asset_to_np_array(
     item: pystac.Item,
@@ -184,6 +204,9 @@ def asset_to_np_array(
 ) -> ma.MaskedArray:
     """
     Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
+
+    This is the main read method which is one way or the other being called from everywhere
+    whenever a band is being read!
     """
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
     return read_raster(

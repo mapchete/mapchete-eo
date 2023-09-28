@@ -164,31 +164,54 @@ class S2Product(EOProduct, EOProductProtocol):
         grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
+        raise_empty: bool = True,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
         **kwargs,
     ) -> ma.MaskedArray:
+        assets = assets or []
+        eo_bands = eo_bands or []
         if eo_bands:
+            count = len(eo_bands)
             raise NotImplementedError("please use asset names for now")
+        else:
+            count = len(assets)
         if grid is None:
             grid = self.metadata.grid(Resolution["10m"])
         elif isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
         mask = self.get_mask(grid, mask_config).data
         if mask.all():
-            raise EmptyProductException(f"{self} is empty over {grid}")
+            if raise_empty:
+                raise EmptyProductException(
+                    f"{self}: configured mask over {grid} covers everything"
+                )
+            else:
+                return self.empty_array(count, grid=grid, fill_value=fill_value)
+
         arr = super().read_np_array(
             assets=assets,
             eo_bands=eo_bands,
             grid=grid,
             resampling=resampling,
+            raise_empty=False,
         )
+
         # bring mask to same shape as data array
         expanded_mask = np.repeat(np.expand_dims(mask, axis=0), arr.shape[0], axis=0)
         arr.set_fill_value(fill_value)
         arr[expanded_mask] = fill_value
         arr[expanded_mask] = ma.masked
+
+        if arr.mask.all():
+            if raise_empty:
+                raise EmptyProductException(
+                    f"{self}: is empty over {grid} after reading bands and applying all masks"
+                )
+            else:
+                return self.empty_array(count, grid=grid, fill_value=fill_value)
+
         # apply BRDF config if required
         if brdf_config:
             for band_idx, asset in zip(range(len(arr)), assets):

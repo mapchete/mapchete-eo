@@ -3,13 +3,13 @@ import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
 
+from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     MaskConfig,
     SceneClassification,
     Sentinel2DriverConfig,
 )
-from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
 def test_format_available():
@@ -75,6 +75,50 @@ def test_read_brdf(sentinel2_stac_mapchete):
         assert (uncorrected[datastrip] != corrected[datastrip]).any()
 
 
+def test_read_empty_raise_nosourceproducts(sentinel2_stac_mapchete):
+    # tile does not intersect with any products
+    with sentinel2_stac_mapchete.process_mp((13, 0, 0)).open("inp") as src:
+        with pytest.raises(NoSourceProducts):
+            src.read(assets=["red"])
+
+
+def test_read_empty_raise_emptystackexception(sentinel2_stac_mapchete):
+    # tile intersects but products are empty
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        with pytest.raises(EmptyStackException):
+            src.read(
+                assets=["red"],
+                mask_config=MaskConfig(
+                    footprint=True,
+                    cloud=True,
+                    snow_ice=True,
+                    cloud_probability=True,
+                    cloud_probability_threshold=1,
+                    scl=True,
+                    scl_classes=list(SceneClassification),
+                ),
+            )
+
+
+def test_read_empty(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        stack = src.read(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+                cloud=True,
+                snow_ice=True,
+                cloud_probability=True,
+                cloud_probability_threshold=1,
+                scl=True,
+                scl_classes=list(SceneClassification),
+            ),
+            raise_empty=False,
+        )
+
+    assert isinstance(stack, xr.Dataset)
+
+
 def test_read_np(sentinel2_stac_mapchete):
     with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
         cube = src.read_np_array(assets=["red"])
@@ -106,6 +150,50 @@ def test_read_np_brdf(sentinel2_stac_mapchete):
         corrected = src.read_np_array(assets=["red"], brdf_config=BRDFConfig())
     assert corrected.any()
     assert (uncorrected != corrected).any()
+
+
+def test_read_np_empty_raise_nosourceproducts(sentinel2_stac_mapchete):
+    # tile does not intersect with any products
+    with sentinel2_stac_mapchete.process_mp((13, 0, 0)).open("inp") as src:
+        with pytest.raises(NoSourceProducts):
+            src.read_np_array(assets=["red"])
+
+
+def test_read_np_empty_raise_emptystackexception(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 1980, 8906)).open("inp") as src:
+        with pytest.raises(EmptyStackException):
+            src.read_np_array(
+                assets=["red"],
+                mask_config=MaskConfig(
+                    footprint=True,
+                    cloud=True,
+                    snow_ice=True,
+                    cloud_probability=True,
+                    cloud_probability_threshold=1,
+                    scl=True,
+                    scl_classes=list(SceneClassification),
+                ),
+            )
+
+
+def test_read_np_empty(sentinel2_stac_mapchete):
+    with sentinel2_stac_mapchete.process_mp((13, 1980, 8906)).open("inp") as src:
+        stack = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+                cloud=True,
+                snow_ice=True,
+                cloud_probability=True,
+                cloud_probability_threshold=1,
+                scl=True,
+                scl_classes=list(SceneClassification),
+            ),
+            raise_empty=False,
+        )
+    assert isinstance(stack, ma.MaskedArray)
+    assert not stack.any()
+    assert stack.shape[0] == 2
 
 
 # def test_read_levelled(sentinel2_stac_mapchete):

@@ -16,7 +16,7 @@ from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
-from mapchete_eo.exceptions import EmptyStackException, PreprocessingNotFinished
+from mapchete_eo.exceptions import PreprocessingNotFinished
 from mapchete_eo.io import products_to_np_array, products_to_xarray
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
@@ -81,8 +81,8 @@ class InputTile(base.InputTile):
 
     def read(
         self,
-        assets: List[str] = [],
-        eo_bands: List[str] = [],
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         start_time: Optional[DateTimeLike] = None,
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
@@ -90,6 +90,7 @@ class InputTile(base.InputTile):
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
+        raise_empty: bool = True,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -107,9 +108,6 @@ class InputTile(base.InputTile):
         )
         nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
 
-        if len(products) == 0:
-            raise EmptyStackException()
-
         return products_to_xarray(
             products=products,
             eo_bands=eo_bands,
@@ -119,12 +117,13 @@ class InputTile(base.InputTile):
             merge_method=merge_method or self.default_read_merge_method,
             nodatavals=nodatavals,
             product_read_kwargs=kwargs,
+            raise_empty=raise_empty,
         )
 
     def read_np_array(
         self,
-        assets: List[str] = [],
-        eo_bands: List[str] = [],
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         start_time: Optional[DateTimeLike] = None,
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
@@ -132,6 +131,7 @@ class InputTile(base.InputTile):
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
+        raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
         products = self.filter_products(
@@ -142,9 +142,6 @@ class InputTile(base.InputTile):
         )
         nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
 
-        if len(products) == 0:
-            raise EmptyStackException()
-
         return products_to_np_array(
             products=products,
             eo_bands=eo_bands,
@@ -154,13 +151,14 @@ class InputTile(base.InputTile):
             merge_method=merge_method or self.default_read_merge_method,
             nodatavals=nodatavals,
             product_read_kwargs=kwargs,
+            raise_empty=raise_empty,
         )
 
     def read_levelled(
         self,
         target_height: int,
-        assets: List[str] = [],
-        eo_bands: List[str] = [],
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         start_time: Optional[DateTimeLike] = None,
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,

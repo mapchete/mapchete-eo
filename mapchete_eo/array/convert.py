@@ -62,29 +62,30 @@ def masked_to_xarr(
 
 def masked_to_xarr_ds(
     masked_arr: ma.MaskedArray,
-    slice_var_names: List[str],
-    data_var_names: List[str],
+    slice_names: List[str],
+    band_names: List[str],
     coords: Optional[dict] = None,
     slices_attrs: Optional[List[Union[dict, None]]] = None,
-    first_axis_name: str = "time",
+    slice_axis_name: str = "time",
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.Dataset:
     """Convert a 4D masked array to a xr.Dataset."""
+    slices_attrs = [None for _ in slice_names] if slices_attrs is None else slices_attrs
     return xr.Dataset(
         data_vars={
             # every slice gets its own xarray Dataset
-            slice_var_name: xr.Dataset(
+            slice_name: xr.Dataset(
                 data_vars={
                     # within each slice Dataset, there are DataArrays for each band
-                    data_var_name: masked_to_xarr(
+                    band_name: masked_to_xarr(
                         band_array,
-                        name=slice_var_name,
+                        name=slice_name,
                         x_axis_name=x_axis_name,
                         y_axis_name=y_axis_name,
                     )
-                    for data_var_name, band_array in zip(data_var_names, product_array)
+                    for band_name, band_array in zip(band_names, product_array)
                 },
                 coords={},
                 attrs=slice_attrs,
@@ -92,15 +93,13 @@ def masked_to_xarr_ds(
             ).to_stacked_array(
                 new_dim=band_axis_name,
                 sample_dims=(x_axis_name, y_axis_name),
-                name=slice_var_name,
+                name=slice_name,
             )
-            for slice_var_name, slice_attrs, product_array in zip(
-                slice_var_names,
-                [None for _ in slice_var_names]
-                if slices_attrs is None
-                else slices_attrs,
+            for slice_name, slice_attrs, product_array in zip(
+                slice_names,
+                slices_attrs,
                 masked_arr,
             )
         },
         coords=coords,
-    ).transpose(first_axis_name, band_axis_name, x_axis_name, y_axis_name)
+    ).transpose(slice_axis_name, band_axis_name, x_axis_name, y_axis_name)

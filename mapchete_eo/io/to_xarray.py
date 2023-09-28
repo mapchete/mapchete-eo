@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -23,12 +23,12 @@ def products_to_xarray(
     grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
+    slice_axis_name: str = "time",
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
-    time_axis_name: str = "time",
     merge_products_by: Optional[str] = None,
-    merge_method: Union[MergeMethod, str] = MergeMethod.first,
+    merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
 ) -> xr.Dataset:
     """Read grid window of EOProducts and merge into a 4D xarray."""
@@ -55,7 +55,7 @@ def products_to_xarray(
             slice_var_names,
             data_var_names,
             coords=coords,
-            first_axis_name=merge_products_by,
+            slice_axis_name=merge_products_by,
             band_axis_name=band_axis_name,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
@@ -65,7 +65,7 @@ def products_to_xarray(
     else:
         slice_var_names = [product.item.id for product in products]
         coords = {
-            time_axis_name: list(
+            slice_axis_name: list(
                 np.array(
                     [product.item.datetime for product in products], dtype=np.datetime64
                 )
@@ -90,7 +90,7 @@ def products_to_xarray(
                 for product in products
             ],
             coords=coords,
-            first_axis_name=time_axis_name,
+            slice_axis_name=slice_axis_name,
             band_axis_name=band_axis_name,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,

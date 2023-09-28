@@ -37,6 +37,7 @@ def products_to_xarray(
     eo_bands = eo_bands or []
     data_var_names = eo_bands or assets
 
+    # TODO use generate_slices here
     # merge products
     if merge_products_by:
         slice_var_names = list(

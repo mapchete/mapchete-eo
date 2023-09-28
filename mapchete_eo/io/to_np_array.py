@@ -1,5 +1,6 @@
 import logging
-from typing import List, Optional, Union
+from dataclasses import dataclass
+from typing import Any, Iterator, List, Optional, Union
 
 import numpy.ma as ma
 import pystac
@@ -99,15 +100,57 @@ def products_to_np_array(
     if len(products) == 0:
         raise NoSourceProducts("no products to read")
 
+    return ma.stack(
+        [
+            s.array
+            for s in generate_slices(
+                products=products,
+                assets=assets,
+                eo_bands=eo_bands,
+                grid=grid,
+                resampling=resampling,
+                nodatavals=nodatavals,
+                merge_products_by=merge_products_by,
+                merge_method=merge_method,
+                product_read_kwargs=product_read_kwargs,
+                raise_empty=raise_empty,
+            )
+        ]
+    )
+
+
+@dataclass
+class Slice:
+    """Class representing a merge of multiple products."""
+
+    array: ma.MaskedArray
+    # TODO: do we really want to store all of the products here?
+    products: List[EOProductProtocol]
+    merge_property: Optional[Any] = None
+
+
+def generate_slices(
+    products: List[EOProductProtocol],
+    assets: Optional[List[str]] = None,
+    eo_bands: Optional[List[str]] = None,
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
+    merge_products_by: Union[str, None] = None,
+    merge_method: MergeMethod = MergeMethod.first,
+    product_read_kwargs: dict = {},
+    raise_empty: bool = True,
+) -> Iterator[Slice]:
+    stack_empty = True
+
     # don't merge products
     if merge_products_by is None:
         logger.debug("reading %s products...", len(products))
-
-        def _read_products(products: List[EOProductProtocol]):
-            """Read products but skip empty ones if raise_empty is active."""
-            for product in products:
-                try:
-                    yield product.read_np_array(
+        # Read products but skip empty ones if raise_empty is active.
+        for product in products:
+            try:
+                yield Slice(
+                    array=product.read_np_array(
                         assets=assets,
                         eo_bands=eo_bands,
                         grid=grid,
@@ -115,15 +158,12 @@ def products_to_np_array(
                         nodatavals=nodatavals,
                         raise_empty=raise_empty,
                         **product_read_kwargs,
-                    )
-                except EmptyProductException:
-                    pass
-
-        products_arrays = list(_read_products(products))
-        if products_arrays:
-            out = ma.stack(products_arrays)
-        else:
-            raise EmptyStackException("all products are empty")
+                    ),
+                    products=[product],
+                )
+                stack_empty = False
+            except EmptyProductException:
+                pass
 
     # merge products
     else:
@@ -133,11 +173,10 @@ def products_to_np_array(
             len(products),
             len(products_per_property),
         )
-
-        def _merge_products(products_per_property: dict):
-            for products in products_per_property.values():
-                try:
-                    yield merge_products(
+        for merge_property, products in products_per_property.items():
+            try:
+                yield Slice(
+                    array=merge_products(
                         products=products,
                         merge_method=merge_method,
                         product_read_kwargs=dict(
@@ -150,21 +189,16 @@ def products_to_np_array(
                             raise_empty=raise_empty,
                         ),
                         raise_empty=raise_empty,
-                    )
-                except EmptySliceException:
-                    pass
+                    ),
+                    products=products,
+                    merge_property=merge_property,
+                )
+                stack_empty = False
+            except EmptySliceException:
+                pass
 
-        slices = list(_merge_products(products_per_property))
-
-        if slices:
-            out = ma.stack(slices)
-        else:
-            raise EmptyStackException("all slices are empty")
-
-    if raise_empty and out.mask.all():
-        raise EmptyStackException("the whole stack is masked")
-
-    return out
+    if stack_empty:
+        raise EmptyStackException("all slices are empty")
 
 
 def merge_products(

@@ -150,7 +150,7 @@ def products_to_np_array(
 
 
 def merge_products(
-    products: List[EOProductProtocol] = [],
+    products: List[EOProductProtocol],
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
 ) -> ma.MaskedArray:

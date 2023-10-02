@@ -4,11 +4,14 @@ from mapchete_eo.io.assets import (
     get_assets,
     read_mask_as_raster,
 )
-from mapchete_eo.io.item import get_item_property
+from mapchete_eo.io.items import get_item_property, item_to_np_array
 from mapchete_eo.io.path import get_product_cache_path, open_xml, path_in_paths
-from mapchete_eo.io.products import group_products_per_property, merge_products
-from mapchete_eo.io.to_np_array import item_to_np_array, products_to_np_array
-from mapchete_eo.io.to_xarray import products_to_xarray
+from mapchete_eo.io.products import (
+    group_products_per_property,
+    merge_products,
+    products_to_np_array,
+    products_to_xarray,
+)
 
 __all__ = [
     "get_assets",

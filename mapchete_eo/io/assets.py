@@ -4,6 +4,7 @@ from typing import Callable, List, Union
 
 import fsspec
 import numpy as np
+import numpy.ma as ma
 import pystac
 from affine import Affine
 from mapchete import Timer
@@ -17,12 +18,41 @@ from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 
 from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
+from mapchete_eo.io.mapchete_io_raster import read_raster
+from mapchete_eo.io.path import (
+    COMMON_RASTER_EXTENSIONS,
+    absolute_asset_path,
+    cached_path,
+)
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.protocols import GridProtocol
-from mapchete_eo.types import Grid
+from mapchete_eo.types import Grid, NodataVal
 
 logger = logging.getLogger(__name__)
+
+
+def asset_to_np_array(
+    item: pystac.Item,
+    asset: str,
+    indexes: Union[List[int], int] = 1,
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodataval: NodataVal = None,
+) -> ma.MaskedArray:
+    """
+    Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
+
+    This is the main read method which is one way or the other being called from everywhere
+    whenever a band is being read!
+    """
+    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
+    return read_raster(
+        inp=absolute_asset_path(item, asset),
+        indexes=indexes,
+        grid=grid,
+        resampling=resampling.name,
+        dst_nodata=nodataval,
+    ).data
 
 
 def asset_mpath(

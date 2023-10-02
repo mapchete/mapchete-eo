@@ -1,3 +1,10 @@
+"""
+This is a temporary module which is a clone of mapchete.io.raster from the core.
+
+It will get removed if the mapchete core adopts the GridProtocol.
+"""
+
+
 import logging
 import warnings
 from typing import Any, Dict, List, Tuple, Union

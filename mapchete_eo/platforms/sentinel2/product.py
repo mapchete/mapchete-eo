@@ -6,7 +6,6 @@ from typing import List, Optional, Union
 import numpy as np
 import numpy.ma as ma
 import pystac
-import xarray as xr
 from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
@@ -20,17 +19,12 @@ from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.mapchete_io_raster import read_raster_window
-from mapchete_eo.io.path import absolute_asset_path, get_product_cache_path
+from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import (
-    CloudType,
-    L2ABand,
-    Resolution,
-    SceneClassification,
-)
+from mapchete_eo.platforms.sentinel2.types import CloudType, L2ABand, Resolution
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
@@ -313,7 +307,7 @@ class S2Product(EOProduct, EOProductProtocol):
             else Grid.from_obj(grid)
         )
         return read_mask_as_raster(
-            absolute_asset_path(self.item, "scl"),
+            asset_mpath(self.item, "scl"),
             dst_grid=grid,
             resampling=Resampling.nearest,
             masked=True,

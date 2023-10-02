@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
 
+import fsspec
 import pystac
 from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
@@ -123,7 +124,21 @@ def cached_path(path: MPath) -> MPath:
         yield path
 
 
-def absolute_asset_path(item: pystac.Item, asset: str) -> MPath:
-    item_dir = MPath.from_inp(item.get_self_href()).parent
-    asset_path = MPath(item.assets[asset].href)
-    return asset_path.absolute_path(item_dir)
+def asset_mpath(
+    item: pystac.Item,
+    asset: str,
+    fs: fsspec.AbstractFileSystem = None,
+    absolute_path: bool = True,
+) -> MPath:
+    """Return MPath instance with asset href."""
+
+    try:
+        asset_path = MPath(item.assets[asset].href, fs=fs)
+    except KeyError:
+        raise KeyError(
+            f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
+        )
+    if absolute_path:
+        return asset_path.absolute_path(MPath(item.get_self_href(), fs=fs).parent)
+    else:
+        return asset_path

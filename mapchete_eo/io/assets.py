@@ -19,11 +19,7 @@ from rasterio.vrt import WarpedVRT
 
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.io.mapchete_io_raster import read_raster
-from mapchete_eo.io.path import (
-    COMMON_RASTER_EXTENSIONS,
-    absolute_asset_path,
-    cached_path,
-)
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import Grid, NodataVal
@@ -47,24 +43,12 @@ def asset_to_np_array(
     """
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
     return read_raster(
-        inp=absolute_asset_path(item, asset),
+        inp=asset_mpath(item, asset),
         indexes=indexes,
         grid=grid,
         resampling=resampling.name,
         dst_nodata=nodataval,
     ).data
-
-
-def asset_mpath(
-    item: pystac.Item, asset: str, fs: fsspec.AbstractFileSystem = None
-) -> MPath:
-    """Return MPath instance with asset href."""
-    try:
-        return MPath(item.assets[asset].href, fs=fs)
-    except KeyError:
-        raise KeyError(
-            f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
-        )
 
 
 def get_assets(

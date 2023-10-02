@@ -1,12 +1,10 @@
 import pystac_client
-import pytest
 import rasterio
 from mapchete.io import fs_from_path, path_exists
 from mapchete.io.raster import rasterio_open
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 
-from mapchete_eo.io.profiles import JP2LossyProfile
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACStaticCatalog

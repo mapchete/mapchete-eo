@@ -4,6 +4,7 @@ import xml.etree.ElementTree as etree
 from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
+from xml.etree.ElementTree import Element
 
 import fsspec
 import pystac
@@ -24,7 +25,8 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
     exceptions=(TimeoutError, FSTimeoutError),
     **dict(IORetrySettings()),
 )
-def open_xml(path: MPath):
+def open_xml(path: MPath) -> Element:
+    """Parse an XML file path into an etree root element."""
     logger.debug("open %s", path)
     return etree.fromstring(path.read_text())
 

@@ -181,6 +181,9 @@ def generate_slices(
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
 ) -> Iterator[xr.DataArray]:
+    """
+    Yield products or merged products into slices as DataArrays.
+    """
     if len(products) == 0:
         raise NoSourceProducts("no products to read")
 

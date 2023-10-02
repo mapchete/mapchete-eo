@@ -151,6 +151,9 @@ def convert_asset(
     item_href_in_dst_dir: bool = True,
     ignore_if_exists: bool = False,
 ) -> pystac.Item:
+    """
+    Convert asset to a different format.
+    """
     src_path = asset_mpath(item, asset, fs=src_fs)
     output_path = dst_dir / src_path.name
     profile = profile or COGDeflateProfile()
@@ -329,6 +332,9 @@ def read_mask_as_raster(
     dtype: Union[DTypeLike, None] = None,
     masked: bool = True,
 ) -> ReferencedRaster:
+    """
+    Read mask as array regardless of source data type (raster or vector).
+    """
     if dst_grid:
         dst_grid = Grid.from_obj(dst_grid)
     if path.suffix in COMMON_RASTER_EXTENSIONS:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Protocol, Tuple, Union
+from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
 
 import numpy.ma as ma
 import pystac
@@ -25,8 +25,8 @@ class EOProductProtocol(Protocol):
 
     def read(
         self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
@@ -38,8 +38,8 @@ class EOProductProtocol(Protocol):
 
     def read_np_array(
         self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,

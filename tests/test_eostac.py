@@ -1,6 +1,22 @@
 import xarray as xr
 from mapchete.formats import available_input_formats
 
+from mapchete_eo.product import eo_bands_to_assets_indexes
+
+
+# TODO:
+# --> PF Elias:
+# DataSet
+# per band 1 DataArray
+# each DataArray has 3 dimensions: time, x, y
+def test_pf_eo_bands_to_assets_indexes(pf_sr_stac_item):
+    eo_bands = ["B3", "B2", "B4"]
+    assets_indexes = eo_bands_to_assets_indexes(pf_sr_stac_item, eo_bands)
+    assert len(eo_bands) == len(assets_indexes)
+    for band_index, (asset, index) in zip([1, 2, 4], assets_indexes):
+        assert asset == "bands"
+        assert band_index == index
+
 
 def test_format_available():
     assert "EOSTAC_DEV" in available_input_formats()

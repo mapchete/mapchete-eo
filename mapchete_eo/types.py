@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Union
 
@@ -42,3 +43,12 @@ class Grid:
         else:
             transform = obj.affine
         return Grid(transform, obj.height, obj.width, obj.crs)
+
+
+@dataclass
+class BandLocation:
+    """A class representing the location of a specific band."""
+
+    asset_name: str
+    band_index: int = 1
+    nodataval: float = 0

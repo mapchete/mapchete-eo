@@ -1,6 +1,65 @@
-from typing import Any
+import logging
+from typing import Any, List, Union
 
+import numpy.ma as ma
 import pystac
+from rasterio.enums import Resampling
+
+from mapchete_eo.exceptions import EmptyProductException
+from mapchete_eo.io.assets import asset_to_np_array
+from mapchete_eo.protocols import GridProtocol
+from mapchete_eo.types import BandLocation, NodataVals
+
+logger = logging.getLogger(__name__)
+
+
+def item_to_np_array(
+    item: pystac.Item,
+    band_locations: List[BandLocation],
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodatavals: NodataVals = None,
+    raise_empty: bool = False,
+) -> ma.MaskedArray:
+    """
+    Read window of STAC Item and merge into a 3D ma.MaskedArray.
+    """
+    logger.debug("reading %s assets from item %s...", len(band_locations), item.id)
+    out = ma.stack(
+        [
+            asset_to_np_array(
+                item,
+                band_location.asset_name,
+                indexes=band_location.band_index,
+                grid=grid,
+                resampling=expanded_resampling,
+                nodataval=nodataval,
+            )
+            for band_location, expanded_resampling, nodataval in zip(
+                band_locations,
+                expand_params(resampling, len(band_locations)),
+                expand_params(nodatavals, len(band_locations)),
+            )
+        ]
+    )
+
+    if raise_empty and out.mask.all():
+        raise EmptyProductException(
+            f"all required assets of {item} over grid {grid} are empty."
+        )
+
+    return out
+
+
+def expand_params(param, length):
+    """
+    Expand parameters if they are not a list.
+    """
+    if isinstance(param, list):
+        if len(param) != length:
+            raise ValueError(f"length of {param} must be {length} but is {len(param)}")
+        return param
+    return [param for _ in range(length)]
 
 
 def get_item_property(item: pystac.Item, property: str) -> Any:

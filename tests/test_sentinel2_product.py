@@ -9,6 +9,7 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
+from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution, SceneClassification
@@ -246,6 +247,24 @@ def test_read_brdf(s2_stac_item_half_footprint):
         assert (uncorrected[asset] != corrected[asset]).any()
 
 
+def test_read_empty_raise(s2_stac_item_half_footprint):
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = BufferedTilePyramid("geodetic").tile(13, 0, 0)
+
+    with pytest.raises(EmptyProductException):
+        product.read(assets=assets, grid=tile)
+
+
+def test_read_empty(s2_stac_item_half_footprint):
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = BufferedTilePyramid("geodetic").tile(13, 0, 0)
+
+    xarr = product.read(assets=assets, grid=tile, raise_empty=False)
+    assert isinstance(xarr, xr.Dataset)
+
+
 def test_read_np(s2_stac_item_half_footprint):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
@@ -297,3 +316,22 @@ def test_read_np_brdf(s2_stac_item):
         assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
     )
     assert (rgb_uncorrected != rgb_corrected).any()
+
+
+def test_read_np_empty_raise(s2_stac_item_half_footprint):
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = BufferedTilePyramid("geodetic").tile(13, 0, 0)
+
+    with pytest.raises(EmptyProductException):
+        product.read_np_array(assets=assets, grid=tile)
+
+
+def test_read_np_empty(s2_stac_item_half_footprint):
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = BufferedTilePyramid("geodetic").tile(13, 0, 0)
+
+    arr = product.read_np_array(assets=assets, grid=tile, raise_empty=False)
+    assert isinstance(arr, ma.MaskedArray)
+    assert arr.mask.all()

@@ -286,15 +286,15 @@ def get_brdf_param(
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
-        logger.debug(f"run on detector {detector_id}")
+        logger.debug("run on detector %s", detector_id)
 
         # handle rare cases where detector geometries are available but no respective
         # angle arrays:
         if detector_id not in viewing_zenith:  # pragma: no cover
-            logger.debug(f"no zenith angles grid found for detector {detector_id}")
+            logger.debug("no zenith angles grid found for detector %s", detector_id)
             continue
         if detector_id not in viewing_azimuth:  # pragma: no cover
-            logger.debug(f"no azimuth angles grid found for detector {detector_id}")
+            logger.debug("no azimuth angles grid found for detector %s", detector_id)
             continue
 
         # select pixels which are covered by detector
@@ -302,7 +302,7 @@ def get_brdf_param(
 
         # skip if detector footprint does not intersect with output window
         if not detector_mask.any():  # pragma: no cover
-            logger.debug(f"detector {detector_id} does not intersect with band window")
+            logger.debug("detector %s does not intersect with band window", detector_id)
             continue
 
         # run low resolution model

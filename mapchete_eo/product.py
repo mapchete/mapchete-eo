@@ -1,24 +1,33 @@
 from __future__ import annotations
 
-from typing import Any, List, Union
+import logging
+from collections import defaultdict
+from typing import Any, List, Optional, Union
 
+import numpy as np
 import numpy.ma as ma
 import pystac
 import xarray as xr
+from mapchete import Timer
 from mapchete.types import Bounds
+from numpy.typing import DTypeLike
 from rasterio.enums import Resampling
 from shapely.geometry import shape
 
 from mapchete_eo.array.convert import masked_to_xarr
+from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.io import get_item_property, item_to_np_array
-from mapchete_eo.io.assets import eo_bands_to_assets_indexes
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
-from mapchete_eo.types import NodataVals
+from mapchete_eo.types import BandLocation, NodataVals
+
+logger = logging.getLogger(__name__)
 
 
 class EOProduct(EOProductProtocol):
     """Wrapper class around a pystac.Item which provides read functions."""
+
+    default_dtype: DTypeLike = np.uint16
 
     def __init__(self, item: pystac.Item):
         self.item = item
@@ -35,48 +44,43 @@ class EOProduct(EOProductProtocol):
 
     def read(
         self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
         grid: Union[GridProtocol, None] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",
         y_axis_name: str = "y",
+        raise_empty: bool = True,
         **kwargs,
     ) -> xr.Dataset:
         """Read bands and assets into xarray."""
         # developer info: all fancy stuff for special platforms like Sentinel-2
         # should be implemented in the respective read_np_array() methods which get
         # called by this method. No need to apply masks etc. here too.
-        if eo_bands:
-            assets_indexes = self.eo_bands_to_assets_indexes(eo_bands)
-            data_var_names = eo_bands
-        elif assets:
-            assets_indexes = [(asset, 1) for asset in assets]
-            data_var_names = assets
-        else:
-            raise ValueError("either eo_bands or assets have to be provided")
-
+        assets = assets or []
+        eo_bands = eo_bands or []
+        data_var_names = assets or eo_bands
         return xr.Dataset(
             data_vars={
                 data_var_name: masked_to_xarr(
                     asset_arr,
                     x_axis_name=x_axis_name,
                     y_axis_name=y_axis_name,
-                    name=asset,
+                    name=data_var_name,
                     attrs=dict(item_id=self.item.id),
                 )
-                for asset_arr, data_var_name, (asset, _), in zip(
+                for asset_arr, data_var_name in zip(
                     self.read_np_array(
                         assets=assets,
                         eo_bands=eo_bands,
                         grid=grid,
                         resampling=resampling,
                         nodatavals=nodatavals,
+                        raise_empty=raise_empty,
                         **kwargs,
                     ),
                     data_var_names,
-                    assets_indexes,
                 )
             },
             coords={},
@@ -88,20 +92,43 @@ class EOProduct(EOProductProtocol):
 
     def read_np_array(
         self,
-        assets: Union[List[str], None] = None,
-        eo_bands: Union[List[str], None] = None,
-        grid: Union[GridProtocol, None] = None,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
+        grid: Union[GridProtocol, Any] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
+        raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
-        return item_to_np_array(
-            self.item,
-            assets=assets or [],
-            eo_bands=eo_bands or [],
-            grid=grid,
-            resampling=resampling,
-            nodatavals=nodatavals,
+        assets = assets or []
+        eo_bands = eo_bands or []
+        bands = assets or eo_bands
+        logger.debug("%s: reading assets %s over %s", self, bands, grid)
+        with Timer() as t:
+            out = item_to_np_array(
+                self.item,
+                self.assets_eo_bands_to_band_locations(assets, eo_bands),
+                grid=grid,
+                resampling=resampling,
+                nodatavals=nodatavals,
+                raise_empty=raise_empty,
+            )
+        logger.debug("%s: read in %s", self, t)
+        return out
+
+    def empty_array(
+        self,
+        count: int,
+        grid: GridProtocol,
+        fill_value: int = 0,
+        dtype: Optional[DTypeLike] = None,
+    ) -> ma.MaskedArray:
+        shape = (count, *grid.shape)
+        dtype = dtype or self.default_dtype
+        return ma.MaskedArray(
+            data=np.full(shape, fill_value=fill_value, dtype=dtype),
+            mask=np.ones(shape, dtype=bool),
+            fill_value=fill_value,
         )
 
     def get_property(self, property: str) -> Any:
@@ -109,3 +136,52 @@ class EOProduct(EOProductProtocol):
 
     def eo_bands_to_assets_indexes(self, eo_bands: List[str]) -> List[tuple]:
         return eo_bands_to_assets_indexes(self.item, eo_bands)
+
+    def assets_eo_bands_to_band_locations(
+        self,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
+    ) -> List[BandLocation]:
+        assets = assets or []
+        eo_bands = eo_bands or []
+        if assets and eo_bands:
+            raise ValueError("assets and eo_bands cannot be provided at the same time")
+        if assets:
+            return [BandLocation(asset, 1) for asset in assets]
+        elif eo_bands:
+            return [
+                BandLocation(asset, index)
+                for (asset, index) in self.eo_bands_to_assets_indexes(eo_bands)
+            ]
+        else:
+            raise ValueError("assets or eo_bands have to be provided")
+
+
+def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
+    """
+    Find out location (asset and band index) of EO band.
+    """
+    mapping = defaultdict(list)
+    for eo_band in eo_bands:
+        for asset_name, asset in item.assets.items():
+            asset_eo_bands = asset.extra_fields.get("eo:bands")
+            if asset_eo_bands:
+                for band_idx, band_info in enumerate(asset_eo_bands, 1):
+                    if eo_band == band_info.get("name"):
+                        mapping[eo_band].append((asset_name, band_idx))
+
+    for eo_band in eo_bands:
+        if eo_band not in mapping:
+            raise KeyError(f"EO band {eo_band} not found in item assets")
+        found = mapping[eo_band]
+        if len(found) > 1:
+            for asset_name, band_idx in found:
+                if asset_name == eo_band:
+                    mapping[eo_band] = [(asset_name, band_idx)]
+                    break
+            else:  # pragma: no cover
+                raise ValueError(
+                    f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
+                )
+
+    return [mapping[eo_band][0] for eo_band in eo_bands]

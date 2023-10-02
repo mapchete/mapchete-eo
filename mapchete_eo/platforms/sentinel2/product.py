@@ -6,7 +6,6 @@ from typing import List, Optional, Union
 import numpy as np
 import numpy.ma as ma
 import pystac
-import xarray as xr
 from mapchete.io.raster import ReferencedRaster
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
@@ -20,17 +19,12 @@ from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.mapchete_io_raster import read_raster_window
-from mapchete_eo.io.path import absolute_asset_path, get_product_cache_path
+from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import (
-    CloudType,
-    L2ABand,
-    Resolution,
-    SceneClassification,
-)
+from mapchete_eo.platforms.sentinel2.types import CloudType, L2ABand, Resolution
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
@@ -57,7 +51,8 @@ class Cache:
         self._brdf_grid_cache: dict = dict()
         if self.config.brdf:
             self._brdf_bands = [
-                asset_name_to_band(self.item, band) for band in self.config.brdf.bands
+                asset_name_to_l2a_band(self.item, band)
+                for band in self.config.brdf.bands
             ]
         else:
             self._brdf_bands = []
@@ -101,7 +96,7 @@ class Cache:
                         model=model,
                         resolution=resolution,
                     )
-                    logger.debug(f"cache BRDF correction grid to {out_path}")
+                    logger.debug("cache BRDF correction grid to %s", out_path)
                     grid.to_file(out_path, **COGDeflateProfile(grid.meta))
                 self._brdf_grid_cache[band] = out_path
 
@@ -164,38 +159,61 @@ class S2Product(EOProduct, EOProductProtocol):
         grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
+        raise_empty: bool = True,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
         **kwargs,
     ) -> ma.MaskedArray:
+        assets = assets or []
+        eo_bands = eo_bands or []
         if eo_bands:
+            count = len(eo_bands)
             raise NotImplementedError("please use asset names for now")
+        else:
+            count = len(assets)
         if grid is None:
             grid = self.metadata.grid(Resolution["10m"])
         elif isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
         mask = self.get_mask(grid, mask_config).data
         if mask.all():
-            raise EmptyProductException(f"{self} is empty over {grid}")
+            if raise_empty:
+                raise EmptyProductException(
+                    f"{self}: configured mask over {grid} covers everything"
+                )
+            else:
+                return self.empty_array(count, grid=grid, fill_value=fill_value)
+
         arr = super().read_np_array(
             assets=assets,
             eo_bands=eo_bands,
             grid=grid,
             resampling=resampling,
+            raise_empty=False,
         )
+
         # bring mask to same shape as data array
         expanded_mask = np.repeat(np.expand_dims(mask, axis=0), arr.shape[0], axis=0)
         arr.set_fill_value(fill_value)
         arr[expanded_mask] = fill_value
         arr[expanded_mask] = ma.masked
+
+        if arr.mask.all():
+            if raise_empty:
+                raise EmptyProductException(
+                    f"{self}: is empty over {grid} after reading bands and applying all masks"
+                )
+            else:
+                return self.empty_array(count, grid=grid, fill_value=fill_value)
+
         # apply BRDF config if required
         if brdf_config:
             for band_idx, asset in zip(range(len(arr)), assets):
                 arr[band_idx] = get_corrected_band_reflectance(
                     arr[band_idx],
                     self.read_brdf_grid(
-                        asset_name_to_band(self.item, asset),
+                        asset_name_to_l2a_band(self.item, asset),
                         resampling=resampling,
                         grid=grid,
                         brdf_config=brdf_config,
@@ -289,7 +307,7 @@ class S2Product(EOProduct, EOProductProtocol):
             else Grid.from_obj(grid)
         )
         return read_mask_as_raster(
-            absolute_asset_path(self.item, "scl"),
+            asset_mpath(self.item, "scl"),
             dst_grid=grid,
             resampling=Resampling.nearest,
             masked=True,
@@ -373,7 +391,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
 
 
-def asset_name_to_band(item: pystac.Item, asset_name: str) -> L2ABand:
+def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:
     asset = item.assets[asset_name]
     asset_path = MPath(asset.href)
     band_name = asset_path.name.split(".")[0]

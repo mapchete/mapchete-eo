@@ -103,7 +103,7 @@ class STACSearchCatalog(Catalog):
 
     def _search(self, **kwargs):
         search_params = dict(self.default_search_params, **kwargs)
-        logger.debug(f"query catalog using params: {search_params}")
+        logger.debug("query catalog using params: %s", search_params)
         return self.client.search(**search_params)
 
     def get_collections(self):

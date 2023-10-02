@@ -1,10 +1,10 @@
 import logging
 import math
-from collections import defaultdict
 from typing import Callable, List, Union
 
 import fsspec
 import numpy as np
+import numpy.ma as ma
 import pystac
 from affine import Affine
 from mapchete import Timer
@@ -18,24 +18,37 @@ from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 
 from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, cached_path
+from mapchete_eo.io.mapchete_io_raster import read_raster
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.protocols import GridProtocol
-from mapchete_eo.types import Grid
+from mapchete_eo.types import Grid, NodataVal
 
 logger = logging.getLogger(__name__)
 
 
-def asset_mpath(
-    item: pystac.Item, asset: str, fs: fsspec.AbstractFileSystem = None
-) -> MPath:
-    """Return MPath instance with asset href."""
-    try:
-        return MPath(item.assets[asset].href, fs=fs)
-    except KeyError:
-        raise KeyError(
-            f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
-        )
+def asset_to_np_array(
+    item: pystac.Item,
+    asset: str,
+    indexes: Union[List[int], int] = 1,
+    grid: Union[GridProtocol, None] = None,
+    resampling: Resampling = Resampling.nearest,
+    nodataval: NodataVal = None,
+) -> ma.MaskedArray:
+    """
+    Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
+
+    This is the main read method which is one way or the other being called from everywhere
+    whenever a band is being read!
+    """
+    logger.debug("reading asset %s and indexes %s ...", asset, indexes)
+    return read_raster(
+        inp=asset_mpath(item, asset),
+        indexes=indexes,
+        grid=grid,
+        resampling=resampling.name,
+        dst_nodata=nodataval,
+    ).data
 
 
 def get_assets(
@@ -138,6 +151,9 @@ def convert_asset(
     item_href_in_dst_dir: bool = True,
     ignore_if_exists: bool = False,
 ) -> pystac.Item:
+    """
+    Convert asset to a different format.
+    """
     src_path = asset_mpath(item, asset, fs=src_fs)
     output_path = dst_dir / src_path.name
     profile = profile or COGDeflateProfile()
@@ -214,36 +230,6 @@ def convert_raster(
                 dst.write(warped.read())
 
 
-def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
-    """
-    Find out location (asset and band index) of EO band.
-    """
-    mapping = defaultdict(list)
-    for eo_band in eo_bands:
-        for asset_name, asset in item.assets.items():
-            asset_eo_bands = asset.extra_fields.get("eo:bands")
-            if asset_eo_bands:
-                for band_idx, band_info in enumerate(asset_eo_bands, 1):
-                    if eo_band == band_info.get("name"):
-                        mapping[eo_band].append((asset_name, band_idx))
-
-    for eo_band in eo_bands:
-        if eo_band not in mapping:
-            raise KeyError(f"EO band {eo_band} not found in item assets")
-        found = mapping[eo_band]
-        if len(found) > 1:
-            for asset_name, band_idx in found:
-                if asset_name == eo_band:
-                    mapping[eo_band] = [(asset_name, band_idx)]
-                    break
-            else:  # pragma: no cover
-                raise ValueError(
-                    f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
-                )
-
-    return [mapping[eo_band][0] for eo_band in eo_bands]
-
-
 def get_metadata_assets(
     item: pystac.Item,
     dst_dir: MPath,
@@ -293,7 +279,7 @@ def get_metadata_assets(
             ):  # pragma: no cover
                 convert_raster(src_path, dst_path, resolution, convert_profile)
             else:
-                logger.debug(f"copy {asset} ...")
+                logger.debug("copy %s ...", asset)
                 copy(src_path, dst_path, overwrite=overwrite)
 
     return item
@@ -321,7 +307,7 @@ def should_be_converted(
 
 
 def _read_vector_mask(mask_path):
-    logger.debug(f"open {mask_path} with Fiona")
+    logger.debug("open %s with Fiona", mask_path)
     with cached_path(mask_path) as cached:
         try:
             with fiona_open(cached) as src:
@@ -346,6 +332,9 @@ def read_mask_as_raster(
     dtype: Union[DTypeLike, None] = None,
     masked: bool = True,
 ) -> ReferencedRaster:
+    """
+    Read mask as array regardless of source data type (raster or vector).
+    """
     if dst_grid:
         dst_grid = Grid.from_obj(dst_grid)
     if path.suffix in COMMON_RASTER_EXTENSIONS:

@@ -1,19 +1,21 @@
 """Custom exceptions."""
 
+from mapchete.errors import MapcheteNodataTile
+
 
 class EmptyFootprintException(Exception):
     """Raised when footprint is empty."""
-
-
-class EmptyProductException(Exception):
-    """Raised when product is empty."""
 
 
 class EmptySliceException(Exception):
     """Raised when slice is empty."""
 
 
-class EmptyStackException(Exception):
+class EmptyProductException(EmptySliceException):
+    """Raised when product is empty."""
+
+
+class EmptyStackException(MapcheteNodataTile):
     """Raised when whole stack is empty."""
 
 
@@ -51,3 +53,7 @@ class PreprocessingNotFinished(Exception):
 
 class AllMasked(Exception):
     """Raised when an array is fully masked."""
+
+
+class NoSourceProducts(MapcheteNodataTile, ValueError):
+    """Raised when no products are available."""

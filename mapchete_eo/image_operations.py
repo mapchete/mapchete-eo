@@ -33,7 +33,7 @@ def dtype_scale(
             bands.mask,
             nodata,
             np.clip(
-                (bands.astype("float32", copy=False) / max_source_value)
+                (bands.astype("float16", copy=False) / max_source_value)
                 * max_output_value,
                 1,
                 max_output_value,

@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures
@@ -79,7 +79,7 @@ class Catalog(ABC):
         output_path: Union[MPath, str],
         name: Union[str, None] = None,
         description: Union[str, None] = None,
-        assets: List[str] = [],
+        assets: Optional[List[str]] = None,
         assets_dst_resolution: Union[None, float, int] = None,
         assets_convert_profile: Union[Profile, None] = None,
         copy_metadata: bool = False,
@@ -90,6 +90,7 @@ class Catalog(ABC):
     ) -> MPath:
         """Dump static version of current items."""
         output_path = MPath.from_inp(output_path)
+        assets = assets or []
 
         # initialize catalog
         catalog_json = output_path / "catalog.json"

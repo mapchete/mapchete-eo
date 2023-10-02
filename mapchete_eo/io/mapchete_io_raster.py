@@ -1,3 +1,10 @@
+"""
+This is a temporary module which is a clone of mapchete.io.raster from the core.
+
+It will get removed if the mapchete core adopts the GridProtocol.
+"""
+
+
 import logging
 import warnings
 from typing import Any, Dict, List, Tuple, Union
@@ -369,7 +376,7 @@ def read_raster(
     inp: MPathLike, grid: Union[GridProtocol, None] = None, **kwargs
 ) -> ReferencedRaster:
     inp = MPath.from_inp(inp)
-    logger.debug(f"reading {str(inp)} into memory")
+    logger.debug("reading %s into memory", str(inp))
     if grid:
         # if grid is a tile, we need to wrap it to get the transform attribute
         if isinstance(grid, BufferedTile):

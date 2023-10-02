@@ -60,6 +60,37 @@ def masked_to_xarr(
     )
 
 
+def masked_to_xarr_slice(
+    slice_array: ma.MaskedArray,
+    slice_name: str,
+    band_names: List[str],
+    slice_attrs: Optional[dict] = None,
+    band_axis_name: str = "bands",
+    x_axis_name: str = "x",
+    y_axis_name: str = "y",
+) -> xr.DataArray:
+    """Convert a 3D masked array to a xr.DataArray."""
+    return xr.Dataset(
+        data_vars={
+            # within each slice Dataset, there are DataArrays for each band
+            band_name: masked_to_xarr(
+                band_array,
+                name=slice_name,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+            )
+            for band_name, band_array in zip(band_names, slice_array)
+        },
+        coords={},
+        attrs=slice_attrs,
+        # finally, the slice Dataset will be converted into a DataArray itself
+    ).to_stacked_array(
+        new_dim=band_axis_name,
+        sample_dims=(x_axis_name, y_axis_name),
+        name=slice_name,
+    )
+
+
 def masked_to_xarr_ds(
     masked_arr: ma.MaskedArray,
     slice_names: List[str],
@@ -76,26 +107,16 @@ def masked_to_xarr_ds(
     return xr.Dataset(
         data_vars={
             # every slice gets its own xarray Dataset
-            slice_name: xr.Dataset(
-                data_vars={
-                    # within each slice Dataset, there are DataArrays for each band
-                    band_name: masked_to_xarr(
-                        band_array,
-                        name=slice_name,
-                        x_axis_name=x_axis_name,
-                        y_axis_name=y_axis_name,
-                    )
-                    for band_name, band_array in zip(band_names, product_array)
-                },
-                coords={},
-                attrs=slice_attrs,
-                # finally, the slice Dataset will be converted into a DataArray itself
-            ).to_stacked_array(
-                new_dim=band_axis_name,
-                sample_dims=(x_axis_name, y_axis_name),
-                name=slice_name,
+            slice_name: masked_to_xarr_slice(
+                slice_array,
+                slice_name,
+                band_names,
+                slice_attrs=slice_attrs,
+                band_axis_name=band_axis_name,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
             )
-            for slice_name, slice_attrs, product_array in zip(
+            for slice_name, slice_attrs, slice_array in zip(
                 slice_names,
                 slices_attrs,
                 masked_arr,

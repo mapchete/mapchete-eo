@@ -47,6 +47,7 @@ def test_remote_s2_read_xarray(sentinel2_mapchete):
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
+@pytest.mark.remote
 def test_preprocessing(sentinel2_mapchete):
     mp = sentinel2_mapchete.mp()
     input_data = list(mp.config.inputs.values())[0]

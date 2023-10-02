@@ -1,11 +1,12 @@
 import logging
-from dataclasses import dataclass
-from typing import Any, Iterator, List, Optional, Union
+from typing import Iterator, List, Optional, Union
 
 import numpy.ma as ma
 import pystac
+import xarray as xr
 from rasterio.enums import Resampling
 
+from mapchete_eo.array.convert import masked_to_xarr_slice, xarr_to_masked
 from mapchete_eo.exceptions import (
     EmptyProductException,
     EmptySliceException,
@@ -14,7 +15,7 @@ from mapchete_eo.exceptions import (
 )
 from mapchete_eo.io.mapchete_io_raster import read_raster
 from mapchete_eo.io.path import absolute_asset_path
-from mapchete_eo.io.products import group_products_per_property
+from mapchete_eo.io.products import group_products_per_property, merge_products
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.types import BandLocation, MergeMethod, NodataVal, NodataVals
 
@@ -96,13 +97,9 @@ def products_to_np_array(
     raise_empty: bool = True,
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
-
-    if len(products) == 0:
-        raise NoSourceProducts("no products to read")
-
     return ma.stack(
         [
-            s.array
+            xarr_to_masked(s)
             for s in generate_slices(
                 products=products,
                 assets=assets,
@@ -119,16 +116,6 @@ def products_to_np_array(
     )
 
 
-@dataclass
-class Slice:
-    """Class representing a merge of multiple products."""
-
-    array: ma.MaskedArray
-    # TODO: do we really want to store all of the products here?
-    products: List[EOProductProtocol]
-    merge_property: Optional[Any] = None
-
-
 def generate_slices(
     products: List[EOProductProtocol],
     assets: Optional[List[str]] = None,
@@ -140,8 +127,14 @@ def generate_slices(
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
-) -> Iterator[Slice]:
+) -> Iterator[xr.DataArray]:
+    if len(products) == 0:
+        raise NoSourceProducts("no products to read")
+
     stack_empty = True
+    assets = assets or []
+    eo_bands = eo_bands or []
+    variables = assets or eo_bands
 
     # don't merge products
     if merge_products_by is None:
@@ -149,8 +142,8 @@ def generate_slices(
         # Read products but skip empty ones if raise_empty is active.
         for product in products:
             try:
-                yield Slice(
-                    array=product.read_np_array(
+                yield masked_to_xarr_slice(
+                    product.read_np_array(
                         assets=assets,
                         eo_bands=eo_bands,
                         grid=grid,
@@ -159,7 +152,9 @@ def generate_slices(
                         raise_empty=raise_empty,
                         **product_read_kwargs,
                     ),
-                    products=[product],
+                    product.item.id,
+                    band_names=variables,
+                    slice_attrs=product.item.properties,
                 )
                 stack_empty = False
             except EmptyProductException:
@@ -175,8 +170,8 @@ def generate_slices(
         )
         for merge_property, products in products_per_property.items():
             try:
-                yield Slice(
-                    array=merge_products(
+                yield masked_to_xarr_slice(
+                    merge_products(
                         products=products,
                         merge_method=merge_method,
                         product_read_kwargs=dict(
@@ -190,8 +185,8 @@ def generate_slices(
                         ),
                         raise_empty=raise_empty,
                     ),
-                    products=products,
-                    merge_property=merge_property,
+                    merge_property,
+                    band_names=variables,
                 )
                 stack_empty = False
             except EmptySliceException:
@@ -199,64 +194,6 @@ def generate_slices(
 
     if stack_empty:
         raise EmptyStackException("all slices are empty")
-
-
-def merge_products(
-    products: List[EOProductProtocol],
-    merge_method: MergeMethod = MergeMethod.first,
-    product_read_kwargs: dict = {},
-    raise_empty: bool = True,
-) -> ma.MaskedArray:
-    """
-    Merge given products into one array.
-    """
-    if len(products) == 0:
-        raise NoSourceProducts("no products to merge")
-
-    # we need to deactivate raising the EmptyProductException
-    product_read_kwargs.update(raise_empty=False)
-
-    # read first product
-    out = products[0].read_np_array(**product_read_kwargs)
-
-    # nothing to merge here
-    if len(products) == 1:
-        pass
-
-    # fill in gaps sequentially, product by product
-    elif merge_method == MergeMethod.first:
-        for product in products[1:]:
-            new = product.read_np_array(**product_read_kwargs)
-            out[~out.mask] = new[~out.mask]
-            out.mask[~out.mask] = new.mask[~out.mask]
-            # if whole output array is filled, there is no point in reading more data
-            if not out.mask.any():
-                return out
-
-    # read all and average
-    elif merge_method == MergeMethod.average:
-        out = (
-            ma.stack(
-                [
-                    out,
-                    *[
-                        product.read_np_array(**product_read_kwargs)
-                        for product in products[1:]
-                    ],
-                ]
-            )
-            .mean(axis=0)
-            .astype(out.dtype, copy=False)
-        )
-    else:
-        raise NotImplementedError(f"unknown merge method: {merge_method}")
-
-    if raise_empty and out.mask.all():
-        raise EmptySliceException(
-            f"slice is empty after combining {len(products)} products"
-        )
-
-    return out
 
 
 def expand_params(param, length):

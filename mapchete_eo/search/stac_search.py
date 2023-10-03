@@ -39,7 +39,7 @@ class STACSearchCatalog(Catalog):
         elif bounds:
             self.bounds = bounds
             self.area = None
-        else:
+        else:  # pragma: no cover
             raise ValueError("either bounds or area have to be given")
 
         self.time = time if isinstance(time, list) else [time]
@@ -85,9 +85,9 @@ class STACSearchCatalog(Catalog):
                 for v in item_assets.values():
                     if "eo:bands" in v and "data" in v.get("roles", []):
                         return ["eo:bands"]
-            else:
-                raise ValueError(f"cannot fin collection {collection}")
-        else:
+            else:  # pragma: no cover
+                raise ValueError(f"cannot find collection {collection}")
+        else:  # pragma: no cover
             raise ValueError("cannot find eo:bands definition from collections")
 
     @cached_property
@@ -100,7 +100,7 @@ class STACSearchCatalog(Catalog):
         }
 
     def _search(self, time_range=None, **kwargs):
-        if time_range is None:
+        if time_range is None:  # pragma: no cover
             raise ValueError("time_range not provided")
         search_params = dict(
             self.default_search_params,

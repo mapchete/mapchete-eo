@@ -386,7 +386,7 @@ class InputData(base.InputData):
             )
 
         # this happens on task graph execution when preprocessing task results are not ready
-        else:
+        else:  # pragma: no cover
             raise PreprocessingNotFinished(
                 f"products are not ready yet because {len(self.preprocessing_tasks)} preprocessing task(s) were not executed."
             )
@@ -397,7 +397,7 @@ class InputData(base.InputData):
         """
         try:
             tile_products = self.products.filter(tile.bounds)
-        except PreprocessingNotFinished:
+        except PreprocessingNotFinished:  # pragma: no cover
             tile_products = None
         return self.input_tile_cls(
             tile,

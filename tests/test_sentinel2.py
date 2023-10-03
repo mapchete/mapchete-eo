@@ -3,6 +3,7 @@ import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
 
+from mapchete_eo.array.convert import to_masked_array
 from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
@@ -11,7 +12,6 @@ from mapchete_eo.platforms.sentinel2.config import (
     Sentinel2DriverConfig,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
-from mapchete_eo.types import TimeRange
 
 
 def test_format_available():
@@ -233,6 +233,34 @@ def test_read_np_empty(sentinel2_stac_mapchete):
     assert isinstance(stack, ma.MaskedArray)
     assert not stack.any()
     assert stack.shape[0] == 2
+
+
+def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
+    with sentinel2_stac_mapchete.process_mp(test_tile).open("inp") as src:
+        assets = ["red"]
+        target_height = 5
+        xarr = src.read_levelled(
+            target_height=target_height,
+            assets=assets,
+            product_read_kwargs=dict(
+                mask_config=MaskConfig(
+                    cloud=True,
+                    cloud_probability=True,
+                    cloud_probability_threshold=50,
+                )
+            ),
+        )
+    assert isinstance(xarr, xr.Dataset)
+
+    arr = to_masked_array(xarr)
+    assert arr.any()
+    assert not arr.mask.all()
+    assert arr.shape[0] == target_height
+
+    # not much a better way of testing it than to make sure, cube is filled from the bottom
+    layers = list(range(target_height))
+    for lower, higher in zip(layers[:-1], layers[1:]):
+        assert arr[lower].mask.sum() <= arr[higher].mask.sum()
 
 
 def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):

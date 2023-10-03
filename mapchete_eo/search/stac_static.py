@@ -1,17 +1,18 @@
 import logging
 import warnings
 from functools import cached_property
-from typing import Union
+from typing import List, Optional, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
+from mapchete.path import MPathLike
 from pystac.stac_io import StacIO
 from pystac_client import Client
 from tilematrix import Bounds
 
 from mapchete_eo.search.base import Catalog, FSSpecStacIO
 from mapchete_eo.time import time_ranges_intersect
-from mapchete_eo.types import DateTimeLike
+from mapchete_eo.types import DateTimeLike, TimeRange
 
 logger = logging.getLogger(__name__)
 
@@ -22,30 +23,37 @@ StacIO.set_default(FSSpecStacIO)
 class STACStaticCatalog(Catalog):
     def __init__(
         self,
-        baseurl: str,
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
+        baseurl: MPathLike,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Bounds = None,
         **kwargs,
     ) -> None:
         self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
         self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
-        self.start_time = start_time
-        self.end_time = end_time
+        self.time = time if isinstance(time, list) else [time] if time else []
 
     @cached_property
     def items(self) -> IndexedFeatures:
         def _gen_items():
             logger.debug("iterate through children")
             for collection in self.client.get_collections():
-                for item in _all_intersecting_items(
-                    collection,
-                    bounds=self.bounds,
-                    timespan=(self.start_time, self.end_time),
-                ):
-                    item.make_asset_hrefs_absolute()
-                    yield item
+                if self.time:
+                    for time_range in self.time:
+                        for item in _all_intersecting_items(
+                            collection,
+                            bounds=self.bounds,
+                            timespan=(time_range.start, time_range.end),
+                        ):
+                            item.make_asset_hrefs_absolute()
+                            yield item
+                else:
+                    for item in _all_intersecting_items(
+                        collection,
+                        bounds=self.bounds,
+                    ):
+                        item.make_asset_hrefs_absolute()
+                        yield item
 
         items = list(_gen_items())
         logger.debug("%s items found", len(items))
@@ -81,12 +89,13 @@ class STACStaticCatalog(Catalog):
 
     def get_collections(self):
         for collection in self.client.get_children():
-            if _collection_extent_intersects(
-                collection,
-                bounds=self.bounds,
-                timespan=(self.start_time, self.end_time),
-            ):
-                yield collection
+            for time_range in self.time:
+                if _collection_extent_intersects(
+                    collection,
+                    bounds=self.bounds,
+                    timespan=(time_range.start, time_range.end),
+                ):
+                    yield collection
 
 
 def _get_first_item(collections):
@@ -124,17 +133,19 @@ def _all_intersecting_items(
 
 def _item_extent_intersects(item, bounds=None, timespan=None):
     spatial_intersect = bounds_intersect(item.bbox, bounds) if bounds else True
-    start_time, end_time = timespan
-    if start_time is None and end_time is None:
-        temporal_intersect = True
-    else:
+    if timespan:
         temporal_intersect = time_ranges_intersect(
             [item.datetime, item.datetime], timespan
         )
-    logger.debug(
-        f"spatial intersect: {spatial_intersect}, temporal intersect: {temporal_intersect}"
-    )
-    return spatial_intersect and temporal_intersect
+        logger.debug(
+            "spatial intersect: %s, temporal intersect: %s",
+            spatial_intersect,
+            temporal_intersect,
+        )
+        return spatial_intersect and temporal_intersect
+    else:
+        logger.debug("spatial intersect: %s", spatial_intersect)
+        return spatial_intersect
 
 
 def _collection_extent_intersects(catalog, bounds=None, timespan=None):
@@ -161,13 +172,14 @@ def _collection_extent_intersects(catalog, bounds=None, timespan=None):
             return False
 
     spatial_intersect = _intersects_spatially() if bounds else True
-    start_time, end_time = timespan
-    if start_time is None and end_time is None:
-        temporal_intersect = True
-    else:
+    if timespan:
         temporal_intersect = _intersects_temporally()
-
-    logger.debug(
-        f"spatial intersect: {spatial_intersect}, temporal intersect: {temporal_intersect}"
-    )
-    return spatial_intersect and temporal_intersect
+        logger.debug(
+            "spatial intersect: %s, temporal intersect: %s",
+            spatial_intersect,
+            temporal_intersect,
+        )
+        return spatial_intersect and temporal_intersect
+    else:
+        logger.debug("spatial intersect: %s", spatial_intersect)
+        return spatial_intersect

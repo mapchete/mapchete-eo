@@ -7,7 +7,7 @@ It will get removed if the mapchete core adopts the GridProtocol.
 
 import logging
 import warnings
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -47,8 +47,8 @@ def read_raster_window(
     resampling: Resampling = Resampling.nearest,
     src_nodata: NodataVal = None,
     dst_nodata: NodataVal = None,
-    dst_dtype: Union[DTypeLike, None] = None,
-    gdal_opts: Union[dict, None] = None,
+    dst_dtype: Optional[DTypeLike] = None,
+    gdal_opts: Optional[dict] = None,
     skip_missing_files: bool = False,
 ) -> ma.MaskedArray:
     """
@@ -93,7 +93,7 @@ def _read_raster_window(
     resampling: Resampling = Resampling.nearest,
     src_nodata: NodataVal = None,
     dst_nodata: NodataVal = None,
-    dst_dtype: Union[DTypeLike, None] = None,
+    dst_dtype: Optional[DTypeLike] = None,
     skip_missing_files: bool = False,
 ):
     def _empty_array():
@@ -373,7 +373,7 @@ def _rasterio_read(
 
 
 def read_raster(
-    inp: MPathLike, grid: Union[GridProtocol, None] = None, **kwargs
+    inp: MPathLike, grid: Optional[GridProtocol] = None, **kwargs
 ) -> ReferencedRaster:
     inp = MPath.from_inp(inp)
     logger.debug("reading %s into memory", str(inp))

@@ -1,6 +1,4 @@
-from typing import Union
-
-from mapchete.path import MPath
+from mapchete.path import MPath, MPathLike
 
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
@@ -42,7 +40,7 @@ class SinergisePathMapper(S2PathMapper):
 
     def __init__(
         self,
-        url: Union[MPath, str],
+        url: MPathLike,
         bucket: str = "sentinel-s2-l2a",
         protocol: str = "s3",
         baseline_version: str = "04.00",

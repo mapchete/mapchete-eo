@@ -4,12 +4,14 @@ input:
     format: Sentinel-2
     level: L2A
     time:
-      start: 2022-04-01
-      end: 2022-04-03
+      - start: 2022-04-01
+        end: 2022-04-03
+      - start: 2022-05-01
+        end: 2022-05-03
 output:
   format: GTiff
   bands: 3
-  path: sentinel2
+  path: sentinel2_time_ranges
   dtype: uint16
 pyramid:
   grid: geodetic

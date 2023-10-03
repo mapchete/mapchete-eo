@@ -1,9 +1,9 @@
 import logging
 from functools import cached_property
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from mapchete.io.vector import IndexedFeatures
-from mapchete.path import MPath
+from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds
 from mapchete.validate import validate_bounds
@@ -13,7 +13,7 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import StacSearchConfig
-from mapchete_eo.types import DateTimeLike
+from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,10 @@ class STACSearchCatalog(Catalog):
     def __init__(
         self,
         collections: List[str],
-        endpoint: Union[str, MPath, None] = None,
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
-        bounds: Union[Bounds, None] = None,
-        area: Union[BaseGeometry, None] = None,
+        time: Union[TimeRange, List[TimeRange]],
+        endpoint: Optional[MPathLike] = None,
+        bounds: Optional[Bounds] = None,
+        area: Optional[BaseGeometry] = None,
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> None:
@@ -43,8 +42,7 @@ class STACSearchCatalog(Catalog):
         else:
             raise ValueError("either bounds or area have to be given")
 
-        self.start_time = start_time
-        self.end_time = end_time
+        self.time = time if isinstance(time, list) else [time]
         self.client = Client.open(endpoint or self.endpoint)
 
         if len(collections) == 0:  # pragma: no cover
@@ -56,24 +54,25 @@ class STACSearchCatalog(Catalog):
     @cached_property
     def items(self) -> IndexedFeatures:
         def _get_items():
-            search = self._search()
-            if search.matched() > self.config.catalog_chunk_threshold:
-                spatial_chunks = bounds_chunks(
-                    map(float, self.default_search_params.get("bbox").split(",")),
-                    grid="geodetic",
-                    zoom=self.config.catalog_chunk_zoom,
-                )
-                logger.debug(
-                    "too many products (%s), query catalog in %s chunks",
-                    search.matched(),
-                    len(spatial_chunks),
-                )
-                searches = (self._search(bounds=chunk) for chunk in spatial_chunks)
-            else:
-                searches = (search,)
+            for time_range in self.time:
+                search = self._search(time_range=time_range)
+                if search.matched() > self.config.catalog_chunk_threshold:
+                    spatial_chunks = bounds_chunks(
+                        map(float, self.default_search_params.get("bbox").split(",")),
+                        grid="geodetic",
+                        zoom=self.config.catalog_chunk_zoom,
+                    )
+                    logger.debug(
+                        "too many products (%s), query catalog in %s chunks",
+                        search.matched(),
+                        len(spatial_chunks),
+                    )
+                    searches = (self._search(bounds=chunk) for chunk in spatial_chunks)
+                else:
+                    searches = (search,)
 
-            for search in searches:
-                yield from search.items()
+                for search in searches:
+                    yield from search.items()
 
         return IndexedFeatures(_get_items())
 
@@ -97,12 +96,17 @@ class STACSearchCatalog(Catalog):
             "collections": self.collections,
             "bbox": ",".join(map(str, self.bounds)) if self.bounds else None,
             "intersects": self.area if self.area else None,
-            "datetime": f"{self.start_time}/{self.end_time}",
             "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
         }
 
-    def _search(self, **kwargs):
-        search_params = dict(self.default_search_params, **kwargs)
+    def _search(self, time_range=None, **kwargs):
+        if time_range is None:
+            raise ValueError("time_range not provided")
+        search_params = dict(
+            self.default_search_params,
+            datetime=f"{time_range.start}/{time_range.end}",
+            **kwargs,
+        )
         logger.debug("query catalog using params: %s", search_params)
         return self.client.search(**search_params)
 

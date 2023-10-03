@@ -1,16 +1,19 @@
-from typing import Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 import numpy.ma as ma
+from numpy.typing import DTypeLike
 from rasterio.dtypes import dtype_ranges
+
+from mapchete_eo.types import NodataVal
 
 
 def dtype_scale(
-    bands: np.ndarray,
-    nodata: Union[int, None] = None,
-    out_dtype: Union[str, None] = "uint8",
+    bands: ma.MaskedArray,
+    nodata: Optional[NodataVal] = None,
+    out_dtype: Optional[DTypeLike] = np.uint8,
     max_source_value: float = 10000.0,
-    max_output_value: Union[float, None] = None,
+    max_output_value: Optional[float] = None,
 ) -> ma.MaskedArray:
     """
     (1) normalize array from range [0:max_value] to range [0:1]
@@ -50,7 +53,7 @@ def linear_normalization(
         (0, 3200),
     ),
     out_dtype: str = "uint8",
-    out_min: Union[int, None] = None,
+    out_min: Optional[int] = None,
 ) -> ma.MaskedArray:
     """
     Scale and normalize bands to individual minimum and maximum values.

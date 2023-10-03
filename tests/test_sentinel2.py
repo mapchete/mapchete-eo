@@ -11,6 +11,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     Sentinel2DriverConfig,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
+from mapchete_eo.types import TimeRange
 
 
 def test_format_available():
@@ -20,10 +21,12 @@ def test_format_available():
 def test_config():
     conf = Sentinel2DriverConfig(
         format="Sentinel-2",
-        start_time="2022-04-01",
-        end_time="2022-04-10",
+        time=dict(
+            start="2022-04-01",
+            end="2022-04-10",
+        ),
     )
-    assert conf.dict()
+    assert conf.model_dump()
 
 
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
@@ -45,6 +48,25 @@ def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
 def test_remote_s2_read_xarray(sentinel2_mapchete):
     with sentinel2_mapchete.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
+
+
+@pytest.mark.remote
+def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
+    with sentinel2_time_ranges_mapchete.process_mp().open("inp") as cube:
+        some_in_first = False
+        some_in_second = True
+        for product in cube.products:
+            first, second = cube.time
+            within_first = first.start < product.item.datetime.date() < first.end
+            within_second = second.start < product.item.datetime.date() < second.end
+            if within_first:
+                some_in_first = True
+            elif within_second:
+                some_in_second = True
+            else:
+                raise ValueError("product outside of given time ranges")
+        assert some_in_first
+        assert some_in_second
 
 
 @pytest.mark.remote

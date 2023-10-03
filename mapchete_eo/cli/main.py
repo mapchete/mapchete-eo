@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 
 import click
 import numpy as np
@@ -25,7 +25,7 @@ from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 class TqdmUpTo(tqdm.tqdm):
     """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
 
-    def update_to(self, n: int = 1, nsize: int = 1, total: Union[int, None] = None):
+    def update_to(self, n: int = 1, nsize: int = 1, total: Optional[int] = None):
         """
         n  : int, optional
             Number of blocks transferred so far [default: 1].

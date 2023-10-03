@@ -45,7 +45,7 @@ class EOProduct(EOProductProtocol):
         self,
         assets: Optional[List[str]] = None,
         eo_bands: Optional[List[str]] = None,
-        grid: Union[GridProtocol, None] = None,
+        grid: Optional[GridProtocol] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",

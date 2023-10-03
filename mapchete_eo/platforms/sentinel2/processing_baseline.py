@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -7,20 +7,20 @@ from pydantic import BaseModel
 class ProductMaskTypes(BaseModel):
     """Mapping between mask type and respective metadata.xml type key."""
 
-    classification: Union[str, None] = None
-    cloud_probability: Union[str, None] = None
-    snow_probability: Union[str, None] = None
+    classification: Optional[str] = None
+    cloud_probability: Optional[str] = None
+    snow_probability: Optional[str] = None
 
 
 class BandMaskTypes(BaseModel):
     """Mapping between band mask type and respective metadata.xml type key."""
 
-    technical_quality: Union[str, None] = None
-    detector_footprints: Union[str, None] = None
+    technical_quality: Optional[str] = None
+    detector_footprints: Optional[str] = None
     # deprecated since 04.00
-    # nodata: Union[str, None] = None
-    # defect: Union[str, None] = None
-    # saturated: Union[str, None] = None
+    # nodata: Optional[str] = None
+    # defect: Optional[str] = None
+    # saturated: Optional[str] = None
 
 
 class ItemMapping(BaseModel):

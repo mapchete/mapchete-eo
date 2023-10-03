@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -7,6 +7,7 @@ from mapchete.errors import MapcheteNodataTile
 
 from mapchete_eo.exceptions import EmptyStackException
 from mapchete_eo.image_operations import dtype_scale
+from mapchete_eo.types import NodataVal
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +16,14 @@ def execute(
     mp,
     bands: list = [1, 2, 3, 4],
     resampling: str = "nearest",
-    matching_method: Union[str, None] = "gdal",
+    matching_method: Optional[str] = "gdal",
     matching_max_zoom: int = 13,
     matching_precision: int = 8,
     fallback_to_higher_zoom: bool = False,
-    out_dtype: Union[str, None] = "uint8",
-    out_nodata: Union[float, int, None] = None,
+    out_dtype: Optional[str] = "uint8",
+    out_nodata: NodataVal = None,
     max_source_value: float = 10000.0,
-    max_output_value: Union[float, None] = None,
+    max_output_value: Optional[float] = None,
 ) -> ma.MaskedArray:
     """
     Scale mosaic to different value range.

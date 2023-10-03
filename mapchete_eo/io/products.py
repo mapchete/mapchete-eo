@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -24,10 +24,10 @@ def products_to_np_array(
     products: List[EOProductProtocol],
     assets: Optional[List[str]] = None,
     eo_bands: Optional[List[str]] = None,
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
-    merge_products_by: Union[str, None] = None,
+    merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
@@ -173,10 +173,10 @@ def generate_slices(
     products: List[EOProductProtocol],
     assets: Optional[List[str]] = None,
     eo_bands: Optional[List[str]] = None,
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
-    merge_products_by: Union[str, None] = None,
+    merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,

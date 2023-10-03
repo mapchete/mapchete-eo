@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -16,8 +16,8 @@ from mapchete_eo.types import Grid
 def resample_array(
     inp: Union[ReferencedRaster, np.ndarray],
     grid: GridProtocol,
-    in_transform: Union[Affine, None] = None,
-    in_crs: Union[CRS, None] = None,
+    in_transform: Optional[Affine] = None,
+    in_crs: Optional[CRS] = None,
     nodata: int = 0,
     resampling: Resampling = Resampling.nearest,
 ) -> ma.MaskedArray:

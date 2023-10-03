@@ -13,6 +13,7 @@ from rasterio import Affine
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
+from mapchete_eo.types import TimeRange
 
 
 @pytest.fixture
@@ -155,6 +156,15 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_time_ranges_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_time_ranges.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_stac_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac.mapchete",
@@ -178,8 +188,10 @@ def test_tile():
 def stac_search_catalog():
     return STACSearchCatalog(
         collection="sentinel-2-l2a",
-        start_time="2022-06-01",
-        end_time="2022-06-06",
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-06",
+        ),
         bounds=[16, 46, 17, 47],
         endpoint="https://earth-search.aws.element84.com/v1/",
     )
@@ -189,8 +201,10 @@ def stac_search_catalog():
 @pytest.fixture(scope="session")
 def e84_cog_catalog():
     return EarthSearchV1S2L2A(
-        start_time="2022-06-01",
-        end_time="2022-06-06",
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-06",
+        ),
         bounds=[16, 46, 17, 47],
         collections=["sentinel-2-l2a"],
     )
@@ -199,8 +213,10 @@ def e84_cog_catalog():
 @pytest.fixture(scope="session")
 def e84_cog_catalog_short():
     return EarthSearchV1S2L2A(
-        start_time="2022-06-01",
-        end_time="2022-06-03",
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-03",
+        ),
         bounds=[16, 46.4, 16.1, 46.5],
         collections=["sentinel-2-l2a"],
     )
@@ -210,8 +226,7 @@ def e84_cog_catalog_short():
 def static_catalog_small(s2_stac_collection):
     return STACStaticCatalog(
         s2_stac_collection,
-        "2023-08-10",
-        "2023-08-11",
+        TimeRange(start="2023-08-10", end="2023-08-11"),
         (15.71762, 46.22546, 15.78400, 46.27169),
     )
 

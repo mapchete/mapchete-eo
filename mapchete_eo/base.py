@@ -29,16 +29,20 @@ from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
 from mapchete_eo.time import to_datetime
-from mapchete_eo.types import DateTimeLike, MergeMethod, NodataVal, NodataVals
+from mapchete_eo.types import (
+    DateTimeLike,
+    MergeMethod,
+    NodataVal,
+    NodataVals,
+    TimeRange,
+)
 
 
 class BaseDriverConfig(BaseModel):
     format: str
-    start_time: DateTimeLike
-    end_time: DateTimeLike
+    time: Union[TimeRange, List[TimeRange]]
     cat_baseurl: Optional[str] = None
     archive: Optional[Type[Archive]] = None
-    pattern: dict = {}
     cache: Optional[Any] = None
 
 
@@ -46,21 +50,19 @@ class InputTile(base.InputTile):
     """Target Tile representation of input data."""
 
     default_read_merge_method: MergeMethod = MergeMethod.first
-    default_read_merge_products_by: Union[str, None] = None
+    default_read_merge_products_by: Optional[str] = None
     default_read_nodataval: NodataVal = None
 
     tile: BufferedTile
     eo_bands: dict
-    start_time: DateTimeLike
-    end_time: DateTimeLike
+    time: List[TimeRange]
 
     def __init__(
         self,
         tile: BufferedTile,
-        products: Union[List[EOProductProtocol], None],
+        products: Optional[List[EOProductProtocol]],
         eo_bands: dict,
-        start_time: DateTimeLike,
-        end_time: DateTimeLike,
+        time: List[TimeRange],
         input_key: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -68,8 +70,7 @@ class InputTile(base.InputTile):
         self.tile = tile
         self._products = products
         self.eo_bands = eo_bands
-        self.start_time = start_time
-        self.end_time = end_time
+        self.time = time
         self.input_key = input_key
 
     @cached_property
@@ -175,7 +176,7 @@ class InputTile(base.InputTile):
         time_pattern: Optional[str] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
-        merge_products_by: Union[str, None] = None,
+        merge_products_by: Optional[str] = None,
         merge_method: MergeMethod = MergeMethod.first,
         raise_empty: bool = True,
         slice_axis_name: str = "layers",
@@ -223,7 +224,7 @@ class InputTile(base.InputTile):
         time_pattern: Optional[str] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
-        merge_products_by: Union[str, None] = None,
+        merge_products_by: Optional[str] = None,
         merge_method: MergeMethod = MergeMethod.first,
         raise_empty: bool = True,
         **kwargs,
@@ -300,12 +301,13 @@ class InputData(base.InputData):
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig
     archive: Archive
+    time: Union[TimeRange, List[TimeRange]]
 
     def __init__(
         self,
         input_params: dict,
         readonly: bool = False,
-        input_key: Union[str, None] = None,
+        input_key: Optional[str] = None,
         standalone: bool = False,
         **kwargs,
     ) -> None:
@@ -318,8 +320,7 @@ class InputData(base.InputData):
         self.params = self.driver_config_model(**input_params["abstract"])
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self._area = input_params["delimiters"]["effective_area"]
-        self.start_time = self.params.start_time
-        self.end_time = self.params.end_time
+        self.time = self.params.time
 
         if self.readonly:  # pragma: no cover
             return
@@ -332,14 +333,12 @@ class InputData(base.InputData):
                         base_dir=input_params["conf_dir"]
                     ),
                     bounds=self.bbox(out_crs=DEFAULT_CATALOG_CRS).bounds,
-                    start_time=self.start_time,
-                    end_time=self.end_time,
+                    time=self.time,
                 )
             )
         elif self.params.archive:
             self.archive = self.params.archive(
-                start_time=self.start_time,
-                end_time=self.end_time,
+                time=self.time,
                 bounds=self._bounds,
                 area=self._area,
             )
@@ -355,7 +354,7 @@ class InputData(base.InputData):
                 ),
             )
 
-    def bbox(self, out_crs: Union[str, None] = None) -> BaseGeometry:
+    def bbox(self, out_crs: Optional[str] = None) -> BaseGeometry:
         """Return data bounding box."""
         return reproject_geometry(
             box(*self._bounds),
@@ -404,8 +403,7 @@ class InputData(base.InputData):
             tile,
             products=tile_products,
             eo_bands=self.archive.catalog.eo_bands,
-            start_time=self.start_time,
-            end_time=self.end_time,
+            time=self.time,
             # passing on the input key is essential so dependent preprocessing tasks can be found!
             input_key=self.input_key,
         )

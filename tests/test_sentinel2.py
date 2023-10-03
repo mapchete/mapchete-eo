@@ -51,6 +51,25 @@ def test_remote_s2_read_xarray(sentinel2_mapchete):
 
 
 @pytest.mark.remote
+def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
+    with sentinel2_time_ranges_mapchete.process_mp().open("inp") as cube:
+        some_in_first = False
+        some_in_second = True
+        for product in cube.products:
+            first, second = cube.time
+            within_first = first.start < product.item.datetime.date() < first.end
+            within_second = second.start < product.item.datetime.date() < second.end
+            if within_first:
+                some_in_first = True
+            elif within_second:
+                some_in_second = True
+            else:
+                raise ValueError("product outside of given time ranges")
+        assert some_in_first
+        assert some_in_second
+
+
+@pytest.mark.remote
 def test_preprocessing(sentinel2_mapchete):
     mp = sentinel2_mapchete.mp()
     input_data = list(mp.config.inputs.values())[0]

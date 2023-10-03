@@ -156,6 +156,15 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_time_ranges_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_time_ranges.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_stac_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac.mapchete",

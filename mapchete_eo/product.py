@@ -14,8 +14,7 @@ from numpy.typing import DTypeLike
 from rasterio.enums import Resampling
 from shapely.geometry import shape
 
-from mapchete_eo.array.convert import masked_to_xarr
-from mapchete_eo.exceptions import EmptyProductException
+from mapchete_eo.array.convert import to_dataarray
 from mapchete_eo.io import get_item_property, item_to_np_array
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
@@ -63,7 +62,7 @@ class EOProduct(EOProductProtocol):
         data_var_names = assets or eo_bands
         return xr.Dataset(
             data_vars={
-                data_var_name: masked_to_xarr(
+                data_var_name: to_dataarray(
                     asset_arr,
                     x_axis_name=x_axis_name,
                     y_axis_name=y_axis_name,

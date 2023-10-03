@@ -213,20 +213,27 @@ def test_read_np_empty(sentinel2_stac_mapchete):
     assert stack.shape[0] == 2
 
 
-# def test_read_levelled(sentinel2_stac_mapchete):
-#     s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
-#     cube = s2_src.read_levelled(["red", "green", "blue", "nir"], 2)
-#     assert isinstance(cube, xr.Dataset)
+def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
+    with sentinel2_stac_mapchete.process_mp(test_tile).open("inp") as src:
+        assets = ["red"]
+        target_height = 5
+        arr = src.read_levelled_np_array(
+            target_height=target_height,
+            assets=assets,
+            product_read_kwargs=dict(
+                mask_config=MaskConfig(
+                    cloud=True,
+                    cloud_probability=True,
+                    cloud_probability_threshold=50,
+                )
+            ),
+        )
+    assert isinstance(arr, ma.MaskedArray)
+    assert arr.any()
+    assert not arr.mask.all()
+    assert arr.shape[0] == target_height
 
-
-# def test_read_ma(sentinel2_stac_mapchete):
-#     s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
-#     cube = s2_src.read_ma(assets=["red", "green", "blue", "nir"])
-#     assert isinstance(cube, ma.MaskedArray)
-
-
-# def test_read_levelled_ma(sentinel2_stac_mapchete):
-#     s2_src = sentinel2_stac_mapchete.process_mp().open("inp")
-#     cube = s2_src.read_levelled_ma(["red", "green", "blue", "nir"])
-#     assert cube.ndims == 4
-#     assert isinstance(cube, ma.MaskedArray)
+    # not much a better way of testing it than to make sure, cube is filled from the bottom
+    layers = list(range(target_height))
+    for lower, higher in zip(layers[:-1], layers[1:]):
+        assert arr[lower].mask.sum() <= arr[higher].mask.sum()

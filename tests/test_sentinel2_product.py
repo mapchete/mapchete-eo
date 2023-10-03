@@ -10,7 +10,7 @@ from mapchete.types import Bounds
 from rasterio.crs import CRS
 
 from mapchete_eo.exceptions import EmptyProductException
-from mapchete_eo.io import read_levelled_cube_np_array
+from mapchete_eo.io import read_levelled_cube_to_np_array, read_levelled_cube_to_xarray
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution, SceneClassification
@@ -338,10 +338,30 @@ def test_read_np_empty(s2_stac_item_half_footprint):
     assert arr.mask.all()
 
 
+def test_read_levelled_cube_xarray(s2_stac_items, test_tile):
+    assets = ["red"]
+    target_height = 5
+    xarr = read_levelled_cube_to_xarray(
+        products=[S2Product.from_stac_item(item) for item in s2_stac_items],
+        target_height=target_height,
+        assets=assets,
+        grid=test_tile,
+        merge_products_by="s2:datastrip_id",
+        product_read_kwargs=dict(
+            mask_config=MaskConfig(
+                cloud=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
+            )
+        ),
+    )
+    assert isinstance(xarr, xr.Dataset)
+
+
 def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
     assets = ["red"]
     target_height = 5
-    arr = read_levelled_cube_np_array(
+    arr = read_levelled_cube_to_np_array(
         products=[S2Product.from_stac_item(item) for item in s2_stac_items],
         target_height=target_height,
         assets=assets,

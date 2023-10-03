@@ -12,12 +12,18 @@ from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from pydantic import BaseModel
+from rasterio.enums import Resampling
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
 from mapchete_eo.exceptions import PreprocessingNotFinished
-from mapchete_eo.io import products_to_np_array, products_to_xarray
+from mapchete_eo.io import (
+    products_to_np_array,
+    products_to_xarray,
+    read_levelled_cube_to_np_array,
+    read_levelled_cube_to_xarray,
+)
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
@@ -107,14 +113,16 @@ class InputTile(base.InputTile):
             time_pattern=time_pattern,
         )
         nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
+        merge_products_by = merge_products_by or self.default_read_merge_products_by
+        merge_method = merge_method or self.default_read_merge_method
 
         return products_to_xarray(
             products=products,
             eo_bands=eo_bands,
             assets=assets,
             grid=self.tile,
-            merge_products_by=merge_products_by or self.default_read_merge_products_by,
-            merge_method=merge_method or self.default_read_merge_method,
+            merge_products_by=merge_products_by,
+            merge_method=merge_method,
             nodatavals=nodatavals,
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,
@@ -141,14 +149,16 @@ class InputTile(base.InputTile):
             time_pattern=time_pattern,
         )
         nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
+        merge_products_by = merge_products_by or self.default_read_merge_products_by
+        merge_method = merge_method or self.default_read_merge_method
 
         return products_to_np_array(
             products=products,
             eo_bands=eo_bands,
             assets=assets,
             grid=self.tile,
-            merge_products_by=merge_products_by or self.default_read_merge_products_by,
-            merge_method=merge_method or self.default_read_merge_method,
+            merge_products_by=merge_products_by,
+            merge_method=merge_method,
             nodatavals=nodatavals,
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,
@@ -163,11 +173,84 @@ class InputTile(base.InputTile):
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
         time_pattern: Optional[str] = None,
-        merge_items_by: Optional[str] = None,
-        merge_method: Union[MergeMethod, str] = MergeMethod.average,
+        resampling: Resampling = Resampling.nearest,
+        nodatavals: NodataVals = None,
+        merge_products_by: Union[str, None] = None,
+        merge_method: MergeMethod = MergeMethod.first,
+        raise_empty: bool = True,
+        slice_axis_name: str = "layers",
+        band_axis_name: str = "bands",
+        x_axis_name: str = "x",
+        y_axis_name: str = "y",
+        **kwargs,
+    ) -> xr.Dataset:
+        products = self.filter_products(
+            start_time=start_time,
+            end_time=end_time,
+            timestamps=timestamps,
+            time_pattern=time_pattern,
+        )
+        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
+        merge_products_by = merge_products_by or self.default_read_merge_products_by
+        merge_method = merge_method or self.default_read_merge_method
+
+        return read_levelled_cube_to_xarray(
+            products=products,
+            target_height=target_height,
+            assets=assets,
+            eo_bands=eo_bands,
+            grid=self.tile,
+            resampling=resampling,
+            nodatavals=nodatavals,
+            merge_products_by=merge_products_by,
+            merge_method=merge_method,
+            raise_empty=raise_empty,
+            product_read_kwargs=kwargs,
+            slice_axis_name=slice_axis_name,
+            band_axis_name=band_axis_name,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+        )
+
+    def read_levelled_np_array(
+        self,
+        target_height: int,
+        assets: Optional[List[str]] = None,
+        eo_bands: Optional[List[str]] = None,
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+        resampling: Resampling = Resampling.nearest,
+        nodatavals: NodataVals = None,
+        merge_products_by: Union[str, None] = None,
+        merge_method: MergeMethod = MergeMethod.first,
+        raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
-        raise NotImplementedError()
+        products = self.filter_products(
+            start_time=start_time,
+            end_time=end_time,
+            timestamps=timestamps,
+            time_pattern=time_pattern,
+        )
+        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
+        merge_products_by = merge_products_by or self.default_read_merge_products_by
+        merge_method = merge_method or self.default_read_merge_method
+
+        return read_levelled_cube_to_np_array(
+            products=products,
+            target_height=target_height,
+            assets=assets,
+            eo_bands=eo_bands,
+            grid=self.tile,
+            resampling=resampling,
+            nodatavals=nodatavals,
+            merge_products_by=merge_products_by,
+            merge_method=merge_method,
+            raise_empty=raise_empty,
+            product_read_kwargs=kwargs,
+        )
 
     def filter_products(
         self,

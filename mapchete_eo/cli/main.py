@@ -20,6 +20,7 @@ from mapchete_eo.platforms.sentinel2.config import (
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
+from mapchete_eo.types import TimeRange
 
 
 class TqdmUpTo(tqdm.tqdm):
@@ -188,46 +189,48 @@ def static_catalog(
     overwrite=False,
     **kwargs,
 ):
-    selector = {
-        "archive": archive,
-        "catalog-json": catalog_json,
-        "endpoint": endpoint,
-    }
-    if len([v for v in selector.values() if v is not None]) != 1:
+    if catalog_json and endpoint:  # pragma: no cover
         raise click.ClickException(
             "exactly one of --archive, --catalog-json or --endpoint has to be set."
         )
-    if any([start_time is None, end_time is None]):
+    if any([start_time is None, end_time is None]):  # pragma: no cover
         raise click.ClickException("--start-time and --end-time are mandatory")
-    if all([bounds is None, mgrs_tile is None]):
-        raise click.ClickException("--bounds and --mgrs-tile are required")
+    if all([bounds is None, mgrs_tile is None]):  # pragma: no cover
+        raise click.ClickException("--bounds or --mgrs-tile are required")
 
-    if archive:
-        if archive == "sentinel-s2-l2a-cogs":
-            catalog = AWSL2ACOGv1(
-                bounds=bounds,
-                start_time=start_time,
-                end_time=end_time,
-                mgrs_tile=mgrs_tile,
-            ).catalog
-        else:
-            raise ValueError(
-                "currently ony archive 'sentinel-s2-l2a-cogs' is supported"
-            )
     if catalog_json:
         catalog = STACStaticCatalog(
             baseurl=catalog_json,
             bounds=bounds,
-            start_time=start_time,
-            end_time=end_time,
+            time=TimeRange(
+                start=start_time,
+                end=end_time,
+            ),
         )
-    if endpoint:
+    elif endpoint:
         catalog = STACSearchCatalog(
-            baseurl=endpoint,
+            endpoint=endpoint,
+            collections=[collection],
             bounds=bounds,
-            start_time=start_time,
-            end_time=end_time,
+            time=TimeRange(
+                start=start_time,
+                end=end_time,
+            ),
         )
+    else:
+        if archive == "sentinel-s2-l2a-cogs":
+            catalog = AWSL2ACOGv1(
+                bounds=bounds,
+                time=TimeRange(
+                    start=start_time,
+                    end=end_time,
+                ),
+                mgrs_tile=mgrs_tile,
+            ).catalog
+        else:  # pragma: no cover
+            raise ValueError(
+                "currently ony archive 'sentinel-s2-l2a-cogs' is supported"
+            )
 
     with TqdmUpTo(
         unit="products", unit_scale=True, miniters=1, disable=opt_debug

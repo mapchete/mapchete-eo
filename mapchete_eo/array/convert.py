@@ -23,6 +23,9 @@ def to_masked_array(
     xarr: Union[xr.Dataset, xr.DataArray], copy: bool = False
 ) -> ma.MaskedArray:
     """Convert xr.DataArray to ma.MaskedArray."""
+    if isinstance(xarr, xr.Dataset):
+        xarr = xarr.to_array()
+
     fill_value = xarr.attrs.get("_FillValue")
     if fill_value is None:
         raise ValueError(
@@ -57,7 +60,6 @@ def to_dataarray(
     A 2-dimensional array indicates that we only have a spatial x- and y-axis. A
     3rd dimension will be interpreted as bands.
     """
-
     # nodata handling is weird.
     #
     # xr.DataArray cannot hold a masked_array but will turn it into
@@ -75,7 +77,7 @@ def to_dataarray(
         band_names = band_names or [f"{band_axis_name}-{i}" for i in range(bands_count)]
         dims = [band_axis_name, x_axis_name, y_axis_name]
         coords = {band_axis_name: band_names}
-    else:
+    else:  # pragma: no cover
         raise TypeError("only a 2D or 3D ma.MaskedArray is allowed.")
 
     return xr.DataArray(
@@ -89,6 +91,7 @@ def to_dataarray(
 
 def to_dataset(
     masked_arr: ma.MaskedArray,
+    nodataval: NodataVal = None,
     slice_names: Optional[List[str]] = None,
     band_names: Optional[List[str]] = None,
     slices_attrs: Optional[List[Union[dict, None]]] = None,
@@ -99,6 +102,8 @@ def to_dataset(
     attrs: Optional[dict] = None,
 ):
     """Convert a 3D or 4D ma.MaskedArray to an xarray.Dataset."""
+    attrs = attrs or dict()
+    nodataval = masked_arr.fill_value if nodataval is None else nodataval
 
     if masked_arr.ndim == 3:
         bands = masked_arr.shape[0]
@@ -117,6 +122,7 @@ def to_dataset(
                 # every slice gets its own xarray Dataset
                 slice_name: to_dataarray(
                     slice_array,
+                    nodataval=nodataval,
                     band_names=band_names,
                     name=slice_name,
                     attrs=slice_attrs,
@@ -131,8 +137,8 @@ def to_dataset(
                 )
             },
             coords=coords,
-            attrs=attrs,
+            attrs=dict(attrs, _FillValue=nodataval),
         ).transpose(slice_axis_name, band_axis_name, x_axis_name, y_axis_name)
 
-    else:
+    else:  # pragma: no cover
         raise TypeError("only a 3D or 4D ma.MaskedArray is allowed.")

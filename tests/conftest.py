@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import numpy.ma as ma
 import pystac
 import pytest
 from mapchete.path import MPath
@@ -66,8 +67,21 @@ def pf_qa_stac_collection(testdata_dir):
 
 
 @pytest.fixture
-def test_array():
-    return np.random.randint(low=0, high=255, size=(3, 256, 256), dtype=np.uint8)
+def test_2d_array() -> ma.MaskedArray:
+    data = np.random.randint(low=0, high=255, size=(256, 256), dtype=np.uint8)
+    return ma.MaskedArray(
+        data=data, mask=np.where(data == 0, True, False), fill_value=0
+    )
+
+
+@pytest.fixture
+def test_3d_array(test_2d_array) -> ma.MaskedArray:
+    return ma.stack([test_2d_array for _ in range(3)])
+
+
+@pytest.fixture
+def test_4d_array(test_3d_array) -> ma.MaskedArray:
+    return ma.stack([test_3d_array for _ in range(5)])
 
 
 @pytest.fixture

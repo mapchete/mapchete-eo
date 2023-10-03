@@ -7,7 +7,7 @@ import numpy.ma as ma
 import xarray as xr
 from rasterio.enums import Resampling
 
-from mapchete_eo.array.convert import masked_to_xarr_slice, xarr_to_masked
+from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import (
     EmptyProductException,
     EmptySliceException,
@@ -35,7 +35,7 @@ def products_to_np_array(
     """Read grid window of EOProducts and merge into a 4D xarray."""
     return ma.stack(
         [
-            xarr_to_masked(s)
+            to_masked_array(s)
             for s in generate_slices(
                 products=products,
                 assets=assets,
@@ -198,7 +198,7 @@ def generate_slices(
         # Read products but skip empty ones if raise_empty is active.
         for product in products:
             try:
-                yield masked_to_xarr_slice(
+                yield to_dataarray(
                     product.read_np_array(
                         assets=assets,
                         eo_bands=eo_bands,
@@ -208,9 +208,9 @@ def generate_slices(
                         raise_empty=raise_empty,
                         **product_read_kwargs,
                     ),
-                    product.item.id,
+                    name=product.item.id,
                     band_names=variables,
-                    slice_attrs=product.item.properties,
+                    attrs=product.item.properties,
                 )
                 stack_empty = False
             except EmptyProductException:
@@ -226,7 +226,7 @@ def generate_slices(
         )
         for merge_property, products in products_per_property.items():
             try:
-                yield masked_to_xarr_slice(
+                yield to_dataarray(
                     merge_products(
                         products=products,
                         merge_method=merge_method,
@@ -241,7 +241,7 @@ def generate_slices(
                         ),
                         raise_empty=raise_empty,
                     ),
-                    merge_property,
+                    name=merge_property,
                     band_names=variables,
                 )
                 stack_empty = False

@@ -11,6 +11,36 @@
     },
     {
       "rel": "item",
+      "href": "./S2B_33TWL_20230820_0_L2A/S2B_33TWL_20230820_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2B_33TWM_20230820_0_L2A/S2B_33TWM_20230820_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_33TWL_20230818_0_L2A/S2A_33TWL_20230818_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_33TWM_20230818_0_L2A/S2A_33TWM_20230818_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_33TWL_20230815_0_L2A/S2A_33TWL_20230815_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_33TWM_20230815_0_L2A/S2A_33TWM_20230815_0_L2A.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
       "href": "./S2B_33TWL_20230813_0_L2A/S2B_33TWL_20230813_0_L2A.json",
       "type": "application/json"
     },
@@ -1299,7 +1329,7 @@
       "interval": [
         [
           "2023-08-10T09:57:57.166000Z",
-          "2023-08-13T10:08:07.856000Z"
+          "2023-08-20T09:58:11.072000Z"
         ]
       ]
     }

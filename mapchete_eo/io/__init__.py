@@ -5,6 +5,10 @@ from mapchete_eo.io.assets import (
     read_mask_as_raster,
 )
 from mapchete_eo.io.items import get_item_property, item_to_np_array
+from mapchete_eo.io.levelled_cubes import (
+    read_levelled_cube_to_np_array,
+    read_levelled_cube_to_xarray,
+)
 from mapchete_eo.io.path import get_product_cache_path, open_xml, path_in_paths
 from mapchete_eo.io.products import (
     group_products_per_property,
@@ -27,4 +31,6 @@ __all__ = [
     "get_product_cache_path",
     "path_in_paths",
     "read_mask_as_raster",
+    "read_levelled_cube_to_np_array",
+    "read_levelled_cube_to_xarray",
 ]

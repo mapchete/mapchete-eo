@@ -58,7 +58,7 @@ class CloudmaskConfig(BaseModel):
     cloud_types: CloudType = CloudType.all
 
 
-class CacheConfig(BaseModel, arbitrary_types_allowed=True):
+class CacheConfig(BaseModel):
     path: MPathLike
     product_path_generation_method: ProductPathGenerationMethod = (
         ProductPathGenerationMethod.hash
@@ -81,7 +81,7 @@ class CacheConfig(BaseModel, arbitrary_types_allowed=True):
     cached_files_validation: bool = False
 
 
-class Sentinel2DriverConfig(BaseDriverConfig, arbitrary_types_allowed=True):
+class Sentinel2DriverConfig(BaseDriverConfig):
     format: str = "Sentinel-2"
     time: Union[TimeRange, List[TimeRange]]
     archive: Type[Archive] = KnownArchives.S2AWS_COG.value

@@ -6,7 +6,7 @@ sun angles, quality masks, etc.
 import logging
 import xml.etree.ElementTree as etree
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -109,7 +109,7 @@ class S2Metadata:
         self,
         metadata_xml: MPath,
         path_mapper: S2PathMapper,
-        xml_root: Union[etree.Element, None] = None,
+        xml_root: Optional[etree.Element] = None,
         boa_offset: float = -1000,
         boa_offset_applied: bool = False,
         **kwargs,
@@ -122,7 +122,7 @@ class S2Metadata:
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
         self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
-        self._cloud_masks_cache: Union[List, None] = None
+        self._cloud_masks_cache: Optional[List] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
@@ -153,8 +153,8 @@ class S2Metadata:
     def from_metadata_xml(
         cls,
         metadata_xml: Union[str, MPath],
-        processing_baseline: Union[str, None] = None,
-        path_mapper: Union[S2PathMapper, None] = None,
+        processing_baseline: Optional[str] = None,
+        path_mapper: Optional[S2PathMapper] = None,
         **kwargs,
     ) -> "S2Metadata":
         metadata_xml = MPath.from_inp(metadata_xml, **kwargs)

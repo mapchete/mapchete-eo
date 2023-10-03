@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 
 from mapchete_eo import base
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
@@ -16,7 +16,7 @@ METADATA: dict = {
 class InputTile(base.InputTile):
     # Sentinel-2 driver specific default values:
     default_read_merge_method: MergeMethod = MergeMethod.average
-    default_read_merge_products_by: Union[str, None] = "s2:datastrip_id"
+    default_read_merge_products_by: Optional[str] = "s2:datastrip_id"
     default_read_nodataval: NodataVal = 0
 
 

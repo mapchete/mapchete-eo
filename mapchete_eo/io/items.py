@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Union
+from typing import Any, List, Optional
 
 import numpy.ma as ma
 import pystac
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def item_to_np_array(
     item: pystac.Item,
     band_locations: List[BandLocation],
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     raise_empty: bool = False,

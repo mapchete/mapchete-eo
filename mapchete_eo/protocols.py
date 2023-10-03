@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 import numpy.ma as ma
 import pystac
@@ -17,7 +17,7 @@ class EOProductProtocol(Protocol):
     item: pystac.Item
     bounds: Bounds
     crs: CRS
-    __geo_interface__: Union[Dict[str, Any], None]
+    __geo_interface__: Optional[Dict[str, Any]]
 
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol:
@@ -27,7 +27,7 @@ class EOProductProtocol(Protocol):
         self,
         assets: Optional[List[str]] = None,
         eo_bands: Optional[List[str]] = None,
-        grid: Union[GridProtocol, None] = None,
+        grid: Optional[GridProtocol] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         x_axis_name: str = "x",
@@ -40,7 +40,7 @@ class EOProductProtocol(Protocol):
         self,
         assets: Optional[List[str]] = None,
         eo_bands: Optional[List[str]] = None,
-        grid: Union[GridProtocol, None] = None,
+        grid: Optional[GridProtocol] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         **kwargs,

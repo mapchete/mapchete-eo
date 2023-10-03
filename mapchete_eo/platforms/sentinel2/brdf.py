@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, List, Union
+from typing import Iterator, List, Optional
 
 import numpy as np
 from fiona.transform import transform
@@ -38,7 +38,7 @@ def get_sun_zenith_angle(s2_metadata: S2Metadata):
 def correction_grid(
     s2_metadata: S2Metadata,
     band: L2ABand,
-    sun_zenith_angle: Union[np.ndarray, None] = None,
+    sun_zenith_angle: Optional[np.ndarray] = None,
     model: BRDFModels = BRDFModels.default,
     resolution: Resolution = Resolution["60m"],
 ) -> ReferencedRaster:

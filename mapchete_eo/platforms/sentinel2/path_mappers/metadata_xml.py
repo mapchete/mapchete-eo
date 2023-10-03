@@ -5,7 +5,7 @@ on a given archive or a local SAFE file.
 import logging
 import xml.etree.ElementTree as etree
 from functools import cached_property
-from typing import Union
+from typing import Optional
 
 from mapchete.path import MPath
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class XMLMapper(S2PathMapper):
     def __init__(
-        self, metadata_xml: MPath, xml_root: Union[etree.Element, None] = None, **kwargs
+        self, metadata_xml: MPath, xml_root: Optional[etree.Element] = None, **kwargs
     ):
         self.metadata_xml = metadata_xml
         self._cached_xml_root = xml_root

@@ -1,7 +1,7 @@
 import datetime
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Union
+from typing import List, Optional, Union
 
 from affine import Affine
 from mapchete.types import Bounds
@@ -22,7 +22,7 @@ class MergeMethod(str, Enum):
     average = "average"
 
 
-NodataVal = Union[int, None]
+NodataVal = Optional[float]
 NodataVals = Union[List[NodataVal], NodataVal]
 DateLike = Union[str, datetime.date]
 DateTimeLike = Union[DateLike, datetime.datetime]

@@ -1,12 +1,11 @@
 import json
 import logging
-import os
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures
-from mapchete.path import MPath
+from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
@@ -24,13 +23,11 @@ logger = logging.getLogger(__name__)
 class FSSpecStacIO(StacApiIO):
     """Custom class which allows I/O operations on object storage."""
 
-    def read_text(self, source: Union[str, os.PathLike, MPath], *args, **kwargs) -> str:
+    def read_text(self, source: MPathLike, *args, **kwargs) -> str:
         path = MPath.from_inp(source)
         return path.read_text()
 
-    def write_text(
-        self, dest: Union[str, os.PathLike, MPath], txt: str, *args, **kwargs
-    ) -> None:
+    def write_text(self, dest: MPathLike, txt: str, *args, **kwargs) -> None:
         path = MPath.from_inp(dest)
         path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
@@ -38,9 +35,7 @@ class FSSpecStacIO(StacApiIO):
 
     # TODO: investigate in pystac why this has to be a staticmethod
     @staticmethod
-    def save_json(
-        dest: Union[str, os.PathLike, MPath], json_dict: dict, *args, **kwargs
-    ) -> None:
+    def save_json(dest: MPathLike, json_dict: dict, *args, **kwargs) -> None:
         path = MPath.from_inp(dest)
         path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
@@ -54,8 +49,8 @@ class Catalog(ABC):
         self,
         collections: List[str],
         time: Union[TimeRange, List[TimeRange]],
-        bounds: Union[Bounds, None] = None,
-        area: Union[BaseGeometry, None] = None,
+        bounds: Optional[Bounds] = None,
+        area: Optional[BaseGeometry] = None,
     ):
         ...
 
@@ -75,17 +70,17 @@ class Catalog(ABC):
 
     def write_static_catalog(
         self,
-        output_path: Union[MPath, str],
-        name: Union[str, None] = None,
-        description: Union[str, None] = None,
+        output_path: MPathLike,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
         assets: Optional[List[str]] = None,
         assets_dst_resolution: Union[None, float, int] = None,
-        assets_convert_profile: Union[Profile, None] = None,
+        assets_convert_profile: Optional[Profile] = None,
         copy_metadata: bool = False,
-        metadata_parser_classes: Union[tuple, None] = None,
+        metadata_parser_classes: Optional[tuple] = None,
         overwrite: bool = False,
         stac_io: DefaultStacIO = FSSpecStacIO(),
-        progress_callback: Union[Callable, None] = None,
+        progress_callback: Optional[Callable] = None,
     ) -> MPath:
         """Dump static version of current items."""
         output_path = MPath.from_inp(output_path)

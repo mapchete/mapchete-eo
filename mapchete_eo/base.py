@@ -50,7 +50,7 @@ class InputTile(base.InputTile):
     """Target Tile representation of input data."""
 
     default_read_merge_method: MergeMethod = MergeMethod.first
-    default_read_merge_products_by: Union[str, None] = None
+    default_read_merge_products_by: Optional[str] = None
     default_read_nodataval: NodataVal = None
 
     tile: BufferedTile
@@ -60,7 +60,7 @@ class InputTile(base.InputTile):
     def __init__(
         self,
         tile: BufferedTile,
-        products: Union[List[EOProductProtocol], None],
+        products: Optional[List[EOProductProtocol]],
         eo_bands: dict,
         time: List[TimeRange],
         input_key: Optional[str] = None,
@@ -176,7 +176,7 @@ class InputTile(base.InputTile):
         time_pattern: Optional[str] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
-        merge_products_by: Union[str, None] = None,
+        merge_products_by: Optional[str] = None,
         merge_method: MergeMethod = MergeMethod.first,
         raise_empty: bool = True,
         slice_axis_name: str = "layers",
@@ -224,7 +224,7 @@ class InputTile(base.InputTile):
         time_pattern: Optional[str] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
-        merge_products_by: Union[str, None] = None,
+        merge_products_by: Optional[str] = None,
         merge_method: MergeMethod = MergeMethod.first,
         raise_empty: bool = True,
         **kwargs,
@@ -307,7 +307,7 @@ class InputData(base.InputData):
         self,
         input_params: dict,
         readonly: bool = False,
-        input_key: Union[str, None] = None,
+        input_key: Optional[str] = None,
         standalone: bool = False,
         **kwargs,
     ) -> None:
@@ -354,7 +354,7 @@ class InputData(base.InputData):
                 ),
             )
 
-    def bbox(self, out_crs: Union[str, None] = None) -> BaseGeometry:
+    def bbox(self, out_crs: Optional[str] = None) -> BaseGeometry:
         """Return data bounding box."""
         return reproject_geometry(
             box(*self._bounds),

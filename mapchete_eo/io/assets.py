@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 import fsspec
 import numpy as np
@@ -31,7 +31,7 @@ def asset_to_np_array(
     item: pystac.Item,
     asset: str,
     indexes: Union[List[int], int] = 1,
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
 ) -> ma.MaskedArray:
@@ -58,7 +58,7 @@ def get_assets(
     src_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     resolution: Union[None, float, int] = None,
-    convert_profile: Union[None, Profile] = None,
+    convert_profile: Optional[Profile] = None,
     item_href_in_dst_dir: bool = True,
     ignore_if_exists: bool = False,
 ) -> pystac.Item:
@@ -147,7 +147,7 @@ def convert_asset(
     src_fs: fsspec.AbstractFileSystem = None,
     overwrite: bool = False,
     resolution: Union[None, float, int] = None,
-    profile: Union[Profile, None] = None,
+    profile: Optional[Profile] = None,
     item_href_in_dst_dir: bool = True,
     ignore_if_exists: bool = False,
 ) -> pystac.Item:
@@ -186,7 +186,7 @@ def convert_raster(
     src_path: MPath,
     dst_path: MPath,
     resolution: Union[None, float, int] = None,
-    profile: Union[Profile, None] = None,
+    profile: Optional[Profile] = None,
 ) -> None:
     with rasterio_open(src_path, "r") as src:
         meta = src.meta.copy()
@@ -234,9 +234,9 @@ def get_metadata_assets(
     item: pystac.Item,
     dst_dir: MPath,
     overwrite: bool = False,
-    metadata_parser_classes: Union[tuple, None] = None,
+    metadata_parser_classes: Optional[tuple] = None,
     resolution: Union[None, float, int] = None,
-    convert_profile: Union[None, Profile] = None,
+    convert_profile: Optional[Profile] = None,
     metadata_asset_names: List[str] = ["metadata", "granule_metadata"],
 ):
     """Copy STAC item metadata and its metadata assets."""
@@ -288,7 +288,7 @@ def get_metadata_assets(
 def should_be_converted(
     path: MPath,
     resolution: Union[None, float, int] = None,
-    profile: Union[None, Profile] = None,
+    profile: Optional[Profile] = None,
 ) -> bool:
     """Decide whether a raster file should be converted or not."""
     if path.endswith(tuple(COMMON_RASTER_EXTENSIONS)):
@@ -324,12 +324,12 @@ def _read_vector_mask(mask_path):
 
 def read_mask_as_raster(
     path: MPath,
-    indexes: Union[List[int], None] = None,
-    dst_grid: Union[GridProtocol, None] = None,
+    indexes: Optional[List[int]] = None,
+    dst_grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     rasterize_value_func: Callable = lambda feature: feature.get("id", 1),
     rasterize_feature_filter: Callable = lambda feature: True,
-    dtype: Union[DTypeLike, None] = None,
+    dtype: Optional[DTypeLike] = None,
     masked: bool = True,
 ) -> ReferencedRaster:
     """

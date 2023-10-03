@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -19,10 +19,10 @@ def read_levelled_cube_to_np_array(
     target_height: int,
     assets: Optional[List[str]] = None,
     eo_bands: Optional[List[str]] = None,
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
-    merge_products_by: Union[str, None] = None,
+    merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
@@ -107,10 +107,10 @@ def read_levelled_cube_to_xarray(
     target_height: int,
     assets: Optional[List[str]] = None,
     eo_bands: Optional[List[str]] = None,
-    grid: Union[GridProtocol, None] = None,
+    grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
-    merge_products_by: Union[str, None] = None,
+    merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,

@@ -24,7 +24,8 @@ class MergeMethod(str, Enum):
 
 NodataVal = Union[int, None]
 NodataVals = Union[List[NodataVal], NodataVal]
-DateTimeLike = Union[str, datetime.datetime, datetime.date]
+DateLike = Union[str, datetime.date]
+DateTimeLike = Union[DateLike, datetime.datetime]
 
 
 class Grid:
@@ -52,3 +53,11 @@ class BandLocation:
     asset_name: str
     band_index: int = 1
     nodataval: float = 0
+
+
+@dataclass
+class TimeRange:
+    """A class handling time ranges."""
+
+    start: DateTimeLike
+    end: DateTimeLike

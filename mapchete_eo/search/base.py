@@ -16,7 +16,7 @@ from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.assets import get_assets, get_metadata_assets
-from mapchete_eo.types import DateTimeLike
+from mapchete_eo.types import DateTimeLike, TimeRange
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,7 @@ class Catalog(ABC):
     def __init__(
         self,
         collections: List[str],
-        start_time: Union[DateTimeLike, None] = None,
-        end_time: Union[DateTimeLike, None] = None,
+        time: Union[TimeRange, List[TimeRange]],
         bounds: Union[Bounds, None] = None,
         area: Union[BaseGeometry, None] = None,
     ):

@@ -11,6 +11,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     Sentinel2DriverConfig,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
+from mapchete_eo.types import TimeRange
 
 
 def test_format_available():
@@ -20,10 +21,12 @@ def test_format_available():
 def test_config():
     conf = Sentinel2DriverConfig(
         format="Sentinel-2",
-        start_time="2022-04-01",
-        end_time="2022-04-10",
+        time=dict(
+            start="2022-04-01",
+            end="2022-04-10",
+        ),
     )
-    assert conf.dict()
+    assert conf.model_dump()
 
 
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):

@@ -4,6 +4,7 @@ from shapely.geometry import shape
 from shapely.ops import unary_union
 
 from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
+from mapchete_eo.types import TimeRange
 
 
 @pytest.mark.remote
@@ -12,10 +13,9 @@ from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
     [AWSL2ACOGv1],
 )
 def test_s2_archives(archive_cls):
-    start_time = "2022-06-01"
-    end_time = "2022-06-06"
+    time = TimeRange(start="2022-06-01", end="2022-06-06")
     bounds = [16, 46, 17, 47]
-    archive = archive_cls(start_time=start_time, end_time=end_time, bounds=bounds)
+    archive = archive_cls(time=time, bounds=bounds)
     assert len(archive.catalog.items)
 
 
@@ -26,12 +26,11 @@ def test_s2_archives(archive_cls):
 )
 def test_s2_archives_multipolygon_search(archive_cls):
     pyramid = BufferedTilePyramid("geodetic")
-    start_time = "2022-06-01"
-    end_time = "2022-06-06"
+    time = TimeRange(start="2022-06-01", end="2022-06-06")
     area = unary_union(
         [pyramid.tile_from_xy(16, 46, 13).bbox, pyramid.tile_from_xy(17, 47, 13).bbox]
     )
-    archive = archive_cls(start_time=start_time, end_time=end_time, area=area)
+    archive = archive_cls(time=time, area=area)
     items = list(archive.catalog.items)
     assert items
     for item in items:

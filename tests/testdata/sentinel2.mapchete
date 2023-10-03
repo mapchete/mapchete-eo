@@ -3,8 +3,9 @@ input:
   inp:
     format: Sentinel-2
     level: L2A
-    start_time: 2022-04-01
-    end_time: 2022-04-03
+    time:
+      start: 2022-04-01
+      end: 2022-04-03
 output:
   format: GTiff
   bands: 3

@@ -66,14 +66,16 @@ def masked_to_xarr(
 
 def masked_to_xarr_slice(
     slice_array: ma.MaskedArray,
-    slice_name: str,
-    band_names: List[str],
+    slice_name: Optional[str] = "slice",
+    band_names: Optional[List[str]] = None,
     slice_attrs: Optional[dict] = None,
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
 ) -> xr.DataArray:
     """Convert a 3D masked array to a xr.DataArray."""
+    bands = slice_array.shape[0]
+    band_names = band_names or [f"{band_axis_name}-{i}" for i in range(bands)]
     return xr.Dataset(
         data_vars={
             # within each slice Dataset, there are DataArrays for each band
@@ -97,8 +99,8 @@ def masked_to_xarr_slice(
 
 def masked_to_xarr_ds(
     masked_arr: ma.MaskedArray,
-    slice_names: List[str],
-    band_names: List[str],
+    slice_names: Optional[List[str]] = None,
+    band_names: Optional[List[str]] = None,
     coords: Optional[dict] = None,
     slices_attrs: Optional[List[Union[dict, None]]] = None,
     slice_axis_name: str = "time",
@@ -107,7 +109,13 @@ def masked_to_xarr_ds(
     y_axis_name: str = "y",
 ) -> xr.Dataset:
     """Convert a 4D masked array to a xr.Dataset."""
-    slices_attrs = [None for _ in slice_names] if slices_attrs is None else slices_attrs
+    slices, bands = masked_arr.shape[:2]
+    slice_names = slice_names or [f"{slice_axis_name}-{i}" for i in range(slices)]
+    band_names = band_names or [f"{band_axis_name}-{i}" for i in range(bands)]
+    slices_attrs = (
+        [None for _ in range(slices)] if slices_attrs is None else slices_attrs
+    )
+
     return xr.Dataset(
         data_vars={
             # every slice gets its own xarray Dataset

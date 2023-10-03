@@ -28,9 +28,13 @@ def xarr_to_masked(
         )
 
     if xarr.dtype in _NUMPY_FLOAT_DTYPES:
-        return ma.masked_values(xarr, fill_value, copy=copy)
+        return ma.masked_values(xarr, fill_value, copy=copy, shrink=False)
     else:
-        return ma.masked_equal(xarr, fill_value, copy=copy)
+        out = ma.masked_equal(xarr, fill_value, copy=copy)
+        # in case of a shrinked mask we have to expand it to the full array shape
+        if not isinstance(out.mask, np.ndarray):
+            out.mask = np.full(out.mask.shape, out.mask, dtype=bool)
+        return out
 
 
 def masked_to_xarr(

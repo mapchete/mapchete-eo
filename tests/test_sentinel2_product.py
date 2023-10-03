@@ -10,6 +10,7 @@ from mapchete.types import Bounds
 from rasterio.crs import CRS
 
 from mapchete_eo.exceptions import EmptyProductException
+from mapchete_eo.io import read_levelled_cube_np_array
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution, SceneClassification
@@ -335,3 +336,31 @@ def test_read_np_empty(s2_stac_item_half_footprint):
     arr = product.read_np_array(assets=assets, grid=tile, raise_empty=False)
     assert isinstance(arr, ma.MaskedArray)
     assert arr.mask.all()
+
+
+def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
+    assets = ["red"]
+    target_height = 5
+    arr = read_levelled_cube_np_array(
+        products=[S2Product.from_stac_item(item) for item in s2_stac_items],
+        target_height=target_height,
+        assets=assets,
+        grid=test_tile,
+        merge_products_by="s2:datastrip_id",
+        product_read_kwargs=dict(
+            mask_config=MaskConfig(
+                cloud=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
+            )
+        ),
+    )
+    assert isinstance(arr, ma.MaskedArray)
+    assert arr.any()
+    assert not arr.mask.all()
+    assert arr.shape[0] == target_height
+
+    # not much a better way of testing it than to make sure, cube is filled from the bottom
+    layers = list(range(target_height))
+    for lower, higher in zip(layers[:-1], layers[1:]):
+        assert arr[lower].mask.sum() <= arr[higher].mask.sum()

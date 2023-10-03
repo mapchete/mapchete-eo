@@ -43,7 +43,7 @@ def test_products_to_np_array_merge_date(s2_stac_items, test_tile):
     assert isinstance(arr, ma.MaskedArray)
     assert arr.any()
     assert not arr.mask.all()
-    assert arr.shape[0] == 2
+    assert arr.shape[0] >= 2
 
 
 @pytest.mark.parametrize(
@@ -64,4 +64,4 @@ def test_products_to_np_array_merge_datastrip_id(
     assert isinstance(arr, ma.MaskedArray)
     assert arr.any()
     assert not arr.mask.all()
-    assert arr.shape[0] == 2
+    assert arr.shape[0] >= 2

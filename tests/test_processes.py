@@ -1,8 +1,5 @@
 import numpy.ma as ma
 import pytest
-from mapchete.testing import get_process_mp
-
-from mapchete_eo.processes import eoxcloudless_mosaic
 
 
 def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_mapchete):
@@ -17,7 +14,7 @@ def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_ma
 
 
 @pytest.mark.parametrize(
-    "method", ["brightness", "max_ndvi", "weigthed_average", "ndvi_linreg"]
+    "method", ["brightness", "max_ndvi", "weighted_avg", "ndvi_linreg"]
 )
 def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete, method):
     eoxcloudless_mosaic_mapchete.dict["process_parameters"]["method"] = method

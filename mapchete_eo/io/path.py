@@ -130,7 +130,6 @@ def asset_mpath(
     item: pystac.Item,
     asset: str,
     fs: fsspec.AbstractFileSystem = None,
-    absolute_path: bool = True,
 ) -> MPath:
     """Return MPath instance with asset href."""
 
@@ -140,7 +139,4 @@ def asset_mpath(
         raise KeyError(
             f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
         )
-    if absolute_path:
-        return asset_path.absolute_path(MPath(item.get_self_href(), fs=fs).parent)
-    else:
-        return asset_path
+    return asset_path

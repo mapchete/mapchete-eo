@@ -2,10 +2,7 @@ import logging
 
 import pystac
 
-from mapchete_eo.platforms.sentinel2.base import S2Product
-
-# from mapchete_eo.platforms.sentinel2.config import CacheConfig
-
+from mapchete_eo.platforms.sentinel2.product import S2Product
 
 logger = logging.getLogger(__name__)
 

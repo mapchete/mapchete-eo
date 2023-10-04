@@ -84,7 +84,10 @@ class Cache:
             )
             sun_zenith_angle = None
             for band in self._brdf_bands:
-                out_path = self.path / f"brdf_{model}_{band}_{resolution}.tif"
+                out_path = (
+                    MPath(self.path).absolute_path()
+                    / f"brdf_{model}_{band}_{resolution}.tif"
+                )
                 # TODO: do check with _existing_files again to reduce S3 requests
                 if not out_path.exists():
                     if sun_zenith_angle is None:

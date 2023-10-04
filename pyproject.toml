@@ -26,6 +26,7 @@ dependencies = [
     "jenkspy",
     "lxml",
     "mapchete>=2023.9.1",
+    "orgonite",
     "pydantic",
     "pystac[urllib3]>=1.8.3",
     "pystac-client>=0.7.5",

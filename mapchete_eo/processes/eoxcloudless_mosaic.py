@@ -66,7 +66,7 @@ def execute(
                     merge_products_by=merge_products_by,
                     merge_method=MergeMethod.average,
                     raise_empty=True,
-                    brdf_config=BRDFConfig(),
+                    brdf_config=BRDFConfig(bands=["red", "green", "blue", "nir"]),
                     product_read_kwargs=dict(
                         mask_config=MaskConfig(
                             cloud=True,

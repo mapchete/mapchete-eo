@@ -1,5 +1,8 @@
 import numpy.ma as ma
 import pytest
+from mapchete.testing import get_process_mp
+
+from mapchete_eo.processes import eoxcloudless_mosaic
 
 
 def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_mapchete):
@@ -13,10 +16,14 @@ def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_ma
     assert ma.mean(output) < 100
 
 
-def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
+@pytest.mark.parametrize(
+    "method", ["brightness", "max_ndvi", "weigthed_average", "ndvi_linreg"]
+)
+def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete, method):
+    eoxcloudless_mosaic_mapchete.dict["process_parameters"]["method"] = method
     mp = eoxcloudless_mosaic_mapchete.mp()
     zoom = max(mp.config.zoom_levels)
-    # # tile containing data
+    # tile containing data
     tile = next(mp.get_process_tiles(zoom))
     output = mp.execute(tile)
     assert isinstance(output, ma.MaskedArray)

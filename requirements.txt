@@ -2,6 +2,7 @@ affine
 click
 croniter
 lxml
+jenkspy
 mapchete>=2023.9.1
 orgonite
 pydantic>=2.0.0

@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "click",
     "croniter",
+    "jenkspy",
     "lxml",
     "mapchete>=2023.9.1",
     "orgonite",

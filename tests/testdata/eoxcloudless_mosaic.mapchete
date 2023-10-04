@@ -5,8 +5,17 @@ input:
     level: L2A
     time:
       start: 2023-07-01
-      end: 2023-07-06
+      end: 2023-07-04
     with_cloudmasks: true
+    cache:
+      keep: true
+      path: sentinel2/full_products
+      product_path_generation_method: date_year_first
+      assets: ["red", "green", "blue", "nir"]
+      max_disk_usage: 100.0
+      check_cached_files_exist: true
+      brdf:
+        bands: ["red", "green", "blue", "nir"]
 output:
   format: GTiff
   bands: 4

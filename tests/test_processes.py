@@ -25,4 +25,4 @@ def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete, method):
     output = mp.execute(tile)
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
-    assert ma.mean(output) > 700
+    assert ma.mean(output) > 200

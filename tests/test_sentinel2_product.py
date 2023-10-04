@@ -49,6 +49,8 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
     assert not product.cache.path.ls()
     product.cache_brdf_grids()
     assert product.cache.path.ls()
+    path = product.cache.path.ls()[0]
+    assert "B02" in str(path)
 
 
 def _get_product_tile(product, metatiling=1):

@@ -115,15 +115,18 @@ def s2_stac_item(s2_stac_collection):
 
 
 @pytest.fixture
-def s2_stac_item_half_footprint(s2_stac_collection):
-    item = pystac.pystac.Item.from_file(
-        str(
-            s2_stac_collection.parent
-            / "sentinel-2-l2a"
-            / "S2B_33TWM_20230813_0_L2A"
-            / "S2B_33TWM_20230813_0_L2A.json"
-        )
+def s2_stac_json_half_footprint(s2_stac_collection):
+    return (
+        s2_stac_collection.parent
+        / "sentinel-2-l2a"
+        / "S2B_33TWM_20230813_0_L2A"
+        / "S2B_33TWM_20230813_0_L2A.json"
     )
+
+
+@pytest.fixture
+def s2_stac_item_half_footprint(s2_stac_json_half_footprint):
+    item = pystac.pystac.Item.from_file(str(s2_stac_json_half_footprint))
     item.make_asset_hrefs_absolute()
     return item
 

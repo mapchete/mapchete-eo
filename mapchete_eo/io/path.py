@@ -77,7 +77,7 @@ def get_product_cache_path(
         return basepath / hashlib.md5(f"{item.id}".encode()).hexdigest()
 
     else:
-        if item.datetime is None:
+        if item.datetime is None:  # pragma: no cover
             raise AttributeError(f"stac item must have a valid datetime object: {item}")
         elif path_generation_method == ProductPathGenerationMethod.date_day_first:
             return (

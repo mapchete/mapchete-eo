@@ -53,6 +53,9 @@ def test_xml_mapper(s2_l2a_metadata_xml):
         for qi_mask in BandQI:
             assert path_mapper.band_qi_mask(qi_mask=qi_mask, band=band).exists()
 
+        assert path_mapper.technical_quality_mask(band).exists()
+        assert path_mapper.detector_footprints(band).exists()
+
 
 @pytest.mark.remote
 @pytest.mark.parametrize(

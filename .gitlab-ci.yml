@@ -11,7 +11,7 @@ precommit:
   stage: codecheck
   image: python:3.10.2-slim-bullseye
   before_script:
-    - apt update && apt install -y --no-install-recommends git
+    - apt update && apt install -y --no-install-recommends git gcc
     - pip install pre-commit
   script:
     - pre-commit run --all-files
@@ -25,10 +25,7 @@ build:
     paths:
       - dist/
   before_script:
-    - pip install 
-      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple 
-      --upgrade
-      hatch
+    - pip install --upgrade hatch
   script:
     - hatch build
 

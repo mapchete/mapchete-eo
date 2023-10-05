@@ -276,13 +276,21 @@ def get_brdf_param(
     # create output array
     model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float32), 0)
 
-    detector_footprints = resample_array(
+    resampled_detector_footprints = resample_array(
         detector_footprints,
         grid=grid,
         nodata=0,
         resampling=Resampling.nearest,
-    )[0]
-    detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
+    )
+    # make sure detector footprints are 2D
+    if resampled_detector_footprints.ndim not in [2, 3]:
+        raise ValueError(
+            f"detector_footprints has to be a 2- or 3-dimensional array but has shape {detector_footprints.shape}"
+        )
+    if resampled_detector_footprints.ndim == 3:
+        resampled_detector_footprints = resampled_detector_footprints[0]
+
+    detector_ids = [x for x in np.unique(resampled_detector_footprints) if x != 0]
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
@@ -298,7 +306,9 @@ def get_brdf_param(
             continue
 
         # select pixels which are covered by detector
-        detector_mask = np.where(detector_footprints == detector_id, True, False)
+        detector_mask = np.where(
+            resampled_detector_footprints == detector_id, True, False
+        )
 
         # skip if detector footprint does not intersect with output window
         if not detector_mask.any():  # pragma: no cover

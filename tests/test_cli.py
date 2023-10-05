@@ -2,7 +2,7 @@ import pytest
 from click.testing import CliRunner
 from pytest_lazyfixture import lazy_fixture
 
-from mapchete_eo.cli.main import eo
+from mapchete_eo.cli import eo
 from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 
 

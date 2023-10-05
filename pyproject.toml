@@ -42,7 +42,7 @@ test = [
 ]
 
 [project.entry-points."mapchete.cli.commands"]
-eo = "mapchete_eo.cli.main:eo"
+eo = "mapchete_eo.cli:eo"
 
 [project.entry-points."mapchete.formats.drivers"]
 eostac_dev = "mapchete_eo.eostac"

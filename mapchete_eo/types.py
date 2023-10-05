@@ -45,6 +45,16 @@ class Grid:
             transform = obj.affine
         return Grid(transform, obj.height, obj.width, obj.crs)
 
+    def to_dict(self):
+        return dict(
+            transform=self.transform,
+            height=self.height,
+            width=self.width,
+            crs=self.crs,
+            bounds=self.bounds,
+            shape=self.shape,
+        )
+
 
 @dataclass
 class BandLocation:

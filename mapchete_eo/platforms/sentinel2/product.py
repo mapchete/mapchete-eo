@@ -71,6 +71,7 @@ class Cache:
                 self.path,
                 resolution=self.config.assets_resolution.value,
                 ignore_if_exists=True,
+                item_href_in_dst_dir=False,
             )
             return self.item
 

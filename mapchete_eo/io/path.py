@@ -140,7 +140,7 @@ def asset_mpath(
         raise KeyError(
             f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
         )
-    if absolute_path:
-        return asset_path.absolute_path(MPath(item.get_self_href(), fs=fs).parent)
+    if absolute_path and not asset_path.is_absolute():
+        return MPath(item.get_self_href(), fs=fs).parent / asset_path
     else:
         return asset_path

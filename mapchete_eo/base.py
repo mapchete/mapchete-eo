@@ -318,6 +318,12 @@ class InputData(base.InputData):
         self.standalone = standalone
 
         self.params = self.driver_config_model(**input_params["abstract"])
+        # we have to make sure, the cache path is absolute
+        # not quite fond of this solution
+        if self.params.cache:
+            self.params.cache.path = MPath.from_inp(
+                self.params.cache.dict()
+            ).absolute_path(base_dir=input_params.get("conf_dir"))
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self._area = input_params["delimiters"]["effective_area"]
         self.time = self.params.time

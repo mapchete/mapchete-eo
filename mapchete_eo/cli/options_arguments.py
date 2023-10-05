@@ -2,11 +2,12 @@ from typing import Optional
 
 import click
 import tqdm
+from mapchete.path import MPath
 
 from mapchete_eo.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
-from mapchete_eo.platforms.sentinel2.types import Resolution
+from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
 
 
 class TqdmUpTo(tqdm.tqdm):
@@ -49,8 +50,26 @@ def _brdf_model_str_to_brdf(_, __, value):
             return BRDFModels[value]
 
 
-arg_stac_item = click.argument("stac-item", type=click.Path())
-arg_dst = click.argument("dst", type=click.Path())
+def _str_to_l2a_bands(_, __, value):
+    if value:
+        return [L2ABand[v] for v in value.split(",")]
+
+
+def _str_to_mpath(_, __, value):
+    if value:
+        return MPath.from_inp(value)
+
+
+arg_stac_item = click.argument("stac-item", type=click.Path(), callback=_str_to_mpath)
+arg_dst_path = click.argument("dst_path", type=click.Path(), callback=_str_to_mpath)
+opt_s2_l2a_bands = click.option(
+    "--l2a-bands",
+    type=click.STRING,
+    callback=_str_to_l2a_bands,
+    help=f"List of L2A bands to be used. (Available bands: {','.join([band.name for band in L2ABand])})",
+    show_default=True,
+    default="B04,B03,B02",
+)
 opt_assets = click.option(
     "--assets",
     "-a",
@@ -104,8 +123,9 @@ opt_mask_scl_classes = click.option(
 opt_brdf_model = click.option(
     "--brdf-model",
     type=click.Choice((["none", *[model.name for model in BRDFModels]])),
-    default="none",
+    default=BRDFModels.HLS,
     callback=_brdf_model_str_to_brdf,
+    show_default=True,
     help="BRDF model.",
 )
 opt_mgrs_tile = click.option("--mgrs-tile", type=click.STRING)
@@ -162,4 +182,9 @@ opt_copy_metadata = click.option(
 )
 opt_overwrite = click.option(
     "--overwrite", "-o", is_flag=True, help="Overwrite existing files."
+)
+opt_dump_detector_footprints = click.option(
+    "--dump-detector-footprints",
+    is_flag=True,
+    help="Also dump products detector footprints.",
 )

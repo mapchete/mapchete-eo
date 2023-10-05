@@ -11,7 +11,7 @@ from mapchete_eo.platforms.sentinel2.product import S2Product
 
 @click.command()
 @options_arguments.arg_stac_item
-@options_arguments.arg_dst
+@options_arguments.arg_dst_path
 @options_arguments.opt_resolution
 @options_arguments.opt_rio_profile
 @options_arguments.opt_mask_footprint
@@ -23,7 +23,7 @@ from mapchete_eo.platforms.sentinel2.product import S2Product
 @opt_debug
 def s2_mask(
     stac_item,
-    dst,
+    dst_path,
     resolution=None,
     rio_profile=None,
     mask_footprint=False,
@@ -34,6 +34,7 @@ def s2_mask(
     mask_scl_classes=None,
     **_,
 ):
+    """Generate mask for Sentinel-2 product from metadata."""
     item = pystac.Item.from_file(stac_item)
     product = S2Product.from_stac_item(item)
     grid = product.metadata.grid(resolution)
@@ -56,7 +57,7 @@ def s2_mask(
     mask = product.get_mask(mask_config=mask_config).data
     rgb = np.stack([mask * 255, mask, mask])
     with rasterio_open(
-        dst,
+        dst_path,
         mode="w",
         crs=grid.crs,
         transform=grid.transform,

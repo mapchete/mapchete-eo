@@ -11,7 +11,7 @@ from mapchete_eo.types import TimeRange
 
 
 @click.command()
-@options_arguments.arg_dst
+@options_arguments.arg_dst_path
 @opt_bounds
 @options_arguments.opt_mgrs_tile
 @options_arguments.opt_start_time
@@ -29,7 +29,7 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_overwrite
 @opt_debug
 def static_catalog(
-    dst,
+    dst_path,
     bounds=None,
     mgrs_tile=None,
     start_time=None,
@@ -47,6 +47,7 @@ def static_catalog(
     overwrite=False,
     **kwargs,
 ):
+    """Write a static STAC catalog for selected area."""
     if catalog_json and endpoint:  # pragma: no cover
         raise click.ClickException(
             "exactly one of --archive, --catalog-json or --endpoint has to be set."
@@ -94,7 +95,7 @@ def static_catalog(
         unit="products", unit_scale=True, miniters=1, disable=opt_debug
     ) as progress:
         catalog_json = catalog.write_static_catalog(
-            dst,
+            dst_path,
             name=name,
             description=description,
             assets=assets,

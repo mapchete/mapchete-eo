@@ -16,7 +16,7 @@ from mapchete_eo.platforms.sentinel2.product import S2Product
 
 @click.command()
 @options_arguments.arg_stac_item
-@options_arguments.arg_dst
+@options_arguments.arg_dst_path
 @options_arguments.opt_assets
 @options_arguments.opt_resolution
 @options_arguments.opt_rio_profile
@@ -30,7 +30,7 @@ from mapchete_eo.platforms.sentinel2.product import S2Product
 @opt_debug
 def s2_rgb(
     stac_item,
-    dst,
+    dst_path,
     assets=None,
     resolution=None,
     rio_profile=None,
@@ -43,6 +43,7 @@ def s2_rgb(
     brdf_model=None,
     **_,
 ):
+    """Generate 8bit RGB image from Sentinel-2 product."""
     item = pystac.Item.from_file(stac_item)
     product = S2Product.from_stac_item(item)
     grid = product.metadata.grid(resolution)
@@ -69,7 +70,7 @@ def s2_rgb(
         brdf_config=BRDFConfig(bands=assets, model=brdf_model) if brdf_model else None,
     )
     with rasterio_open(
-        dst,
+        dst_path,
         mode="w",
         crs=grid.crs,
         transform=grid.transform,

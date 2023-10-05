@@ -303,6 +303,10 @@ def _rasterio_read(
     def _read(
         src, indexes, dst_bounds, dst_shape, dst_crs, resampling, src_nodata, dst_nodata
     ):
+        try:
+            resampling = Resampling[resampling]
+        except KeyError:
+            resampling = Resampling.bilinear
         height, width = dst_shape[-2:]
         if indexes is None:
             dst_shape = (len(src.indexes), height, width)
@@ -325,7 +329,7 @@ def _rasterio_read(
                     ),
                     dst_crs=dst_crs,
                     dst_nodata=dst_nodata,
-                    resampling=Resampling[resampling],
+                    resampling=resampling,
                 )[0],
                 masked=True,
                 nodata=dst_nodata,
@@ -341,7 +345,7 @@ def _rasterio_read(
                 transform=affine_from_bounds(
                     dst_left, dst_bottom, dst_right, dst_top, width, height
                 ),
-                resampling=Resampling[resampling],
+                resampling=resampling,
             ) as vrt:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")

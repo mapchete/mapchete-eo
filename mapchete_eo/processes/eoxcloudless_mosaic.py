@@ -10,6 +10,7 @@ from rasterio.enums import Resampling
 
 from mapchete_eo.exceptions import EmptyStackException
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, MaskConfig
+from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.types import MergeMethod
 
 logger = logging.getLogger(__name__)
@@ -61,12 +62,14 @@ def execute(
                 s2_arr = mp_src.read_levelled_np_array(
                     target_height=target_height,
                     assets=assets,
-                    resampling=Resampling[f"{resampling}"],
+                    resampling=Resampling[resampling],
                     nodatavals=nodata,
                     merge_products_by=merge_products_by,
                     merge_method=MergeMethod.average,
                     raise_empty=True,
-                    brdf_config=BRDFConfig(bands=["red", "green", "blue", "nir"]),
+                    brdf_config=BRDFConfig(
+                        bands=assets, model="HLS", resolution=Resolution["60m"]
+                    ),
                     product_read_kwargs=dict(
                         mask_config=MaskConfig(
                             cloud=True,

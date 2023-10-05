@@ -38,6 +38,17 @@ def test_product_asset_cache(s2_stac_item, tmpdir):
     assert product.cache.path.ls()
 
 
+def test_remote_product_asset_cache(s2_remote_stac_item, tmpdir):
+    product = S2Product(
+        s2_remote_stac_item,
+        cache_config=CacheConfig(path=MPath.from_inp(tmpdir), assets=["coastal"]),
+    )
+    assert product.cache
+    assert not product.cache.path.ls()
+    product.cache_assets()
+    assert product.cache.path.ls()
+
+
 def test_product_brdf_cache(s2_stac_item, tmpdir):
     product = S2Product(
         s2_stac_item,

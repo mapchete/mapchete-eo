@@ -77,7 +77,7 @@ def get_product_cache_path(
         return basepath / hashlib.md5(f"{item.id}".encode()).hexdigest()
 
     else:
-        if item.datetime is None:
+        if item.datetime is None:  # pragma: no cover
             raise AttributeError(f"stac item must have a valid datetime object: {item}")
         elif path_generation_method == ProductPathGenerationMethod.date_day_first:
             return (
@@ -130,6 +130,7 @@ def asset_mpath(
     item: pystac.Item,
     asset: str,
     fs: fsspec.AbstractFileSystem = None,
+    absolute_path: bool = True,
 ) -> MPath:
     """Return MPath instance with asset href."""
 
@@ -139,4 +140,7 @@ def asset_mpath(
         raise KeyError(
             f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
         )
-    return asset_path
+    if absolute_path and not asset_path.is_absolute():
+        return MPath(item.get_self_href(), fs=fs).parent / asset_path
+    else:
+        return asset_path

@@ -99,7 +99,7 @@ def s2metadata_from_stac_item(
 
 
 class S2Metadata:
-    _cached_xml_root = None
+    _cached_xml_root: Optional[etree.Element] = None
     path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS

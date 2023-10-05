@@ -1,6 +1,13 @@
 import pytest
+from mapchete.path import MPath
+from pytest_lazyfixture import lazy_fixture
 
 from mapchete_eo.io import get_item_property, group_products_per_property
+from mapchete_eo.io.path import (
+    ProductPathGenerationMethod,
+    asset_mpath,
+    get_product_cache_path,
+)
 from mapchete_eo.product import EOProduct
 
 
@@ -51,3 +58,32 @@ def test_get_item_property_properties(s2_stac_item, key):
 
 def test_get_item_property_extra_fields(s2_stac_item):
     assert isinstance(get_item_property(s2_stac_item, "stac_extensions"), list)
+
+
+@pytest.mark.parametrize("path_generation_method", ProductPathGenerationMethod)
+def test_get_product_cache_path(s2_stac_item, tmp_mpath, path_generation_method):
+    path = get_product_cache_path(
+        s2_stac_item, tmp_mpath, path_generation_method=path_generation_method
+    )
+    assert isinstance(path, MPath)
+
+
+@pytest.mark.parametrize(
+    "item", [lazy_fixture("s2_stac_item"), lazy_fixture("s2_remote_stac_item")]
+)
+@pytest.mark.parametrize("absolute_out_path", [True, False])
+@pytest.mark.parametrize("relative_asset_path", [True, False])
+def test_asset_mpath(item, absolute_out_path, relative_asset_path):
+    asset = "red"
+    if relative_asset_path:
+        item.assets[asset].href = MPath(item.assets[asset].href).name
+    path = asset_mpath(item, asset, absolute_path=absolute_out_path)
+    assert isinstance(path, MPath)
+    if absolute_out_path:
+        assert path.is_absolute()
+
+    # don't test file existance on this because per definition, file cannot be found here:
+    if relative_asset_path and not absolute_out_path:
+        return
+
+    assert path.exists()

@@ -318,6 +318,12 @@ class InputData(base.InputData):
         self.standalone = standalone
 
         self.params = self.driver_config_model(**input_params["abstract"])
+        # we have to make sure, the cache path is absolute
+        # not quite fond of this solution
+        if self.params.cache:
+            self.params.cache.path = MPath.from_inp(
+                self.params.cache.dict()
+            ).absolute_path(base_dir=input_params.get("conf_dir"))
         self._bounds = input_params["delimiters"]["effective_bounds"]
         self._area = input_params["delimiters"]["effective_area"]
         self.time = self.params.time
@@ -386,7 +392,7 @@ class InputData(base.InputData):
             )
 
         # this happens on task graph execution when preprocessing task results are not ready
-        else:
+        else:  # pragma: no cover
             raise PreprocessingNotFinished(
                 f"products are not ready yet because {len(self.preprocessing_tasks)} preprocessing task(s) were not executed."
             )
@@ -397,7 +403,7 @@ class InputData(base.InputData):
         """
         try:
             tile_products = self.products.filter(tile.bounds)
-        except PreprocessingNotFinished:
+        except PreprocessingNotFinished:  # pragma: no cover
             tile_products = None
         return self.input_tile_cls(
             tile,

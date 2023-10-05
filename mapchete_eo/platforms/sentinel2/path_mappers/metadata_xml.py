@@ -32,7 +32,7 @@ class XMLMapper(S2PathMapper):
 
     @cached_property
     def xml_root(self):
-        if self._cached_xml_root is None:
+        if self._cached_xml_root is None:  # pragma: no cover
             self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
@@ -48,8 +48,10 @@ class XMLMapper(S2PathMapper):
         version = _get_version()
         try:
             return ProcessingBaseline.from_version(version)
-        except Exception:
+        except Exception:  # pragma: no cover
             # try use L1C product version as fallback
+            # we don't need to test this because HOPEFULLY we won't be confronted
+            # with such data
             try:
                 l1c_version = _get_version("L1C_TILE_ID")
             except StopIteration:
@@ -107,11 +109,11 @@ class XMLMapper(S2PathMapper):
                         band_idx = int(mask_path.get("bandId"))
                         if band_idx == band.value:
                             return self._metadata_dir / mask_path.text
-                else:
+                else:  # pragma: no cover
                     raise KeyError(
                         f"no {qi_mask_type} for band {band.name} not found in metadata: {', '.join(mask_types)}"
                     )
-        else:
+        else:  # pragma: no cover
             raise KeyError(
                 f"no {qi_mask_type} not found in metadata: {', '.join(mask_types)}"
             )

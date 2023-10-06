@@ -47,5 +47,4 @@ process_parameters:
   # DEBUG: RGB + NIR for fun
   # assets: ["red", "green", "blue", "nir"]
   assets: ["red", "green", "blue"]
-  method: brightness
   from_brightness_extract_method: third_quartile

@@ -16,10 +16,7 @@ def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_ma
 
 
 @pytest.mark.remote
-@pytest.mark.parametrize(
-    "method", ["brightness", "max_ndvi", "weighted_avg", "ndvi_linreg"]
-)
-def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete, method):
+def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
     process_mp = eoxcloudless_mosaic_mapchete.process_mp()
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
@@ -27,7 +24,6 @@ def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete, method):
         process_mp,
         assets=["red", "green", "blue", "nir"],
         mask_config=dict(scl_classes=["vegetation"]),
-        method=method,
     )
     assert isinstance(output, ma.MaskedArray)
     assert output.mask.any()

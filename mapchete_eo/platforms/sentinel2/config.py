@@ -13,11 +13,12 @@ from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProcessingLevel,
+    ProductQIMaskResolution,
     Resolution,
     SceneClassification,
 )
 from mapchete_eo.search.config import StacSearchConfig
-from mapchete_eo.types import DateTimeLike, GeodataType, TimeRange
+from mapchete_eo.types import TimeRange
 
 
 class AWSL2ACOGv1(Archive):
@@ -91,7 +92,13 @@ class MaskConfig(BaseModel):
     snow_ice: bool = False
     # mask using cloud probability classification
     cloud_probability_threshold: int = 100
+    cloud_probability_resolution: ProductQIMaskResolution = ProductQIMaskResolution[
+        "60m"
+    ]
     # mask using cloud probability classification
     snow_probability_threshold: int = 100
+    snow_probability_resolution: ProductQIMaskResolution = ProductQIMaskResolution[
+        "60m"
+    ]
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None

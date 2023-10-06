@@ -337,6 +337,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -344,7 +345,7 @@ class S2Metadata:
             dst_grid = self.grid(dst_grid)
         # TODO: determine whether to read the 20m or the 60m file
         return read_mask_as_raster(
-            self.path_mapper.cloud_probability_mask(),
+            self.path_mapper.cloud_probability_mask(resolution=from_resolution),
             dst_grid=dst_grid,
             resampling=resampling,
             rasterize_value_func=lambda feature: True,
@@ -355,6 +356,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -362,7 +364,7 @@ class S2Metadata:
             dst_grid = self.grid(dst_grid)
         # TODO: determine whether to read the 20m or the 60m file
         return read_mask_as_raster(
-            self.path_mapper.snow_probability_mask(),
+            self.path_mapper.snow_probability_mask(resolution=from_resolution),
             dst_grid=dst_grid,
             resampling=resampling,
             rasterize_value_func=lambda feature: True,

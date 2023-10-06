@@ -24,7 +24,12 @@ from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import CloudType, L2ABand, Resolution
+from mapchete_eo.platforms.sentinel2.types import (
+    CloudType,
+    L2ABand,
+    ProductQIMaskResolution,
+    Resolution,
+)
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
@@ -282,19 +287,25 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
-        return self.metadata.cloud_probability(dst_grid=grid, resampling=resampling)
+        return self.metadata.cloud_probability(
+            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+        )
 
     def read_snow_probability(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))
-        return self.metadata.snow_probability(dst_grid=grid, resampling=resampling)
+        return self.metadata.snow_probability(
+            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+        )
 
     def read_scl(
         self,
@@ -364,7 +375,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
             if mask_config.cloud_probability_threshold != 100:
-                cld_prb = self.read_cloud_probability(grid).data
+                cld_prb = self.read_cloud_probability(
+                    grid, from_resolution=mask_config.cloud_probability_resolution
+                ).data
                 out += np.where(
                     cld_prb >= mask_config.cloud_probability_threshold, True, False
                 )
@@ -381,7 +394,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += self.read_snow_ice_mask(grid).data
                 _check_full(out)
             if mask_config.snow_probability_threshold != 100:
-                snw_prb = self.read_snow_probability(grid).data
+                snw_prb = self.read_snow_probability(
+                    grid, from_resolution=mask_config.snow_probability_resolution
+                ).data
                 out += np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False
                 )

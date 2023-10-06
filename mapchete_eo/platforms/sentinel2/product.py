@@ -360,7 +360,7 @@ class S2Product(EOProduct, EOProductProtocol):
             if mask_config.footprint:
                 out += self.footprint_nodata_mask(grid).data
                 _check_full(out)
-            if mask_config.l1c_clouds:
+            if mask_config.l1c_cloud_type:
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
             if mask_config.cloud_probability_threshold != 100:
@@ -371,7 +371,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 _check_full(out)
             if mask_config.scl_classes:
                 # convert SCL classes to pixel values
-                scl_values = [scl.value for scl in mask_config.scl_classes or []]
+                scl_values = [scl.value for scl in mask_config.scl_classes]
                 # read SCL mask
                 scl_arr = self.read_scl(grid).data
                 # mask out specific pixel values

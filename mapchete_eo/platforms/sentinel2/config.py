@@ -52,33 +52,19 @@ class L2ABandFParams(Enum):
     B12 = F_MODIS_PARAMS[12]
 
 
-class CloudmaskConfig(BaseModel):
-    format: GeodataType = GeodataType.vector
-    raster_resolution: Resolution = Resolution["20m"]
-    cloud_types: CloudType = CloudType.all
-
-
 class CacheConfig(BaseModel):
     path: MPathLike
     product_path_generation_method: ProductPathGenerationMethod = (
         ProductPathGenerationMethod.hash
     )
     intersection_percent: float = 100.0
-    cloudmasks: Optional[CloudmaskConfig] = None
     assets: List[str] = []
     assets_resolution: Resolution = Resolution.original
     keep: bool = False
     max_cloud_percent: float = 100.0
     max_disk_usage: float = 90.0
-    scl: bool = False
-    qi_snw: bool = False
-    qi_cld: bool = False
-    aot: bool = False
-    angles: list = []
     brdf: Optional[BRDFConfig] = None
     zoom: int = 13
-    check_cached_files_exist: bool = False
-    cached_files_validation: bool = False
 
 
 class Sentinel2DriverConfig(BaseDriverConfig):
@@ -86,7 +72,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     time: Union[TimeRange, List[TimeRange]]
     archive: Type[Archive] = KnownArchives.S2AWS_COG.value
     cat_baseurl: Optional[MPathLike] = None
-    cloudmasks: Optional[CloudmaskConfig] = CloudmaskConfig()
     max_cloud_percent: int = 100
     footprint_buffer: float = -500
     stac_config: StacSearchConfig = StacSearchConfig()
@@ -98,10 +83,15 @@ class Sentinel2DriverConfig(BaseDriverConfig):
 
 
 class MaskConfig(BaseModel):
+    # mask by footprint geometry
     footprint: bool = True
-    l1c_clouds: bool = False
-    l1c_cloud_type: CloudType = CloudType.all
+    # mask by L1C cloud types (either opaque, cirrus or all)
+    l1c_cloud_type: Optional[CloudType] = None
+    # mask using the snow/ice mask
     snow_ice: bool = False
+    # mask using cloud probability classification
     cloud_probability_threshold: int = 100
+    # mask using cloud probability classification
     snow_probability_threshold: int = 100
+    # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None

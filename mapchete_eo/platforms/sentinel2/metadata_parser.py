@@ -122,7 +122,7 @@ class S2Metadata:
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
         self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
-        self._cloud_masks_cache: Optional[List] = None
+        self._l1c_cloud_masks_cache: Optional[List] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
@@ -286,13 +286,13 @@ class S2Metadata:
     #####################
     # product QI layers #
     #####################
-    def cloud_mask(
+    def l1c_cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
     ) -> ReferencedRaster:
         """
-        Return classification cloud mask.
+        Return L1C classification cloud mask.
         """
         dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
@@ -337,6 +337,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -344,7 +345,7 @@ class S2Metadata:
             dst_grid = self.grid(dst_grid)
         # TODO: determine whether to read the 20m or the 60m file
         return read_mask_as_raster(
-            self.path_mapper.cloud_probability_mask(),
+            self.path_mapper.cloud_probability_mask(resolution=from_resolution),
             dst_grid=dst_grid,
             resampling=resampling,
             rasterize_value_func=lambda feature: True,
@@ -355,6 +356,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -362,7 +364,7 @@ class S2Metadata:
             dst_grid = self.grid(dst_grid)
         # TODO: determine whether to read the 20m or the 60m file
         return read_mask_as_raster(
-            self.path_mapper.snow_probability_mask(),
+            self.path_mapper.snow_probability_mask(resolution=from_resolution),
             dst_grid=dst_grid,
             resampling=resampling,
             rasterize_value_func=lambda feature: True,

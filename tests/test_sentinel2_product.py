@@ -13,7 +13,11 @@ from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.io import read_levelled_cube_to_np_array, read_levelled_cube_to_xarray
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
-from mapchete_eo.platforms.sentinel2.types import Resolution, SceneClassification
+from mapchete_eo.platforms.sentinel2.types import (
+    CloudType,
+    Resolution,
+    SceneClassification,
+)
 
 
 def test_product(s2_stac_item):
@@ -72,7 +76,7 @@ def _get_product_tile(product, metatiling=1):
 
 def test_product_read_cloud_mask(s2_stac_item):
     product = S2Product(s2_stac_item)
-    cloud_mask = product.read_cloud_mask()
+    cloud_mask = product.read_l1c_cloud_mask()
     assert isinstance(cloud_mask, ReferencedRaster)
     assert not isinstance(cloud_mask.data, ma.MaskedArray)
     assert cloud_mask.data.any()
@@ -83,7 +87,7 @@ def test_product_read_cloud_mask(s2_stac_item):
 
 def test_product_read_cloud_mask_tile(s2_stac_item):
     product = S2Product(s2_stac_item)
-    cloud_mask = product.read_cloud_mask(_get_product_tile(product))
+    cloud_mask = product.read_l1c_cloud_mask(_get_product_tile(product))
     assert isinstance(cloud_mask, ReferencedRaster)
     assert not isinstance(cloud_mask.data, ma.MaskedArray)
     assert cloud_mask.data.any()
@@ -188,11 +192,9 @@ def test_footprint_nodata_mask_tile(s2_stac_item_half_footprint):
 @pytest.mark.parametrize(
     "mask_config",
     [
-        MaskConfig(cloud=True),
+        MaskConfig(l1c_cloud_type=CloudType.all),
         MaskConfig(snow_ice=True),
-        MaskConfig(cloud_probability=True),
-        MaskConfig(snow_probability=True),
-        MaskConfig(scl=True),
+        MaskConfig(scl_classes=[SceneClassification.vegetation]),
     ],
 )
 def test_get_mask(s2_stac_item_half_footprint, mask_config):
@@ -228,11 +230,8 @@ def test_read_masked(s2_stac_item_half_footprint):
         mask_config=MaskConfig(
             footprint=True,
             snow_ice=True,
-            cloud_probability=True,
             cloud_probability_threshold=10,
-            snow_probability=True,
             snow_probability_threshold=10,
-            scl=True,
             scl_classes=[
                 SceneClassification.vegetation,
             ],
@@ -302,13 +301,10 @@ def test_read_np_masked(s2_stac_item):
         grid=tile,
         mask_config=MaskConfig(
             footprint=True,
-            cloud=True,
+            l1c_cloud_type=CloudType.all,
             snow_ice=True,
-            cloud_probability=True,
             cloud_probability_threshold=50,
-            snow_probability=True,
             snow_probability_threshold=50,
-            scl=True,
             scl_classes=[
                 SceneClassification.vegetation,
                 SceneClassification.thin_cirrus,
@@ -362,8 +358,7 @@ def test_read_levelled_cube_xarray(s2_stac_items, test_tile):
         merge_products_by="s2:datastrip_id",
         product_read_kwargs=dict(
             mask_config=MaskConfig(
-                cloud=True,
-                cloud_probability=True,
+                l1c_cloud_type=CloudType.all,
                 cloud_probability_threshold=50,
             )
         ),
@@ -382,8 +377,7 @@ def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
         merge_products_by="s2:datastrip_id",
         product_read_kwargs=dict(
             mask_config=MaskConfig(
-                cloud=True,
-                cloud_probability=True,
+                l1c_cloud_type=CloudType.all,
                 cloud_probability_threshold=50,
             )
         ),

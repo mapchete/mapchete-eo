@@ -10,6 +10,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     MaskConfig,
     SceneClassification,
     Sentinel2DriverConfig,
+    parse_mask_config,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
 
@@ -129,7 +130,7 @@ def test_read_empty_raise_emptystackexception(sentinel2_stac_mapchete):
                 assets=["red"],
                 mask_config=MaskConfig(
                     footprint=True,
-                    cloud=True,
+                    l1c_clouds=True,
                     snow_ice=True,
                     cloud_probability=True,
                     cloud_probability_threshold=1,
@@ -145,7 +146,7 @@ def test_read_empty(sentinel2_stac_mapchete):
             assets=["red"],
             mask_config=MaskConfig(
                 footprint=True,
-                cloud=True,
+                l1c_clouds=True,
                 snow_ice=True,
                 cloud_probability=True,
                 cloud_probability_threshold=1,
@@ -205,7 +206,7 @@ def test_read_np_empty_raise_emptystackexception(sentinel2_stac_mapchete):
                 assets=["red"],
                 mask_config=MaskConfig(
                     footprint=True,
-                    cloud=True,
+                    l1c_clouds=True,
                     snow_ice=True,
                     cloud_probability=True,
                     cloud_probability_threshold=1,
@@ -221,7 +222,7 @@ def test_read_np_empty(sentinel2_stac_mapchete):
             assets=["red"],
             mask_config=MaskConfig(
                 footprint=True,
-                cloud=True,
+                l1c_clouds=True,
                 snow_ice=True,
                 cloud_probability=True,
                 cloud_probability_threshold=1,
@@ -242,12 +243,10 @@ def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
         xarr = src.read_levelled(
             target_height=target_height,
             assets=assets,
-            product_read_kwargs=dict(
-                mask_config=MaskConfig(
-                    cloud=True,
-                    cloud_probability=True,
-                    cloud_probability_threshold=50,
-                )
+            mask_config=MaskConfig(
+                l1c_clouds=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
             ),
         )
     assert isinstance(xarr, xr.Dataset)
@@ -270,12 +269,10 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
         arr = src.read_levelled_np_array(
             target_height=target_height,
             assets=assets,
-            product_read_kwargs=dict(
-                mask_config=MaskConfig(
-                    cloud=True,
-                    cloud_probability=True,
-                    cloud_probability_threshold=50,
-                )
+            mask_config=MaskConfig(
+                l1c_clouds=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
             ),
         )
     assert isinstance(arr, ma.MaskedArray)
@@ -287,3 +284,22 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
     layers = list(range(target_height))
     for lower, higher in zip(layers[:-1], layers[1:]):
         assert arr[lower].mask.sum() <= arr[higher].mask.sum()
+
+
+@pytest.mark.parametrize(
+    "mask_config",
+    [
+        # L1C cloud type as string
+        dict(l1c_cloud_type="cirrus"),
+        dict(l1c_cloud_type="opaque"),
+        dict(l1c_cloud_type="all"),
+        # SCL class as string
+        dict(scl_classes=["vegetation"]),
+        # QI band resolution as string
+        dict(cloud_probability_resolution=20),
+        # snow/ice
+        dict(snow_ice=True),
+    ],
+)
+def test_parse_mask_config(mask_config):
+    assert parse_mask_config(mask_config)

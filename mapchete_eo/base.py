@@ -52,6 +52,7 @@ class InputTile(base.InputTile):
     default_read_merge_method: MergeMethod = MergeMethod.first
     default_read_merge_products_by: Optional[str] = None
     default_read_nodataval: NodataVal = None
+    default_read_resampling: Resampling = Resampling.nearest
 
     tile: BufferedTile
     eo_bands: dict
@@ -94,6 +95,7 @@ class InputTile(base.InputTile):
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
         time_pattern: Optional[str] = None,
+        resampling: Optional[Union[Resampling, str]] = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
@@ -107,26 +109,24 @@ class InputTile(base.InputTile):
         -------
         data : xarray.Dataset
         """
-        products = self.filter_products(
-            start_time=start_time,
-            end_time=end_time,
-            timestamps=timestamps,
-            time_pattern=time_pattern,
-        )
-        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
-        merge_products_by = merge_products_by or self.default_read_merge_products_by
-        merge_method = merge_method or self.default_read_merge_method
-
         return products_to_xarray(
-            products=products,
+            products=self.filter_products(
+                start_time=start_time,
+                end_time=end_time,
+                timestamps=timestamps,
+                time_pattern=time_pattern,
+            ),
             eo_bands=eo_bands,
             assets=assets,
             grid=self.tile,
-            merge_products_by=merge_products_by,
-            merge_method=merge_method,
-            nodatavals=nodatavals,
-            product_read_kwargs=kwargs,
             raise_empty=raise_empty,
+            product_read_kwargs=kwargs,
+            **self.default_read_values(
+                merge_products_by=merge_products_by,
+                merge_method=merge_method,
+                resampling=resampling,
+                nodatavals=nodatavals,
+            ),
         )
 
     def read_np_array(
@@ -137,32 +137,31 @@ class InputTile(base.InputTile):
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
         time_pattern: Optional[str] = None,
+        resampling: Optional[Union[Resampling, str]] = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
-        products = self.filter_products(
-            start_time=start_time,
-            end_time=end_time,
-            timestamps=timestamps,
-            time_pattern=time_pattern,
-        )
-        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
-        merge_products_by = merge_products_by or self.default_read_merge_products_by
-        merge_method = merge_method or self.default_read_merge_method
-
         return products_to_np_array(
-            products=products,
+            products=self.filter_products(
+                start_time=start_time,
+                end_time=end_time,
+                timestamps=timestamps,
+                time_pattern=time_pattern,
+            ),
             eo_bands=eo_bands,
             assets=assets,
             grid=self.tile,
-            merge_products_by=merge_products_by,
-            merge_method=merge_method,
-            nodatavals=nodatavals,
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,
+            **self.default_read_values(
+                merge_products_by=merge_products_by,
+                merge_method=merge_method,
+                resampling=resampling,
+                nodatavals=nodatavals,
+            ),
         )
 
     def read_levelled(
@@ -174,10 +173,10 @@ class InputTile(base.InputTile):
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
         time_pattern: Optional[str] = None,
-        resampling: Resampling = Resampling.nearest,
+        resampling: Optional[Union[Resampling, str]] = None,
         nodatavals: NodataVals = None,
         merge_products_by: Optional[str] = None,
-        merge_method: MergeMethod = MergeMethod.first,
+        merge_method: Optional[MergeMethod] = None,
         raise_empty: bool = True,
         slice_axis_name: str = "layers",
         band_axis_name: str = "bands",
@@ -185,32 +184,29 @@ class InputTile(base.InputTile):
         y_axis_name: str = "y",
         **kwargs,
     ) -> xr.Dataset:
-        products = self.filter_products(
-            start_time=start_time,
-            end_time=end_time,
-            timestamps=timestamps,
-            time_pattern=time_pattern,
-        )
-        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
-        merge_products_by = merge_products_by or self.default_read_merge_products_by
-        merge_method = merge_method or self.default_read_merge_method
-
         return read_levelled_cube_to_xarray(
-            products=products,
+            products=self.filter_products(
+                start_time=start_time,
+                end_time=end_time,
+                timestamps=timestamps,
+                time_pattern=time_pattern,
+            ),
             target_height=target_height,
             assets=assets,
             eo_bands=eo_bands,
             grid=self.tile,
-            resampling=resampling,
-            nodatavals=nodatavals,
-            merge_products_by=merge_products_by,
-            merge_method=merge_method,
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
             slice_axis_name=slice_axis_name,
             band_axis_name=band_axis_name,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
+            **self.default_read_values(
+                merge_products_by=merge_products_by,
+                merge_method=merge_method,
+                resampling=resampling,
+                nodatavals=nodatavals,
+            ),
         )
 
     def read_levelled_np_array(
@@ -222,35 +218,32 @@ class InputTile(base.InputTile):
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
         time_pattern: Optional[str] = None,
-        resampling: Resampling = Resampling.nearest,
+        resampling: Optional[Union[Resampling, str]] = None,
         nodatavals: NodataVals = None,
         merge_products_by: Optional[str] = None,
-        merge_method: MergeMethod = MergeMethod.first,
+        merge_method: Optional[MergeMethod] = None,
         raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
-        products = self.filter_products(
-            start_time=start_time,
-            end_time=end_time,
-            timestamps=timestamps,
-            time_pattern=time_pattern,
-        )
-        nodatavals = self.default_read_nodataval if nodatavals is None else nodatavals
-        merge_products_by = merge_products_by or self.default_read_merge_products_by
-        merge_method = merge_method or self.default_read_merge_method
-
         return read_levelled_cube_to_np_array(
-            products=products,
+            products=self.filter_products(
+                start_time=start_time,
+                end_time=end_time,
+                timestamps=timestamps,
+                time_pattern=time_pattern,
+            ),
             target_height=target_height,
             assets=assets,
             eo_bands=eo_bands,
             grid=self.tile,
-            resampling=resampling,
-            nodatavals=nodatavals,
-            merge_products_by=merge_products_by,
-            merge_method=merge_method,
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
+            **self.default_read_values(
+                merge_products_by=merge_products_by,
+                merge_method=merge_method,
+                resampling=resampling,
+                nodatavals=nodatavals,
+            ),
         )
 
     def filter_products(
@@ -294,6 +287,33 @@ class InputTile(base.InputTile):
         is empty : bool
         """
         return len(self.items) == 0
+
+    def default_read_values(
+        self,
+        resampling: Optional[Union[Resampling, str]] = None,
+        nodatavals: NodataVals = None,
+        merge_products_by: Optional[str] = None,
+        merge_method: Optional[MergeMethod] = None,
+    ) -> dict:
+        """Provide proper read values depending on user input and defaults."""
+        if nodatavals is None:
+            nodatavals = self.default_read_nodataval
+        merge_products_by = merge_products_by or self.default_read_merge_products_by
+        merge_method = merge_method or self.default_read_merge_method
+        if resampling is None:
+            resampling = self.default_read_resampling
+        else:
+            resampling = (
+                resampling
+                if isinstance(resampling, Resampling)
+                else Resampling[resampling]
+            )
+        return dict(
+            resampling=resampling,
+            nodatavals=nodatavals,
+            merge_products_by=merge_products_by,
+            merge_method=merge_method,
+        )
 
 
 class InputData(base.InputData):

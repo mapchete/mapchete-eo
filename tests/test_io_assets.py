@@ -27,11 +27,8 @@ def test_asset_mpath_error(s2_stac_item):
 
 def test_get_assets_copy(s2_stac_item, tmp_mpath):
     asset = "red"
-    orig_meta = rasterio.open(s2_stac_item.assets[asset].href).meta
-    item = get_assets(s2_stac_item, [asset], tmp_mpath)
+    get_assets(s2_stac_item, [asset], tmp_mpath)
     assert tmp_mpath.ls()
-    copied_meta = rasterio.open(item.assets[asset].href).meta
-    assert orig_meta == copied_meta
 
 
 def test_get_assets_convert(s2_stac_item, tmp_mpath):

@@ -24,7 +24,12 @@ from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.types import CloudType, L2ABand, Resolution
+from mapchete_eo.platforms.sentinel2.types import (
+    CloudType,
+    L2ABand,
+    ProductQIMaskResolution,
+    Resolution,
+)
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
@@ -261,14 +266,14 @@ class S2Product(EOProduct, EOProductProtocol):
             resampling=resampling,
         )
 
-    def read_cloud_mask(
+    def read_l1c_cloud_mask(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         cloud_type: CloudType = CloudType.all,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         logger.debug("read classification cloud mask for %s", str(self))
-        return self.metadata.cloud_mask(cloud_type, dst_grid=grid)
+        return self.metadata.l1c_cloud_mask(cloud_type, dst_grid=grid)
 
     def read_snow_ice_mask(
         self,
@@ -282,19 +287,25 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
-        return self.metadata.cloud_probability(dst_grid=grid, resampling=resampling)
+        return self.metadata.cloud_probability(
+            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+        )
 
     def read_snow_probability(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
+        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))
-        return self.metadata.snow_probability(dst_grid=grid, resampling=resampling)
+        return self.metadata.snow_probability(
+            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+        )
 
     def read_scl(
         self,
@@ -360,27 +371,32 @@ class S2Product(EOProduct, EOProductProtocol):
             if mask_config.footprint:
                 out += self.footprint_nodata_mask(grid).data
                 _check_full(out)
-            if mask_config.cloud:
-                out += self.read_cloud_mask(grid, mask_config.cloud_type).data
+            if mask_config.l1c_cloud_type:
+                out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
-            if mask_config.cloud_probability:
-                cld_prb = self.read_cloud_probability(grid).data
+            if mask_config.cloud_probability_threshold != 100:
+                cld_prb = self.read_cloud_probability(
+                    grid, from_resolution=mask_config.cloud_probability_resolution
+                ).data
                 out += np.where(
                     cld_prb >= mask_config.cloud_probability_threshold, True, False
                 )
                 _check_full(out)
-            if mask_config.scl:
-                scl_arr = self.read_scl(grid).data
+            if mask_config.scl_classes:
                 # convert SCL classes to pixel values
-                scl_values = [scl.value for scl in mask_config.scl_classes or []]
+                scl_values = [scl.value for scl in mask_config.scl_classes]
+                # read SCL mask
+                scl_arr = self.read_scl(grid).data
                 # mask out specific pixel values
                 out += np.isin(scl_arr, scl_values)
                 _check_full(out)
             if mask_config.snow_ice:
                 out += self.read_snow_ice_mask(grid).data
                 _check_full(out)
-            if mask_config.snow_probability:
-                snw_prb = self.read_snow_probability(grid).data
+            if mask_config.snow_probability_threshold != 100:
+                snw_prb = self.read_snow_probability(
+                    grid, from_resolution=mask_config.snow_probability_resolution
+                ).data
                 out += np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False
                 )

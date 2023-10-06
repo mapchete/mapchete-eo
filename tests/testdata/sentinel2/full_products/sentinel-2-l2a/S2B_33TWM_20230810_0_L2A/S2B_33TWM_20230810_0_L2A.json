@@ -284,7 +284,7 @@
       ]
     },
     "nir": {
-      "href": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/T/WM/2023/8/S2B_33TWM_20230810_0_L2A/B08.tif",
+      "href": "B08.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "title": "NIR 1 (band 8) - 10m",
       "eo:bands": [

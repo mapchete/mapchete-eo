@@ -6,8 +6,5 @@
     <Metadata domain="IMAGE_STRUCTURE">
       <MDI key="COMPRESSION">JPEG2000</MDI>
     </Metadata>
-    <Metadata>
-      <MDI key="STATISTICS_VALID_PERCENT">0</MDI>
-    </Metadata>
   </PAMRasterBand>
 </PAMDataset>

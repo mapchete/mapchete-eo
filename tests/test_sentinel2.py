@@ -10,6 +10,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     MaskConfig,
     SceneClassification,
     Sentinel2DriverConfig,
+    parse_mask_config,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
 
@@ -283,3 +284,22 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
     layers = list(range(target_height))
     for lower, higher in zip(layers[:-1], layers[1:]):
         assert arr[lower].mask.sum() <= arr[higher].mask.sum()
+
+
+@pytest.mark.parametrize(
+    "mask_config",
+    [
+        # L1C cloud type as string
+        dict(l1c_cloud_type="cirrus"),
+        dict(l1c_cloud_type="opaque"),
+        dict(l1c_cloud_type="all"),
+        # SCL class as string
+        dict(scl=["vegetation"]),
+        # QI band resolution as string
+        dict(cloud_probability_resolution=20),
+        # snow/ice
+        dict(snow_ice=True),
+    ],
+)
+def test_parse_mask_config(mask_config):
+    assert parse_mask_config(mask_config)

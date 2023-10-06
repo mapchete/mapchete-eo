@@ -102,3 +102,19 @@ class MaskConfig(BaseModel):
     ]
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None
+
+
+def parse_mask_config(config: Union[dict, MaskConfig]) -> MaskConfig:
+    """
+    Make sure all values are parsed correctly
+    """
+    if isinstance(config, MaskConfig):
+        return config
+
+    elif isinstance(config, dict):
+        return MaskConfig(**config)
+
+    else:
+        raise TypeError(
+            f"mask configuration should either be a dictionary or a MaskConfig object, not {config}"
+        )

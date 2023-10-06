@@ -9,7 +9,12 @@ from orgonite import cloudless
 from rasterio.enums import Resampling
 
 from mapchete_eo.exceptions import EmptyStackException
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, BRDFModels, MaskConfig
+from mapchete_eo.platforms.sentinel2.config import (
+    BRDFConfig,
+    BRDFModels,
+    MaskConfig,
+    parse_mask_config,
+)
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.types import MergeMethod
 
@@ -24,12 +29,14 @@ def execute(
     nodata: Union[float, int, None] = 0.0,
     merge_products_by: str = "s2:datastrip_id",
     add_indexes: bool = False,
-    mask_config: MaskConfig = MaskConfig(cloud_probability_threshold=70),
+    mask_config: Union[MaskConfig, dict] = MaskConfig(cloud_probability_threshold=70),
     method: str = "brightness",
     from_brightness_extract_method: str = "median",
     from_brightness_average_over: int = 3,
     considered_bands: int = 3,
 ) -> ma.MaskedArray:
+    mask_config = parse_mask_config(mask_config)
+
     if method not in [
         "water_mosaic",
         "brightness",

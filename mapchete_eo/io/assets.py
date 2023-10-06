@@ -157,6 +157,7 @@ def convert_asset(
     src_path = asset_mpath(item, asset, fs=src_fs)
     output_path = dst_dir / src_path.name
     profile = profile or COGDeflateProfile()
+
     # write relative path into asset.href if Item will be in the same directory
     if item_href_in_dst_dir and not output_path.is_absolute():  # pragma: no cover
         item.assets[asset].href = src_path.name

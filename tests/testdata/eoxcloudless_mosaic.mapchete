@@ -1,0 +1,46 @@
+process: mapchete_eo.processes.eoxcloudless_mosaic
+input:
+  sentinel2:
+    format: Sentinel-2
+    level: L2A
+    time:
+      start: 2023-08-10
+      end: 2023-08-20
+    cat_baseurl: sentinel2/full_products/catalog.json
+    # DEBUG: Nice weather time frame below 
+    # time:
+    #  start: 2023-07-10
+    #  end: 2023-07-15
+
+    # DEBUG: Cache for local here below, switch off local catalogue baseurl
+    # cache:
+    #  keep: true
+    #  path: sentinel2/full_products
+    #  product_path_generation_method: date_year_first
+    #  assets: ["red", "green", "blue", "nir"]
+    #  max_disk_usage: 100.0
+    #  check_cached_files_exist: true
+    #  brdf:
+    #    bands: ["red", "green", "blue", "nir"]
+output:
+  format: GTiff
+  bands: 3
+  path: eoxcloudless_tmp
+  dtype: uint16
+pyramid:
+  grid: geodetic
+# DEBUG: use zoom 13 with the fancy date range
+# zoom_levels: 13
+zoom_levels: 9
+bounds: [16, 46, 16.1, 46.1]
+
+
+process_parameters:
+  resampling: bilinear
+  target_height: 10
+  cloud_probability_threshold: 20
+  # DEBUG: RGB + NIR for fun
+  # assets: ["red", "green", "blue", "nir"]
+  assets: ["red", "green", "blue"]
+  method: brightness
+  from_brightness_extract_method: third_quartile

@@ -23,8 +23,10 @@ classifiers = [
 dependencies = [
     "click",
     "croniter",
+    "jenkspy",
     "lxml",
     "mapchete>=2023.9.1",
+    "orgonite",
     "pydantic",
     "pystac[urllib3]>=1.8.3",
     "pystac-client>=0.7.5",
@@ -50,6 +52,7 @@ sentinel2 = "mapchete_eo.platforms.sentinel2"
 
 [project.entry-points."mapchete.processes"]
 dtype_scale = "mapchete_eo.processes.dtype_scale"
+eoxcloudless_mosaic = "mapchete_eo.processes.eoxcloudless_mosaic"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"

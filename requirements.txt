@@ -3,6 +3,7 @@ click
 croniter
 lxml
 mapchete>=2023.9.1
+orgonite
 pydantic>=2.0.0
 pystac[urllib3]==1.8.3
 pystac-client==0.7.5

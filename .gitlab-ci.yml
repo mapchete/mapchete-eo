@@ -17,6 +17,9 @@ precommit:
     - pre-commit run --all-files
 
 
+before_script:
+  - apt update && apt install -y --no-install-recommends git gcc
+
 build:
   stage: build
   tags:

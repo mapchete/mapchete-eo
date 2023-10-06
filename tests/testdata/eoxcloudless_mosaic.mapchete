@@ -38,7 +38,8 @@ bounds: [16, 46, 16.1, 46.1]
 process_parameters:
   resampling: bilinear
   target_height: 10
-  cloud_probability_threshold: 20
+  mask_config:
+    cloud_probability_threshold: 20
   # DEBUG: RGB + NIR for fun
   # assets: ["red", "green", "blue", "nir"]
   assets: ["red", "green", "blue"]

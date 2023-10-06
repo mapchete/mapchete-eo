@@ -1,5 +1,7 @@
 from typing import Optional
 
+from rasterio.enums import Resampling
+
 from mapchete_eo import base
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
@@ -18,6 +20,7 @@ class InputTile(base.InputTile):
     default_read_merge_method: MergeMethod = MergeMethod.average
     default_read_merge_products_by: Optional[str] = "s2:datastrip_id"
     default_read_nodataval: NodataVal = 0
+    default_read_resampling: Resampling = Resampling.bilinear
 
 
 class InputData(base.InputData):

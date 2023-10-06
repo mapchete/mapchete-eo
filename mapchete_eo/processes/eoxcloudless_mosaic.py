@@ -9,7 +9,7 @@ from orgonite import cloudless
 from rasterio.enums import Resampling
 
 from mapchete_eo.exceptions import EmptyStackException
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, MaskConfig
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, BRDFModels, MaskConfig
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.types import MergeMethod
 
@@ -24,7 +24,7 @@ def execute(
     nodata: Union[float, int, None] = 0.0,
     merge_products_by: str = "s2:datastrip_id",
     add_indexes: bool = False,
-    cloud_probability_threshold: Union[float, int] = 70,
+    mask_config: MaskConfig = MaskConfig(cloud_probability_threshold=70),
     method: str = "brightness",
     from_brightness_extract_method: str = "median",
     from_brightness_average_over: int = 3,
@@ -49,7 +49,7 @@ def execute(
         clip_geom = mp.open("clip").read()
         if not clip_geom:
             logger.debug("no clip data over tile")
-            return "empty"
+            raise MapcheteNodataTile("no clip data over tile")
     else:
         clip_geom = []
 
@@ -68,21 +68,17 @@ def execute(
                     merge_method=MergeMethod.average,
                     raise_empty=True,
                     brdf_config=BRDFConfig(
-                        bands=assets, model="HLS", resolution=Resolution["60m"]
+                        bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
                     ),
-                    mask_config=MaskConfig(
-                        l1c_clouds=True,
-                        cloud_probability=True,
-                        cloud_probability_threshold=cloud_probability_threshold,
-                    ),
+                    mask_config=mask_config,
                 )
             except EmptyStackException:
                 raise MapcheteNodataTile
         logger.debug(
-            f"Sentinel-2 stack of shape {s2_arr.shape} " f"read with BRDF took {t}"
+            "Sentinel-2 stack of shape %s read with BRDF took %s", s2_arr.shape, t
         )
 
-    eoxcloudless_mosaic_array = ma.MaskedArray(
+    return ma.MaskedArray(
         _extract_mosaic(
             stack_data=s2_arr,
             method=method,
@@ -91,8 +87,6 @@ def execute(
             considered_bands=considered_bands,
         ).astype(np.uint16)
     )
-
-    return eoxcloudless_mosaic_array
 
 
 def _extract_mosaic(

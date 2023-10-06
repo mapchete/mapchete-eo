@@ -24,7 +24,7 @@ def execute(
     nodata: Union[float, int, None] = 0.0,
     merge_products_by: str = "s2:datastrip_id",
     add_indexes: bool = False,
-    cloud_probability_threshold: Union[float, int] = 5,
+    cloud_probability_threshold: Union[float, int] = 70,
     method: str = "brightness",
     from_brightness_extract_method: str = "median",
     from_brightness_average_over: int = 3,
@@ -70,12 +70,10 @@ def execute(
                     brdf_config=BRDFConfig(
                         bands=assets, model="HLS", resolution=Resolution["60m"]
                     ),
-                    product_read_kwargs=dict(
-                        mask_config=MaskConfig(
-                            cloud=True,
-                            cloud_probability=True,
-                            cloud_probability_threshold=cloud_probability_threshold,
-                        )
+                    mask_config=MaskConfig(
+                        cloud=True,
+                        cloud_probability=True,
+                        cloud_probability_threshold=cloud_probability_threshold,
                     ),
                 )
             except EmptyStackException:

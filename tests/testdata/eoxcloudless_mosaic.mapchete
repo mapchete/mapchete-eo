@@ -5,7 +5,7 @@ input:
     level: L2A
     time:
       start: 2023-08-10
-      end: 2023-08-13
+      end: 2023-08-18
     cat_baseurl: sentinel2/full_products/catalog.json
     # DEBUG: Nice weather time frame below 
     # time:
@@ -43,7 +43,7 @@ process_parameters:
     footprint: true
     cloud_probability_threshold: 20
     cloud_probability_resolution: 20
-    # scl_classes: ["vegetation"]
+    scl_classes: ["vegetation"]
   # DEBUG: RGB + NIR for fun
   # assets: ["red", "green", "blue", "nir"]
   assets: ["red", "green", "blue"]

@@ -65,22 +65,19 @@ def execute(
     with mp.open("sentinel2") as mp_src:
         logger.debug("Reading Sentinel-2 data stack.")
         with Timer() as t:
-            try:
-                s2_arr = mp_src.read_levelled_np_array(
-                    target_height=target_height,
-                    assets=assets,
-                    resampling=Resampling[resampling],
-                    nodatavals=nodata,
-                    merge_products_by=merge_products_by,
-                    merge_method=MergeMethod.average,
-                    raise_empty=True,
-                    brdf_config=BRDFConfig(
-                        bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
-                    ),
-                    mask_config=mask_config,
-                )
-            except EmptyStackException:
-                raise MapcheteNodataTile
+            s2_arr = mp_src.read_levelled_np_array(
+                target_height=target_height,
+                assets=assets,
+                resampling=Resampling[resampling],
+                nodatavals=nodata,
+                merge_products_by=merge_products_by,
+                merge_method=MergeMethod.average,
+                raise_empty=True,
+                brdf_config=BRDFConfig(
+                    bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
+                ),
+                mask_config=mask_config,
+            )
         logger.debug(
             "Sentinel-2 stack of shape %s read with BRDF took %s", s2_arr.shape, t
         )

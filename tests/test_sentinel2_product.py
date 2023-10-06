@@ -190,9 +190,7 @@ def test_footprint_nodata_mask_tile(s2_stac_item_half_footprint):
     [
         MaskConfig(l1c_clouds=True),
         MaskConfig(snow_ice=True),
-        MaskConfig(cloud_probability=True),
-        MaskConfig(snow_probability=True),
-        MaskConfig(scl=True),
+        MaskConfig(scl_classes=[SceneClassification.vegetation]),
     ],
 )
 def test_get_mask(s2_stac_item_half_footprint, mask_config):
@@ -228,11 +226,8 @@ def test_read_masked(s2_stac_item_half_footprint):
         mask_config=MaskConfig(
             footprint=True,
             snow_ice=True,
-            cloud_probability=True,
             cloud_probability_threshold=10,
-            snow_probability=True,
             snow_probability_threshold=10,
-            scl=True,
             scl_classes=[
                 SceneClassification.vegetation,
             ],
@@ -304,11 +299,8 @@ def test_read_np_masked(s2_stac_item):
             footprint=True,
             l1c_clouds=True,
             snow_ice=True,
-            cloud_probability=True,
             cloud_probability_threshold=50,
-            snow_probability=True,
             snow_probability_threshold=50,
-            scl=True,
             scl_classes=[
                 SceneClassification.vegetation,
                 SceneClassification.thin_cirrus,
@@ -363,7 +355,6 @@ def test_read_levelled_cube_xarray(s2_stac_items, test_tile):
         product_read_kwargs=dict(
             mask_config=MaskConfig(
                 l1c_clouds=True,
-                cloud_probability=True,
                 cloud_probability_threshold=50,
             )
         ),
@@ -383,7 +374,6 @@ def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
         product_read_kwargs=dict(
             mask_config=MaskConfig(
                 l1c_clouds=True,
-                cloud_probability=True,
                 cloud_probability_threshold=50,
             )
         ),

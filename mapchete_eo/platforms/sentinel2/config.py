@@ -102,9 +102,6 @@ class MaskConfig(BaseModel):
     l1c_clouds: bool = False
     l1c_cloud_type: CloudType = CloudType.all
     snow_ice: bool = False
-    cloud_probability: bool = False
     cloud_probability_threshold: int = 100
-    snow_probability: bool = False
     snow_probability_threshold: int = 100
-    scl: bool = False
     scl_classes: Optional[List[SceneClassification]] = None

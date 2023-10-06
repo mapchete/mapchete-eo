@@ -363,23 +363,24 @@ class S2Product(EOProduct, EOProductProtocol):
             if mask_config.l1c_clouds:
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
-            if mask_config.cloud_probability:
+            if mask_config.cloud_probability_threshold != 100:
                 cld_prb = self.read_cloud_probability(grid).data
                 out += np.where(
                     cld_prb >= mask_config.cloud_probability_threshold, True, False
                 )
                 _check_full(out)
-            if mask_config.scl:
-                scl_arr = self.read_scl(grid).data
+            if mask_config.scl_classes:
                 # convert SCL classes to pixel values
                 scl_values = [scl.value for scl in mask_config.scl_classes or []]
+                # read SCL mask
+                scl_arr = self.read_scl(grid).data
                 # mask out specific pixel values
                 out += np.isin(scl_arr, scl_values)
                 _check_full(out)
             if mask_config.snow_ice:
                 out += self.read_snow_ice_mask(grid).data
                 _check_full(out)
-            if mask_config.snow_probability:
+            if mask_config.snow_probability_threshold != 100:
                 snw_prb = self.read_snow_probability(grid).data
                 out += np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False

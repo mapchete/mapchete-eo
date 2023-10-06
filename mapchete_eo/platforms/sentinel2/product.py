@@ -261,14 +261,14 @@ class S2Product(EOProduct, EOProductProtocol):
             resampling=resampling,
         )
 
-    def read_cloud_mask(
+    def read_l1c_cloud_mask(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         cloud_type: CloudType = CloudType.all,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         logger.debug("read classification cloud mask for %s", str(self))
-        return self.metadata.cloud_mask(cloud_type, dst_grid=grid)
+        return self.metadata.l1c_cloud_mask(cloud_type, dst_grid=grid)
 
     def read_snow_ice_mask(
         self,
@@ -360,8 +360,8 @@ class S2Product(EOProduct, EOProductProtocol):
             if mask_config.footprint:
                 out += self.footprint_nodata_mask(grid).data
                 _check_full(out)
-            if mask_config.cloud:
-                out += self.read_cloud_mask(grid, mask_config.cloud_type).data
+            if mask_config.l1c_clouds:
+                out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
             if mask_config.cloud_probability:
                 cld_prb = self.read_cloud_probability(grid).data

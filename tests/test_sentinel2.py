@@ -129,7 +129,7 @@ def test_read_empty_raise_emptystackexception(sentinel2_stac_mapchete):
                 assets=["red"],
                 mask_config=MaskConfig(
                     footprint=True,
-                    cloud=True,
+                    l1c_clouds=True,
                     snow_ice=True,
                     cloud_probability=True,
                     cloud_probability_threshold=1,
@@ -145,7 +145,7 @@ def test_read_empty(sentinel2_stac_mapchete):
             assets=["red"],
             mask_config=MaskConfig(
                 footprint=True,
-                cloud=True,
+                l1c_clouds=True,
                 snow_ice=True,
                 cloud_probability=True,
                 cloud_probability_threshold=1,
@@ -205,7 +205,7 @@ def test_read_np_empty_raise_emptystackexception(sentinel2_stac_mapchete):
                 assets=["red"],
                 mask_config=MaskConfig(
                     footprint=True,
-                    cloud=True,
+                    l1c_clouds=True,
                     snow_ice=True,
                     cloud_probability=True,
                     cloud_probability_threshold=1,
@@ -221,7 +221,7 @@ def test_read_np_empty(sentinel2_stac_mapchete):
             assets=["red"],
             mask_config=MaskConfig(
                 footprint=True,
-                cloud=True,
+                l1c_clouds=True,
                 snow_ice=True,
                 cloud_probability=True,
                 cloud_probability_threshold=1,
@@ -243,7 +243,7 @@ def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
             target_height=target_height,
             assets=assets,
             mask_config=MaskConfig(
-                cloud=True,
+                l1c_clouds=True,
                 cloud_probability=True,
                 cloud_probability_threshold=50,
             ),
@@ -269,7 +269,7 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
             target_height=target_height,
             assets=assets,
             mask_config=MaskConfig(
-                cloud=True,
+                l1c_clouds=True,
                 cloud_probability=True,
                 cloud_probability_threshold=50,
             ),

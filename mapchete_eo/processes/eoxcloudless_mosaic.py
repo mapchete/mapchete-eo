@@ -71,7 +71,7 @@ def execute(
                         bands=assets, model="HLS", resolution=Resolution["60m"]
                     ),
                     mask_config=MaskConfig(
-                        cloud=True,
+                        l1c_clouds=True,
                         cloud_probability=True,
                         cloud_probability_threshold=cloud_probability_threshold,
                     ),

@@ -256,16 +256,16 @@ def test_remote_metadata_footprint(metadata):
     _test_metadata_footprint(metadata)
 
 
-def _test_metadata_cloud_mask(metadata):
-    combined = metadata.cloud_mask()
+def _test_metadata_l1c_cloud_mask(metadata):
+    combined = metadata.l1c_cloud_mask()
     assert isinstance(combined, ReferencedRaster)
     assert combined.data.dtype == bool
 
-    cirrus = metadata.cloud_mask(CloudType.cirrus)
+    cirrus = metadata.l1c_cloud_mask(CloudType.cirrus)
     assert isinstance(cirrus, ReferencedRaster)
     assert cirrus.data.dtype == bool
 
-    opaque = metadata.cloud_mask(CloudType.opaque)
+    opaque = metadata.l1c_cloud_mask(CloudType.opaque)
     assert isinstance(opaque, ReferencedRaster)
     assert opaque.data.dtype == bool
 
@@ -279,8 +279,8 @@ def _test_metadata_cloud_mask(metadata):
         lazy_fixture("s2_l2a_safe_metadata"),
     ],
 )
-def test_metadata_cloud_mask(metadata):
-    _test_metadata_cloud_mask(metadata)
+def test_metadata_l1c_cloud_mask(metadata):
+    _test_metadata_l1c_cloud_mask(metadata)
 
 
 @pytest.mark.remote
@@ -293,8 +293,8 @@ def test_metadata_cloud_mask(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_cloud_mask(metadata):
-    _test_metadata_cloud_mask(metadata)
+def test_remote_metadata_l1c_cloud_mask(metadata):
+    _test_metadata_l1c_cloud_mask(metadata)
 
 
 def _test_metadata_snow_ice_mask(metadata):

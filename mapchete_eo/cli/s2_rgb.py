@@ -50,7 +50,7 @@ def s2_rgb(
     click.echo(product)
     mask_config = MaskConfig(
         footprint=mask_footprint,
-        cloud=mask_clouds,
+        l1c_clouds=mask_clouds,
         snow_ice=mask_snow_ice,
         cloud_probability=mask_cloud_probability_threshold != 100,
         cloud_probability_threshold=mask_cloud_probability_threshold,

@@ -122,7 +122,7 @@ class S2Metadata:
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
         self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
-        self._cloud_masks_cache: Optional[List] = None
+        self._l1c_cloud_masks_cache: Optional[List] = None
         self._viewing_incidence_angles_cache: Dict = {}
 
         # get geoinformation per resolution and bounds
@@ -286,13 +286,13 @@ class S2Metadata:
     #####################
     # product QI layers #
     #####################
-    def cloud_mask(
+    def l1c_cloud_mask(
         self,
         cloud_type: CloudType = CloudType.all,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
     ) -> ReferencedRaster:
         """
-        Return classification cloud mask.
+        Return L1C classification cloud mask.
         """
         dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):

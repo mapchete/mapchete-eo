@@ -99,8 +99,8 @@ class Sentinel2DriverConfig(BaseDriverConfig):
 
 class MaskConfig(BaseModel):
     footprint: bool = True
-    cloud: bool = False
-    cloud_type: CloudType = CloudType.all
+    l1c_clouds: bool = False
+    l1c_cloud_type: CloudType = CloudType.all
     snow_ice: bool = False
     cloud_probability: bool = False
     cloud_probability_threshold: int = 100

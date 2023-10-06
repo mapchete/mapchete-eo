@@ -242,12 +242,10 @@ def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
         xarr = src.read_levelled(
             target_height=target_height,
             assets=assets,
-            product_read_kwargs=dict(
-                mask_config=MaskConfig(
-                    cloud=True,
-                    cloud_probability=True,
-                    cloud_probability_threshold=50,
-                )
+            mask_config=MaskConfig(
+                cloud=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
             ),
         )
     assert isinstance(xarr, xr.Dataset)
@@ -270,12 +268,10 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
         arr = src.read_levelled_np_array(
             target_height=target_height,
             assets=assets,
-            product_read_kwargs=dict(
-                mask_config=MaskConfig(
-                    cloud=True,
-                    cloud_probability=True,
-                    cloud_probability_threshold=50,
-                )
+            mask_config=MaskConfig(
+                cloud=True,
+                cloud_probability=True,
+                cloud_probability_threshold=50,
             ),
         )
     assert isinstance(arr, ma.MaskedArray)

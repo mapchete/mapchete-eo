@@ -88,16 +88,16 @@ def execute(
         The number of 3x3 smoothing filter passes to run.
     rgb_composite: dict, RGBCompositeConfig
         default and possible values:
-        red: Tuple[int, int] = (0, 2300)
-        green: Tuple[int, int] = (0, 2300)
-        blue: Tuple[int, int] = (0, 2300)
-        gamma: float = 1.15
-        saturation: float = 1.3
-        clahe_clip_limit: float = 3.2
-        fuzzy_radius: Optional[int] = 0
-        sharpen: Optional[bool] = False
-        smooth_water: Optional[bool] = False
-        smooth_water_ndwi_threshold: float = 0.2
+            red: Tuple[int, int] = (0, 2300)
+            green: Tuple[int, int] = (0, 2300)
+            blue: Tuple[int, int] = (0, 2300)
+            gamma: float = 1.15
+            saturation: float = 1.3
+            clahe_clip_limit: float = 3.2
+            fuzzy_radius: Optional[int] = 0
+            sharpen: Optional[bool] = False
+            smooth_water: Optional[bool] = False
+            smooth_water_ndwi_threshold: float = 0.2
     desert_color_correction_flag: bool
         Use different color correction in desert areas. (default: False)
     desert_rgb_composite: dict, RGBCompositeConfig

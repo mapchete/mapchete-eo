@@ -1,10 +1,10 @@
-process: mapchete_eo.processes.dtype_scale
+process: mapchete_eo.processes.eoxcloudless_sentinel2_color_correction
 input:
   inp: eoxcloudless/2022_rgbnir/
 output:
   format: GTiff
-  bands: 4
-  path: eoxcloudless/8bit_dtype_scale/
+  bands: 3
+  path: eoxcloudless/color_correction/
   dtype: uint8
 pyramid:
   grid: geodetic
@@ -20,5 +20,12 @@ process_parameters:
   matching_precision: 12
   fallback_to_higher_zoom: false
   out_dtype: uint8
-  max_source_value: 10000
-  max_output_value: null
+  rgb_composite:
+    red: [0, 2400]
+    green: [5, 2400]
+    blue: [0, 2400]
+    gamma: 1.15
+    saturation: 1.6
+    clahe_clip_limit: 3.5
+    sharpen: true
+    smooth_water: true

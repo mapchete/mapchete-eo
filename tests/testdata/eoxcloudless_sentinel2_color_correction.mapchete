@@ -1,6 +1,6 @@
 process: mapchete_eo.processes.eoxcloudless_sentinel2_color_correction
 input:
-  inp: eoxcloudless/2022_rgbnir/
+  mosaic: eoxcloudless/2022_rgbnir/
 output:
   format: GTiff
   bands: 3

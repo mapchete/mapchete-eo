@@ -35,13 +35,87 @@ def execute(
     desert_color_correction_flag: bool = False,
     desert_rgb_composite: Union[RGBCompositeConfig, dict] = RGBCompositeConfig(),
 ) -> ma.MaskedArray:
+    """
+    Extract color-corrected image from Sentinel-2 mosaic.
+
+    Inputs:
+    -------
+    mosaic
+        3 or 4 band 12bit data
+    desert_mask
+        AOI for different color correction over deserts
+
+    Parameters
+    ----------
+    bands : list
+        List of band indexes pointing to bands in the order [red, green, blue, nir].
+    resampling : str (default: 'nearest')
+        resampling used when reading from mosaic.
+    matching_method : str ('gdal' or 'min') (default: 'gdal')
+        gdal: Uses GDAL's standard method. Here, the target resolution is
+            calculated by averaging the extent's pixel sizes over both x and y
+            axes. This approach returns a zoom level which may not have the
+            best quality but will speed up reading significantly.
+        min: Returns the zoom level which matches the minimum resolution of the
+            extents four corner pixels. This approach returns the zoom level
+            with the best possible quality but with low performance. If the
+            tile extent is outside of the destination pyramid, a
+            TopologicalError will be raised.
+    matching_max_zoom : int (optional, default: None)
+        If set, it will prevent reading from zoom levels above the maximum.
+    matching_precision : int (default: 8)
+        Round resolutions to n digits before comparing.
+    fallback_to_higher_zoom : bool (default: False)
+        In case no data is found at zoom level, try to read data from higher
+        zoom levels. Enabling this setting can lead to many IO requests in
+        areas with no data.
+    fillnodata : bool
+        Interpolate nodata patches using GDAL. (default: false)
+    fillnodata_method : str
+        Method how to select areas to interpolate. (default: patch_size)
+            - all: interpolate all nodata areas
+            - patch_size: only interpolate areas up to a certain size. (defined by
+                max_patch_size)
+            - nodata_neighbors: only interpolate single nodata pixel.
+    fillnodata_max_patch_size : int
+        Minimum patch size in pixels to be interpolated. (default: 1)
+    fillnodata_max_nodata_neighbors : int
+        Maximum number of nodata neighbor pixels in "nodata_neighbors" method.
+    fillnodata_max_search_distance : float
+        The maxmimum number of pixels to search in all directions to find values to
+        interpolate from.
+    fillnodata_smoothing_iterations : int
+        The number of 3x3 smoothing filter passes to run.
+    rgb_composite: dict, RGBCompositeConfig
+        default and possible values:
+        red: Tuple[int, int] = (0, 2300)
+        green: Tuple[int, int] = (0, 2300)
+        blue: Tuple[int, int] = (0, 2300)
+        gamma: float = 1.15
+        saturation: float = 1.3
+        clahe_clip_limit: float = 3.2
+        fuzzy_radius: Optional[int] = 0
+        sharpen: Optional[bool] = False
+        smooth_water: Optional[bool] = False
+        smooth_water_ndwi_threshold: float = 0.2
+    desert_color_correction_flag: bool
+        Use different color correction in desert areas. (default: False)
+    desert_rgb_composite: dict, RGBCompositeConfig
+        default and possible values are same as rgb_composite,
+        to trigger define these values
+    Output
+    ------
+    ma.MaskedArray
+        8bit RGB
+    """
+
     if isinstance(rgb_composite, dict):
         rgb_composite = RGBCompositeConfig(**rgb_composite)
     if isinstance(desert_rgb_composite, dict):
         desert_rgb_composite = RGBCompositeConfig(**desert_rgb_composite)
 
     logger.debug("read input mosaic")
-    with mp.open("inp") as mosaic_inp:
+    with mp.open("mosaic") as mosaic_inp:
         if mosaic_inp.is_empty():
             logger.debug("mosaic empty")
             raise MapcheteNodataTile

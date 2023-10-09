@@ -18,7 +18,7 @@ precommit:
 
 
 before_script:
-  - apt update && apt install -y --no-install-recommends git gcc
+  - apt update && apt install -y --no-install-recommends git gcc g++ libgl1-mesa-glx
 
 build:
   stage: build

@@ -6,9 +6,8 @@ from mapchete_eo import image_compositing
 
 
 @pytest.mark.parametrize("bands", range(1, 5))
-def test_to_rgba(bands):
-    arr = np.full((bands, 256, 256), 2, dtype=np.uint8)
-    out = image_compositing.to_rgba(arr)
+def test_to_rgba(bands, test_3d_array):
+    out = image_compositing.to_rgba(test_3d_array)
     assert isinstance(out, np.ndarray)
     assert not isinstance(out, ma.masked_array)
     assert out.shape == (4, 256, 256)
@@ -19,9 +18,10 @@ def test_to_rgba(bands):
 
 @pytest.mark.parametrize("method", image_compositing.METHODS.keys())
 @pytest.mark.parametrize("opacity", [0, 0.5, 1])
-def test_compositing_output_array(method, opacity):
-    arr = np.full((1, 256, 256), 2, dtype=np.uint8)
-    out = image_compositing.composite(method, arr, arr, opacity=opacity)
+def test_compositing_output_array(test_3d_array, method, opacity):
+    out = image_compositing.composite(
+        method, test_3d_array, test_3d_array, opacity=opacity
+    )
     assert isinstance(out, ma.masked_array)
     assert out.shape == (4, 256, 256)
     assert out.dtype == np.uint8

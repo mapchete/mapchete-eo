@@ -126,7 +126,7 @@ class Slice:
         # a Slice can only be valid if it contains one or more products
         if products:
             self.products = products
-        else:
+        else:  # pragma: no cover
             raise ValueError("at least one product must be provided.")
 
         # calculate mean datetime
@@ -197,7 +197,7 @@ def merge_products(
     """
     Merge given products into one array.
     """
-    if len(products) == 0:
+    if len(products) == 0:  # pragma: no cover
         raise NoSourceProducts("no products to merge")
 
     # we need to deactivate raising the EmptyProductException
@@ -235,7 +235,7 @@ def merge_products(
             .mean(axis=0)
             .astype(out.dtype, copy=False)
         )
-    else:
+    else:  # pragma: no cover
         raise NotImplementedError(f"unknown merge method: {merge_method}")
 
     if raise_empty and out.mask.all():

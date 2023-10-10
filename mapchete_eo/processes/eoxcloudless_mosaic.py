@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -8,7 +8,6 @@ from mapchete.errors import MapcheteNodataTile
 from orgonite import cloudless
 from rasterio.enums import Resampling
 
-from mapchete_eo.exceptions import EmptyStackException
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModels,
@@ -16,7 +15,8 @@ from mapchete_eo.platforms.sentinel2.config import (
     parse_mask_config,
 )
 from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.types import MergeMethod
+from mapchete_eo.sort import TargetDateSort
+from mapchete_eo.types import DateTimeLike, MergeMethod
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ def execute(
     from_brightness_extract_method: str = "median",
     from_brightness_average_over: int = 3,
     considered_bands: int = 3,
+    target_date: Optional[DateTimeLike] = None,
 ) -> ma.MaskedArray:
     mask_config = parse_mask_config(mask_config)
 
@@ -61,6 +62,7 @@ def execute(
                     bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
                 ),
                 mask_config=mask_config,
+                sort=TargetDateSort(target_date=target_date),
             )
         logger.debug(
             "Sentinel-2 stack of shape %s read with BRDF took %s", s2_arr.shape, t

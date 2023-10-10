@@ -225,15 +225,17 @@ def execute(
     # smooth out water areas
     if rgb_composite.smooth_water and water_mask.any():
         logger.debug("smooth water areas")
-        corrected[water_mask] = filters.gaussian_blur(
-            filters.smooth(corrected), radius=1
-        )[water_mask]
+        corrected = ma.where(
+            water_mask,
+            filters.gaussian_blur(filters.smooth(corrected), radius=1),
+            corrected,
+        )
 
     # sharpen non-water areas
     if rgb_composite.sharpen:
         if rgb_composite.smooth_water and not water_mask.all():
             logger.debug("sharpen output")
-            corrected[~water_mask] = filters.sharpen(corrected)[~water_mask]
+            corrected = ma.where(water_mask, corrected, filters.sharpen(corrected))
         else:
             corrected = filters.sharpen(corrected)
 

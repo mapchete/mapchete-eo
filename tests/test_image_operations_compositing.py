@@ -57,3 +57,13 @@ def test_fuzzy_alpha_mask(test_3d_array, mask, radius, gradient_position):
     assert out.shape == (4, 256, 256)
     assert out.dtype == np.uint8
     assert not np.array_equal(test_3d_array, out)
+
+
+def test_fuzzy_alpha_mask_shape_error(test_3d_array):
+    with pytest.raises(TypeError):
+        compositing.fuzzy_alpha_mask(test_3d_array[0])
+
+
+def test_fuzzy_alpha_mask_error(test_3d_array):
+    with pytest.raises(TypeError):
+        compositing.fuzzy_alpha_mask(test_3d_array.data)

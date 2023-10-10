@@ -28,6 +28,7 @@ from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.time import to_datetime
 from mapchete_eo.types import (
     DateTimeLike,
@@ -98,6 +99,7 @@ class InputTile(base.InputTile):
         resampling: Optional[Union[Resampling, str]] = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
+        sort: Optional[SortMethodConfig] = None,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
         **kwargs,
@@ -121,6 +123,7 @@ class InputTile(base.InputTile):
             grid=self.tile,
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
+            sort=sort,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -140,6 +143,7 @@ class InputTile(base.InputTile):
         resampling: Optional[Union[Resampling, str]] = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
+        sort: Optional[SortMethodConfig] = None,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
         **kwargs,
@@ -156,6 +160,7 @@ class InputTile(base.InputTile):
             grid=self.tile,
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,
+            sort=sort,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -177,6 +182,7 @@ class InputTile(base.InputTile):
         nodatavals: NodataVals = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
+        sort: SortMethodConfig = TargetDateSort(),
         raise_empty: bool = True,
         slice_axis_name: str = "layers",
         band_axis_name: str = "bands",
@@ -201,6 +207,7 @@ class InputTile(base.InputTile):
             band_axis_name=band_axis_name,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
+            sort=sort,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -222,6 +229,7 @@ class InputTile(base.InputTile):
         nodatavals: NodataVals = None,
         merge_products_by: Optional[str] = None,
         merge_method: Optional[MergeMethod] = None,
+        sort: SortMethodConfig = TargetDateSort(),
         raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
@@ -238,6 +246,7 @@ class InputTile(base.InputTile):
             grid=self.tile,
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
+            sort=sort,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,

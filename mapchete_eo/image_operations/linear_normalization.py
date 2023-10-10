@@ -41,10 +41,14 @@ def linear_normalization(
     if len(bands_minmax_values) != bands.shape[0]:
         raise ValueError("bands and bands_minmax_values must have the same length")
     try:
-        if out_min is None:
-            out_min, out_max = dtype_ranges[out_dtype]
+        if isinstance(out_dtype, str):
+            dtype_str = out_dtype
         else:
-            out_max = dtype_ranges[out_dtype][1]
+            dtype_str = str(out_dtype).split(".")[1].split("'")[0]
+        if out_min is None:
+            out_min, out_max = dtype_ranges[dtype_str]
+        else:
+            out_max = dtype_ranges[dtype_str][1]
     except KeyError:
         raise KeyError(f"invalid out_dtype: {out_dtype}")
 

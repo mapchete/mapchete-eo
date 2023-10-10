@@ -10,7 +10,7 @@ from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 
-from mapchete_eo.types import NodataVals
+from mapchete_eo.types import DateTimeLike, NodataVals
 
 
 class EOProductProtocol(Protocol):
@@ -58,3 +58,7 @@ class GridProtocol(Protocol):
     shape: Tuple[int, int]
     bounds: Bounds
     crs: CRS
+
+
+class DateTimeProtocol(Protocol):
+    datetime: DateTimeLike

@@ -28,3 +28,12 @@ def time_ranges_intersect(
     t2_start = to_datetime(t2[0], "min").replace(tzinfo=None)
     t2_end = to_datetime(t2[1], "max").replace(tzinfo=None)
     return (t1_start <= t2_start <= t1_end) or (t2_start <= t1_start <= t2_end)
+
+
+def timedelta(date: DateTimeLike, target: DateTimeLike, seconds: bool = True):
+    """Return difference between two time stamps."""
+    delta = to_datetime(date) - to_datetime(target)
+    if seconds:
+        return abs(delta.total_seconds())
+    else:
+        return abs(delta.days)

@@ -9,6 +9,7 @@ from rasterio.enums import Resampling
 from mapchete_eo.array.convert import to_dataset, to_masked_array
 from mapchete_eo.io.products import generate_slices
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.types import MergeMethod, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def read_levelled_cube_to_np_array(
     nodatavals: NodataVals = None,
     merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
+    sort: SortMethodConfig = TargetDateSort(),
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
 ) -> ma.MaskedArray:
@@ -43,6 +45,7 @@ def read_levelled_cube_to_np_array(
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
+            sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
         )
@@ -112,6 +115,7 @@ def read_levelled_cube_to_xarray(
     nodatavals: NodataVals = None,
     merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
+    sort: SortMethodConfig = TargetDateSort(),
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
     slice_axis_name: str = "layers",
@@ -136,6 +140,7 @@ def read_levelled_cube_to_xarray(
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
+            sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
         ),

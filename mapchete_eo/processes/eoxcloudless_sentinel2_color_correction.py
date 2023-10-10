@@ -7,8 +7,9 @@ from mapchete.errors import MapcheteNodataTile
 from shapely import unary_union
 from shapely.geometry import shape
 
-from mapchete_eo import image_compositing, image_filters, image_operations
+from mapchete_eo import image_operations
 from mapchete_eo.exceptions import EmptyStackException
+from mapchete_eo.image_operations import compositing, filters
 from mapchete_eo.processes.config import RGBCompositeConfig
 from mapchete_eo.types import NodataVal
 
@@ -26,7 +27,9 @@ def execute(
     out_dtype: Optional[str] = "uint8",
     out_nodata: NodataVal = None,
     fillnodata: bool = False,
-    fillnodata_method: str = "nodata_neighbors",
+    fillnodata_method: Union[
+        image_operations.FillSelectionMethod, str
+    ] = image_operations.FillSelectionMethod.nodata_neighbors,
     fillnodata_max_patch_size: int = 1,
     fillnodata_max_nodata_neighbors: int = 0,
     fillnodata_max_search_distance: int = 10,
@@ -108,7 +111,8 @@ def execute(
     ma.MaskedArray
         8bit RGB
     """
-
+    if isinstance(fillnodata_method, str):
+        fillnodata_method = image_operations.FillSelectionMethod[fillnodata_method]
     if isinstance(rgb_composite, dict):
         rgb_composite = RGBCompositeConfig(**rgb_composite)
     if isinstance(desert_rgb_composite, dict):
@@ -194,7 +198,7 @@ def execute(
             # apply custom scaling to 8bit
             # apply custom color correction
             # merge with existing corrected pixels
-            corrected = image_compositing.normal(
+            corrected = compositing.normal(
                 image_operations.color_correct(
                     rgb=image_operations.linear_normalization(
                         bands=desert_mosaic[:3],
@@ -209,7 +213,7 @@ def execute(
                     clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
                     saturation=desert_rgb_composite.saturation,
                 ),
-                image_compositing.fuzzy_alpha_mask(
+                compositing.fuzzy_alpha_mask(
                     corrected,
                     mask=desert_mosaic.mask,
                     radius=desert_rgb_composite.fuzzy_radius,
@@ -221,28 +225,24 @@ def execute(
     # smooth out water areas
     if rgb_composite.smooth_water and water_mask.any():
         logger.debug("smooth water areas")
-        corrected = np.where(
-            water_mask,
-            image_filters.gaussian_blur(image_filters.smooth(corrected), radius=1),
-            corrected,
-        )
+        corrected[water_mask] = filters.gaussian_blur(
+            filters.smooth(corrected), radius=1
+        )[water_mask]
 
     # sharpen non-water areas
     if rgb_composite.sharpen:
         if rgb_composite.smooth_water and not water_mask.all():
             logger.debug("sharpen output")
-            corrected = np.where(
-                water_mask, corrected, image_filters.sharpen(corrected)
-            )
+            corrected[~water_mask] = filters.sharpen(corrected)[~water_mask]
         else:
-            corrected = image_filters.sharpen(corrected)
+            corrected = filters.sharpen(corrected)
 
     return ma.masked_where(corrected == out_nodata, corrected, copy=False)
 
 
 def _percent_masked(
-    mask: Union[ma.MaskedArray, np.array],
-    nodata_mask: Union[ma.MaskedArray, np.array],
+    mask: np.ndarray,
+    nodata_mask: np.ndarray,
     round_by: int = 2,
 ) -> float:
     # divide number of masked and valid pixels by number of valid pixels
@@ -255,8 +255,8 @@ def _percent_masked(
 
 
 def _water_mask(
-    bands_array: Union[ma.MaskedArray, np.array], ndwi_threshold: float = 0.2
-) -> np.array:
+    bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2
+) -> ma.MaskedArray:
     if len(bands_array) != 4:
         raise ValueError("smooth_water only works with RGBNir bands")
 

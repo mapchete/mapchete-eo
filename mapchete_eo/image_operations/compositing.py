@@ -7,13 +7,12 @@ import cv2
 import numpy as np
 import numpy.ma as ma
 from mapchete import Timer
-from numpy.typing import ArrayLike
 from rasterio.plot import reshape_as_image, reshape_as_raster
 
 logger = logging.getLogger(__name__)
 
 
-def to_rgba(arr: ArrayLike) -> np.ndarray:
+def to_rgba(arr: np.ndarray) -> np.ndarray:
     # make sure array is a proper MaskedArray with expanded mask
     if not isinstance(arr, ma.MaskedArray):
         arr = ma.masked_array(arr, mask=np.zeros(arr.shape, dtype=bool))
@@ -38,7 +37,7 @@ def to_rgba(arr: ArrayLike) -> np.ndarray:
 
 
 def _blend_base(
-    bg: ArrayLike, fg: ArrayLike, opacity: float, operation: Callable
+    bg: np.ndarray, fg: np.ndarray, opacity: float, operation: Callable
 ) -> ma.MaskedArray:
     # generate RGBA output and run compositing
     out_arr = reshape_as_raster(
@@ -54,63 +53,63 @@ def _blend_base(
     return ma.masked_array(out_arr, mask=np.stack([out_mask for _ in range(4)]))
 
 
-def normal(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def normal(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.normal)
 
 
-def soft_light(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def soft_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.soft_light)
 
 
-def lighten_only(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def lighten_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.lighten_only)
 
 
-def screen(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def screen(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.screen)
 
 
-def dodge(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def dodge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.dodge)
 
 
-def addition(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def addition(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.addition)
 
 
-def darken_only(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def darken_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.darken_only)
 
 
-def multiply(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def multiply(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.multiply)
 
 
-def hard_light(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def hard_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.hard_light)
 
 
-def difference(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def difference(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.difference)
 
 
-def subtract(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def subtract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.subtract)
 
 
-def grain_extract(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def grain_extract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.grain_extract)
 
 
-def grain_merge(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def grain_merge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.grain_merge)
 
 
-def divide(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def divide(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.divide)
 
 
-def overlay(bg: ArrayLike, fg: ArrayLike, opacity: float = 1) -> ma.MaskedArray:
+def overlay(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
     return _blend_base(bg, fg, opacity, blend_modes.overlay)
 
 
@@ -133,7 +132,7 @@ METHODS = {
 }
 
 
-def composite(method: str, bg: ArrayLike, fg: ArrayLike, opacity: float = 1):
+def composite(method: str, bg: np.ndarray, fg: np.ndarray, opacity: float = 1):
     return METHODS[method](bg, fg, opacity)
 
 

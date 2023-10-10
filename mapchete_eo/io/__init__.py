@@ -11,9 +11,9 @@ from mapchete_eo.io.levelled_cubes import (
 )
 from mapchete_eo.io.path import get_product_cache_path, open_xml, path_in_paths
 from mapchete_eo.io.products import (
-    group_products_per_property,
     merge_products,
     products_to_np_array,
+    products_to_slices,
     products_to_xarray,
 )
 
@@ -24,7 +24,7 @@ __all__ = [
     "item_to_np_array",
     "products_to_xarray",
     "products_to_np_array",
-    "group_products_per_property",
+    "products_to_slices",
     "merge_products",
     "get_item_property",
     "open_xml",

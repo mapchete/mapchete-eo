@@ -1,24 +1,17 @@
+from datetime import datetime
+
 import pytest
 from mapchete.path import MPath
 from pytest_lazyfixture import lazy_fixture
 
-from mapchete_eo.io import get_item_property, group_products_per_property
+from mapchete_eo.io import get_item_property, products_to_slices
 from mapchete_eo.io.path import (
     ProductPathGenerationMethod,
     asset_mpath,
     get_product_cache_path,
 )
+from mapchete_eo.io.products import Slice
 from mapchete_eo.product import EOProduct
-
-
-def test_group_products_per_property_day(s2_stac_items):
-    grouped = group_products_per_property(
-        [EOProduct.from_stac_item(item) for item in s2_stac_items], "day"
-    )
-    for property, products in grouped.items():
-        assert len(products) > 1
-        for product in products:
-            assert property == product.item.datetime.day
 
 
 def test_get_item_property_date(s2_stac_item):
@@ -87,3 +80,25 @@ def test_asset_mpath(item, absolute_out_path, relative_asset_path):
         return
 
     assert path.exists()
+
+
+def test_slice(s2_stac_items):
+    name = "foo"
+    slice_ = Slice(
+        name=name, products=[EOProduct.from_stac_item(item) for item in s2_stac_items]
+    )
+    assert slice_.name == name
+    assert slice_.products
+    assert isinstance(slice_.datetime, datetime)
+    assert isinstance(slice_.properties, dict)
+
+
+def test_products_to_slices(s2_stac_items):
+    slices = products_to_slices(
+        [EOProduct.from_stac_item(item) for item in s2_stac_items],
+        group_by_property="day",
+    )
+    for slice_ in slices:
+        assert len(slice_.products) > 1
+        for product in slice_.products:
+            assert slice_.name == product.item.datetime.day

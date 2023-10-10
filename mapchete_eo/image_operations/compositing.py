@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Callable
+from typing import Callable, Optional
 
 import blend_modes
 import cv2
@@ -16,8 +16,6 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
     # make sure array is a proper MaskedArray with expanded mask
     if not isinstance(arr, ma.MaskedArray):
         arr = ma.masked_array(arr, mask=np.zeros(arr.shape, dtype=bool))
-    elif not isinstance(arr.mask, np.ndarray):
-        arr = ma.masked_array(arr, mask=np.full(arr.shape, arr.mask, dtype=bool))
     if arr.dtype != np.uint8:
         raise TypeError(f"image array must be of type uint8, not {str(arr.dtype)}")
     num_bands = arr.shape[0]
@@ -31,8 +29,10 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data
     elif num_bands == 4:
         out = arr.data
-    else:
-        raise TypeError("array must have between one and four bands")
+    else:  # pragma: no cover
+        raise TypeError(
+            f"array must have between one and four bands but has {num_bands}"
+        )
     return out.astype(np.float16, copy=False)
 
 
@@ -132,11 +132,20 @@ METHODS = {
 }
 
 
-def composite(method: str, bg: np.ndarray, fg: np.ndarray, opacity: float = 1):
+def composite(
+    method: str, bg: np.ndarray, fg: np.ndarray, opacity: float = 1
+) -> ma.MaskedArray:
     return METHODS[method](bg, fg, opacity)
 
 
-def fuzzy_mask(arr, fill_value, radius=0, invert=True, dilate=True):
+def fuzzy_mask(
+    arr: np.ndarray,
+    fill_value: float,
+    radius: int = 0,
+    invert: bool = True,
+    dilate: bool = True,
+) -> np.ndarray:
+    """Create fuzzy mask from binary mask."""
     if arr.ndim == 2:
         arr = np.expand_dims(arr, 0)
     if arr.ndim != 3:
@@ -154,7 +163,7 @@ def fuzzy_mask(arr, fill_value, radius=0, invert=True, dilate=True):
     # convert mask into an image and set true values to fill value
     # dilate = buffer image using the blur radius
     out = np.multiply(reshape_as_image(three_bands), fill_value, dtype=np.uint8)
-    if dilate:
+    if dilate and radius:
         with Timer() as t:
             kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (radius, radius))
         logger.debug("dilation kernel generated in %s", t)
@@ -162,9 +171,12 @@ def fuzzy_mask(arr, fill_value, radius=0, invert=True, dilate=True):
             out = cv2.morphologyEx(out, cv2.MORPH_DILATE, kernel)
         logger.debug("dilation took %s", t)
     # blur and return
-    with Timer() as t:
-        out = reshape_as_raster(cv2.blur(out, (radius, radius)))[0]
-    logger.debug("blur filter took %s", t)
+    if radius:
+        with Timer() as t:
+            out = reshape_as_raster(cv2.blur(out, (radius, radius)))[0]
+        logger.debug("blur filter took %s", t)
+    else:
+        out = reshape_as_raster(out)[0]
     if invert:
         return -(out - fill_value).astype(np.uint8)
     return out
@@ -177,34 +189,44 @@ class GradientPosition(Enum):
 
 
 def fuzzy_alpha_mask(
-    arr, mask=None, radius=0, fill_value=255, gradient_position=GradientPosition.outside
-):
+    arr: np.ndarray,
+    mask: Optional[np.ndarray] = None,
+    radius=0,
+    fill_value=255,
+    gradient_position=GradientPosition.outside,
+) -> np.ndarray:
     """Return an RGBA array with a fuzzy alpha mask."""
     gradient_position = (
         GradientPosition[gradient_position]
         if isinstance(gradient_position, str)
         else gradient_position
     )
-    if not isinstance(arr, ma.MaskedArray) and mask is None:
-        raise TypeError(
-            "input array must be a numpy MaskedArray or mask must be provided"
-        )
-    elif arr.shape[0] != 3:
+
+    if arr.shape[0] != 3:
         raise TypeError("input array must have exactly three bands")
+
     if mask is None:
+        if not isinstance(arr, ma.MaskedArray):
+            raise TypeError(
+                "input array must be a numpy MaskedArray or mask must be provided"
+            )
         mask = arr.mask
+
     if gradient_position == GradientPosition.outside:
         fuzzy = fuzzy_mask(
             mask, fill_value=fill_value, radius=radius, invert=False, dilate=True
         )
+
     elif gradient_position == GradientPosition.inside:
         fuzzy = fuzzy_mask(
             mask, fill_value=fill_value, radius=radius, invert=True, dilate=True
         )
+
     elif gradient_position == GradientPosition.edge:
         fuzzy = fuzzy_mask(mask, fill_value=fill_value, radius=radius, dilate=False)
-    else:
-        raise ValueError
+
+    else:  # pragma: no cover
+        raise ValueError(f"unknown gradient_position: {gradient_position}")
 
     # doing this makes sure that originally masked pixels are also fully masked
     # fuzzy[mask[0]] = 255

@@ -24,7 +24,6 @@ dependencies = [
     "blend-modes",
     "click",
     "croniter",
-    "jenkspy",
     "lxml",
     "mapchete>=2023.9.1",
     "opencv-python",

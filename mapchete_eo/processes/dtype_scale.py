@@ -93,8 +93,8 @@ def execute(
             logger.debug("mosaic empty: all masked")
             raise MapcheteNodataTile
 
-    if mp.output_params["nodata"] and out_nodata is None:
-        out_nodata = mp.output_params["nodata"]
+    if mp.output_params and mp.output_params.get("nodata") and out_nodata is None:
+        out_nodata = mp.output_params.get("nodata")
     elif out_nodata is None:
         logger.debug("Out nodata is None setting it to 0")
         out_nodata = 0

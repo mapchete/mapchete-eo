@@ -1,28 +1,38 @@
 import numpy.ma as ma
 import pytest
 
-from mapchete_eo.processes import eoxcloudless_mosaic
+from mapchete_eo.image_operations import FillSelectionMethod
+from mapchete_eo.processes import (
+    dtype_scale,
+    eoxcloudless_mosaic,
+    eoxcloudless_sentinel2_color_correction,
+)
 
 
 def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_mapchete):
-    mp = eoxcloudless_8bit_dtype_scale_mapchete.mp()
-    zoom = max(mp.config.zoom_levels)
-    # # tile containing data
-    tile = next(mp.get_process_tiles(zoom))
-    output = mp.execute(tile)
+    process_mp = eoxcloudless_8bit_dtype_scale_mapchete.process_mp()
+    output = dtype_scale.execute(process_mp)
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
     assert ma.mean(output) < 100
 
 
+@pytest.mark.parametrize("fillnodata", [True, False])
+@pytest.mark.parametrize("fillnodata_method", [FillSelectionMethod.all, "all"])
+@pytest.mark.parametrize("desert_color_correction_flag", [True, False])
 def test_eoxcloudless_sentinel2_color_correction(
     eoxcloudless_sentinel2_color_correction_mapchete,
+    fillnodata,
+    fillnodata_method,
+    desert_color_correction_flag,
 ):
-    mp = eoxcloudless_sentinel2_color_correction_mapchete.mp()
-    zoom = max(mp.config.zoom_levels)
-    # # tile containing data
-    tile = next(mp.get_process_tiles(zoom))
-    output = mp.execute(tile)
+    process_mp = eoxcloudless_sentinel2_color_correction_mapchete.process_mp()
+    output = eoxcloudless_sentinel2_color_correction.execute(
+        process_mp,
+        fillnodata=fillnodata,
+        fillnodata_method=fillnodata_method,
+        desert_color_correction_flag=desert_color_correction_flag,
+    )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
     assert ma.mean(output) < 200

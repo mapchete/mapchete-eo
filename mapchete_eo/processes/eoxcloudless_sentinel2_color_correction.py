@@ -111,32 +111,37 @@ def execute(
     ma.MaskedArray
         8bit RGB
     """
-    if isinstance(fillnodata_method, str):
-        fillnodata_method = image_operations.FillSelectionMethod[fillnodata_method]
-    if isinstance(rgb_composite, dict):
-        rgb_composite = RGBCompositeConfig(**rgb_composite)
-    if isinstance(desert_rgb_composite, dict):
-        desert_rgb_composite = RGBCompositeConfig(**desert_rgb_composite)
+    fillnodata_method = (
+        image_operations.FillSelectionMethod[fillnodata_method]
+        if isinstance(fillnodata_method, str)
+        else fillnodata_method
+    )
+    rgb_composite = (
+        RGBCompositeConfig(**rgb_composite)
+        if isinstance(rgb_composite, dict)
+        else rgb_composite
+    )
+    desert_rgb_composite = (
+        RGBCompositeConfig(**desert_rgb_composite)
+        if isinstance(desert_rgb_composite, dict)
+        else desert_rgb_composite
+    )
 
     logger.debug("read input mosaic")
     with mp.open("mosaic") as mosaic_inp:
-        if mosaic_inp.is_empty():
+        if mosaic_inp.is_empty():  # pragma: no cover
             logger.debug("mosaic empty")
             raise MapcheteNodataTile
-        try:
-            mosaic = mosaic_inp.read(
-                indexes=bands,
-                resampling=resampling,
-                matching_method=matching_method,
-                matching_max_zoom=matching_max_zoom,
-                matching_precision=matching_precision,
-                fallback_to_higher_zoom=fallback_to_higher_zoom,
-            ).astype(np.int16, copy=False)
-            nodata_mask = mosaic[0].mask
-        except EmptyStackException:
-            logger.debug("mosaic empty: EmptyStackException")
-            raise MapcheteNodataTile
-        if mosaic[0].mask.all():
+        mosaic = mosaic_inp.read(
+            indexes=bands,
+            resampling=resampling,
+            matching_method=matching_method,
+            matching_max_zoom=matching_max_zoom,
+            matching_precision=matching_precision,
+            fallback_to_higher_zoom=fallback_to_higher_zoom,
+        ).astype(np.int16, copy=False)
+        nodata_mask = mosaic[0].mask
+        if nodata_mask.all():  # pragma: no cover
             logger.debug("mosaic empty: all masked")
             raise MapcheteNodataTile
 
@@ -184,7 +189,7 @@ def execute(
             desert_mask = unary_union(
                 [shape(f["geometry"]) for f in mp.open("desert_mask").read()]
             )
-        else:
+        else:  # pragma: no cover
             raise ValueError(
                 "a vector input with the key 'desert_mask' has to be provided"
             )
@@ -193,7 +198,7 @@ def execute(
             # clip original mosaic with desert mask
             desert_mosaic = mp.clip(
                 mosaic, [dict(geometry=desert_mask)], inverted=False
-            ).astype("uint16")
+            ).astype("uint16")[:3]
             logger.debug("apply other color correction for desert areas")
             # apply custom scaling to 8bit
             # apply custom color correction
@@ -201,7 +206,7 @@ def execute(
             corrected = compositing.normal(
                 image_operations.color_correct(
                     rgb=image_operations.linear_normalization(
-                        bands=desert_mosaic[:3],
+                        bands=desert_mosaic,
                         bands_minmax_values=(
                             desert_rgb_composite.red,
                             desert_rgb_composite.green,
@@ -259,10 +264,10 @@ def _percent_masked(
 def _water_mask(
     bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2
 ) -> ma.MaskedArray:
-    if len(bands_array) != 4:
+    if len(bands_array) != 4:  # pragma: no cover
         raise ValueError("smooth_water only works with RGBNir bands")
 
-    red, green, blue, nir = bands_array.astype(np.float16, copy=False)
+    _, green, _, nir = bands_array.astype(np.float16, copy=False)
     return ma.MaskedArray(
         data=np.where((green - nir) / (green + nir) > ndwi_threshold, True, False),
         mask=bands_array[0].mask,

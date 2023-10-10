@@ -1,6 +1,7 @@
 process: mapchete_eo.processes.eoxcloudless_sentinel2_color_correction
 input:
   mosaic: eoxcloudless/2022_rgbnir/
+  desert_mask: 14-3758-17876.geojson
 output:
   format: GTiff
   bands: 3

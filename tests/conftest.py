@@ -71,7 +71,7 @@ def pf_qa_stac_collection(testdata_dir):
 def test_2d_array() -> ma.MaskedArray:
     data = np.random.randint(low=0, high=255, size=(256, 256), dtype=np.uint8)
     return ma.MaskedArray(
-        data=data, mask=np.where(data == 0, True, False), fill_value=0
+        data=data, mask=np.where(data <= 100, True, False), fill_value=0
     )
 
 

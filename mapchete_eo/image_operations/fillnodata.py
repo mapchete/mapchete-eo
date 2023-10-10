@@ -57,7 +57,7 @@ def fillnodata(
     -------
     filled bands : ma.MaskedArray
     """
-    if not isinstance(bands, ma.MaskedArray):
+    if not isinstance(bands, ma.MaskedArray):  # pragma: no cover
         raise TypeError("bands must be a ma.MaskedArray")
 
     def _interpolate(bands, max_search_distance, smoothing_iterations):

@@ -112,7 +112,7 @@ class Slice:
     """Combine multiple products into one slice."""
 
     name: Any
-    attrs: dict
+    properties: dict
     products: List[EOProductProtocol]
     datetime: datetime
 

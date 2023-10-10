@@ -42,3 +42,4 @@ def sort_objects_by_target_date(
 class TargetDateSort(SortMethodConfig):
     func: Callable = sort_objects_by_target_date
     target_date: Optional[DateTimeLike] = None
+    reverse: bool = False

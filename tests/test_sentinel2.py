@@ -13,6 +13,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     parse_mask_config,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
+from mapchete_eo.sort import TargetDateSort
 
 
 def test_format_available():
@@ -78,6 +79,10 @@ def test_preprocessing(sentinel2_mapchete):
 
     tile_mp = sentinel2_mapchete.process_mp()
     assert tile_mp.open("inp").products
+
+
+# InputData.read() #
+####################
 
 
 def test_read(sentinel2_stac_mapchete):
@@ -159,6 +164,22 @@ def test_read_empty(sentinel2_stac_mapchete):
     assert isinstance(stack, xr.Dataset)
 
 
+def test_read_sorted(sentinel2_stac_mapchete):
+    assets = ["red"]
+    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        cube_sorted = src.read(
+            assets=assets, sort=TargetDateSort(target_date="2023-08-01")
+        )
+        cube_sorted_reverse = src.read(
+            assets=assets, sort=TargetDateSort(target_date="2023-08-01", reverse=True)
+        )
+    assert [str(i) for i in cube_sorted] != [str(i) for i in cube_sorted_reverse]
+
+
+# InputData.read_np_array() #
+#############################
+
+
 def test_read_np(sentinel2_stac_mapchete):
     with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
         cube = src.read_np_array(assets=["red"])
@@ -236,6 +257,10 @@ def test_read_np_empty(sentinel2_stac_mapchete):
     assert stack.shape[0] == 2
 
 
+# InputData.read_levelled() #
+#############################
+
+
 def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
     with sentinel2_stac_mapchete.process_mp(test_tile).open("inp") as src:
         assets = ["red"]
@@ -262,6 +287,10 @@ def test_read_levelled_cube_xarray(sentinel2_stac_mapchete, test_tile):
         assert arr[lower].mask.sum() <= arr[higher].mask.sum()
 
 
+# InputData.read_levelled_np_array() #
+######################################
+
+
 def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
     with sentinel2_stac_mapchete.process_mp(test_tile).open("inp") as src:
         assets = ["red"]
@@ -284,6 +313,23 @@ def test_read_levelled_cube_np_array(sentinel2_stac_mapchete, test_tile):
     layers = list(range(target_height))
     for lower, higher in zip(layers[:-1], layers[1:]):
         assert arr[lower].mask.sum() <= arr[higher].mask.sum()
+
+
+def test_read_levelled_cube_np_array_sort(sentinel2_stac_mapchete, test_tile):
+    with sentinel2_stac_mapchete.process_mp(test_tile).open("inp") as src:
+        assets = ["red"]
+        target_height = 1
+        arr = src.read_levelled_np_array(
+            target_height=target_height,
+            assets=assets,
+            sort=TargetDateSort(target_date="2023-08-01", reverse=False),
+        )
+        arr_reversed = src.read_levelled_np_array(
+            target_height=target_height,
+            assets=assets,
+            sort=TargetDateSort(target_date="2023-08-01", reverse=True),
+        )
+        assert ma.not_equal(arr, arr_reversed).any()
 
 
 @pytest.mark.parametrize(

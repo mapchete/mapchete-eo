@@ -21,16 +21,20 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
+    "blend-modes",
     "click",
     "croniter",
     "jenkspy",
     "lxml",
     "mapchete>=2023.9.1",
+    "opencv-python",
     "orgonite",
+    "Pillow",
     "pydantic",
     "pystac[urllib3]>=1.8.3",
     "pystac-client>=0.7.5",
     "rtree",
+    "scipy",
     "tqdm",
     "xarray",
 ]
@@ -53,6 +57,7 @@ sentinel2 = "mapchete_eo.platforms.sentinel2"
 [project.entry-points."mapchete.processes"]
 dtype_scale = "mapchete_eo.processes.dtype_scale"
 eoxcloudless_mosaic = "mapchete_eo.processes.eoxcloudless_mosaic"
+eoxcloudless_sentinel2_color_correction = "mapchete_eo.processes.eoxcloudless_sentinel2_color_correction"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"

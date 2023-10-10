@@ -158,6 +158,15 @@ def eoxcloudless_8bit_dtype_scale_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def eoxcloudless_sentinel2_color_correction_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_sentinel2_color_correction.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "eoxcloudless_mosaic.mapchete",

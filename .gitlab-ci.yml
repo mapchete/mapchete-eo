@@ -6,10 +6,13 @@ stages:
 
 default:
   image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.10.0
+  # we can remove this once libglib is installed per default on our base images:
+  before_script:
+    - apt update && apt install -y --no-install-recommends libglib2.0-0
 
 precommit:
   stage: codecheck
-  image: python:3.10.2-slim-bullseye
+  image: registry.gitlab.eox.at/maps/docker-base/python:3.11-slim-buster
   before_script:
     - apt update && apt install -y --no-install-recommends git
     - pip install pre-commit

@@ -5,11 +5,11 @@ stages:
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.8.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.10.1
 
 precommit:
   stage: codecheck
-  image: python:3.10.2-slim-bullseye
+  image: registry.gitlab.eox.at/maps/docker-base/python:3.11-slim-buster
   before_script:
     - apt update && apt install -y --no-install-recommends git
     - pip install pre-commit
@@ -17,13 +17,10 @@ precommit:
     - pre-commit run --all-files
 
 
-before_script:
-  - apt update && apt install -y --no-install-recommends git gcc g++ libgl1-mesa-glx
-
 build:
   stage: build
   tags:
-    - dind-test
+    - docker
   artifacts:
     paths:
       - dist/
@@ -36,7 +33,7 @@ build:
 test_wheel_base_image:
   stage: test
   tags:
-    - dind-test
+    - docker
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -66,7 +63,7 @@ test_wheel_base_image:
 test_tar_base_image:
   stage: test
   tags:
-    - dind-test
+    - docker
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -95,7 +92,7 @@ test_tar_base_image:
 package:
   stage: package
   tags:
-    - dind-test
+    - docker
   before_script:
     - pip install --upgrade hatch
   script:

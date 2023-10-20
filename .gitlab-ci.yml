@@ -5,10 +5,7 @@ stages:
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.8.0
-  # we can remove this once libglib is installed per default on our base images:
-  before_script:
-    - apt update && apt install -y --no-install-recommends libglib2.0-0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.10.1
 
 precommit:
   stage: codecheck
@@ -19,9 +16,6 @@ precommit:
   script:
     - pre-commit run --all-files
 
-
-# before_script:
-#   - apt update && apt install -y --no-install-recommends git gcc g++ libgl1-mesa-glx
 
 build:
   stage: build

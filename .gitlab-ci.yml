@@ -20,8 +20,8 @@ precommit:
     - pre-commit run --all-files
 
 
-before_script:
-  - apt update && apt install -y --no-install-recommends git gcc g++ libgl1-mesa-glx
+# before_script:
+#   - apt update && apt install -y --no-install-recommends git gcc g++ libgl1-mesa-glx
 
 build:
   stage: build

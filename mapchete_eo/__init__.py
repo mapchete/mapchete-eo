@@ -1,11 +1,1 @@
-"""
-mapchete satellite new backend
-
-
-
-
-
-"""
-
-
-__version__ = "2022.7.0"
+__version__ = "2023.10.0"

@@ -20,8 +20,8 @@ from mapchete.io.raster import (
     _prepare_masked,
     rasterio_open,
 )
-from mapchete.io.settings import IORetrySettings
 from mapchete.path import MPath
+from mapchete.settings import IORetrySettings
 from mapchete.tile import BufferedTile
 from numpy.typing import DTypeLike
 from rasterio.enums import Resampling

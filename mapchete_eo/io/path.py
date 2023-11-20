@@ -10,8 +10,8 @@ import fsspec
 import pystac
 from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
-from mapchete.io.settings import IORetrySettings
 from mapchete.path import MPath
+from mapchete.settings import IORetrySettings
 from retry import retry
 
 logger = logging.getLogger(__name__)

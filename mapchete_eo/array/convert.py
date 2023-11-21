@@ -4,7 +4,7 @@ import numpy as np
 import numpy.ma as ma
 import xarray as xr
 
-from mapchete_eo.types import NodataVals
+from mapchete_eo.types import NodataVal
 
 # dtypes from https://numpy.org/doc/stable/user/basics.types.html
 _NUMPY_FLOAT_DTYPES = [
@@ -44,7 +44,7 @@ def to_masked_array(
 
 def to_dataarray(
     masked_arr: ma.MaskedArray,
-    nodatavals: NodataVals = None,
+    nodataval: NodataVal = None,
     name: Optional[str] = None,
     band_names: Optional[List[str]] = None,
     band_axis_name: str = "bands",
@@ -66,7 +66,7 @@ def to_dataarray(
     # a usual NumPy array, replacing the masked values with np.nan.
     # However, this also seems to change the dtype to float32 which
     # is not desirable.
-    nodatavals = masked_arr.fill_value if nodatavals is None else nodatavals
+    nodataval = masked_arr.fill_value if nodataval is None else nodataval
     attrs = attrs or dict()
 
     if masked_arr.ndim == 2:
@@ -81,17 +81,17 @@ def to_dataarray(
         raise TypeError("only a 2D or 3D ma.MaskedArray is allowed.")
 
     return xr.DataArray(
-        data=masked_arr.filled(nodatavals),
+        data=masked_arr.filled(nodataval),
         dims=dims,
         name=name,
-        attrs=dict(attrs, _FillValue=nodatavals),
+        attrs=dict(attrs, _FillValue=nodataval),
         coords=coords,
     )
 
 
 def to_dataset(
     masked_arr: ma.MaskedArray,
-    nodatavals: NodataVals = None,
+    nodataval: NodataVal = None,
     slice_names: Optional[List[str]] = None,
     band_names: Optional[List[str]] = None,
     slices_attrs: Optional[List[Union[dict, None]]] = None,
@@ -103,7 +103,7 @@ def to_dataset(
 ):
     """Convert a 3D or 4D ma.MaskedArray to an xarray.Dataset."""
     attrs = attrs or dict()
-    nodatavals = masked_arr.fill_value if nodatavals is None else nodatavals
+    nodataval = masked_arr.fill_value if nodataval is None else nodataval
 
     if masked_arr.ndim == 3:
         bands = masked_arr.shape[0]
@@ -122,7 +122,7 @@ def to_dataset(
                 # every slice gets its own xarray Dataset
                 slice_name: to_dataarray(
                     slice_array,
-                    nodatavals=nodatavals,
+                    nodataval=nodataval,
                     band_names=band_names,
                     name=slice_name,
                     attrs=slice_attrs,
@@ -137,7 +137,7 @@ def to_dataset(
                 )
             },
             coords=coords,
-            attrs=dict(attrs, _FillValue=nodatavals),
+            attrs=dict(attrs, _FillValue=nodataval),
         ).transpose(slice_axis_name, band_axis_name, x_axis_name, y_axis_name)
 
     else:  # pragma: no cover

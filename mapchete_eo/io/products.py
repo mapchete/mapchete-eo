@@ -284,6 +284,8 @@ def generate_slices(
         nodataval = nodatavals[0]
     elif isinstance(nodatavals, float):
         nodataval = nodatavals
+    else:
+        nodataval = nodatavals
     for slice_ in slices:
         try:
             # if merge_products_by is none, each slice contains just one product

@@ -299,6 +299,7 @@ def generate_slices(
                     ),
                     raise_empty=raise_empty,
                 ),
+                nodatavals=nodatavals,
                 name=slice_.name,
                 band_names=variables,
                 attrs=slice_.properties,

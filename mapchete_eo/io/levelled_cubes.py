@@ -56,7 +56,7 @@ def read_levelled_cube_to_np_array(
     shape = (target_height, *first_slice.shape)
     out: ma.MaskedArray = ma.masked_array(
         data=np.zeros(shape, dtype=first_slice.dtype),
-        mask=np.ones(shape, dtype=first_slice.dtype),
+        mask=np.ones(shape, dtype=first_slice.mask.dtype),
         fill_value=first_slice.fill_value,
     )
     # insert first slice to output cube

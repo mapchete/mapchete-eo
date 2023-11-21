@@ -282,7 +282,7 @@ def generate_slices(
     )
     if isinstance(nodatavals, list):
         nodataval = nodatavals[0]
-    else:
+    elif isinstance(nodatavals, float):
         nodataval = nodatavals
     for slice_ in slices:
         try:

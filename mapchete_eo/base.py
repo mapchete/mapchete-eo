@@ -23,7 +23,6 @@ from mapchete_eo.io import (
     products_to_xarray,
     read_levelled_cube_to_np_array,
     read_levelled_cube_to_xarray,
-    read_masks,
 )
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
@@ -265,6 +264,8 @@ class InputTile(base.InputTile):
         nodatavals: NodataVals = None,
         **kwargs,
     ):
+        from mapchete_eo.platforms.sentinel2.masks import read_masks
+
         return read_masks(
             products=self.filter_products(
                 start_time=start_time,

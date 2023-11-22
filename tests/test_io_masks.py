@@ -1,7 +1,7 @@
 import numpy.ma as ma
 
-from mapchete_eo.io import read_masks
 from mapchete_eo.platforms.sentinel2.config import parse_mask_config
+from mapchete_eo.platforms.sentinel2.masks import read_masks
 from mapchete_eo.platforms.sentinel2.product import S2Product
 
 

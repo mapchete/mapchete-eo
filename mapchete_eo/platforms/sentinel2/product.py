@@ -183,6 +183,10 @@ class S2Product(EOProduct, EOProductProtocol):
         elif isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
         mask = self.get_mask(grid, mask_config).data
+        if nodatavals is None:
+            nodatavals = fill_value
+        elif fill_value is None and nodatavals is not None:
+            fill_value = nodatavals
         if mask.all():
             if raise_empty:
                 raise EmptyProductException(
@@ -225,7 +229,7 @@ class S2Product(EOProduct, EOProductProtocol):
                         brdf_config=brdf_config,
                     ),
                 )
-        return arr
+        return ma.MaskedArray(arr, fill_value=fill_value)
 
     def cache_assets(self) -> None:
         if self.cache is not None:

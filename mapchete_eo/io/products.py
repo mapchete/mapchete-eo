@@ -18,7 +18,7 @@ from mapchete_eo.exceptions import (
 from mapchete_eo.io.items import get_item_property
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.sort import SortMethodConfig
-from mapchete_eo.types import MergeMethod, NodataVals
+from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 
 logger = logging.getLogger(__name__)
 
@@ -280,6 +280,12 @@ def generate_slices(
         len(products),
         len(slices),
     )
+    if isinstance(nodatavals, list):
+        nodataval = nodatavals[0]
+    elif isinstance(nodatavals, float):
+        nodataval = nodatavals
+    else:
+        nodataval = nodatavals
     for slice_ in slices:
         try:
             # if merge_products_by is none, each slice contains just one product
@@ -299,6 +305,7 @@ def generate_slices(
                     ),
                     raise_empty=raise_empty,
                 ),
+                nodataval=nodataval,
                 name=slice_.name,
                 band_names=variables,
                 attrs=slice_.properties,

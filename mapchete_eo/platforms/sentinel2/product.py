@@ -169,6 +169,7 @@ class S2Product(EOProduct, EOProductProtocol):
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
+        only_mask: bool = False,
         **kwargs,
     ) -> ma.MaskedArray:
         assets = assets or []
@@ -194,6 +195,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 )
             else:
                 return self.empty_array(count, grid=grid, fill_value=fill_value)
+
+        if only_mask:
+            return ma.MaskedArray(ma.expand_dims(mask, axis=0), fill_value=nodatavals)
 
         arr = super().read_np_array(
             assets=assets,

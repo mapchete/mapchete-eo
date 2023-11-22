@@ -57,6 +57,13 @@ class EOProduct(EOProductProtocol):
         # developer info: all fancy stuff for special platforms like Sentinel-2
         # should be implemented in the respective read_np_array() methods which get
         # called by this method. No need to apply masks etc. here too.
+        if isinstance(nodatavals, list):
+            nodataval = nodatavals[0]
+        elif isinstance(nodatavals, float):
+            nodataval = nodatavals
+        else:
+            nodataval = nodatavals
+
         assets = assets or []
         eo_bands = eo_bands or []
         data_var_names = assets or eo_bands
@@ -83,10 +90,7 @@ class EOProduct(EOProductProtocol):
                 )
             },
             coords={},
-            attrs=dict(
-                self.item.properties,
-                id=self.item.id,
-            ),
+            attrs=dict(self.item.properties, id=self.item.id, _FillValue=nodataval),
         )
 
     def read_np_array(

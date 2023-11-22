@@ -38,12 +38,17 @@ bounds: [16, 46, 16.1, 46.1]
 process_parameters:
   resampling: bilinear
   target_height: 10
+  read_masks: true
   mask_config:
     # !! dicts with one entry cause a bug in mapchete
     footprint: true
     cloud_probability_threshold: 20
     cloud_probability_resolution: 20
     scl_classes: ["vegetation"]
+  custom_mask_config:
+    footprint: true
+    cloud_probability_threshold: 5
+    cloud_probability_resolution: 60
   # DEBUG: RGB + NIR for fun
   # assets: ["red", "green", "blue", "nir"]
   assets: ["red", "green", "blue"]

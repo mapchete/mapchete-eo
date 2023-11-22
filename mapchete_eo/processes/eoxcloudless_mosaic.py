@@ -28,13 +28,17 @@ def execute(
     resampling: str = "bilinear",
     nodata: Union[float, int, None] = 0.0,
     merge_products_by: str = "s2:datastrip_id",
+    read_masks: bool = False,
     mask_config: Union[MaskConfig, dict] = MaskConfig(cloud_probability_threshold=70),
+    custom_mask_config: Union[None, MaskConfig, dict] = None,
     from_brightness_extract_method: str = "median",
     from_brightness_average_over: int = 3,
     considered_bands: int = 3,
     target_date: Optional[DateTimeLike] = None,
 ) -> ma.MaskedArray:
     mask_config = parse_mask_config(mask_config)
+    if custom_mask_config is not None:
+        custom_mask_config = parse_mask_config(custom_mask_config)
 
     # clip geometry
     if "clip" in mp.params["input"]:
@@ -48,6 +52,21 @@ def execute(
     # Read all the data first and ideally just once
     # Masks reading should've been done while reading
     with mp.open("sentinel2") as mp_src:
+        # Read Masks separately with different mask_config
+        # for other/later use
+        if read_masks:
+            if custom_mask_config is None:
+                custom_mask_config = mask_config
+            logger.debug("Reading Sentinel-2 custom masks stack.")
+            with Timer() as t:
+                s2_custom_mask = mp_src.read_masks(
+                    mask_config=custom_mask_config,
+                    sort=TargetDateSort(target_date=target_date),
+                )
+            logger.debug(
+                f"Sentinel-2 custom masks stack {s2_custom_mask.shape}. read in {t}"
+            )
+
         logger.debug("Reading Sentinel-2 data stack.")
         with Timer() as t:
             s2_arr = mp_src.read_levelled_np_array(

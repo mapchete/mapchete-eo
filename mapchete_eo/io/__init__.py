@@ -9,6 +9,7 @@ from mapchete_eo.io.levelled_cubes import (
     read_levelled_cube_to_np_array,
     read_levelled_cube_to_xarray,
 )
+from mapchete_eo.io.masks import read_masks
 from mapchete_eo.io.path import get_product_cache_path, open_xml, path_in_paths
 from mapchete_eo.io.products import (
     merge_products,
@@ -30,6 +31,7 @@ __all__ = [
     "open_xml",
     "get_product_cache_path",
     "path_in_paths",
+    "read_masks",
     "read_mask_as_raster",
     "read_levelled_cube_to_np_array",
     "read_levelled_cube_to_xarray",

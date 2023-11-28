@@ -255,6 +255,29 @@ class InputTile(base.InputTile):
             ),
         )
 
+    def read_masks(
+        self,
+        start_time: Optional[DateTimeLike] = None,
+        end_time: Optional[DateTimeLike] = None,
+        timestamps: Optional[List[DateTimeLike]] = None,
+        time_pattern: Optional[str] = None,
+        nodatavals: NodataVals = None,
+        **kwargs,
+    ):
+        from mapchete_eo.platforms.sentinel2.masks import read_masks
+
+        return read_masks(
+            products=self.filter_products(
+                start_time=start_time,
+                end_time=end_time,
+                timestamps=timestamps,
+                time_pattern=time_pattern,
+            ),
+            grid=self.tile,
+            nodatavals=nodatavals,
+            product_read_kwargs=kwargs,
+        )
+
     def filter_products(
         self,
         start_time: Optional[DateTimeLike] = None,

@@ -86,6 +86,8 @@ class Sentinel2DriverConfig(BaseDriverConfig):
 class MaskConfig(BaseModel):
     # mask by footprint geometry
     footprint: bool = True
+    # add pixel buffer to all masks
+    buffer: int = 0
     # mask by L1C cloud types (either opaque, cirrus or all)
     l1c_cloud_type: Optional[CloudType] = None
     # mask using the snow/ice mask

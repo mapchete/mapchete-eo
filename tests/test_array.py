@@ -3,7 +3,13 @@ import pytest
 import xarray as xr
 from pytest_lazyfixture import lazy_fixture
 
+from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_dataarray, to_dataset, to_masked_array
+
+
+def test_buffer_array(test_2d_array):
+    buffered_arr = buffer_array(test_2d_array, buffer=4)
+    assert not np.in1d(test_2d_array, buffered_arr).all()
 
 
 def test_to_dataarray_2d(test_2d_array):

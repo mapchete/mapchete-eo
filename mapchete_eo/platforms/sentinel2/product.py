@@ -14,6 +14,7 @@ from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
+from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
@@ -408,6 +409,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False
                 )
+                _check_full(out)
+            if mask_config.buffer:
+                out = buffer_array(array=out, buffer=mask_config.buffer)
                 _check_full(out)
         except AllMasked:
             logger.debug(

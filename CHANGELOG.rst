@@ -2,6 +2,18 @@
 Changelog
 #########
 
+2023.11.0 - 2023-11-28
+----------------------
+
+* CI/CD
+    * use ```mapchete``` image tag ``2023.11.0`` with the same mapchete version
+
+* core
+  * add `read_masks` and `buffer_array` functions and tests to have more mask handling options
+
+* packaging
+    * bump ``mapchete`` to ``2023.11.0``
+
 2023.10.0 - 2023-10-20
 ----------------------
 

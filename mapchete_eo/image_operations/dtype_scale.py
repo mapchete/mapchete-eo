@@ -41,4 +41,4 @@ def dtype_scale(
                 max_output_value,
             ),
         ),
-    )
+    ).astype(out_dtype, copy=False)

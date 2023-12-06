@@ -37,8 +37,8 @@ from mapchete_eo.platforms.sentinel2.types import (
     ClassificationBandIndex,
     CloudType,
     L2ABand,
+    ProductMaskResolution,
     ProductQI,
-    ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
@@ -250,7 +250,7 @@ class S2Metadata:
                     product_qi_mask
                 )
             else:
-                for resolution in ProductQIMaskResolution:
+                for resolution in ProductMaskResolution:
                     out[
                         f"{product_qi_mask.name}-{resolution.name}"
                     ] = self.path_mapper.product_qi_mask(
@@ -337,7 +337,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
-        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+        from_resolution: ProductMaskResolution = ProductMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -356,7 +356,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
-        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+        from_resolution: ProductMaskResolution = ProductMaskResolution["60m"],
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]

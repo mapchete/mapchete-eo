@@ -28,7 +28,7 @@ from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     L2ABand,
-    ProductQIMaskResolution,
+    ProductMaskResolution,
     Resolution,
 )
 from mapchete_eo.product import EOProduct
@@ -296,7 +296,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
-        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
+        from_resolution: ProductMaskResolution = ProductMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
@@ -308,7 +308,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
-        from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
+        from_resolution: ProductMaskResolution = ProductMaskResolution["20m"],
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))

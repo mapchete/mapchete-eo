@@ -5,8 +5,8 @@ from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseli
 from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
     L2ABand,
+    ProductMaskResolution,
     ProductQI,
-    ProductQIMaskResolution,
 )
 
 
@@ -61,7 +61,7 @@ class SinergisePathMapper(S2PathMapper):
     def product_qi_mask(
         self,
         qi_mask: ProductQI,
-        resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
     ) -> MPath:
         """Determine product QI mask according to Sinergise bucket schema."""
         if self.processing_baseline.version < "04.00":
@@ -75,12 +75,12 @@ class SinergisePathMapper(S2PathMapper):
         return self.product_qi_mask(ProductQI.classification)
 
     def cloud_probability_mask(
-        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
     ) -> MPath:
         return self.product_qi_mask(ProductQI.cloud_probability, resolution=resolution)
 
     def snow_probability_mask(
-        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
+        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
     ) -> MPath:
         return self.product_qi_mask(ProductQI.snow_probability, resolution=resolution)
 

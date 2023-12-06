@@ -23,8 +23,8 @@ from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
     CloudType,
     L2ABand,
+    ProductMaskResolution,
     ProductQI,
-    ProductQIMaskResolution,
     Resolution,
     SunAngle,
     ViewAngle,
@@ -42,7 +42,7 @@ def test_xml_mapper(s2_l2a_metadata_xml):
         band = L2ABand.B01
 
         for qi_mask in ProductQI:
-            for resolution in ProductQIMaskResolution:
+            for resolution in ProductMaskResolution:
                 path = path_mapper.product_qi_mask(
                     qi_mask=qi_mask, resolution=resolution
                 )
@@ -69,7 +69,7 @@ def test_sinergise_mapper(tileinfo, baseline_version):
     path_mapper = SinergisePathMapper(tileinfo, baseline_version=baseline_version)
 
     for qi_mask in ProductQI:
-        for resolution in ProductQIMaskResolution:
+        for resolution in ProductMaskResolution:
             path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
             assert path.exists()
             if qi_mask != ProductQI.classification:
@@ -85,7 +85,7 @@ def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
     path_mapper = EarthSearchPathMapper(s2_l2a_earthsearch_xml_remote)
 
     for qi_mask in ProductQI:
-        for resolution in ProductQIMaskResolution:
+        for resolution in ProductMaskResolution:
             path = path_mapper.product_qi_mask(qi_mask=qi_mask, resolution=resolution)
             assert path.exists()
             if qi_mask != ProductQI.classification:
@@ -537,7 +537,7 @@ def test_from_stac_item_backwards(item):
 
     # see if paths exist on prior versions
     for qi_mask in ProductQI:
-        for resolution in ProductQIMaskResolution:
+        for resolution in ProductMaskResolution:
             path = s2_metadata.path_mapper.product_qi_mask(
                 qi_mask=qi_mask, resolution=resolution
             )

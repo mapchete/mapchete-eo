@@ -20,7 +20,7 @@ precommit:
 build:
   stage: build
   tags:
-    - docker
+    - podman
   artifacts:
     paths:
       - dist/
@@ -33,7 +33,7 @@ build:
 test_wheel_base_image:
   stage: test
   tags:
-    - docker
+    - podman
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -63,7 +63,7 @@ test_wheel_base_image:
 test_tar_base_image:
   stage: test
   tags:
-    - docker
+    - podman
   timeout: 30m
   variables:
     MAPCHETE_IO_RETRY_DELAY: 2
@@ -92,7 +92,7 @@ test_tar_base_image:
 package:
   stage: package
   tags:
-    - docker
+    - podman
   before_script:
     - pip install --upgrade hatch
   script:

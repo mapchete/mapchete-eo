@@ -6,8 +6,8 @@ from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseli
 from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
     L2ABand,
-    ProductMaskResolution,
     ProductQI,
+    ProductQIMaskResolution,
 )
 
 
@@ -28,7 +28,7 @@ class S2PathMapper(ABC):
     def product_qi_mask(
         self,
         qi_mask: ProductQI,
-        resolution: ProductMaskResolution = ProductMaskResolution["60m"],
+        resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
     ) -> MPath:
         ...
 
@@ -38,13 +38,13 @@ class S2PathMapper(ABC):
 
     @abstractmethod
     def cloud_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         ...
 
     @abstractmethod
     def snow_probability_mask(
-        self, resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
     ) -> MPath:
         ...
 

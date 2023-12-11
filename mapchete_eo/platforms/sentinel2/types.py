@@ -12,8 +12,8 @@ Resolution = Enum(
 )
 
 
-ProductMaskResolution = Enum(
-    "ProductMaskResolution",
+ProductQIMaskResolution = Enum(
+    "ProductQIMaskResolution",
     {
         "20m": 20,
         "60m": 60,

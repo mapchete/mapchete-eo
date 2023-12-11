@@ -13,7 +13,7 @@ from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProcessingLevel,
-    ProductMaskResolution,
+    ProductQIMaskResolution,
     Resolution,
     SceneClassification,
 )
@@ -94,10 +94,14 @@ class MaskConfig(BaseModel):
     snow_ice: bool = False
     # mask using cloud probability classification
     cloud_probability_threshold: int = 100
-    cloud_probability_resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    cloud_probability_resolution: ProductQIMaskResolution = ProductQIMaskResolution[
+        "60m"
+    ]
     # mask using cloud probability classification
     snow_probability_threshold: int = 100
-    snow_probability_resolution: ProductMaskResolution = ProductMaskResolution["60m"]
+    snow_probability_resolution: ProductQIMaskResolution = ProductQIMaskResolution[
+        "60m"
+    ]
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None
 

@@ -14,7 +14,6 @@ from mapchete_eo.types import DateTimeLike, NodataVals
 
 
 class EOProductProtocol(Protocol):
-    item: pystac.Item
     bounds: Bounds
     crs: CRS
     __geo_interface__: Optional[Dict[str, Any]]
@@ -48,6 +47,10 @@ class EOProductProtocol(Protocol):
         ...
 
     def get_property(self, property: str) -> Any:
+        ...
+
+    @property
+    def item(self) -> pystac.Item:
         ...
 
 

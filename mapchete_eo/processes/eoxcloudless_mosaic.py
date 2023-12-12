@@ -52,6 +52,11 @@ def execute(
     # Read all the data first and ideally just once
     # Masks reading should've been done while reading
     with mp.open("sentinel2") as mp_src:
+        from mapchete.pretty import pretty_bytes
+        from pympler.asizeof import asizeof
+
+        products = mp_src.products
+        logger.debug("HERBERT %s: %s", products, pretty_bytes(asizeof(products)))
         # Read Masks separately with different mask_config
         # for other/later use
         if read_masks:

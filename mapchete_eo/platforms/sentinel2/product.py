@@ -119,6 +119,7 @@ class Cache:
 
 class S2Product(EOProduct, EOProductProtocol):
     metadata: S2Metadata
+    item_dict: dict
     cache: Optional[Cache] = None
 
     def __init__(
@@ -127,13 +128,13 @@ class S2Product(EOProduct, EOProductProtocol):
         metadata: Optional[S2Metadata] = None,
         cache_config: Optional[CacheConfig] = None,
     ):
-        self.item = item
-        self.id = self.item.id
+        self.item_dict = item.to_dict()
+        self.id = item.id
 
-        self.metadata = metadata or S2Metadata.from_stac_item(self.item)
-        self.cache = Cache(self.item, cache_config) if cache_config else None
+        self.metadata = metadata or S2Metadata.from_stac_item(item)
+        self.cache = Cache(item, cache_config) if cache_config else None
 
-        self.__geo_interface__ = self.item.geometry
+        self.__geo_interface__ = item.geometry
         self.bounds = Bounds.from_inp(shape(self))
         self.crs = DEFAULT_CATALOG_CRS
 
@@ -157,7 +158,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return s2product
 
     def __repr__(self):
-        return f"<S2Product product_id={self.item.id}>"
+        return f"<S2Product product_id={self.id}>"
 
     def read_np_array(
         self,

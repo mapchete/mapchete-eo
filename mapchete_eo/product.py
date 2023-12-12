@@ -29,13 +29,17 @@ class EOProduct(EOProductProtocol):
     default_dtype: DTypeLike = np.uint16
 
     def __init__(self, item: pystac.Item):
-        self.item = item
+        self.item_dict = item.to_dict()
         self.__geo_interface__ = self.item.geometry
         self.bounds = Bounds.from_inp(shape(self))
         self.crs = DEFAULT_CATALOG_CRS
 
     def __repr__(self):
         return f"<EOProduct product_id={self.item.id}>"
+
+    @property
+    def item(self) -> pystac.Item:
+        return pystac.Item.from_dict(self.item_dict)
 
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:

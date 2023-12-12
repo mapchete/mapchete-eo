@@ -7,7 +7,7 @@ from scipy.ndimage import binary_dilation
 
 
 def buffer_array(
-    array: ma.MaskedArray, buffer: int = 0, out_array_dtype: Optional[DTypeLike] = None
+    array: np.ndarray, buffer: int = 0, out_array_dtype: Optional[DTypeLike] = None
 ):
     if out_array_dtype is None:
         out_array_dtype = array.dtype

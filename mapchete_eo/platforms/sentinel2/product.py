@@ -31,9 +31,9 @@ from mapchete_eo.platforms.sentinel2.types import (
     ProductQIMaskResolution,
     Resolution,
 )
-from mapchete_eo.product import EOProduct
+from mapchete_eo.product import EOProduct, add_to_blacklist
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
-from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import Grid, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class S2Product(EOProduct, EOProductProtocol):
 
         self.__geo_interface__ = item.geometry
         self.bounds = Bounds.from_inp(shape(self))
-        self.crs = DEFAULT_CATALOG_CRS
+        self.crs = mapchete_eo_settings.default_catalog_crs
 
     @classmethod
     def from_stac_item(
@@ -146,7 +146,14 @@ class S2Product(EOProduct, EOProductProtocol):
         cache_all: bool = False,
         **kwargs,
     ) -> S2Product:
-        s2product = S2Product(item, cache_config=cache_config)
+        try:
+            s2product = S2Product(item, cache_config=cache_config)
+        except Exception:
+            if mapchete_eo_settings.blacklist:
+                item_path = item.get_self_href()
+                logger.debug("add item path %s to blacklist", item_path)
+                add_to_blacklist(item_path)
+            raise
 
         if cache_all:
             # cache assets if configured

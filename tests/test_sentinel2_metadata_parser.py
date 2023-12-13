@@ -627,3 +627,9 @@ def test_full_remote_product_paths(item):
     metadata = S2Metadata.from_stac_item(item)
     for path in metadata.assets.values():
         assert path.exists()
+
+
+@pytest.mark.remote
+def test_broken_metadata_xml(s2_l2a_earthsearch_xml_remote_broken):
+    with pytest.raises(Exception):
+        S2Metadata.from_metadata_xml(s2_l2a_earthsearch_xml_remote_broken)

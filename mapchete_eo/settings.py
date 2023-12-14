@@ -1,14 +1,8 @@
-import os
 from typing import Optional
 
 from mapchete.path import MPath, MPathLike
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rasterio.crs import CRS
-
-DEFAULT_CACHE_LOCATION: MPath = MPath(
-    os.environ.get("MP_EO_DEFAULT_CACHE_LOCATION", "s3://eox-mhub-cache/")
-)
-DEFAULT_CATALOG_CRS: CRS = CRS.from_epsg(4326)
 
 
 class Settings(BaseSettings):

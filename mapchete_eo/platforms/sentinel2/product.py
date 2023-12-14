@@ -31,7 +31,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     ProductQIMaskResolution,
     Resolution,
 )
-from mapchete_eo.product import EOProduct, add_to_blacklist
+from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import Grid, NodataVals
@@ -146,14 +146,7 @@ class S2Product(EOProduct, EOProductProtocol):
         cache_all: bool = False,
         **kwargs,
     ) -> S2Product:
-        try:
-            s2product = S2Product(item, cache_config=cache_config)
-        except Exception:
-            if mapchete_eo_settings.blacklist:
-                item_path = item.get_self_href()
-                logger.debug("add item path %s to blacklist", item_path)
-                add_to_blacklist(item_path)
-            raise
+        s2product = S2Product(item, cache_config=cache_config)
 
         if cache_all:
             # cache assets if configured

@@ -4,7 +4,7 @@ from rasterio.enums import Resampling
 
 from mapchete_eo import base
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
-from mapchete_eo.platforms.sentinel2.product import S2Product
+from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.types import MergeMethod, NodataVal
 
 METADATA: dict = {
@@ -25,6 +25,6 @@ class InputTile(base.InputTile):
 
 class InputData(base.InputData):
     # Sentinel-2 driver specific parameters:
-    default_product_cls = S2Product
+    default_preprocessing_task = staticmethod(parse_s2_product)
     driver_config_model = Sentinel2DriverConfig
     input_tile_cls = InputTile

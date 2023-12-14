@@ -57,3 +57,7 @@ class AllMasked(Exception):
 
 class NoSourceProducts(MapcheteNodataTile, ValueError):
     """Raised when no products are available."""
+
+
+class CorruptedProductMetadata(Exception):
+    """Raised when EOProduct cannot be parsed due to a metadata issue."""

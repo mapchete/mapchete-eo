@@ -4,6 +4,7 @@ from typing import Iterator, List, Optional
 import numpy as np
 from fiona.transform import transform
 from mapchete import Timer
+from mapchete.io.profiles import COGDeflateProfile
 
 from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array
 from mapchete_eo.brdf.config import BRDFModels
@@ -71,6 +72,7 @@ def correction_grid(
         transform=s2_metadata.transform(resolution),
         crs=s2_metadata.crs,
         bounds=s2_metadata.bounds,
+        driver="COG",
     )
 
 

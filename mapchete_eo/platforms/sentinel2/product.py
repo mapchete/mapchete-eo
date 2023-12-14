@@ -33,7 +33,7 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
-from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import Grid, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class S2Product(EOProduct, EOProductProtocol):
 
         self.__geo_interface__ = item.geometry
         self.bounds = Bounds.from_inp(shape(self))
-        self.crs = DEFAULT_CATALOG_CRS
+        self.crs = mapchete_eo_settings.default_catalog_crs
 
     @classmethod
     def from_stac_item(

@@ -326,6 +326,15 @@ def s2_l2a_earthsearch_xml_remote():
 
 
 @pytest.mark.remote
+@pytest.fixture()
+def s2_l2a_earthsearch_xml_remote_broken():
+    """Metadata used by Earth-Search V1 endpoint"""
+    return MPath(
+        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/21/N/TD/2023/6/S2A_21NTD_20230604_0_L2A/granule_metadata.xml"
+    )
+
+
+@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote(s2_l2a_earthsearch_remote_item):
     """Metadata used by Earth-Search V1 endpoint"""

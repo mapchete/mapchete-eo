@@ -1,6 +1,6 @@
 import logging
 from functools import cached_property
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPathLike
@@ -11,8 +11,10 @@ from pystac_client import Client
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import StacSearchConfig
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 class STACSearchCatalog(Catalog):
     endpoint: str
+    blacklist: Set[str] = (
+        blacklist_products(mapchete_eo_settings.blacklist)
+        if mapchete_eo_settings.blacklist
+        else set()
+    )
 
     def __init__(
         self,
@@ -72,7 +79,14 @@ class STACSearchCatalog(Catalog):
                     searches = (search,)
 
                 for search in searches:
-                    yield from search.items()
+                    for item in search.items():
+                        item_path = item.get_self_href()
+                        if item_path in self.blacklist:  # pragma: no cover
+                            logger.debug(
+                                "item %s found in blacklist and skipping", item_path
+                            )
+                        else:
+                            yield item
 
         return IndexedFeatures(_get_items())
 

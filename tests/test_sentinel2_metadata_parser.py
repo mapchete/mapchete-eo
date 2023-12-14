@@ -11,7 +11,7 @@ from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
-from mapchete_eo.exceptions import MissingAsset
+from mapchete_eo.exceptions import CorruptedProductMetadata, MissingAsset
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
     EarthSearchPathMapper,
@@ -627,3 +627,9 @@ def test_full_remote_product_paths(item):
     metadata = S2Metadata.from_stac_item(item)
     for path in metadata.assets.values():
         assert path.exists()
+
+
+@pytest.mark.remote
+def test_broken_metadata_xml(s2_l2a_earthsearch_xml_remote_broken):
+    with pytest.raises(CorruptedProductMetadata):
+        S2Metadata.from_metadata_xml(s2_l2a_earthsearch_xml_remote_broken)

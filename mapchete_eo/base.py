@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Any, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Type, Union
 
 import croniter
 import numpy.ma as ma
@@ -17,7 +17,7 @@ from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
-from mapchete_eo.exceptions import PreprocessingNotFinished
+from mapchete_eo.exceptions import CorruptedProductMetadata, PreprocessingNotFinished
 from mapchete_eo.io import (
     products_to_np_array,
     products_to_xarray,
@@ -27,7 +27,7 @@ from mapchete_eo.io import (
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.search.stac_static import STACStaticCatalog
-from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.time import to_datetime
 from mapchete_eo.types import (
@@ -82,11 +82,23 @@ class InputTile(base.InputTile):
             if not self.preprocessing_tasks_results:
                 raise ValueError("no preprocessing results available")
             return IndexedFeatures(
-                self.preprocessing_tasks_results.values(), crs=self.tile.crs
+                [
+                    item
+                    for item in self.preprocessing_tasks_results.values()
+                    if not isinstance(item, CorruptedProductMetadata)
+                ],
+                crs=self.tile.crs,
             )
 
         # just return the prouducts as is
-        return IndexedFeatures(self._products, crs=self.tile.crs)
+        return IndexedFeatures(
+            [
+                item
+                for item in self._products
+                if not isinstance(item, CorruptedProductMetadata)
+            ],
+            crs=self.tile.crs,
+        )
 
     def read(
         self,
@@ -349,7 +361,7 @@ class InputTile(base.InputTile):
 
 
 class InputData(base.InputData):
-    default_product_cls = EOProduct
+    default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig
     archive: Archive
@@ -390,7 +402,9 @@ class InputData(base.InputData):
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=input_params["conf_dir"]
                     ),
-                    bounds=self.bbox(out_crs=DEFAULT_CATALOG_CRS).bounds,
+                    bounds=self.bbox(
+                        out_crs=mapchete_eo_settings.default_catalog_crs
+                    ).bounds,
                     time=self.time,
                 )
             )
@@ -403,12 +417,14 @@ class InputData(base.InputData):
 
         for item in self.archive.catalog.items:
             self.add_preprocessing_task(
-                self.default_product_cls.from_stac_item,
+                self.default_preprocessing_task,
                 fargs=(item,),
                 fkwargs=dict(cache_config=self.params.cache, cache_all=True),
                 key=item.id,
                 geometry=reproject_geometry(
-                    item.geometry, src_crs=DEFAULT_CATALOG_CRS, dst_crs=self.crs
+                    item.geometry,
+                    src_crs=mapchete_eo_settings.default_catalog_crs,
+                    dst_crs=self.crs,
                 ),
             )
 
@@ -439,6 +455,7 @@ class InputData(base.InputData):
                 [
                     self.get_preprocessing_task_result(item.id)
                     for item in self.archive.catalog.items
+                    if not isinstance(item, CorruptedProductMetadata)
                 ],
                 crs=self.crs,
             )

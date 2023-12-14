@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Set, Union
 
 import numpy as np
 import numpy.ma as ma
 import pystac
 import xarray as xr
 from mapchete import Timer
+from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from numpy.typing import DTypeLike
 from rasterio.enums import Resampling
@@ -17,7 +18,7 @@ from shapely.geometry import shape
 from mapchete_eo.array.convert import to_dataarray
 from mapchete_eo.io import get_item_property, item_to_np_array
 from mapchete_eo.protocols import EOProductProtocol, GridProtocol
-from mapchete_eo.settings import DEFAULT_CATALOG_CRS
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import BandLocation, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class EOProduct(EOProductProtocol):
         self.item_dict = item.to_dict()
         self.__geo_interface__ = self.item.geometry
         self.bounds = Bounds.from_inp(shape(self))
-        self.crs = DEFAULT_CATALOG_CRS
+        self.crs = mapchete_eo_settings.default_catalog_crs
 
     def __repr__(self):
         return f"<EOProduct product_id={self.item.id}>"
@@ -192,3 +193,32 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
                 )
 
     return [mapping[eo_band][0] for eo_band in eo_bands]
+
+
+def add_to_blacklist(path: MPathLike, blacklist: Optional[MPath] = None) -> None:
+    blacklist = blacklist or mapchete_eo_settings.blacklist
+    if blacklist is None:
+        raise ValueError("no blacklist is defined")
+    blacklist = MPath.from_inp(blacklist)
+
+    path = MPath.from_inp(path)
+
+    try:
+        with blacklist.open("a") as dst:
+            dst.write(f"{path}\n")
+    except FileNotFoundError:
+        with blacklist.open("w") as dst:
+            dst.write(f"{path}\n")
+
+
+def blacklist_products(blacklist: Optional[MPath] = None) -> Set[str]:
+    blacklist = blacklist or mapchete_eo_settings.blacklist
+    if blacklist is None:
+        raise ValueError("no blacklist is defined")
+    blacklist = MPath.from_inp(blacklist)
+
+    try:
+        with blacklist.open("r") as src:
+            return set(src.read().splitlines())
+    except FileNotFoundError:
+        return set()

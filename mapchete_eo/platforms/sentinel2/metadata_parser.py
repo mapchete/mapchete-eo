@@ -7,6 +7,7 @@ import logging
 import xml.etree.ElementTree as etree
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
+from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
 import numpy.ma as ma
@@ -26,7 +27,7 @@ from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
 
 from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.exceptions import MissingAsset
+from mapchete_eo.exceptions import CorruptedProductMetadata, MissingAsset
 from mapchete_eo.io import open_xml, read_mask_as_raster
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
@@ -47,6 +48,13 @@ from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
+
+
+def open_granule_metadata_xml(metadata_xml: MPath) -> Element:
+    try:
+        return open_xml(metadata_xml)
+    except ParseError as exc:
+        raise CorruptedProductMetadata(exc)
 
 
 def s2metadata_from_stac_item(
@@ -158,7 +166,7 @@ class S2Metadata:
         **kwargs,
     ) -> "S2Metadata":
         metadata_xml = MPath.from_inp(metadata_xml, **kwargs)
-        xml_root = open_xml(metadata_xml)
+        xml_root = open_granule_metadata_xml(metadata_xml)
         if path_mapper is None:
             # guess correct path mapper
             path_mapper = cls.path_mapper_guesser(
@@ -191,7 +199,7 @@ class S2Metadata:
     @cached_property
     def xml_root(self):
         if self._cached_xml_root is None:  # pragma: no cover
-            self._cached_xml_root = open_xml(self.metadata_xml)
+            self._cached_xml_root = open_granule_metadata_xml(self.metadata_xml)
         return self._cached_xml_root
 
     @cached_property

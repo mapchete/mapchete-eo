@@ -5,11 +5,11 @@ import numpy as np
 from fiona.transform import transform
 from mapchete import Timer
 from mapchete.io.profiles import COGDeflateProfile
+from mapchete.io.raster import ReferencedRaster
 
 from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array
 from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.exceptions import BRDFError
-from mapchete_eo.io.mapchete_io_raster import ReferencedRaster
 from mapchete_eo.platforms.sentinel2.config import L2ABandFParams
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (

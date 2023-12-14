@@ -9,19 +9,17 @@ import pystac
 from affine import Affine
 from mapchete import Timer
 from mapchete.io import copy, fiona_open, rasterio_open
-from mapchete.io.raster import ReferencedRaster
+from mapchete.io.raster import ReferencedRaster, read_raster, resample_from_array
 from mapchete.path import MPath
+from mapchete.protocols import GridProtocol
 from numpy.typing import DTypeLike
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 
-from mapchete_eo.array.resampling import resample_array
-from mapchete_eo.io.mapchete_io_raster import read_raster
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
-from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import Grid, NodataVal
 
 logger = logging.getLogger(__name__)
@@ -349,7 +347,9 @@ def read_mask_as_raster(
         # TODO: this can be replaced by using the updated mapchete.io.raster.read_raster_window()
         # function which will be able to handle the GridProtocol.
         if dst_grid:
-            arr = resample_array(mask, dst_grid, resampling=resampling)
+            arr = resample_from_array(
+                mask, out_grid=dst_grid, resampling=resampling, keep_2d=True
+            )
             mask = ReferencedRaster(
                 arr if masked else arr.data,
                 transform=dst_grid.transform,

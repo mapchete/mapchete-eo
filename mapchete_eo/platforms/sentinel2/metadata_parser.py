@@ -15,8 +15,9 @@ import pystac
 from affine import Affine
 from fiona.transform import transform_geom
 from mapchete import Timer
-from mapchete.io.raster import ReferencedRaster
+from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.path import MPath
+from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
@@ -26,7 +27,6 @@ from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
 
-from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.exceptions import CorruptedProductMetadata, MissingAsset
 from mapchete_eo.io import open_xml, read_mask_as_raster
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
@@ -44,7 +44,6 @@ from mapchete_eo.platforms.sentinel2.types import (
     SunAngle,
     ViewAngle,
 )
-from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
@@ -512,11 +511,12 @@ class S2Metadata:
                     )
                 )
                 # resample detector angles to output resolution
-                detector_angle = resample_array(
+                detector_angle = resample_from_array(
                     detector_angles_raster,
                     nodata=0,
-                    grid=self.grid(resolution),
+                    out_grid=self.grid(resolution),
                     resampling=resampling,
+                    keep_2d=True,
                 )
                 # select pixels which are covered by detector
                 detector_mask = np.where(

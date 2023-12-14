@@ -4,11 +4,12 @@ from typing import List, Optional
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
+from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import to_dataset, to_masked_array
 from mapchete_eo.io.products import generate_slices
-from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.types import MergeMethod, NodataVals
 

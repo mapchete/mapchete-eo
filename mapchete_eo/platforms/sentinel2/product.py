@@ -65,7 +65,7 @@ class Cache:
         try:
             self._existing_files = self.path.ls()
         except FileNotFoundError:
-            self._existing_files = []
+            self._existing_files = None
 
     def __repr__(self):
         return f"<Cache: product={self.item.id}, path={self.path}>"

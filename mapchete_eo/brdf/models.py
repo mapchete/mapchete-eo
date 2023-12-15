@@ -3,14 +3,13 @@ from typing import Tuple
 
 import numpy as np
 import numpy.ma as ma
-from mapchete.io.raster import ReferencedRaster
+from mapchete.io.raster import ReferencedRaster, resample_from_array
+from mapchete.protocols import GridProtocol
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 
-from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.brdf.config import BRDFModels
-from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
@@ -276,11 +275,12 @@ def get_brdf_param(
     # create output array
     model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float32), 0)
 
-    resampled_detector_footprints = resample_array(
+    resampled_detector_footprints = resample_from_array(
         detector_footprints,
-        grid=grid,
+        out_grid=grid,
         nodata=0,
         resampling=Resampling.nearest,
+        keep_2d=True,
     )
     # make sure detector footprints are 2D
     if resampled_detector_footprints.ndim not in [2, 3]:
@@ -334,13 +334,14 @@ def get_brdf_param(
         )
 
         # resample model to output resolution
-        detector_brdf = resample_array(
+        detector_brdf = resample_from_array(
             detector_brdf_param,
-            grid=grid,
-            in_transform=viewing_zenith[detector_id]["raster"].transform,
+            out_grid=grid,
+            array_transform=viewing_zenith[detector_id]["raster"].transform,
             in_crs=product_crs,
             nodata=0,
             resampling=Resampling.bilinear,
+            keep_2d=True,
         )
         # merge detector stripes
         model_params[detector_mask] = detector_brdf[detector_mask]

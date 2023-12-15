@@ -6,20 +6,19 @@ from typing import List, Optional, Union
 import numpy as np
 import numpy.ma as ma
 import pystac
-from mapchete.io.raster import ReferencedRaster
+from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_from_array
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
+from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
 from mapchete_eo.array.buffer import buffer_array
-from mapchete_eo.array.resampling import resample_array
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import AllMasked, EmptyProductException
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
-from mapchete_eo.io.mapchete_io_raster import read_raster_window
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
@@ -32,7 +31,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     Resolution,
 )
 from mapchete_eo.product import EOProduct
-from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import Grid, NodataVals
 
@@ -268,15 +267,16 @@ class S2Product(EOProduct, EOProductProtocol):
                 resampling=resampling,
             )
         # calculate on the fly
-        return resample_array(
+        return resample_from_array(
             correction_grid(
                 self.metadata,
                 band,
                 model=brdf_config.model,
                 resolution=brdf_config.resolution,
             ),
-            grid=grid,
+            out_grid=grid,
             resampling=resampling,
+            keep_2d=True,
         )
 
     def read_l1c_cloud_mask(

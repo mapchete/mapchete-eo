@@ -7,6 +7,7 @@ import numpy as np
 import numpy.ma as ma
 import xarray as xr
 from mapchete.config import get_hash
+from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
@@ -16,7 +17,7 @@ from mapchete_eo.exceptions import (
     NoSourceProducts,
 )
 from mapchete_eo.io.items import get_item_property
-from mapchete_eo.protocols import EOProductProtocol, GridProtocol
+from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig
 from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
 

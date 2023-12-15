@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Protocol
 
 import numpy.ma as ma
 import pystac
 import xarray as xr
 from affine import Affine
+from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
@@ -52,15 +53,6 @@ class EOProductProtocol(Protocol):
     @property
     def item(self) -> pystac.Item:
         ...
-
-
-class GridProtocol(Protocol):
-    transform: Affine
-    width: int
-    height: int
-    shape: Tuple[int, int]
-    bounds: Bounds
-    crs: CRS
 
 
 class DateTimeProtocol(Protocol):

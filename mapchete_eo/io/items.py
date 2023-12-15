@@ -3,11 +3,11 @@ from typing import Any, List, Optional
 
 import numpy.ma as ma
 import pystac
+from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
 
 from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.io.assets import asset_to_np_array
-from mapchete_eo.protocols import GridProtocol
 from mapchete_eo.types import BandLocation, NodataVals
 
 logger = logging.getLogger(__name__)

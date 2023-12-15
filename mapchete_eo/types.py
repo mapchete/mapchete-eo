@@ -1,10 +1,10 @@
 import datetime
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Union
 
 from affine import Affine
-from mapchete.types import Bounds
+from mapchete.types import Bounds, Grid, NodataVal, NodataVals
 from rasterio.crs import CRS
 from rasterio.transform import array_bounds
 from tilematrix import Shape
@@ -22,38 +22,8 @@ class MergeMethod(str, Enum):
     average = "average"
 
 
-NodataVal = Optional[float]
-NodataVals = Union[List[NodataVal], NodataVal]
 DateLike = Union[str, datetime.date]
 DateTimeLike = Union[DateLike, datetime.datetime]
-
-
-class Grid:
-    def __init__(self, transform: Affine, height: int, width: int, crs: CRS):
-        self.transform = transform
-        self.height = height
-        self.width = width
-        self.crs = crs
-        self.bounds = Bounds(*array_bounds(self.height, self.width, self.transform))
-        self.shape = Shape(self.height, self.width)
-
-    @staticmethod
-    def from_obj(obj):
-        if hasattr(obj, "transform"):
-            transform = obj.transform
-        else:
-            transform = obj.affine
-        return Grid(transform, obj.height, obj.width, obj.crs)
-
-    def to_dict(self):
-        return dict(
-            transform=self.transform,
-            height=self.height,
-            width=self.width,
-            crs=self.crs,
-            bounds=self.bounds,
-            shape=self.shape,
-        )
 
 
 @dataclass

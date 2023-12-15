@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2023.12.3 - 2023-12-15
+----------------------
+
+NOTE: no code changes here, just added missing changelog entries for 2023.12.2
+
+* core
+
+  * fixed S3 cache
+  * enable product blacklist
+  * lazily generate `pystac.Item` when preprocessing to save memory
+
+
 2023.12.2 - 2023-12-15
 ----------------------
 

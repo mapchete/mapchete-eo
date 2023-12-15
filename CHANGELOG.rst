@@ -2,6 +2,15 @@
 Changelog
 #########
 
+
+2023.12.2 - 2023-12-15
+----------------------
+
+* core
+
+  * use `GridProtocol`, `Grid` and resampling functions from mapchete core package
+
+
 2023.12.1 - 2023-12-11
 ----------------------
 

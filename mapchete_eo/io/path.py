@@ -12,7 +12,7 @@ from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
 from mapchete.path import MPath
 from mapchete.settings import IORetrySettings
-from retry import retry
+from tenacity import retry
 
 logger = logging.getLogger(__name__)
 

@@ -25,7 +25,7 @@ dependencies = [
     "click",
     "croniter",
     "lxml",
-    "mapchete>2023.12.2",
+    "mapchete>=2024.1.0",
     "opencv-python",
     "orgonite",
     "Pillow",
@@ -34,7 +34,7 @@ dependencies = [
     "pystac-client>=0.7.5",
     "rtree",
     "scipy",
-    "tenacity",
+    "retry",
     "tqdm",
     "xarray",
 ]

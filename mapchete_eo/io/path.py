@@ -22,8 +22,7 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 
 @retry(
     logger=logger,
-    exceptions=(TimeoutError, FSTimeoutError),
-    **dict(IORetrySettings()),
+    **dict(IORetrySettings(exceptions=(TimeoutError, FSTimeoutError))),
 )
 def open_xml(path: MPath) -> Element:
     """Parse an XML file path into an etree root element."""

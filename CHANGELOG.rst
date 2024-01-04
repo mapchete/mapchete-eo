@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+2024.1.0 - 2024-01-04
+----------------------
+* CI/CD
+  * use `mapchete` image tag `2024.1.0`
+
+* core
+  * align `retry` args to match latest mapchete release
+
+* packaging
+  * bump `mapchete` to `2024.1.0`  
+
 2023.12.3 - 2023-12-15
 ----------------------
 

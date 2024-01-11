@@ -3,8 +3,17 @@ Changelog
 #########
 
 
+2024.1.1 - 2024-01-11
+---------------------
+* CI/CD
+  * use `privileged` tag for codecheck stage
+
+* core
+  * also retry on `ServerDisconnectedError` in `io.open_xml`
+
+
 2024.1.0 - 2024-01-04
-----------------------
+---------------------
 * CI/CD
   * use `mapchete` image tag `2024.1.0`
 
@@ -13,6 +22,7 @@ Changelog
 
 * packaging
   * bump `mapchete` to `2024.1.0`  
+
 
 2023.12.3 - 2023-12-15
 ----------------------

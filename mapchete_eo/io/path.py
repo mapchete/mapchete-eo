@@ -8,6 +8,7 @@ from xml.etree.ElementTree import Element
 
 import fsspec
 import pystac
+from aiohttp.client_exceptions import ServerDisconnectedError
 from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
 from mapchete.path import MPath
@@ -22,7 +23,11 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 
 @retry(
     logger=logger,
-    **dict(IORetrySettings(exceptions=(TimeoutError, FSTimeoutError))),
+    **dict(
+        IORetrySettings(
+            exceptions=(TimeoutError, FSTimeoutError, ServerDisconnectedError)
+        )
+    ),
 )
 def open_xml(path: MPath) -> Element:
     """Parse an XML file path into an etree root element."""

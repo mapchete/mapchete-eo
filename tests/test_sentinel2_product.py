@@ -9,7 +9,11 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 
-from mapchete_eo.exceptions import EmptyProductException
+from mapchete_eo.exceptions import (
+    CorruptedProduct,
+    EmptyProductException,
+    EmptyStackException,
+)
 from mapchete_eo.io import read_levelled_cube_to_np_array, read_levelled_cube_to_xarray
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
@@ -260,6 +264,15 @@ def test_read_brdf(s2_stac_item_half_footprint):
         assert (uncorrected[asset] != corrected[asset]).any()
 
 
+@pytest.mark.remote
+def test_read_broken_product(stac_item_missing_detector_footprints):
+    assets = ["blue"]
+    product = S2Product(stac_item_missing_detector_footprints)
+    tile = _get_product_tile(product, metatiling=2)
+    with pytest.raises(CorruptedProduct):
+        product.read(assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets))
+
+
 def test_read_empty_raise(s2_stac_item_half_footprint):
     assets = ["red"]
     product = S2Product(s2_stac_item_half_footprint)
@@ -391,3 +404,20 @@ def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
     layers = list(range(target_height))
     for lower, higher in zip(layers[:-1], layers[1:]):
         assert arr[lower].mask.sum() <= arr[higher].mask.sum()
+
+
+@pytest.mark.remote
+def test_read_levelled_cube_broken_slice(stac_item_missing_detector_footprints):
+    assets = ["blue"]
+    target_height = 5
+    product = S2Product.from_stac_item(stac_item_missing_detector_footprints)
+    # stack will be empty because the only slice is broken
+    with pytest.raises(EmptyStackException):
+        read_levelled_cube_to_np_array(
+            products=[product],
+            target_height=target_height,
+            assets=assets,
+            grid=_get_product_tile(product, metatiling=2),
+            merge_products_by="s2:datastrip_id",
+            product_read_kwargs=dict(brdf_config=BRDFConfig(bands=assets)),
+        )

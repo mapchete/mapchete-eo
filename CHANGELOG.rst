@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2024.1.2 - 2024-01-11
+---------------------
+
+* core
+  * don't raise exception if no preprocessing tasks are available
+
 
 2024.1.1 - 2024-01-11
 ---------------------

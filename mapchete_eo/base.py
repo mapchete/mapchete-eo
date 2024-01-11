@@ -79,8 +79,6 @@ class InputTile(base.InputTile):
     def products(self) -> IndexedFeatures[EOProductProtocol]:
         # during task graph processing, the products have to be fetched as preprocessing task results
         if self._products is None:  # pragma: no cover
-            if not self.preprocessing_tasks_results:
-                raise ValueError("no preprocessing results available")
             return IndexedFeatures(
                 [
                     item

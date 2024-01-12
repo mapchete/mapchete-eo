@@ -17,7 +17,12 @@ from shapely.geometry import shape
 
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
-from mapchete_eo.exceptions import AllMasked, EmptyProductException
+from mapchete_eo.exceptions import (
+    AllMasked,
+    AssetError,
+    CorruptedProduct,
+    EmptyProductException,
+)
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
@@ -30,7 +35,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     ProductQIMaskResolution,
     Resolution,
 )
-from mapchete_eo.product import EOProduct
+from mapchete_eo.product import EOProduct, add_to_blacklist
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import Grid, NodataVals
@@ -259,25 +264,31 @@ class S2Product(EOProduct, EOProductProtocol):
             if isinstance(grid, Resolution)
             else Grid.from_obj(grid)
         )
-        # read cached file if configured
-        if self.cache:
-            return read_raster_window(
-                self.cache.get_brdf_grid(band),
-                grid=grid,
+        try:
+            # read cached file if configured
+            if self.cache:
+                return read_raster_window(
+                    self.cache.get_brdf_grid(band),
+                    grid=grid,
+                    resampling=resampling,
+                )
+            # calculate on the fly
+            return resample_from_array(
+                correction_grid(
+                    self.metadata,
+                    band,
+                    model=brdf_config.model,
+                    resolution=brdf_config.resolution,
+                ),
+                out_grid=grid,
                 resampling=resampling,
+                keep_2d=True,
             )
-        # calculate on the fly
-        return resample_from_array(
-            correction_grid(
-                self.metadata,
-                band,
-                model=brdf_config.model,
-                resolution=brdf_config.resolution,
-            ),
-            out_grid=grid,
-            resampling=resampling,
-            keep_2d=True,
-        )
+        except AssetError as exc:
+            error_msg = f"product {self.item.get_self_href()} is corrupted: {exc}"
+            logger.error(error_msg)
+            add_to_blacklist(self.item.get_self_href())
+            raise CorruptedProduct(error_msg)
 
     def read_l1c_cloud_mask(
         self,

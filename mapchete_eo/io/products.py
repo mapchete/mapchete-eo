@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Iterator, List, Optional
+from typing import Any, Generator, Iterator, List, Optional
 
 import numpy as np
 import numpy.ma as ma
@@ -12,6 +12,8 @@ from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import (
+    CorruptedProduct,
+    CorruptedSlice,
     EmptySliceException,
     EmptyStackException,
     NoSourceProducts,
@@ -19,7 +21,7 @@ from mapchete_eo.exceptions import (
 from mapchete_eo.io.items import get_item_property
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig
-from mapchete_eo.types import MergeMethod, NodataVal, NodataVals
+from mapchete_eo.types import MergeMethod, NodataVals
 
 logger = logging.getLogger(__name__)
 
@@ -198,23 +200,39 @@ def merge_products(
     """
     Merge given products into one array.
     """
+
+    def read_remaining_valid_products(
+        products_iter: Iterator[EOProductProtocol], product_read_kwargs: dict
+    ) -> Generator[ma.MaskedArray, None, None]:
+        """Yields and reads remaining products from iterator while discarding corrupt products."""
+        for product in products_iter:
+            try:
+                yield product.read_np_array(**product_read_kwargs)
+            except CorruptedProduct:
+                pass
+
     if len(products) == 0:  # pragma: no cover
         raise NoSourceProducts("no products to merge")
 
     # we need to deactivate raising the EmptyProductException
     product_read_kwargs.update(raise_empty=False)
 
-    # read first product
-    out = products[0].read_np_array(**product_read_kwargs)
+    products_iter = iter(products)
 
-    # nothing to merge here
-    if len(products) == 1:
-        pass
+    # read first valid product
+    for product in products_iter:
+        try:
+            out = product.read_np_array(**product_read_kwargs)
+            break
+        except CorruptedProduct:
+            pass
+    else:
+        # we cannot do anything here, as all products are broken
+        raise CorruptedSlice("all products are broken here")
 
     # fill in gaps sequentially, product by product
-    elif merge_method == MergeMethod.first:
-        for product in products[1:]:
-            new = product.read_np_array(**product_read_kwargs)
+    if merge_method == MergeMethod.first:
+        for new in read_remaining_valid_products(products_iter, product_read_kwargs):
             out[~out.mask] = new[~out.mask]
             out.mask[~out.mask] = new.mask[~out.mask]
             # if whole output array is filled, there is no point in reading more data
@@ -223,19 +241,16 @@ def merge_products(
 
     # read all and average
     elif merge_method == MergeMethod.average:
-        out = (
-            ma.stack(
-                [
-                    out,
-                    *[
-                        product.read_np_array(**product_read_kwargs)
-                        for product in products[1:]
-                    ],
-                ]
-            )
-            .mean(axis=0)
-            .astype(out.dtype, copy=False)
+        remaining_products = list(
+            read_remaining_valid_products(products_iter, product_read_kwargs)
         )
+        if remaining_products:
+            out = (
+                ma.stack([out, *remaining_products])
+                .mean(axis=0)
+                .astype(out.dtype, copy=False)
+            )
+
     else:  # pragma: no cover
         raise NotImplementedError(f"unknown merge method: {merge_method}")
 
@@ -313,7 +328,7 @@ def generate_slices(
             )
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
-        except EmptySliceException:
+        except (EmptySliceException, CorruptedSlice):
             pass
 
     if stack_empty:

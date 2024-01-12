@@ -43,7 +43,15 @@ class BRDFError(Exception):
     """Raised when calculated BRDF grid is empty."""
 
 
-class MissingAsset(Exception):
+class AssetError(Exception):
+    """Generic Exception class for Assets."""
+
+
+class AssetMissing(AssetError, FileNotFoundError):
+    """Raised when a product asset should be there but isn't."""
+
+
+class AssetEmpty(AssetError):
     """Raised when a product asset should contain data but is empty."""
 
 
@@ -59,5 +67,13 @@ class NoSourceProducts(MapcheteNodataTile, ValueError):
     """Raised when no products are available."""
 
 
-class CorruptedProductMetadata(Exception):
+class CorruptedProduct(Exception):
+    """Raised when product is damaged and cannot be read."""
+
+
+class CorruptedProductMetadata(CorruptedProduct):
     """Raised when EOProduct cannot be parsed due to a metadata issue."""
+
+
+class CorruptedSlice(Exception):
+    """Raised when all products in a slice are damaged and cannot be read."""

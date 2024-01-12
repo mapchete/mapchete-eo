@@ -27,7 +27,7 @@ from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
 
-from mapchete_eo.exceptions import CorruptedProductMetadata, MissingAsset
+from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
 from mapchete_eo.io import open_xml, read_mask_as_raster
 from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
@@ -396,17 +396,19 @@ class S2Metadata:
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
 
-        footprints = read_mask_as_raster(
-            self.path_mapper.band_qi_mask(
-                qi_mask=BandQI.detector_footprints, band=band
-            ),
-            dst_grid=dst_grid,
-            rasterize_value_func=_get_detector_id,
-        )
-        if not footprints.data.any():
-            raise MissingAsset(
-                f"No detector footprints found for band {band} in {self}"
+        try:
+            footprints = read_mask_as_raster(
+                self.path_mapper.band_qi_mask(
+                    qi_mask=BandQI.detector_footprints, band=band
+                ),
+                dst_grid=dst_grid,
+                rasterize_value_func=_get_detector_id,
             )
+        except FileNotFoundError as exc:
+            raise AssetMissing(exc)
+
+        if not footprints.data.any():
+            raise AssetEmpty(f"No detector footprints found for band {band} in {self}")
         return footprints
 
     def technical_quality_mask(
@@ -419,10 +421,15 @@ class S2Metadata:
         """
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
-        return read_mask_as_raster(
-            self.path_mapper.band_qi_mask(qi_mask=BandQI.technical_quality, band=band),
-            dst_grid=dst_grid,
-        )
+        try:
+            return read_mask_as_raster(
+                self.path_mapper.band_qi_mask(
+                    qi_mask=BandQI.technical_quality, band=band
+                ),
+                dst_grid=dst_grid,
+            )
+        except FileNotFoundError as exc:
+            raise AssetMissing(exc)
 
     def viewing_incidence_angles(self, band: L2ABand) -> Dict:
         """

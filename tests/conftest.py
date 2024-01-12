@@ -508,5 +508,17 @@ def full_stac_item_pb0509(s2_testdata_dir):
 
 
 @pytest.fixture()
-def product_no_detector_footprints():
+def product_empty_detector_footprints():
     return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/34/R/FN/2022/4/15/0/metadata.xml"
+
+
+@pytest.fixture()
+def product_missing_detector_footprints():
+    return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/37/W/EP/2023/10/17/0/metadata.xml"
+
+
+@pytest.fixture(scope="session")
+def stac_item_missing_detector_footprints():
+    return pystac.Item.from_file(
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_37WEP_20231017_0_L2A"
+    )

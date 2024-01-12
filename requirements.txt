@@ -3,7 +3,7 @@ blend-modes
 click
 croniter
 lxml
-mapchete>=2024.1.0
+mapchete>=2024.1.2
 opencv-python
 orgonite
 Pillow

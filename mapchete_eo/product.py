@@ -198,12 +198,15 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
 
 def add_to_blacklist(path: MPathLike, blacklist: Optional[MPath] = None) -> None:
     blacklist = blacklist or mapchete_eo_settings.blacklist
+
     if blacklist is None:
-        raise ValueError("no blacklist is defined")
+        return
+
     blacklist = MPath.from_inp(blacklist)
 
     path = MPath.from_inp(path)
 
+    logger.debug("add path %s to blacklist", path)
     try:
         with blacklist.open("a") as dst:
             dst.write(f"{path}\n")

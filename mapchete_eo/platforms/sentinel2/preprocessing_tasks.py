@@ -22,9 +22,6 @@ def parse_s2_product(
             item, cache_config=cache_config, cache_all=cache_all
         )
     except CorruptedProductMetadata as exc:
-        if mapchete_eo_settings.blacklist:
-            item_path = item.get_self_href()
-            logger.debug("add item path %s to blacklist", item_path)
-            add_to_blacklist(item_path)
+        add_to_blacklist(item.get_self_href())
         return exc
     return s2product

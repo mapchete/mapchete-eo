@@ -11,7 +11,7 @@ from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
-from mapchete_eo.exceptions import CorruptedProductMetadata, MissingAsset
+from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.path_mappers import (
     EarthSearchPathMapper,
@@ -582,9 +582,16 @@ def test_future_baseline_version():
 
 
 @pytest.mark.remote
-def test_product_no_detector_footprints(product_no_detector_footprints):
-    s2_product = S2Metadata.from_metadata_xml(product_no_detector_footprints)
-    with pytest.raises(MissingAsset):
+def test_product_empty_detector_footprints(product_empty_detector_footprints):
+    s2_product = S2Metadata.from_metadata_xml(product_empty_detector_footprints)
+    with pytest.raises(AssetEmpty):
+        s2_product.detector_footprints(L2ABand.B02)
+
+
+@pytest.mark.remote
+def test_product_missing_detector_footprints(product_missing_detector_footprints):
+    s2_product = S2Metadata.from_metadata_xml(product_missing_detector_footprints)
+    with pytest.raises(AssetMissing):
         s2_product.detector_footprints(L2ABand.B02)
 
 

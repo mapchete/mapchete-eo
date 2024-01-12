@@ -2,6 +2,15 @@
 Changelog
 #########
 
+
+2024.1.3 - 2024-01-12
+---------------------
+
+* core
+  * raise `exceptions.AssetMissing` error if asset file cannot be found
+  * `io.products.merge_products()`: account for potentially broken products
+
+
 2024.1.2 - 2024-01-11
 ---------------------
 

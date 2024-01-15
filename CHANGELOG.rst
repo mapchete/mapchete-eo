@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.1.4 - 2024-01-15
+---------------------
+
+* core
+  * `io.path`: add `open_json` with retry mechaniym (for tileInfo.json)
+
+
 2024.1.3 - 2024-01-12
 ---------------------
 

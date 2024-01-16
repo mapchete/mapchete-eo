@@ -21,32 +21,10 @@ logger = logging.getLogger(__name__)
 COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 
 
-@retry(
-    logger=logger,
-    **dict(
-        IORetrySettings(
-            exceptions=(TimeoutError, FSTimeoutError, ServerDisconnectedError)
-        )
-    ),
-)
 def open_xml(path: MPath) -> Element:
     """Parse an XML file path into an etree root element."""
     logger.debug("open %s", path)
     return etree.fromstring(path.read_text())
-
-
-@retry(
-    logger=logger,
-    **dict(
-        IORetrySettings(
-            exceptions=(TimeoutError, FSTimeoutError, ServerDisconnectedError)
-        )
-    ),
-)
-def open_json(path: MPath) -> dict:
-    """Parse an JSON file path into a dictionary."""
-    logger.debug("open %s", path)
-    return path.read_json()
 
 
 class ProductPathGenerationMethod(str, Enum):

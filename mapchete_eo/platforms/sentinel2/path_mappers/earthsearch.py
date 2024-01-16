@@ -1,6 +1,5 @@
 from mapchete.path import MPath
 
-from mapchete_eo.io.path import open_json
 from mapchete_eo.platforms.sentinel2.path_mappers.sinergise import SinergisePathMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 
@@ -28,9 +27,7 @@ class EarthSearchPathMapper(SinergisePathMapper):
         **kwargs,
     ):
         basedir = metadata_xml.parent
-        self._path = MPath.from_inp(
-            open_json(basedir / "tileinfo_metadata.json")["path"]
-        )
+        self._path = (basedir / "tileinfo_metadata.json").read_json()["path"]
         self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol

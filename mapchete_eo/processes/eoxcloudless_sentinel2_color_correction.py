@@ -236,7 +236,7 @@ def execute(
         logger.debug("smooth water areas")
         corrected = ma.where(
             water_mask,
-            filters.gaussian_blur(filters.smooth(corrected), radius=1),
+            filters.gaussian_blur(filters.smooth_more(corrected), radius=4),
             corrected,
         )
 

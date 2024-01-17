@@ -8,7 +8,7 @@ from shapely import unary_union
 from shapely.geometry import shape
 
 from mapchete_eo import image_operations
-from mapchete_eo.exceptions import EmptyStackException
+from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.image_operations import compositing, filters
 from mapchete_eo.processes.config import RGBCompositeConfig
 from mapchete_eo.types import NodataVal
@@ -236,7 +236,12 @@ def execute(
         logger.debug("smooth water areas")
         corrected = ma.where(
             water_mask,
-            filters.gaussian_blur(filters.smooth_more(corrected), radius=4),
+            filters.gaussian_blur(corrected, radius=6),
+            corrected,
+        )
+        corrected = ma.where(
+            buffer_array(water_mask, buffer=2),
+            filters.smooth_more(corrected),
             corrected,
         )
 

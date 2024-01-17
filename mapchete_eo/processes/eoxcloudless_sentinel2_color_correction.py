@@ -179,7 +179,9 @@ def execute(
             out_dtype=str(out_dtype),
         ),
         gamma=rgb_composite.gamma,
+        clahe_flag=rgb_composite.clahe_flag,
         clahe_clip_limit=rgb_composite.clahe_clip_limit,
+        clahe_tile_grid_size=rgb_composite.clahe_tile_grid_size,
         saturation=rgb_composite.saturation,
     )
 
@@ -215,7 +217,9 @@ def execute(
                         out_dtype=str(out_dtype),
                     ),
                     gamma=desert_rgb_composite.gamma,
+                    clahe_flag=desert_rgb_composite.clahe_flag,
                     clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
+                    clahe_tile_grid_size=desert_rgb_composite.clahe_tile_grid_size,
                     saturation=desert_rgb_composite.saturation,
                 ),
                 compositing.fuzzy_alpha_mask(

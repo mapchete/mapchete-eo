@@ -9,7 +9,9 @@ class RGBCompositeConfig(BaseModel):
     blue: Tuple[int, int] = (0, 2300)
     gamma: float = 1.15
     saturation: float = 1.3
+    clahe_flag: bool = True
     clahe_clip_limit: float = 3.2
+    clahe_tile_grid_size: tuple = (32, 32)
     fuzzy_radius: Optional[int] = 0
     sharpen: Optional[bool] = False
     smooth_water: Optional[bool] = False

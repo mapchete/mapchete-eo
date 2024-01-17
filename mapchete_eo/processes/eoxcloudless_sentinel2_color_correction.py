@@ -276,8 +276,13 @@ def _water_mask(
     if len(bands_array) != 4:  # pragma: no cover
         raise ValueError("smooth_water only works with RGBNir bands")
 
-    _, green, _, nir = bands_array.astype(np.float16, copy=False)
+    red, green, blue, nir = bands_array.astype(np.float16, copy=False)
     return ma.MaskedArray(
-        data=np.where((green - nir) / (green + nir) > ndwi_threshold, True, False),
+        data=np.where(
+            ((green - nir) / (green + nir) > ndwi_threshold)
+            & ((blue + green) / 2 > red),
+            True,
+            False,
+        ),
         mask=bands_array[0].mask,
     )

@@ -8,7 +8,7 @@ from shapely import unary_union
 from shapely.geometry import shape
 
 from mapchete_eo import image_operations
-from mapchete_eo.exceptions import EmptyStackException
+from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.image_operations import compositing, filters
 from mapchete_eo.processes.config import RGBCompositeConfig
 from mapchete_eo.types import NodataVal
@@ -179,7 +179,9 @@ def execute(
             out_dtype=str(out_dtype),
         ),
         gamma=rgb_composite.gamma,
+        clahe_flag=rgb_composite.clahe_flag,
         clahe_clip_limit=rgb_composite.clahe_clip_limit,
+        clahe_tile_grid_size=rgb_composite.clahe_tile_grid_size,
         saturation=rgb_composite.saturation,
     )
 
@@ -215,7 +217,9 @@ def execute(
                         out_dtype=str(out_dtype),
                     ),
                     gamma=desert_rgb_composite.gamma,
+                    clahe_flag=desert_rgb_composite.clahe_flag,
                     clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
+                    clahe_tile_grid_size=desert_rgb_composite.clahe_tile_grid_size,
                     saturation=desert_rgb_composite.saturation,
                 ),
                 compositing.fuzzy_alpha_mask(
@@ -232,7 +236,12 @@ def execute(
         logger.debug("smooth water areas")
         corrected = ma.where(
             water_mask,
-            filters.gaussian_blur(filters.smooth(corrected), radius=1),
+            filters.gaussian_blur(corrected, radius=6),
+            corrected,
+        )
+        corrected = ma.where(
+            buffer_array(water_mask, buffer=2),
+            filters.smooth_more(corrected),
             corrected,
         )
 
@@ -267,8 +276,13 @@ def _water_mask(
     if len(bands_array) != 4:  # pragma: no cover
         raise ValueError("smooth_water only works with RGBNir bands")
 
-    _, green, _, nir = bands_array.astype(np.float16, copy=False)
+    red, green, blue, nir = bands_array.astype(np.float16, copy=False)
     return ma.MaskedArray(
-        data=np.where((green - nir) / (green + nir) > ndwi_threshold, True, False),
+        data=np.where(
+            ((green - nir) / (green + nir) > ndwi_threshold)
+            & ((blue + green) / 2 > red),
+            True,
+            False,
+        ),
         mask=bands_array[0].mask,
     )

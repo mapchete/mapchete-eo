@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.1.5 - 2024-01-17
+---------------------
+* core
+  * fix `Brightness` and `Saturation` HSV color correction operations in `color_correct`
+  * larger radius for water smoothing in `smooth_water` of `eoxcloudless_sentinel2_color_correction` process
+
+
 2024.1.4 - 2024-01-15
 ---------------------
 

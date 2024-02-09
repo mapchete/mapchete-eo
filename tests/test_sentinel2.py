@@ -81,6 +81,20 @@ def test_preprocessing(sentinel2_mapchete):
     assert tile_mp.open("inp").products
 
 
+def test_read_area_stac(sentinel2_stac_area_mapchete):
+    with sentinel2_stac_area_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        assert src.is_empty()
+        with pytest.raises(NoSourceProducts):
+            src.read(assets=["red"])
+
+
+def test_read_area(sentinel2_area_mapchete):
+    with sentinel2_area_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+        assert src.is_empty()
+        with pytest.raises(NoSourceProducts):
+            src.read(assets=["red"])
+
+
 # InputData.read() #
 ####################
 

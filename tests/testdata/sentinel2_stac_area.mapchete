@@ -1,0 +1,21 @@
+process: read_xarray.py
+input:
+  inp:
+    format: Sentinel-2
+    level: L2A
+    time:
+      start: 2023-08-10
+      end: 2023-08-13
+    # tmx bbox 7 29 138
+    area: "POLYGON ((15.46875 47.8125, 15.46875 49.21875, 14.0625 49.21875, 14.0625 47.8125, 15.46875 47.8125))"
+    cat_baseurl: sentinel2/full_products/catalog.json
+    with_cloudmasks: true
+output:
+  format: GTiff
+  bands: 3
+  path: stac
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+bounds: [16, 46, 16.1, 46.1]

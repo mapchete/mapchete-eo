@@ -1,4 +1,4 @@
-pytest
+pytest<8
 pytest-coverage
 pytest-lazy-fixture
 types-croniter

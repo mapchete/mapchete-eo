@@ -41,7 +41,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest",
+    "pytest<8",
     "pytest-coverage",
     "pytest-lazy-fixture",
     "mapchete_xarray",

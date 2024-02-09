@@ -1,6 +1,3 @@
-import pystac
-from mapchete.path import MPath
-
 from mapchete_eo.platforms.sentinel2.driver import METADATA, InputData, InputTile
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 

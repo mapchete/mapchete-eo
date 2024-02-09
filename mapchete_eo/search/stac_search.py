@@ -1,14 +1,13 @@
 import logging
 from functools import cached_property
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, Iterator, List, Optional, Set, Union
 
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
-from mapchete.types import Bounds
-from mapchete.validate import validate_bounds
+from mapchete.types import Bounds, BoundsLike
 from pystac_client import Client
-from shapely.geometry import box
+from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
@@ -38,25 +37,25 @@ class STACSearchCatalog(Catalog):
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> None:
-        self._collection_items: Dict = {}
-
-        if area:
+        if area is not None:
             self.area = area
             self.bounds = None
-        elif bounds:
+        elif bounds is not None:
             self.bounds = bounds
             self.area = None
         else:  # pragma: no cover
             raise ValueError("either bounds or area have to be given")
 
-        self.time = time if isinstance(time, list) else [time]
-        self.client = Client.open(endpoint or self.endpoint)
-
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
 
+        self.time = time if isinstance(time, list) else [time]
+        self.client = Client.open(endpoint or self.endpoint)
+
         self.collections = collections
         self.config = config
+
+        self._collection_items: Dict = {}
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -64,17 +63,21 @@ class STACSearchCatalog(Catalog):
             for time_range in self.time:
                 search = self._search(time_range=time_range)
                 if search.matched() > self.config.catalog_chunk_threshold:
-                    spatial_chunks = bounds_chunks(
-                        map(float, self.default_search_params.get("bbox").split(",")),
+                    spatial_search_chunks = SpatialSearchChunks(
+                        bounds=self.bounds,
+                        area=self.area,
                         grid="geodetic",
                         zoom=self.config.catalog_chunk_zoom,
                     )
                     logger.debug(
                         "too many products (%s), query catalog in %s chunks",
                         search.matched(),
-                        len(spatial_chunks),
+                        len(spatial_search_chunks),
                     )
-                    searches = (self._search(bounds=chunk) for chunk in spatial_chunks)
+                    searches = (
+                        self._search(**chunk_kwargs)
+                        for chunk_kwargs in spatial_search_chunks
+                    )
                 else:
                     searches = (search,)
 
@@ -88,6 +91,8 @@ class STACSearchCatalog(Catalog):
                         else:
                             yield item
 
+        if self.area is not None and self.area.is_empty:
+            return IndexedFeatures([])
         return IndexedFeatures(_get_items())
 
     @cached_property
@@ -113,9 +118,25 @@ class STACSearchCatalog(Catalog):
             "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
         }
 
-    def _search(self, time_range=None, **kwargs):
+    def _search(
+        self,
+        time_range: Optional[TimeRange] = None,
+        bounds: Optional[Bounds] = None,
+        area: Optional[BaseGeometry] = None,
+        **kwargs,
+    ):
         if time_range is None:  # pragma: no cover
             raise ValueError("time_range not provided")
+
+        if bounds is not None:
+            if shape(bounds).is_empty:  # pragma: no cover
+                raise ValueError("bounds empty")
+            kwargs.update(bbox=",".join(map(str, bounds)))
+        elif area is not None:
+            if self.area.is_empty:  # pragma: no cover
+                raise ValueError("area empty")
+            kwargs.update(intersects=self.area)
+
         search_params = dict(
             self.default_search_params,
             datetime=f"{time_range.start}/{time_range.end}",
@@ -129,24 +150,66 @@ class STACSearchCatalog(Catalog):
             yield self.client.get_collection(collection_name)
 
 
-def bounds_intersection(bounds1, bounds2):
-    g = box(*bounds1).intersection(box(*bounds2))
-    if g.is_empty:
-        raise ValueError(f"bounds must have an intersecting area: {bounds1}, {bounds2}")
-    return Bounds(*g.bounds)
+class SpatialSearchChunks:
+    bounds: Bounds
+    area: BaseGeometry
+    search_kw: str
+    tile_pyramid: BufferedTilePyramid
+    zoom: int
 
+    def __init__(
+        self,
+        bounds: Optional[BoundsLike] = None,
+        area: Optional[BaseGeometry] = None,
+        zoom: int = 6,
+        grid: str = "geodetic",
+    ):
+        if bounds is not None:
+            self.bounds = Bounds.from_inp(bounds)
+            self.area = None
+            self.search_kw = "bbox"
+        elif area is not None:
+            self.bounds = None
+            self.area = area
+            self.search_kw = "intersects"
+        else:  # pragma: no cover
+            raise ValueError("either area or bounds have to be given")
+        self.zoom = zoom
+        self.tile_pyramid = BufferedTilePyramid(grid)
 
-def bounds_chunks(bounds, grid="geodetic", zoom=5):
-    tile_pyramid = BufferedTilePyramid(grid)
-    bounds = validate_bounds(bounds)
-    # if bounds cross the antimeridian, snap them to CRS bouds
-    if bounds.left < tile_pyramid.left:
-        logger.warning("snap left bounds value back to CRS bounds")
-        bounds = Bounds(tile_pyramid.left, bounds.bottom, bounds.right, bounds.top)
-    if bounds.right > tile_pyramid.right:
-        logger.warning("snap right bounds value back to CRS bounds")
-        bounds = Bounds(bounds.left, bounds.bottom, tile_pyramid.right, bounds.top)
-    return [
-        bounds_intersection(tile.bounds, bounds)
-        for tile in tile_pyramid.tiles_from_bounds(bounds, zoom=zoom)
-    ]
+    @cached_property
+    def _chunks(self) -> List[Union[Bounds, BaseGeometry]]:
+        if self.bounds is not None:
+            bounds = self.bounds
+            # if bounds cross the antimeridian, snap them to CRS bouds
+            if self.bounds.left < self.tile_pyramid.left:
+                logger.warning("snap left bounds value back to CRS bounds")
+                bounds = Bounds(
+                    self.tile_pyramid.left,
+                    self.bounds.bottom,
+                    self.bounds.right,
+                    self.bounds.top,
+                )
+            if self.bounds.right > self.tile_pyramid.right:
+                logger.warning("snap right bounds value back to CRS bounds")
+                bounds = Bounds(
+                    self.bounds.left,
+                    self.bounds.bottom,
+                    self.tile_pyramid.right,
+                    self.bounds.top,
+                )
+            return [
+                Bounds.from_inp(tile.bbox.intersection(shape(bounds)))
+                for tile in self.tile_pyramid.tiles_from_bounds(bounds, zoom=self.zoom)
+            ]
+        else:
+            return [
+                tile.bbox.intersection(self.area)
+                for tile in self.tile_pyramid.tiles_from_geom(self.area, zoom=self.zoom)
+            ]
+
+    def __len__(self) -> int:
+        return len(self._chunks)
+
+    def __iter__(self) -> Iterator[dict]:
+        return iter([{self.search_kw: chunk} for chunk in self._chunks])

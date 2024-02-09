@@ -7,10 +7,12 @@ import croniter
 import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
+from mapchete.config.parse import guess_geometry
 from mapchete.formats import base
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
+from mapchete.types import MPathLike
 from pydantic import BaseModel
 from rasterio.enums import Resampling
 from shapely.geometry import box
@@ -45,6 +47,7 @@ class BaseDriverConfig(BaseModel):
     cat_baseurl: Optional[str] = None
     archive: Optional[Type[Archive]] = None
     cache: Optional[Any] = None
+    area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
 
 
 class InputTile(base.InputTile):
@@ -328,7 +331,7 @@ class InputTile(base.InputTile):
         -------
         is empty : bool
         """
-        return len(self.items) == 0
+        return len(self.products) == 0
 
     def default_read_values(
         self,
@@ -364,6 +367,7 @@ class InputData(base.InputData):
     params: BaseDriverConfig
     archive: Archive
     time: Union[TimeRange, List[TimeRange]]
+    area: BaseGeometry
 
     def __init__(
         self,
@@ -386,8 +390,9 @@ class InputData(base.InputData):
             self.params.cache.path = MPath.from_inp(
                 self.params.cache.dict()
             ).absolute_path(base_dir=input_params.get("conf_dir"))
-        self._bounds = input_params["delimiters"]["effective_bounds"]
-        self._area = input_params["delimiters"]["effective_area"]
+
+        self.area = self._init_area(input_params)
+
         self.time = self.params.time
 
         if self.readonly:  # pragma: no cover
@@ -400,17 +405,15 @@ class InputData(base.InputData):
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=input_params["conf_dir"]
                     ),
-                    bounds=self.bbox(
-                        out_crs=mapchete_eo_settings.default_catalog_crs
-                    ).bounds,
+                    bounds=self.bbox(mapchete_eo_settings.default_catalog_crs).bounds,
                     time=self.time,
                 )
             )
         elif self.params.archive:
             self.archive = self.params.archive(
                 time=self.time,
-                bounds=self._bounds,
-                area=self._area,
+                bounds=self.area.bounds,
+                area=self.area,
             )
 
         for item in self.archive.catalog.items:
@@ -426,10 +429,25 @@ class InputData(base.InputData):
                 ),
             )
 
+    def _init_area(self, input_params: dict) -> BaseGeometry:
+        """Returns valid driver area for this process."""
+        process_area = input_params["delimiters"]["effective_area"]
+        if self.params.area:
+            # read area parameter and intersect with effective area
+            configured_area, configured_area_crs = guess_geometry(self.params.area)
+            return process_area.intersection(
+                reproject_geometry(
+                    configured_area,
+                    src_crs=configured_area_crs or self.crs,
+                    dst_crs=self.crs,
+                )
+            )
+        return process_area
+
     def bbox(self, out_crs: Optional[str] = None) -> BaseGeometry:
         """Return data bounding box."""
         return reproject_geometry(
-            box(*self._bounds),
+            self.area,
             src_crs=self.pyramid.crs,
             dst_crs=self.pyramid.crs if out_crs is None else out_crs,
             segmentize_on_clip=True,

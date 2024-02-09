@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from functools import cached_property
 from typing import Any, Callable, List, Optional, Type, Union
 
@@ -8,6 +9,7 @@ import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.config.parse import guess_geometry
+from mapchete.executor import Executor
 from mapchete.formats import base
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
@@ -15,7 +17,6 @@ from mapchete.tile import BufferedTile
 from mapchete.types import MPathLike
 from pydantic import BaseModel
 from rasterio.enums import Resampling
-from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive, StaticArchive
@@ -40,6 +41,8 @@ from mapchete_eo.types import (
     TimeRange,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class BaseDriverConfig(BaseModel):
     format: str
@@ -48,6 +51,8 @@ class BaseDriverConfig(BaseModel):
     archive: Optional[Type[Archive]] = None
     cache: Optional[Any] = None
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
+    eager_preprocessing_execution: bool = False
+    eager_preprocessing_workers: Optional[int] = None
 
 
 class InputTile(base.InputTile):
@@ -368,6 +373,7 @@ class InputData(base.InputData):
     archive: Archive
     time: Union[TimeRange, List[TimeRange]]
     area: BaseGeometry
+    _products: Optional[IndexedFeatures] = None
 
     def __init__(
         self,
@@ -416,18 +422,37 @@ class InputData(base.InputData):
                 area=self.area,
             )
 
-        for item in self.archive.catalog.items:
-            self.add_preprocessing_task(
-                self.default_preprocessing_task,
-                fargs=(item,),
-                fkwargs=dict(cache_config=self.params.cache, cache_all=True),
-                key=item.id,
-                geometry=reproject_geometry(
-                    item.geometry,
-                    src_crs=mapchete_eo_settings.default_catalog_crs,
-                    dst_crs=self.crs,
-                ),
-            )
+        # if preprocessing tasks should be done now, instead of later:
+        if self.params.eager_preprocessing_execution:
+            logger.debug("do preprocessing tasks now rather than later")
+            with Executor(
+                "threads", workers=self.params.eager_preprocessing_workers
+            ) as executor:
+                self._products = IndexedFeatures(
+                    [
+                        future.result()
+                        for future in executor.as_completed(
+                            self.default_preprocessing_task,
+                            self.archive.catalog.items,
+                            fkwargs=dict(
+                                cache_config=self.params.cache, cache_all=True
+                            ),
+                        )
+                    ]
+                )
+        else:
+            for item in self.archive.catalog.items:
+                self.add_preprocessing_task(
+                    self.default_preprocessing_task,
+                    fargs=(item,),
+                    fkwargs=dict(cache_config=self.params.cache, cache_all=True),
+                    key=item.id,
+                    geometry=reproject_geometry(
+                        item.geometry,
+                        src_crs=mapchete_eo_settings.default_catalog_crs,
+                        dst_crs=self.crs,
+                    ),
+                )
 
     def _init_area(self, input_params: dict) -> BaseGeometry:
         """Returns valid driver area for this process."""
@@ -458,7 +483,7 @@ class InputData(base.InputData):
         """Hold preprocessed S2Products in an IndexedFeatures container."""
 
         # nothing to index here
-        if self.readonly or not self.preprocessing_tasks:
+        if self.readonly:
             return IndexedFeatures([])
 
         # TODO: copied it from mapchete_satellite, not yet sure which use case this is
@@ -475,6 +500,9 @@ class InputData(base.InputData):
                 ],
                 crs=self.crs,
             )
+
+        elif not self.preprocessing_tasks:
+            return IndexedFeatures([])
 
         # this happens on task graph execution when preprocessing task results are not ready
         else:  # pragma: no cover

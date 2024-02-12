@@ -3,8 +3,18 @@ Changelog
 #########
 
 
+2024.2.0 - 2024-02-12
+---------------------
+
+* core
+  * add option `preprocessing_tasks` to deactivate preprocessing tasks
+  * make `S2Metadata` load lazily when initializing `S2Product`
+  * add `area` parameter to limit AOI of EO cube
+
+
 2024.1.5 - 2024-01-17
 ---------------------
+
 * core
   * fix `Brightness` and `Saturation` HSV color correction operations in `color_correct`
   * larger radius for water smoothing in `smooth_water` of `eoxcloudless_sentinel2_color_correction` process

@@ -51,8 +51,7 @@ class BaseDriverConfig(BaseModel):
     archive: Optional[Type[Archive]] = None
     cache: Optional[Any] = None
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
-    eager_preprocessing_execution: bool = False
-    eager_preprocessing_workers: Optional[int] = None
+    preprocessing_tasks: bool = True
 
 
 class InputTile(base.InputTile):
@@ -422,25 +421,8 @@ class InputData(base.InputData):
                 area=self.area,
             )
 
-        # if preprocessing tasks should be done now, instead of later:
-        if self.params.eager_preprocessing_execution:
-            logger.debug("do preprocessing tasks now rather than later")
-            with Executor(
-                "threads", workers=self.params.eager_preprocessing_workers
-            ) as executor:
-                self._products = IndexedFeatures(
-                    [
-                        future.result()
-                        for future in executor.as_completed(
-                            self.default_preprocessing_task,
-                            self.archive.catalog.items,
-                            fkwargs=dict(
-                                cache_config=self.params.cache, cache_all=True
-                            ),
-                        )
-                    ]
-                )
-        else:
+        # don't use preprocessing tasks for Sentinel-2 products:
+        if self.params.preprocessing_tasks or self.params.cache is not None:
             for item in self.archive.catalog.items:
                 self.add_preprocessing_task(
                     self.default_preprocessing_task,
@@ -453,6 +435,16 @@ class InputData(base.InputData):
                         dst_crs=self.crs,
                     ),
                 )
+        else:
+            logger.debug("do preprocessing tasks now rather than later")
+            self._products = IndexedFeatures(
+                [
+                    self.default_preprocessing_task(
+                        item, cache_config=self.params.cache, cache_all=True
+                    )
+                    for item in self.archive.catalog.items
+                ]
+            )
 
     def _init_area(self, input_params: dict) -> BaseGeometry:
         """Returns valid driver area for this process."""
@@ -485,6 +477,9 @@ class InputData(base.InputData):
         # nothing to index here
         if self.readonly:
             return IndexedFeatures([])
+
+        elif self._products is not None:
+            return self._products
 
         # TODO: copied it from mapchete_satellite, not yet sure which use case this is
         elif self.standalone:

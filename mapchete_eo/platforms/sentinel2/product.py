@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import cached_property
 from typing import List, Optional, Union
 
 import numpy as np
@@ -125,7 +126,6 @@ class Cache:
 
 
 class S2Product(EOProduct, EOProductProtocol):
-    metadata: S2Metadata
     item_dict: dict
     cache: Optional[Cache] = None
 
@@ -138,7 +138,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.item_dict = item.to_dict()
         self.id = item.id
 
-        self.metadata = metadata or S2Metadata.from_stac_item(item)
+        self._metadata = metadata
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -163,6 +163,12 @@ class S2Product(EOProduct, EOProductProtocol):
             s2product.cache_brdf_grids()
 
         return s2product
+
+    @cached_property
+    def metadata(self) -> S2Metadata:
+        if self._metadata:
+            return self._metadata
+        return S2Metadata.from_stac_item(pystac.Item.from_dict(self.item_dict))
 
     def __repr__(self):
         return f"<S2Product product_id={self.id}>"

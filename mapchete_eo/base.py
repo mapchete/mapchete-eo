@@ -51,7 +51,7 @@ class BaseDriverConfig(BaseModel):
     archive: Optional[Type[Archive]] = None
     cache: Optional[Any] = None
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
-    preprocessing_tasks: bool = True
+    preprocessing_tasks: bool = False
 
 
 class InputTile(base.InputTile):

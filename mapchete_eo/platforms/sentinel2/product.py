@@ -21,6 +21,7 @@ from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import (
     AllMasked,
     AssetError,
+    BRDFError,
     CorruptedProduct,
     EmptyProductException,
 )
@@ -104,13 +105,22 @@ class Cache:
                 if not out_path.exists():
                     if sun_zenith_angle is None:
                         sun_zenith_angle = get_sun_zenith_angle(metadata)
-                    grid = correction_grid(
-                        metadata,
-                        band,
-                        sun_zenith_angle,
-                        model=model,
-                        resolution=resolution,
-                    )
+                    try:
+                        grid = correction_grid(
+                            metadata,
+                            band,
+                            sun_zenith_angle,
+                            model=model,
+                            resolution=resolution,
+                        )
+                    except BRDFError as exc:
+                        error_msg = (
+                            f"product {self.item.get_self_href()} is corrupted: {exc}"
+                        )
+                        logger.error(error_msg)
+                        add_to_blacklist(self.item.get_self_href())
+                        raise CorruptedProduct(error_msg)
+
                     logger.debug("cache BRDF correction grid to %s", out_path)
                     grid.to_file(out_path, **COGDeflateProfile(grid.meta))
                 self._brdf_grid_cache[band] = out_path
@@ -290,7 +300,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 resampling=resampling,
                 keep_2d=True,
             )
-        except AssetError as exc:
+        except (AssetError, BRDFError) as exc:
             error_msg = f"product {self.item.get_self_href()} is corrupted: {exc}"
             logger.error(error_msg)
             add_to_blacklist(self.item.get_self_href())

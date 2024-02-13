@@ -4,7 +4,6 @@ from typing import Iterator, List, Optional
 import numpy as np
 from fiona.transform import transform
 from mapchete import Timer
-from mapchete.io.profiles import COGDeflateProfile
 from mapchete.io.raster import ReferencedRaster
 
 from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array

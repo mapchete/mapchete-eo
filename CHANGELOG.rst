@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.2.1 - 2024-02-13
+---------------------
+
+* core
+  * make `preprocessing_tasks=False` the default
+  * add `BRDFError` to `CorruptedProduct` and add product to blacklist, also when caching
+
+
 2024.2.0 - 2024-02-12
 ---------------------
 

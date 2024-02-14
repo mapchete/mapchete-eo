@@ -1,0 +1,41 @@
+process: mapchete_eo.processes.eoxcloudless_rgb_map
+input:
+  mosaic: eoxcloudless/color_correction/
+  ocean_mask: eox-data/naturalearth/ne_10m_ocean.fgb
+  land_mask: eox-data/naturalearth/ne_10m_land.fgb
+  fuzzy_ocean_mask:
+    zoom<=9: eox-data/fuzzy_ocean_mask_v5/
+  ocean_depth:
+    zoom<=9: eox-data/gebco/
+  bathymetry:
+    zoom<=9: eox-data/bathymetry_v2/
+
+output:
+  format: GTiff
+  bands: 3
+  path: eoxcloudless/rgb_map/
+  dtype: uint8
+pyramid:
+  grid: geodetic
+zoom_levels: 6
+# tmx bounds 6 17 68
+bounds: [11.25, 39.375, 14.0625, 42.1875]
+
+process_parameters:
+  resampling: bilinear
+  matching_method: min
+  matching_max_zoom: 13
+  matching_precision: 12
+  fallback_to_higher_zoom: false
+
+  ocean_color: "#182c4e"
+  land_color: "#ffffff"
+  ocean_depth_opacity: 0.8
+  bathymetry_opacity: 0.8
+
+  fillnodata: true
+  fillnodata_method: patch_size
+  fillnodata_max_patch_size: 9
+  fillnodata_max_nodata_neighbors: 9
+  fillnodata_max_search_distance: 0.25
+  fillnodata_smoothing_iterations: 1

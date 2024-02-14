@@ -38,6 +38,16 @@ def test_eoxcloudless_sentinel2_color_correction(
     assert ma.mean(output) < 200
 
 
+def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
+    process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
+    output = eoxcloudless_sentinel2_color_correction.execute(
+        process_mp,
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert not output.mask.any()
+    assert ma.mean(output) < 200
+
+
 @pytest.mark.remote
 def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
     process_mp = eoxcloudless_mosaic_mapchete.process_mp()

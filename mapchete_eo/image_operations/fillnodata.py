@@ -23,7 +23,7 @@ def fillnodata(
     method: FillSelectionMethod = FillSelectionMethod.patch_size,
     max_patch_size: int = 2,
     max_nodata_neighbors: int = 0,
-    max_search_distance: int = 10,
+    max_search_distance: float = 10,
     smoothing_iterations: int = 0,
 ) -> ma.MaskedArray:
     """

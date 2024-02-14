@@ -5,6 +5,7 @@ from mapchete_eo.image_operations import FillSelectionMethod
 from mapchete_eo.processes import (
     dtype_scale,
     eoxcloudless_mosaic,
+    eoxcloudless_rgb_map,
     eoxcloudless_sentinel2_color_correction,
 )
 
@@ -40,7 +41,7 @@ def test_eoxcloudless_sentinel2_color_correction(
 
 def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
     process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
-    output = eoxcloudless_sentinel2_color_correction.execute(
+    output = eoxcloudless_rgb_map.execute(
         process_mp,
     )
     assert isinstance(output, ma.MaskedArray)

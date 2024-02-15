@@ -1,0 +1,108 @@
+{
+    "type": "Feature",
+    "stac_version": "1.0.0",
+    "id": "color_correction",
+    "properties": {
+        "datetime": "2024-02-14T17:49:36.949199Z",
+        "collection": "color_correction",
+        "tiles:tile_matrix_links": {
+            "WorldCRS84Quad": {
+                "url": "#WorldCRS84Quad",
+                "limits": {
+                    "6": {
+                        "min_tile_col": 68,
+                        "max_tile_col": 68,
+                        "min_tile_row": 17,
+                        "max_tile_row": 17
+                    }
+                }
+            }
+        },
+        "tiles:tile_matrix_sets": {
+            "WorldCRS84Quad": {
+                "type": "TileMatrixSetType",
+                "title": "CRS84 for the World",
+                "identifier": "WorldCRS84Quad",
+                "supportedCRS": "http://www.opengis.net/def/crs/OGC/1.3/CRS84",
+                "wellKnownScaleSet": "http://www.opengis.net/def/wkss/OGC/1.0/GoogleCRS84Quad",
+                "tileMatrix": [
+                    {
+                        "type": "TileMatrixType",
+                        "identifier": "6",
+                        "scaleDenominator": 4367830.1877243435,
+                        "topLeftCorner": [
+                            -180.0,
+                            90.0
+                        ],
+                        "tileWidth": 256,
+                        "tileHeight": 256,
+                        "matrixWidth": 128,
+                        "matrixHeight": 64
+                    }
+                ],
+                "boundingBox": {
+                    "type": "BoundingBoxType",
+                    "crs": "http://www.opengis.net/def/crs/OGC/1.3/CRS84",
+                    "lowerCorner": [
+                        -180.0,
+                        -90.0
+                    ],
+                    "upperCorner": [
+                        180.0,
+                        90.0
+                    ]
+                }
+            }
+        }
+    },
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    14.0625,
+                    39.375
+                ],
+                [
+                    11.25,
+                    39.375
+                ],
+                [
+                    11.25,
+                    42.1875
+                ],
+                [
+                    14.0625,
+                    42.1875
+                ],
+                [
+                    14.0625,
+                    39.375
+                ]
+            ]
+        ]
+    },
+    "links": [
+        {
+            "rel": "self",
+            "href": "/home/suprd/GIS_GIT_Projects/_Sentinel-2_mosaics/git/mapchete_eo/tests/testdata/eoxcloudless/color_correction/color_correction.json"
+        }
+    ],
+    "assets": {},
+    "bbox": [
+        11.25,
+        39.375,
+        14.0625,
+        42.1875
+    ],
+    "stac_extensions": [
+        "tiled-assets",
+        "https://stac-extensions.github.io/tiled-assets/v1.0.0/schema.json"
+    ],
+    "asset_templates": {
+        "bands": {
+            "href": "/home/suprd/GIS_GIT_Projects/_Sentinel-2_mosaics/git/mapchete_eo/tests/testdata/eoxcloudless/color_correction/{TileMatrix}/{TileRow}/{TileCol}.tif",
+            "type": "image/tiff; application=geotiff"
+        }
+    }
+}

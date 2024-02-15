@@ -5,6 +5,7 @@ from mapchete_eo.image_operations import FillSelectionMethod
 from mapchete_eo.processes import (
     dtype_scale,
     eoxcloudless_mosaic,
+    eoxcloudless_rgb_map,
     eoxcloudless_sentinel2_color_correction,
 )
 
@@ -32,6 +33,16 @@ def test_eoxcloudless_sentinel2_color_correction(
         fillnodata=fillnodata,
         fillnodata_method=fillnodata_method,
         desert_color_correction_flag=desert_color_correction_flag,
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert not output.mask.any()
+    assert ma.mean(output) < 200
+
+
+def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
+    process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
+    output = eoxcloudless_rgb_map.execute(
+        process_mp,
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()

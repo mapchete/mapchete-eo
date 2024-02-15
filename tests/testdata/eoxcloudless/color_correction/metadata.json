@@ -1,0 +1,60 @@
+{
+    "driver": {
+        "bands": 3,
+        "blockxsize": 512,
+        "blockysize": 512,
+        "cog": false,
+        "compression": "webp",
+        "delimiters": {
+            "bounds": [
+                11.25,
+                39.375,
+                14.0625,
+                42.1875
+            ],
+            "effective_area": null,
+            "effective_bounds": [
+                11.25,
+                39.375,
+                14.0625,
+                42.1875
+            ],
+            "process_bounds": [
+                -180.0,
+                -90.0,
+                180.0,
+                90.0
+            ],
+            "zoom": [
+                6
+            ]
+        },
+        "dtype": "uint8",
+        "format": "GTiff",
+        "interleave": "pixel",
+        "mode": "continue",
+        "webp_lossless": true
+    },
+    "pyramid": {
+        "grid": {
+            "bounds": [
+                -180.0,
+                -90.0,
+                180.0,
+                90.0
+            ],
+            "is_global": true,
+            "shape": [
+                1,
+                2
+            ],
+            "srs": {
+                "wkt": "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]"
+            },
+            "type": "geodetic"
+        },
+        "metatiling": 1,
+        "pixelbuffer": 0,
+        "tile_size": 256
+    }
+}

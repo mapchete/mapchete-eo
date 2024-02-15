@@ -58,6 +58,7 @@ sentinel2 = "mapchete_eo.platforms.sentinel2"
 dtype_scale = "mapchete_eo.processes.dtype_scale"
 eoxcloudless_mosaic = "mapchete_eo.processes.eoxcloudless_mosaic"
 eoxcloudless_sentinel2_color_correction = "mapchete_eo.processes.eoxcloudless_sentinel2_color_correction"
+eoxcloudless_rgb_map = "mapchete_eo.processes.eoxcloudless_rgb_map"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"

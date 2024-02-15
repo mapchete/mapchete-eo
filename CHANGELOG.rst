@@ -3,6 +3,12 @@ Changelog
 #########
 
 
+2024.2.3 - 2024-02-15
+---------------------
+
+* core
+  * add `mosaic_mask` to `eoxcloudless_rgb_map` mapchete process
+
 2024.2.2 - 2024-02-15
 ---------------------
 

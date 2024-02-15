@@ -33,11 +33,6 @@ def execute(
     fillnodata_max_search_distance: float = 0.5,
     fillnodata_smoothing_iterations: int = 3,
 ):
-    if mp.params["pyramid"]["pixelbuffer"] != 0:
-        raise ValueError(
-            "Pixelbuffer != 0 is not supported for converted vector arrays yet!"
-        )
-
     fillnodata_method = (
         image_operations.FillSelectionMethod[fillnodata_method]
         if isinstance(fillnodata_method, str)
@@ -52,16 +47,13 @@ def execute(
     else:
         mask_geom = Polygon()
 
-    output_mp_dtype = mp.params["output"].profile()["dtype"]
-    output_mp_bands_len = mp.params["output"].profile()["bands"]
-
-    # if we are deep into antarctica, it does not pay off to even read mosaics:
+    # just return empty array, when mask covers tile completely
     if mask_geom.equals(mp.tile.bbox):
-        out_shape = (output_mp_bands_len, *mp.tile.shape)
+        out_shape = (3, *mp.tile.shape)
         out = ma.masked_array(
-            data=np.zeros(out_shape, dtype=np.dtype(output_mp_dtype)),
+            data=np.zeros(out_shape, dtype=np.uint8),
             mask=np.ones(out_shape, dtype=bool),
-        )
+        ).astype(np.uint8, copy=False)
     else:
         with mp.open("mosaic") as src:
             out = src.read(
@@ -72,11 +64,11 @@ def execute(
                 fallback_to_higher_zoom=fallback_to_higher_zoom,
             )
             if fillnodata:
-                out = ma.clip(out, min=1, max=255).astype(
-                    np.dtype(output_mp_dtype), copy=False
-                )
+                out = ma.clip(out, 1, 255).astype(np.uint8, copy=False)
     if not mask_geom.is_empty and not mask_geom.equals(mp.tile.bbox):
-        out = mp.clip(out, [{"geometry": mask_geom}], inverted=False)
+        out = mp.clip(out, [{"geometry": mask_geom}], inverted=False).astype(
+            np.uint8, copy=False
+        )
 
     # interpolate tiny nodata gaps
     if fillnodata:
@@ -87,7 +79,7 @@ def execute(
             max_nodata_neighbors=fillnodata_max_nodata_neighbors,
             max_search_distance=fillnodata_max_search_distance,
             smoothing_iterations=fillnodata_smoothing_iterations,
-        )
+        ).astype(np.uint8, copy=False)
 
     if "land_mask" in mp.input:
         with mp.open("land_mask") as src:

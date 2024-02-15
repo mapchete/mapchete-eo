@@ -20,12 +20,14 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
         raise TypeError(f"image array must be of type uint8, not {str(arr.dtype)}")
     num_bands = arr.shape[0]
     if num_bands == 1:
-        alpha = np.multiply(~arr[0].mask, 255, dtype=np.uint8)
+        alpha = np.where(~arr[0].mask, 255, 0).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[0], arr[0], alpha]).data
     elif num_bands == 2:
         out = np.stack([arr[0], arr[0], arr[0], arr[1]]).data
     elif num_bands == 3:
-        alpha = ~arr[0].mask * 255
+        alpha = np.where((~arr[0].mask | ~arr[1].mask | ~arr[2].mask), 255, 0).astype(
+            np.uint8, copy=False
+        )
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data
     elif num_bands == 4:
         out = arr.data

@@ -18,6 +18,7 @@ output:
   dtype: uint8
 pyramid:
   grid: geodetic
+  pixelbuffer: 4
 zoom_levels: 6
 # tmx bounds 6 17 68
 bounds: [11.25, 39.375, 14.0625, 42.1875]
@@ -35,7 +36,7 @@ process_parameters:
   bathymetry_opacity: 0.8
 
   fillnodata: true
-  fillnodata_method: patch_size
+  fillnodata_method: nodata_neighbors  
   fillnodata_max_patch_size: 9
   fillnodata_max_nodata_neighbors: 9
   fillnodata_max_search_distance: 0.25

@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.2.4 - 2024-02-15
+---------------------
+
+* core
+  * make sure arrays in `eoxcloudless_rgb_map` are `uint8`
+  * fix `to_rgba` 3 band version, take into account all 3 bands to make sure
+
 2024.2.3 - 2024-02-15
 ---------------------
 

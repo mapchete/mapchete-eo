@@ -1,6 +1,11 @@
 import logging
 from typing import Union
 
+import numpy as np
+import numpy.ma as ma
+from shapely import unary_union
+from shapely.geometry import Polygon, shape
+
 from mapchete_eo import image_operations
 from mapchete_eo.array.color import color_array
 from mapchete_eo.image_operations import compositing
@@ -34,14 +39,39 @@ def execute(
         else fillnodata_method
     )
 
-    with mp.open("mosaic") as src:
-        out = src.read(
-            resampling=resampling,
-            matching_method=matching_method,
-            matching_max_zoom=matching_max_zoom,
-            matching_precision=matching_precision,
-            fallback_to_higher_zoom=fallback_to_higher_zoom,
+    # read bad aois mask
+    if "mosaic_mask" in mp.params["input"]:
+        mask_geom = unary_union(
+            [shape(f["geometry"]) for f in mp.open("mosaic_mask").read()]
         )
+    else:
+        mask_geom = Polygon()
+
+    output_mp_dtype = mp.params["output"].profile()["dtype"]
+    output_mp_bands_len = mp.params["output"].profile()["bands"]
+
+    # if we are deep into antarctica, it does not pay off to even read mosaics:
+    if mask_geom.equals(mp.tile.bbox):
+        out_shape = (output_mp_bands_len, *mp.tile.shape)
+        out = ma.masked_array(
+            data=np.zeros(out_shape, dtype=np.dtype(output_mp_dtype)),
+            mask=np.ones(out_shape, dtype=bool),
+        )
+    else:
+        with mp.open("mosaic") as src:
+            out = src.read(
+                resampling=resampling,
+                matching_method=matching_method,
+                matching_max_zoom=matching_max_zoom,
+                matching_precision=matching_precision,
+                fallback_to_higher_zoom=fallback_to_higher_zoom,
+            )
+            if fillnodata:
+                out = ma.clip(out, min=1, max=255).astype(
+                    np.dtype(output_mp_dtype), copy=False
+                )
+    if not mask_geom.is_empty and not mask_geom.equals(mp.tile.bbox):
+        out = mp.clip(out, [{"geometry": mask_geom}], inverted=False)
 
     # interpolate tiny nodata gaps
     if fillnodata:

@@ -9,6 +9,7 @@ input:
     zoom<=9: eox-data/gebco/
   bathymetry:
     zoom<=9: eox-data/bathymetry_v2/
+  mosaic_mask: eox-data/eoxcloudless_masks/antarctica.fgb
 
 output:
   format: GTiff

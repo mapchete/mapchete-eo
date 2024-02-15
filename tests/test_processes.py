@@ -49,6 +49,16 @@ def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
     assert ma.mean(output) < 200
 
 
+def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):
+    process_mp = eoxcloudless_rgb_map_mapchete.process_mp(tile=(6, 56, 103))
+    output = eoxcloudless_rgb_map.execute(
+        process_mp,
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert not output.mask.any()
+    assert ma.mean(output) == 255
+
+
 @pytest.mark.remote
 def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
     process_mp = eoxcloudless_mosaic_mapchete.process_mp()

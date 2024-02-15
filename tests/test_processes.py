@@ -56,7 +56,9 @@ def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
+    assert ma.min(output) == 255
     assert ma.mean(output) == 255
+    assert ma.max(output) == 255
 
 
 @pytest.mark.remote

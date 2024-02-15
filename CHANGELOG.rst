@@ -2,12 +2,12 @@
 Changelog
 #########
 
+
 2024.2.2 - 2024-02-15
 ---------------------
 
 * core
   * add `eoxcloudless_rgb_map`mapchete process
-  * add test and test data for the `eoxcloudless_rgb_map`
 
 
 2024.2.1 - 2024-02-13

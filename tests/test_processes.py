@@ -1,5 +1,6 @@
 import numpy.ma as ma
 import pytest
+from mapchete.tile import BufferedTile
 
 from mapchete_eo.image_operations import FillSelectionMethod
 from mapchete_eo.processes import (
@@ -47,6 +48,13 @@ def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
     assert ma.mean(output) < 200
+
+    process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
+    process_mp.params["pyramid"]["pixelbuffer"] = 4
+    with pytest.raises(ValueError):
+        output = eoxcloudless_rgb_map.execute(
+            process_mp,
+        )
 
 
 def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):

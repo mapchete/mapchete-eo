@@ -33,6 +33,11 @@ def execute(
     fillnodata_max_search_distance: float = 0.5,
     fillnodata_smoothing_iterations: int = 3,
 ):
+    if mp.params["pyramid"]["pixelbuffer"] != 0:
+        raise ValueError(
+            "Pixelbuffer != 0 is not supported for converted vector arrays yet!"
+        )
+
     fillnodata_method = (
         image_operations.FillSelectionMethod[fillnodata_method]
         if isinstance(fillnodata_method, str)

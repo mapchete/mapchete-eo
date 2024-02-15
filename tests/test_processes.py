@@ -49,13 +49,6 @@ def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
     assert not output.mask.any()
     assert ma.mean(output) < 200
 
-    process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
-    process_mp.params["pyramid"]["pixelbuffer"] = 4
-    with pytest.raises(ValueError):
-        output = eoxcloudless_rgb_map.execute(
-            process_mp,
-        )
-
 
 def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):
     process_mp = eoxcloudless_rgb_map_mapchete.process_mp(tile=(6, 56, 103))

@@ -3,6 +3,12 @@ Changelog
 #########
 
 
+2024.2.4 - 2024-02-15
+---------------------
+
+* core
+  * make sure arrays in `eoxcloudless_rgb_map` are `uint8`
+
 2024.2.3 - 2024-02-15
 ---------------------
 

@@ -25,7 +25,7 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
     elif num_bands == 2:
         out = np.stack([arr[0], arr[0], arr[0], arr[1]]).data
     elif num_bands == 3:
-        alpha = np.where((~arr[0].mask | ~arr[1].mask | ~arr[2].mask), 255, 0).astype(
+        alpha = np.where((~arr[0].mask & ~arr[1].mask & ~arr[2].mask), 255, 0).astype(
             np.uint8, copy=False
         )
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data

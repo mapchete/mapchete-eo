@@ -65,8 +65,8 @@ def execute(
             )
             if fillnodata:
                 out = ma.clip(out, 1, 255).astype(np.uint8, copy=False)
-    if not mask_geom.is_empty and not mask_geom.equals(mp.tile.bbox):
-        out = mp.clip(out, [{"geometry": mask_geom}], inverted=False).astype(
+    if not mask_geom.is_empty or not mask_geom.equals(mp.tile.bbox):
+        out = mp.clip(out, [{"geometry": mask_geom}], inverted=True).astype(
             np.uint8, copy=False
         )
 

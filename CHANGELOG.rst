@@ -2,6 +2,16 @@
 Changelog
 #########
 
+
+2024.2.6 - 2024-02-20
+---------------------
+
+* core
+  * `merge_products()`: skip products with missing assets
+  * added `s2-verify` subcommand
+  * blacklist: add log message if blacklist cannot be found & only add item if it does not already exist in blacklist
+
+
 2024.2.5 - 2024-02-16
 ---------------------
 

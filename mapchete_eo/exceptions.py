@@ -55,6 +55,10 @@ class AssetEmpty(AssetError):
     """Raised when a product asset should contain data but is empty."""
 
 
+class AssetKeyError(AssetError, KeyError):
+    """Raised when an asset name cannot be found in item."""
+
+
 class PreprocessingNotFinished(Exception):
     """Raised when preprocessing tasks have not been fully executed."""
 

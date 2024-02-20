@@ -55,13 +55,11 @@ def _str_to_l2a_bands(_, __, value):
         return [L2ABand[v] for v in value.split(",")]
 
 
-def _str_to_mpath(_, __, value):
-    if value:
-        return MPath.from_inp(value)
-
-
-arg_stac_item = click.argument("stac-item", type=click.Path(), callback=_str_to_mpath)
-arg_dst_path = click.argument("dst_path", type=click.Path(), callback=_str_to_mpath)
+arg_stac_item = click.argument("stac-item", type=click.Path(path_type=MPath))
+arg_stac_items = click.argument(
+    "stac-items", type=click.Path(path_type=MPath), nargs=-1
+)
+arg_dst_path = click.argument("dst_path", type=click.Path(path_type=MPath))
 opt_s2_l2a_bands = click.option(
     "--l2a-bands",
     type=click.STRING,

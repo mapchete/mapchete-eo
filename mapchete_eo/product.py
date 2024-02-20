@@ -206,13 +206,15 @@ def add_to_blacklist(path: MPathLike, blacklist: Optional[MPath] = None) -> None
 
     path = MPath.from_inp(path)
 
-    logger.debug("add path %s to blacklist", path)
-    try:
-        with blacklist.open("a") as dst:
-            dst.write(f"{path}\n")
-    except FileNotFoundError:
-        with blacklist.open("w") as dst:
-            dst.write(f"{path}\n")
+    # make sure paths stay unique
+    if str(path) not in blacklist_products(blacklist):
+        logger.debug("add path %s to blacklist", str(path))
+        try:
+            with blacklist.open("a") as dst:
+                dst.write(f"{path}\n")
+        except FileNotFoundError:
+            with blacklist.open("w") as dst:
+                dst.write(f"{path}\n")
 
 
 def blacklist_products(blacklist: Optional[MPath] = None) -> Set[str]:
@@ -225,4 +227,5 @@ def blacklist_products(blacklist: Optional[MPath] = None) -> Set[str]:
         with blacklist.open("r") as src:
             return set(src.read().splitlines())
     except FileNotFoundError:
+        logger.debug("%s does not exist, returning empty set", str(blacklist))
         return set()

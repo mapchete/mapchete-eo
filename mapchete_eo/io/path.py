@@ -8,12 +8,10 @@ from xml.etree.ElementTree import Element
 
 import fsspec
 import pystac
-from aiohttp.client_exceptions import ServerDisconnectedError
-from fsspec.exceptions import FSTimeoutError
 from mapchete.io import copy
 from mapchete.path import MPath
-from mapchete.settings import IORetrySettings
-from retry import retry
+
+from mapchete_eo.exceptions import AssetKeyError
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +131,8 @@ def asset_mpath(
     try:
         asset_path = MPath(item.assets[asset].href, fs=fs)
     except KeyError:
-        raise KeyError(
-            f"no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
+        raise AssetKeyError(
+            f"{item.id} no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
         )
     if absolute_path and not asset_path.is_absolute():
         return MPath(item.get_self_href(), fs=fs).parent / asset_path

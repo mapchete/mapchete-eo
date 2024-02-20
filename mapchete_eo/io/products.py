@@ -12,6 +12,7 @@ from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import (
+    AssetKeyError,
     CorruptedProduct,
     CorruptedSlice,
     EmptySliceException,
@@ -208,8 +209,8 @@ def merge_products(
         for product in products_iter:
             try:
                 yield product.read_np_array(**product_read_kwargs)
-            except CorruptedProduct:
-                pass
+            except (AssetKeyError, CorruptedProduct) as exc:
+                logger.debug("skip product %s because of %s", product.item.id, exc)
 
     if len(products) == 0:  # pragma: no cover
         raise NoSourceProducts("no products to merge")
@@ -224,8 +225,8 @@ def merge_products(
         try:
             out = product.read_np_array(**product_read_kwargs)
             break
-        except CorruptedProduct:
-            pass
+        except (AssetKeyError, CorruptedProduct) as exc:
+            logger.debug("skip product %s because of %s", product.item.id, exc)
     else:
         # we cannot do anything here, as all products are broken
         raise CorruptedSlice("all products are broken here")

@@ -185,6 +185,15 @@ def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def eoxcloudless_mosaic_regions_merge_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_mosaic_regions_merge.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2.mapchete",

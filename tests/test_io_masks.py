@@ -1,6 +1,6 @@
 import numpy.ma as ma
 
-from mapchete_eo.platforms.sentinel2.config import parse_mask_config
+from mapchete_eo.platforms.sentinel2.config import MaskConfig
 from mapchete_eo.platforms.sentinel2.masks import read_masks
 from mapchete_eo.platforms.sentinel2.product import S2Product
 
@@ -8,7 +8,7 @@ from mapchete_eo.platforms.sentinel2.product import S2Product
 def test_read_single_product_mask(s2_stac_item, test_tile):
     product = S2Product(s2_stac_item)
     product_read_kwargs = dict(
-        mask_config=parse_mask_config(
+        mask_config=MaskConfig.parse(
             dict(
                 footprint=True,
                 l1c_cloud_type="all",
@@ -31,7 +31,7 @@ def test_read_single_product_mask(s2_stac_item, test_tile):
 def test_read_masks(s2_stac_item, test_tile):
     product = S2Product(s2_stac_item)
     product_read_kwargs = dict(
-        mask_config=parse_mask_config(
+        mask_config=MaskConfig.parse(
             dict(
                 footprint=True,
                 l1c_cloud_type="all",

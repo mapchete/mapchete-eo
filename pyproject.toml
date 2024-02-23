@@ -57,8 +57,10 @@ sentinel2 = "mapchete_eo.platforms.sentinel2"
 [project.entry-points."mapchete.processes"]
 dtype_scale = "mapchete_eo.processes.dtype_scale"
 eoxcloudless_mosaic = "mapchete_eo.processes.eoxcloudless_mosaic"
+eoxcloudless_mosaic_merge = "mapchete_eo.processes.eoxcloudless_mosaic_merge"
 eoxcloudless_sentinel2_color_correction = "mapchete_eo.processes.eoxcloudless_sentinel2_color_correction"
 eoxcloudless_rgb_map = "mapchete_eo.processes.eoxcloudless_rgb_map"
+merge_rasters = "mapchete_eo.processes.merge_rasters"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_eo"

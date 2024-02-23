@@ -83,8 +83,7 @@ def test_eoxcloudless_mosaic_regions_merge(eoxcloudless_mosaic_regions_merge_map
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
     output = eoxcloudless_mosaic_merge.execute(
-        process_mp,
-        assets=["red", "green", "blue"],
+        process_mp, **process_mp.params.get("process_parameters", {})
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.all()

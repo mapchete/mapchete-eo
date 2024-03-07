@@ -25,3 +25,4 @@ process_parameters:
   read_masks: true
   assets: ["red", "green", "blue"]
   from_brightness_extract_method: third_quartile
+  merge_products_by: sentinel2:product_title  

@@ -21,8 +21,14 @@ bounds: [179.5, 67, 180, 67.3]
 
 
 process_parameters:
+  read_masks: false
+  mask_config:
+    # !! dicts with one entry cause a bug in mapchete
+    footprint: false
+    buffer: 16
   resampling: bilinear
   target_height: 10
   read_masks: true
   assets: ["red", "green", "blue"]
   from_brightness_extract_method: third_quartile
+  merge_products_by: sentinel2:product_title

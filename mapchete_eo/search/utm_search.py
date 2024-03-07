@@ -75,7 +75,7 @@ class UTMSearchCatalog(Catalog):
                     # Handle eastern Part of Antimedian, warp MGRS and process bounds by 360
                     if (
                         "01" in f["properties"]["MGRS"]
-                        and self.bounds[3] > 100
+                        and self.bounds[2] > 100
                         and intersects(
                             transform(shape(f["geometry"]), lambda x: x + [360, 0]),
                             box(*self.bounds),

@@ -56,6 +56,11 @@ class Catalog(ABC):
 
     @property
     @abstractmethod
+    def endpoint(self) -> str:  # pragma: no cover
+        ...
+
+    @property
+    @abstractmethod
     def items(self) -> IndexedFeatures:  # pragma: no cover
         ...
 

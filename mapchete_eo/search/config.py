@@ -11,7 +11,7 @@ class StacSearchConfig(BaseModel):
     catalog_pagesize: int = 500
 
 
-class UTMSearchConfig(BaseModel):
+class UTMSearchConfig:
     sinergise_aws_collections: dict = dict(
         S2_L2A=dict(
             id="sentinel-s2-l2a",

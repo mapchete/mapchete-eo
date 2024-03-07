@@ -351,9 +351,15 @@ def test_read_np_masked(s2_stac_item):
     assert rgb_unmasked.mask.sum() < rgb.mask.sum()
 
 
-def test_read_np_brdf(s2_stac_item):
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("s2_stac_item"),
+    ],
+)
+def test_read_np_brdf(item):
     assets = ["red", "green", "blue"]
-    product = S2Product(s2_stac_item)
+    product = S2Product(item)
     tile = _get_product_tile(product)
     rgb_uncorrected = product.read_np_array(
         assets=assets,
@@ -363,6 +369,20 @@ def test_read_np_brdf(s2_stac_item):
         assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
     )
     assert (rgb_uncorrected != rgb_corrected).any()
+
+
+@pytest.mark.skip(
+    reason="This takes ~1 minute and consumes requester pays requests but should pass."
+)
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("stac_item_sentinel2_jp2"),
+    ],
+)
+def test_read_np_brdf_remote(item):
+    test_read_np_brdf(item)
 
 
 def test_read_np_empty_raise(s2_stac_item_half_footprint):

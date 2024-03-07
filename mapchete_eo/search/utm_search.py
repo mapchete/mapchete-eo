@@ -4,6 +4,7 @@ import logging
 from functools import cached_property
 from typing import Dict, List, Optional
 
+import numpy as np
 from mapchete.io import fiona_open
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath, MPathLike
@@ -11,7 +12,7 @@ from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.item import Item
 from shapely import intersects
-from shapely.geometry import box, shape
+from shapely.geometry import Polygon, box, shape
 
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import UTMSearchConfig
@@ -70,6 +71,14 @@ class UTMSearchCatalog(Catalog):
                 for f in mgrs_src:
                     if intersects(shape(f["geometry"]), box(*self.bounds)):
                         utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
+
+                    # Handle eastern Part of Antimedian, warp MGRS and process bounds by 360
+                    if "01" in f["properties"]["MGRS"]:
+                        x, y = shape(f["geometry"]).exterior.coords.xy
+                        x += np.full(np.array(x).shape, 360)
+                        f_360_offset = Polygon(list(zip(x, y)))
+                        if intersects(f_360_offset, box(*self.bounds)):
+                            utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
             return utm_s2_mgrs_granules
 
         def _get_items():

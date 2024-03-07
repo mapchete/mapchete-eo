@@ -73,9 +73,13 @@ class UTMSearchCatalog(Catalog):
                         utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
 
                     # Handle eastern Part of Antimedian, warp MGRS and process bounds by 360
-                    if "01" in f["properties"]["MGRS"] and intersects(
-                        transform(shape(f["geometry"]), lambda x: x + [360, 0]),
-                        box(*self.bounds),
+                    if (
+                        "01" in f["properties"]["MGRS"]
+                        and self.bounds[3] > 100
+                        and intersects(
+                            transform(shape(f["geometry"]), lambda x: x + [360, 0]),
+                            box(*self.bounds),
+                        )
                     ):
                         utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
             return utm_s2_mgrs_granules

@@ -4,7 +4,9 @@ from typing import List, Optional
 
 import numpy as np
 import numpy.ma as ma
+from mapchete.errors import MapcheteNodataTile
 from mapchete.io.vector import to_shape
+from mapchete.processing.mp import MapcheteProcess
 from mapchete.tile import BufferedTile
 from rasterio.features import geometry_mask
 from shapely.geometry import base, mapping, shape
@@ -21,7 +23,7 @@ class MergeMethod(str, Enum):
 
 
 def execute(
-    mp,
+    mp: MapcheteProcess,
     region_rasters_mapping: Optional[dict] = None,
     gradient_buffer: int = 10,
     merge_method: MergeMethod = MergeMethod.footprint_gradient,
@@ -52,7 +54,7 @@ def execute(
     # read region features
     with mp.open("regions") as src:
         if src.is_empty():
-            return "empty"
+            raise MapcheteNodataTile
 
         regions = src.read()
 

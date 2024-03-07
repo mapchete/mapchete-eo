@@ -63,10 +63,12 @@ def s2metadata_from_stac_item(
     metadata_assets: List[str] = ["metadata", "granule_metadata"],
     boa_offset_fields: List[str] = [
         "sentinel:boa_offset_applied",
+        "sentinel2:boa_offset_applied",
         "earthsearch:boa_offset_applied",
     ],
     processing_baseline_fields: List[str] = [
         "s2:processing_baseline",
+        "sentinel:processing_baseline",
         "sentinel2:processing_baseline",
     ],
     **kwargs,

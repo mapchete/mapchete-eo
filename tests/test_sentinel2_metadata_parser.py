@@ -613,17 +613,6 @@ def test_full_product_paths(item):
 @pytest.mark.parametrize(
     "item",
     [
-        # deactivate tests for ancient metadata
-        # lazy_fixture("stac_item_pb_l1c_0204"),
-        # lazy_fixture("stac_item_pb_l1c_0205"),
-        # lazy_fixture("stac_item_pb_l1c_0206"),
-        # lazy_fixture("stac_item_pb0207"),
-        # lazy_fixture("stac_item_pb0208"),
-        # lazy_fixture("stac_item_pb0209"),
-        # lazy_fixture("stac_item_pb0210"),
-        # lazy_fixture("stac_item_pb0211"),
-        # lazy_fixture("stac_item_pb0212"),
-        # lazy_fixture("stac_item_pb0213"),
         lazy_fixture("stac_item_pb0214"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),

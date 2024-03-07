@@ -139,6 +139,8 @@ def execute(
             matching_max_zoom=matching_max_zoom,
             matching_precision=matching_precision,
             fallback_to_higher_zoom=fallback_to_higher_zoom,
+            src_nodata=0,
+            nodata=0,
         ).astype(np.int16, copy=False)
         nodata_mask = mosaic[0].mask
         if nodata_mask.all():  # pragma: no cover

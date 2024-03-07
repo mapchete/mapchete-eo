@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
 
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
+from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.types import TimeRange
@@ -262,6 +262,19 @@ def e84_cog_catalog():
             end="2022-06-06",
         ),
         bounds=[16, 46, 17, 47],
+        collections=["sentinel-2-l2a"],
+    )
+
+
+@pytest.mark.remote
+@pytest.fixture(scope="session")
+def utm_search_catalog():
+    return AWSSearchCatalogS2L2A(
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-06",
+        ),
+        bounds=[-180, 65, -179, 65.3],
         collections=["sentinel-2-l2a"],
     )
 

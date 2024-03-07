@@ -7,6 +7,7 @@ from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds
+from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS
 
 from mapchete_eo.exceptions import (
@@ -24,13 +25,36 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 
 
-def test_product(s2_stac_item):
-    product = S2Product(s2_stac_item)
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("s2_stac_item"),
+    ],
+)
+def test_product(item):
+    product = S2Product(item)
     assert product.item
     assert product.metadata
     assert product.cache is None
     assert isinstance(product.bounds, Bounds)
     assert isinstance(product.crs, CRS)
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("stac_item_pb0300"),
+        lazy_fixture("stac_item_pb0301"),
+        lazy_fixture("stac_item_pb0400"),
+        lazy_fixture("stac_item_pb0400_offset"),
+        lazy_fixture("stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
+    ],
+)
+def test_product_remote(item):
+    test_product(item)
 
 
 def test_product_asset_cache(s2_stac_item, tmpdir):

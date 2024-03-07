@@ -515,6 +515,7 @@ def test_from_stac_item(item_url):
         lazy_fixture("stac_item_pb0400"),
         lazy_fixture("stac_item_pb0400_offset"),
         lazy_fixture("stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_from_stac_item_backwards(item):
@@ -529,7 +530,7 @@ def test_from_stac_item_backwards(item):
 
     # make sure baseline version is as expected
     assert s2_metadata.processing_baseline.version == item.properties.get(
-        "s2:processing_baseline"
+        "s2:processing_baseline", item.properties.get("sentinel2:processing_baseline")
     )
 
     # make sure offset is correct
@@ -599,6 +600,7 @@ def test_product_missing_detector_footprints(product_missing_detector_footprints
     "item",
     [
         lazy_fixture("full_stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_full_product_paths(item):
@@ -628,6 +630,7 @@ def test_full_product_paths(item):
         lazy_fixture("stac_item_pb0400"),
         lazy_fixture("stac_item_pb0400_offset"),
         lazy_fixture("stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_full_remote_product_paths(item):

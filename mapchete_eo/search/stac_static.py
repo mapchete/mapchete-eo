@@ -24,6 +24,7 @@ class STACStaticCatalog(Catalog):
     def __init__(
         self,
         baseurl: MPathLike,
+        endpoint: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Bounds = None,
         **kwargs,

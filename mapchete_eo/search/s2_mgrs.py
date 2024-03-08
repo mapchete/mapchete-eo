@@ -4,10 +4,15 @@ import math
 from dataclasses import dataclass
 from typing import List
 
-from mapchete.types import CRSLike
+from mapchete.io.vector import reproject_geometry
+from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
+from shapely.geometry import box, mapping, shape
+from shapely.geometry.base import BaseGeometry
 
-LATLON_WIDTH = 360
+LATLON_LEFT = -180
+LATLON_RIGHT = 180
+LATLON_WIDTH = LATLON_RIGHT - LATLON_LEFT
 LATLON_WIDTH_OFFSET = LATLON_WIDTH / 2
 MIN_LATITUDE = -80.0
 MAX_LATITUDE = 84
@@ -98,11 +103,17 @@ SQUARE_ROWS = [
     "V",
 ]
 
+# 100 x 100 km
+TILE_WIDTH_M = 100_000
+TILE_HEIGHT_M = 100_000
+# overlap for bottom and right
+TILE_OVERLAP_M = 9_800
 
-@dataclass
+
+@dataclass(frozen=True)
 class MGRSCell:
     utm_zone: str
-    latutde_band: str
+    latitude_band: str
 
     def tiles(self) -> List[S2Tile]:
         # nth global columns from left
@@ -112,7 +123,7 @@ class MGRSCell:
 
         # nth global latitude bands from the bottom
         min_global_square_row_idx = (
-            LATITUDE_BANDS.index(self.latutde_band) * ROWS_PER_LATITUDE_BAND
+            LATITUDE_BANDS.index(self.latitude_band) * ROWS_PER_LATITUDE_BAND
         )
         max_global_square_row_idx = min_global_square_row_idx + ROWS_PER_LATITUDE_BAND
 
@@ -139,11 +150,27 @@ class MGRSCell:
                 tiles.append(
                     S2Tile(
                         utm_zone=self.utm_zone,
-                        latitude_band=self.latutde_band,
+                        latitude_band=self.latitude_band,
                         grid_square=grid_square,
                     )
                 )
         return tiles
+
+    @property
+    def latlon_bounds(self) -> Bounds:
+        left = LATLON_LEFT + UTM_ZONE_WIDTH * UTM_ZONES.index(self.utm_zone)
+        bottom = MIN_LATITUDE + LATITUDE_BAND_HEIGHT * LATITUDE_BANDS.index(
+            self.latitude_band
+        )
+        right = left + UTM_ZONE_WIDTH
+        top = bottom + (12 if self.latitude_band == "X" else LATITUDE_BAND_HEIGHT)
+        return Bounds(left, bottom, right, top)
+
+    @property
+    def crs(self) -> CRS:
+        # 7 for south, 6 for north
+        hemisphere = "7" if self.latitude_band < "N" else "6"
+        return CRS.from_string(f"EPSG:32{hemisphere}{self.utm_zone}")
 
 
 @dataclass(frozen=True)
@@ -154,7 +181,30 @@ class S2Tile:
 
     @property
     def crs(self) -> CRS:
-        return CRS.from_epsg()
+        # 7 for south, 6 for north
+        hemisphere = "7" if self.latitude_band < "N" else "6"
+        return CRS.from_string(f"EPSG:32{hemisphere}{self.utm_zone}")
+
+    @property
+    def bounds(self) -> Bounds:
+        # nth global columns from left
+        utm_zone_idx = UTM_ZONES.index(self.utm_zone)
+        utm_zone_idx * COLUMNS_PER_ZONE
+
+        # start_column = SQUARE_COLUMNS[
+        #     min_global_square_column_idx % len(SQUARE_COLUMNS)
+        # ]
+        # first row in this UTM zone
+        SQUARE_ROW_START[utm_zone_idx % len(SQUARE_ROW_START)]
+
+        raise NotImplementedError
+
+    @property
+    def __geo_interface__(self) -> dict:
+        return mapping(box(self.bounds))
+
+    def latlon_geom(self) -> BaseGeometry:
+        return reproject_geometry(shape(self), src_crs=self.crs, dst_crs="EPSG:4326")
 
     @staticmethod
     def from_tile_id(tile_id: str) -> S2Tile:
@@ -192,7 +242,7 @@ def s2_tiles_from_bounds(
         ):
             cell = MGRSCell(
                 utm_zone=UTM_ZONES[utm_zone_idx],
-                latutde_band=LATITUDE_BANDS[latitude_band_idx],
+                latitude_band=LATITUDE_BANDS[latitude_band_idx],
             )
             tiles.extend(cell.tiles())
     return tiles

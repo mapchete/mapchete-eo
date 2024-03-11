@@ -299,9 +299,11 @@ def s2_tiles_from_bounds(
     left: float, bottom: float, right: float, top: float
 ) -> List[S2Tile]:
     bounds = Bounds(left, bottom, right, top)
-    # TODO: antimeridian wrap
+
+    # determine zones in eastern-western direction
     min_zone_idx = math.floor((left + LATLON_WIDTH_OFFSET) / UTM_ZONE_WIDTH)
     max_zone_idx = math.floor((right + LATLON_WIDTH_OFFSET) / UTM_ZONE_WIDTH)
+
     min_latitude_band_idx = math.floor(
         (bottom + LATLON_HEIGHT_OFFSET) / LATITUDE_BAND_HEIGHT
     )
@@ -312,14 +314,22 @@ def s2_tiles_from_bounds(
         ]
     )
 
+    # in order to also get overlapping tiles from other UTM cells, we also
+    # query the neighbors:
+    min_zone_idx -= 1
+    max_zone_idx += 1
+    min_latitude_band_idx -= 1
+    max_latitude_band_idx += 1
+
     def tiles_generator():
         for utm_zone_idx in range(min_zone_idx, max_zone_idx + 1):
             for latitude_band_idx in range(
-                min_latitude_band_idx,
+                # clamp latitude index to range of 0 and number of latitude bands
+                max(min_latitude_band_idx, 0),
                 min(max_latitude_band_idx + 1, len(LATITUDE_BANDS)),
             ):
                 cell = MGRSCell(
-                    utm_zone=UTM_ZONES[utm_zone_idx],
+                    utm_zone=UTM_ZONES[utm_zone_idx % len(UTM_ZONES)],
                     latitude_band=LATITUDE_BANDS[latitude_band_idx],
                 )
                 yield from cell.tiles(bounds=bounds)

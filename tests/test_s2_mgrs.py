@@ -64,7 +64,12 @@ def test_s2_tiles_from_bounds():
 
 @pytest.mark.parametrize(
     "bounds",
-    [(-180, 65, -178, 72), (178, 65, 180, 72)],
+    [
+        (-180, 65, -178, 72),
+        (178, 65, 180, 72),
+        (-182, 65, -178, 72),
+        (178, 65, 182, 72),
+    ],
 )
 def test_s2_tiles_from_bounds_antimeridian(bounds):
     tiles = s2_tiles_from_bounds(*bounds)

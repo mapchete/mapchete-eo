@@ -7,32 +7,6 @@ from shapely.geometry import box, shape
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
 
 
-def _reverse_engineer_source(item, s2tile):
-    """Find out source coordinates of square grid."""
-    from mapchete.io import rasterio_open
-    from mapchete.types import Bounds
-
-    TILE_WIDTH_M = 100_000
-    TILE_HEIGHT_M = 100_000
-    # overlap for bottom and right
-    TILE_OVERLAP_M = 9_800
-
-    # get UTM bounds from dataset
-    with rasterio_open(item.assets["red"].href) as src:
-        bounds = Bounds(
-            left=src.bounds.left,
-            bottom=src.bounds.bottom + TILE_OVERLAP_M,
-            right=src.bounds.right - TILE_OVERLAP_M,
-            top=src.bounds.top,
-        )
-        print(shape(bounds).wkt)
-    col, row = s2tile._zone_square_idx()
-    left_source = bounds.left - col * TILE_WIDTH_M
-    bottom_source = bounds.bottom - row * TILE_HEIGHT_M
-    print(f"left: {left_source}")
-    print(f"bottom: {bottom_source}")
-
-
 @pytest.mark.parametrize(
     "item",
     [
@@ -61,7 +35,7 @@ def test_s2tile_bounds(item):
     item_fixed = reproject_geometry(
         box(*item_utm_bounds), src_crs=s2tile.crs, dst_crs="EPSG:4326"
     )
-    # _reverse_engineer_source(item, s2tile)
+
     assert item_fixed.intersects(tile_geom)
     # assert item_fixed.intersection(tile_geom).area == pytest.approx(
     #     tile_geom.area, 0.001
@@ -86,4 +60,3 @@ def test_s2_tiles_from_bounds():
         ]
     )
     assert control_tiles <= set(tiles)
-    1 / 0

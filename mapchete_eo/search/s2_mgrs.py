@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import List, Tuple
+from itertools import product
+from typing import List, Optional, Tuple
 
+from mapchete import Timer
 from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
@@ -78,7 +80,8 @@ SQUARE_COLUMNS = [
 ]
 
 # rows are weird. zone 01 starts at -80° with "M", then zone 02 with "S", then zone 03 with "M" and so on
-SQUARE_ROW_START = ["M", "S"]
+# SQUARE_ROW_START = ["M", "S"]
+SQUARE_ROW_START = ["B", "G"]
 ROWS_PER_LATITUDE_BAND = 9
 SQUARE_ROWS = [
     "A",
@@ -110,8 +113,8 @@ TILE_HEIGHT_M = 100_000
 TILE_OVERLAP_M = 9_800
 
 # source point of UTM zone from where tiles start
-UTM_TILE_SOURCE_LEFT = 99960.0
-UTM_TILE_SOURCE_BOTTOM = 100040.0
+UTM_TILE_SOURCE_LEFT = 99_960.0
+UTM_TILE_SOURCE_BOTTOM = 100_040.0
 
 
 @dataclass(frozen=True)
@@ -120,6 +123,7 @@ class MGRSCell:
     latitude_band: str
 
     def tiles(self) -> List[S2Tile]:
+        # TODO: this is incredibly slow
         def tiles_generator():
             for column_index, row_index in self._global_square_indexes():
                 tile = S2Tile(
@@ -140,25 +144,21 @@ class MGRSCell:
         # TODO:
         # (1) reproject cell bounds to UTM
         # (2) get min/max cell index values based on tile grid source and tile width/height
-
-        # nth global columns from left
-        min_global_square_column_idx = UTM_ZONES.index(self.utm_zone) * COLUMNS_PER_ZONE
-        max_global_square_column_idx = min_global_square_column_idx + COLUMNS_PER_ZONE
-
-        # nth global latitude bands from the bottom
-        min_global_square_row_idx = (
-            LATITUDE_BANDS.index(self.latitude_band) * ROWS_PER_LATITUDE_BAND
+        utm_bounds = Bounds(
+            *reproject_geometry(
+                self.latlon_geometry, src_crs="EPSG:4326", dst_crs=self.crs
+            ).bounds
         )
-        max_global_square_row_idx = min_global_square_row_idx + ROWS_PER_LATITUDE_BAND
-        indexes = []
-        for global_square_column_idx in range(
-            min_global_square_column_idx, max_global_square_column_idx + 1
-        ):
-            for global_square_row_idx in range(
-                min_global_square_row_idx, max_global_square_row_idx + 1
-            ):
-                indexes.append((global_square_column_idx, global_square_row_idx))
-        return indexes
+        # min_col = math.floor((utm_bounds.left - UTM_TILE_SOURCE_LEFT) / TILE_WIDTH_M)
+        # max_col = math.floor((utm_bounds.right - UTM_TILE_SOURCE_LEFT) / TILE_WIDTH_M)
+        min_col = UTM_ZONES.index(self.utm_zone) * COLUMNS_PER_ZONE
+        max_col = min_col + COLUMNS_PER_ZONE
+
+        min_row = math.floor(
+            (utm_bounds.bottom - UTM_TILE_SOURCE_BOTTOM) / TILE_HEIGHT_M
+        )
+        max_row = math.floor((utm_bounds.top - UTM_TILE_SOURCE_BOTTOM) / TILE_HEIGHT_M)
+        return list(product(range(min_col, max_col + 1), range(min_row, max_row + 1)))
 
     def _global_square_index_to_grid_square(
         self, column_index: int, row_index: int
@@ -279,7 +279,7 @@ class S2Tile:
 
 
 def s2_tiles_from_bounds(
-    left: float, bottom: float, right: float, top: float, crs: CRSLike
+    left: float, bottom: float, right: float, top: float, crs: Optional[CRSLike] = None
 ) -> List[S2Tile]:
     bounds = Bounds(left, bottom, right, top)
     # TODO: antimeridian wrap
@@ -298,7 +298,8 @@ def s2_tiles_from_bounds(
     def tiles_generator():
         for utm_zone_idx in range(min_zone_idx, max_zone_idx + 1):
             for latitude_band_idx in range(
-                min_latitude_band_idx, max_latitude_band_idx + 1
+                min_latitude_band_idx,
+                min(max_latitude_band_idx + 1, len(LATITUDE_BANDS)),
             ):
                 cell = MGRSCell(
                     utm_zone=UTM_ZONES[utm_zone_idx],
@@ -306,10 +307,8 @@ def s2_tiles_from_bounds(
                 )
                 print(cell)
                 for tile in cell.tiles():
+                    print(tile)
                     if tile.latlon_geometry.intersects(shape(bounds)):
-                        # print(f"{tile.tile_id} intersects")
                         yield tile
-                    # else:
-                    #     print(tile.tile_id)
 
     return list(tiles_generator())

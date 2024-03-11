@@ -264,14 +264,12 @@ class S2Tile:
 
     @cached_property
     def latlon_geometry(self) -> BaseGeometry:
-        return reproject_geometry(shape(self), src_crs=self.crs, dst_crs="EPSG:4326")
         return reproject_geometry(
             box(*self.bounds), src_crs=self.crs, dst_crs="EPSG:4326"
         )
 
     @cached_property
     def latlon_bounds(self) -> BaseGeometry:
-        return Bounds(*self.latlon_geometry.bounds)
         return transform_bounds(self.bounds, self.crs, "EPSG:4326")
 
     @cached_property

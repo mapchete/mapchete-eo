@@ -6,7 +6,6 @@ from functools import cached_property
 from itertools import product
 from typing import List, Literal, Optional, Tuple, Union
 
-from mapchete import Timer
 from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
@@ -135,22 +134,44 @@ class MGRSCell:
                     return
             else:
                 filter_bounds = self.latlon_bounds
-            for column_index, row_index in self._global_square_indexes():
-                tile = S2Tile(
-                    utm_zone=self.utm_zone,
-                    latitude_band=self.latitude_band,
+            for column_index, row_index in self._global_square_indexes:
+                tile = self.tile(
                     grid_square=self._global_square_index_to_grid_square(
                         column_index, row_index
                     ),
+                    column_index=column_index,
+                    row_index=row_index,
                 )
                 if tile.latlon_bounds.intersects(filter_bounds):
                     yield tile
 
-        with Timer() as tt:
-            tiles = list(tiles_generator())
-        print(f"tiles generated in {tt}")
-        return tiles
+        return list(tiles_generator())
 
+    def tile(
+        self,
+        grid_square: str,
+        column_index: Optional[int] = None,
+        row_index: Optional[int] = None,
+    ) -> S2Tile:
+        if column_index is None or row_index is None:
+            for column_index, row_index in self._global_square_indexes:
+                if (
+                    self._global_square_index_to_grid_square(column_index, row_index)
+                    == grid_square
+                ):
+                    break
+            else:  # pragma: no cover
+                raise ValueError("global square index could not be determined!")
+
+        return S2Tile(
+            utm_zone=self.utm_zone,
+            latitude_band=self.latitude_band,
+            grid_square=grid_square,
+            global_column_index=column_index,
+            global_row_index=row_index,
+        )
+
+    @cached_property
     def _global_square_indexes(self) -> List[Tuple[int, int]]:
         """Return global row/column indexes of squares within MGRSCell."""
 
@@ -215,6 +236,8 @@ class S2Tile:
     utm_zone: str
     latitude_band: str
     grid_square: str
+    global_column_index: Optional[int] = None
+    global_row_index: Optional[int] = None
 
     @cached_property
     def crs(self) -> CRS:
@@ -224,9 +247,8 @@ class S2Tile:
 
     @cached_property
     def bounds(self) -> Bounds:
-        column_index, row_index = self._zone_square_idx()
-        base_bottom = UTM_TILE_SOURCE_BOTTOM + row_index * TILE_WIDTH_M
-        left = UTM_TILE_SOURCE_LEFT + column_index * TILE_WIDTH_M
+        base_bottom = UTM_TILE_SOURCE_BOTTOM + self.square_row * TILE_WIDTH_M
+        left = UTM_TILE_SOURCE_LEFT + self.square_column * TILE_WIDTH_M
         bottom = base_bottom - TILE_OVERLAP_M
         right = left + TILE_WIDTH_M + TILE_OVERLAP_M
         top = base_bottom + TILE_HEIGHT_M
@@ -243,22 +265,37 @@ class S2Tile:
     @cached_property
     def latlon_geometry(self) -> BaseGeometry:
         return reproject_geometry(shape(self), src_crs=self.crs, dst_crs="EPSG:4326")
+        return reproject_geometry(
+            box(*self.bounds), src_crs=self.crs, dst_crs="EPSG:4326"
+        )
 
     @cached_property
     def latlon_bounds(self) -> BaseGeometry:
         return Bounds(*self.latlon_geometry.bounds)
+        return transform_bounds(self.bounds, self.crs, "EPSG:4326")
 
     @cached_property
     def tile_id(self) -> str:
         return f"{self.utm_zone}{self.latitude_band}{self.grid_square}"
 
+    @cached_property
+    def square_column(self) -> int:
+        if self.global_column_index is None:
+            return self._global_square_idx[0] % COLUMNS_PER_ZONE
+        return self.global_column_index % COLUMNS_PER_ZONE
+
+    @cached_property
+    def square_row(self) -> int:
+        if self.global_row_index is None:
+            return self._global_square_idx[1]
+        return self.global_row_index
+
+    @cached_property
     def _global_square_idx(self) -> Tuple[int, int]:
         """
         Square index based on bottom-left corner of global AOI.
-
-        (left: -180 and bottom: -80)
         """
-        for column_index, row_index in self.mgrs_cell._global_square_indexes():
+        for column_index, row_index in self.mgrs_cell._global_square_indexes:
             if (
                 self.mgrs_cell._global_square_index_to_grid_square(
                     column_index, row_index
@@ -268,13 +305,6 @@ class S2Tile:
                 return (column_index, row_index)
         else:  # pragma: no cover
             raise ValueError("global square index could not be determined!")
-
-    def _zone_square_idx(self) -> Tuple[int, int]:
-        """Square index based on bottom-left corner of UTM zone"""
-        global_column_index, global_row_index = self._global_square_idx()
-        row_index = global_row_index
-        column_index = global_column_index % COLUMNS_PER_ZONE
-        return (column_index, row_index)
 
     @staticmethod
     def from_tile_id(tile_id: str) -> S2Tile:
@@ -286,9 +316,7 @@ class S2Tile:
         except Exception:
             raise ValueError(f"invalid UTM zone given: {utm_zone}")
 
-        return S2Tile(
-            utm_zone=utm_zone, latitude_band=latitude_band, grid_square=grid_square
-        )
+        return MGRSCell(utm_zone, latitude_band).tile(grid_square)
 
     @cached_property
     def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
@@ -335,3 +363,16 @@ def s2_tiles_from_bounds(
                 yield from cell.tiles(bounds=bounds)
 
     return list(tiles_generator())
+
+
+def transform_bounds(bounds: Bounds, src_crs: CRSLike, dst_crs: CRSLike) -> Bounds:
+    from fiona.transform import transform
+
+    in_coords_x = [bounds.left, bounds.right, bounds.right, bounds.left]
+    in_coords_y = [bounds.bottom, bounds.bottom, bounds.top, bounds.top]
+    out_coords_x, out_coords_y = transform(src_crs, dst_crs, in_coords_x, in_coords_y)
+    left = min(out_coords_x)
+    bottom = min(out_coords_y)
+    right = max(out_coords_x)
+    top = max(out_coords_y)
+    return Bounds(left, bottom, right, top)

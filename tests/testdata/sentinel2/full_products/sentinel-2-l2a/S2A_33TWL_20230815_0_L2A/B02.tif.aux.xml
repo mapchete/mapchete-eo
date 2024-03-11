@@ -6,5 +6,13 @@
     <Metadata domain="IMAGE_STRUCTURE">
       <MDI key="COMPRESSION">JPEG2000</MDI>
     </Metadata>
+    <Metadata>
+      <MDI key="STATISTICS_APPROXIMATE">YES</MDI>
+      <MDI key="STATISTICS_MAXIMUM">4195</MDI>
+      <MDI key="STATISTICS_MEAN">406.5876</MDI>
+      <MDI key="STATISTICS_MINIMUM">69</MDI>
+      <MDI key="STATISTICS_STDDEV">194.78943689595</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">100</MDI>
+    </Metadata>
   </PAMRasterBand>
 </PAMDataset>

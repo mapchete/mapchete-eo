@@ -69,12 +69,8 @@ def test_s2tile_bounds(item):
 
 
 def test_s2_tiles_from_bounds():
-    # print(S2Tile.from_tile_id("31UCQ").latlon_geometry.wkt)
     tiles = s2_tiles_from_bounds(0.72796, 47.36041, 3.68207, 50.24650)
-    for tile in tiles:
-        print(tiles)
-
-    assert set(
+    control_tiles = set(
         [
             S2Tile.from_tile_id("31UCR"),
             S2Tile.from_tile_id("31UDR"),
@@ -88,4 +84,5 @@ def test_s2_tiles_from_bounds():
             S2Tile.from_tile_id("31TDN"),
             S2Tile.from_tile_id("31TEN"),
         ]
-    ) in set(tiles)
+    )
+    assert control_tiles <= set(tiles)

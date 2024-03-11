@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from functools import cached_property
 from itertools import product
 from typing import List, Literal, Tuple, Union
 
@@ -173,7 +174,7 @@ class MGRSCell:
 
         return f"{SQUARE_COLUMNS[square_column_idx]}{SQUARE_ROWS[square_row_idx]}"
 
-    @property
+    @cached_property
     def latlon_bounds(self) -> Bounds:
         left = LATLON_LEFT + UTM_ZONE_WIDTH * UTM_ZONES.index(self.utm_zone)
         bottom = MIN_LATITUDE + LATITUDE_BAND_HEIGHT * LATITUDE_BANDS.index(
@@ -183,17 +184,17 @@ class MGRSCell:
         top = bottom + (12 if self.latitude_band == "X" else LATITUDE_BAND_HEIGHT)
         return Bounds(left, bottom, right, top)
 
-    @property
+    @cached_property
     def crs(self) -> CRS:
         # 7 for south, 6 for north
         hemisphere_code = "7" if self.hemisphere == "S" else "6"
         return CRS.from_string(f"EPSG:32{hemisphere_code}{self.utm_zone}")
 
-    @property
+    @cached_property
     def latlon_geometry(self) -> BaseGeometry:
         return shape(self.latlon_bounds)
 
-    @property
+    @cached_property
     def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
         return "S" if self.latitude_band < "N" else "N"
 
@@ -204,13 +205,13 @@ class S2Tile:
     latitude_band: str
     grid_square: str
 
-    @property
+    @cached_property
     def crs(self) -> CRS:
         # 7 for south, 6 for north
         hemisphere = "7" if self.latitude_band < "N" else "6"
         return CRS.from_string(f"EPSG:32{hemisphere}{self.utm_zone}")
 
-    @property
+    @cached_property
     def bounds(self) -> Bounds:
         column_index, row_index = self._zone_square_idx()
         base_bottom = UTM_TILE_SOURCE_BOTTOM + row_index * TILE_WIDTH_M
@@ -220,19 +221,19 @@ class S2Tile:
         top = base_bottom + TILE_HEIGHT_M
         return Bounds(left, bottom, right, top)
 
-    @property
+    @cached_property
     def __geo_interface__(self) -> dict:
         return mapping(box(*self.bounds))
 
-    @property
+    @cached_property
     def mgrs_cell(self) -> MGRSCell:
         return MGRSCell(self.utm_zone, self.latitude_band)
 
-    @property
+    @cached_property
     def latlon_geometry(self) -> BaseGeometry:
         return reproject_geometry(shape(self), src_crs=self.crs, dst_crs="EPSG:4326")
 
-    @property
+    @cached_property
     def tile_id(self) -> str:
         return f"{self.utm_zone}{self.latitude_band}{self.grid_square}"
 
@@ -281,7 +282,7 @@ class S2Tile:
 
         return S2Tile(utm_zone=utm_zone, latitude_band=latitude_band, grid_square=tile)
 
-    @property
+    @cached_property
     def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
         return "S" if self.latitude_band < "N" else "N"
 

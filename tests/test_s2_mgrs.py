@@ -86,3 +86,4 @@ def test_s2_tiles_from_bounds():
         ]
     )
     assert control_tiles <= set(tiles)
+    1 / 0

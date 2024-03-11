@@ -6,6 +6,7 @@ from functools import cached_property
 from itertools import product
 from typing import List, Literal, Optional, Tuple, Union
 
+from fiona.transform import transform
 from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
@@ -145,7 +146,7 @@ class MGRSCell:
                 if tile.latlon_bounds.intersects(filter_bounds):
                     yield tile
 
-        return list(tiles_generator())
+        return list(tiles_generator(bounds=bounds))
 
     def tile(
         self,
@@ -364,8 +365,6 @@ def s2_tiles_from_bounds(
 
 
 def transform_bounds(bounds: Bounds, src_crs: CRSLike, dst_crs: CRSLike) -> Bounds:
-    from fiona.transform import transform
-
     in_coords_x = [bounds.left, bounds.right, bounds.right, bounds.left]
     in_coords_y = [bounds.bottom, bounds.bottom, bounds.top, bounds.top]
     out_coords_x, out_coords_y = transform(src_crs, dst_crs, in_coords_x, in_coords_y)

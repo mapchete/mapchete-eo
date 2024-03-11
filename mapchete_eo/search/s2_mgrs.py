@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from itertools import product
-from typing import List, Optional, Tuple
+from typing import List, Literal, Tuple, Union
 
 from mapchete import Timer
 from mapchete.io.vector import reproject_geometry
@@ -81,8 +81,8 @@ SQUARE_COLUMNS = [
 
 # rows are weird. zone 01 starts at -80° with "M", then zone 02 with "S", then zone 03 with "M" and so on
 # SQUARE_ROW_START = ["M", "S"]
-SQUARE_ROW_START = ["B", "G"]
-ROWS_PER_LATITUDE_BAND = 9
+# SQUARE_ROW_START = ["B", "G"]  # manual offset so the naming starts on the South Pole
+SQUARE_ROW_START = ["A", "F"]
 SQUARE_ROWS = [
     "A",
     "B",
@@ -113,8 +113,9 @@ TILE_HEIGHT_M = 100_000
 TILE_OVERLAP_M = 9_800
 
 # source point of UTM zone from where tiles start
-UTM_TILE_SOURCE_LEFT = 99_960.0
-UTM_TILE_SOURCE_BOTTOM = 100_040.0
+# UTM_TILE_SOURCE_LEFT = 99_960.0
+UTM_TILE_SOURCE_LEFT = 100_000
+UTM_TILE_SOURCE_BOTTOM = 0
 
 
 @dataclass(frozen=True)
@@ -141,19 +142,17 @@ class MGRSCell:
     def _global_square_indexes(self) -> List[Tuple[int, int]]:
         """Return global row/column indexes of squares within MGRSCell."""
 
-        # TODO:
-        # (1) reproject cell bounds to UTM
-        # (2) get min/max cell index values based on tile grid source and tile width/height
+        # reproject cell bounds to UTM
         utm_bounds = Bounds(
             *reproject_geometry(
                 self.latlon_geometry, src_crs="EPSG:4326", dst_crs=self.crs
             ).bounds
         )
-        # min_col = math.floor((utm_bounds.left - UTM_TILE_SOURCE_LEFT) / TILE_WIDTH_M)
-        # max_col = math.floor((utm_bounds.right - UTM_TILE_SOURCE_LEFT) / TILE_WIDTH_M)
+        # get min/max column index values based on tile grid source and tile width/height
         min_col = UTM_ZONES.index(self.utm_zone) * COLUMNS_PER_ZONE
         max_col = min_col + COLUMNS_PER_ZONE
 
+        # count rows from UTM zone bottom
         min_row = math.floor(
             (utm_bounds.bottom - UTM_TILE_SOURCE_BOTTOM) / TILE_HEIGHT_M
         )
@@ -187,12 +186,16 @@ class MGRSCell:
     @property
     def crs(self) -> CRS:
         # 7 for south, 6 for north
-        hemisphere = "7" if self.latitude_band < "N" else "6"
-        return CRS.from_string(f"EPSG:32{hemisphere}{self.utm_zone}")
+        hemisphere_code = "7" if self.hemisphere == "S" else "6"
+        return CRS.from_string(f"EPSG:32{hemisphere_code}{self.utm_zone}")
 
     @property
     def latlon_geometry(self) -> BaseGeometry:
         return shape(self.latlon_bounds)
+
+    @property
+    def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
+        return "S" if self.latitude_band < "N" else "N"
 
 
 @dataclass(frozen=True)
@@ -253,14 +256,15 @@ class S2Tile:
     def _zone_square_idx(self) -> Tuple[int, int]:
         """Square index based on bottom-left corner of UTM zone"""
         global_column_index, global_row_index = self._global_square_idx()
-        # northern zones start rows at equator
-        if self.latitude_band >= "N":
-            # substract latitude bands south of equator
-            row_index = global_row_index - ROWS_PER_LATITUDE_BAND * len(
-                [bb for bb in LATITUDE_BANDS if bb < "N"]
-            )
-        else:
-            row_index = global_row_index
+        # # northern zones start rows at equator
+        # if self.latitude_band >= "N":
+        #     # substract latitude bands south of equator
+        #     row_index = global_row_index - ROWS_PER_LATITUDE_BAND * len(
+        #         [bb for bb in LATITUDE_BANDS if bb < "N"]
+        #     )
+        # else:
+        #     row_index = global_row_index
+        row_index = global_row_index
         column_index = global_column_index % COLUMNS_PER_ZONE
         return (column_index, row_index)
 
@@ -277,9 +281,13 @@ class S2Tile:
 
         return S2Tile(utm_zone=utm_zone, latitude_band=latitude_band, grid_square=tile)
 
+    @property
+    def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
+        return "S" if self.latitude_band < "N" else "N"
+
 
 def s2_tiles_from_bounds(
-    left: float, bottom: float, right: float, top: float, crs: Optional[CRSLike] = None
+    left: float, bottom: float, right: float, top: float
 ) -> List[S2Tile]:
     bounds = Bounds(left, bottom, right, top)
     # TODO: antimeridian wrap
@@ -305,9 +313,7 @@ def s2_tiles_from_bounds(
                     utm_zone=UTM_ZONES[utm_zone_idx],
                     latitude_band=LATITUDE_BANDS[latitude_band_idx],
                 )
-                print(cell)
                 for tile in cell.tiles():
-                    print(tile)
                     if tile.latlon_geometry.intersects(shape(bounds)):
                         yield tile
 

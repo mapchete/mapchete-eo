@@ -1,7 +1,6 @@
 import pytest
-from mapchete.io.vector import reproject_geometry, segmentize_geometry
+from mapchete.io.vector import reproject_geometry
 from pytest_lazyfixture import lazy_fixture
-from shapely import equals
 from shapely.geometry import box, shape
 
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
@@ -73,6 +72,8 @@ def test_s2_tiles_from_bounds():
 )
 def test_s2_tiles_from_bounds_antimeridian(bounds):
     tiles = s2_tiles_from_bounds(*bounds)
+    # print(len(tiles))
+    # 1 / 0
     control_tiles = set(
         [
             # eastern side of antimeridian

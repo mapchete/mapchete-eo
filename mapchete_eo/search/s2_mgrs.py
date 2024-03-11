@@ -10,8 +10,10 @@ from fiona.transform import transform
 from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
+from shapely import prepare
 from shapely.geometry import box, mapping, shape
 from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 
 LATLON_LEFT = -180
 LATLON_RIGHT = 180
@@ -124,17 +126,9 @@ class MGRSCell:
     utm_zone: str
     latitude_band: str
 
-    def tiles(self, bounds: Optional[Bounds] = None) -> List[S2Tile]:
+    def tiles(self) -> List[S2Tile]:
         # TODO: this is incredibly slow
-        def tiles_generator(bounds: Optional[Bounds] = None):
-            if bounds:
-                filter_bounds = Bounds(
-                    *shape(bounds).intersection(self.latlon_geometry)
-                )
-                if filter_bounds.is_empty:
-                    return
-            else:
-                filter_bounds = self.latlon_bounds
+        def tiles_generator():
             for column_index, row_index in self._global_square_indexes:
                 tile = self.tile(
                     grid_square=self._global_square_index_to_grid_square(
@@ -143,10 +137,10 @@ class MGRSCell:
                     column_index=column_index,
                     row_index=row_index,
                 )
-                if tile.latlon_bounds.intersects(filter_bounds):
+                if tile.latlon_bounds.intersects(self.latlon_bounds):
                     yield tile
 
-        return list(tiles_generator(bounds=bounds))
+        return list(tiles_generator())
 
     def tile(
         self,
@@ -348,6 +342,9 @@ def s2_tiles_from_bounds(
     min_latitude_band_idx -= 1
     max_latitude_band_idx += 1
 
+    aoi = bounds_to_geom(bounds)
+    prepare(aoi)
+
     def tiles_generator():
         for utm_zone_idx in range(min_zone_idx, max_zone_idx + 1):
             for latitude_band_idx in range(
@@ -359,9 +356,26 @@ def s2_tiles_from_bounds(
                     utm_zone=UTM_ZONES[utm_zone_idx % len(UTM_ZONES)],
                     latitude_band=LATITUDE_BANDS[latitude_band_idx],
                 )
-                yield from cell.tiles(bounds=bounds)
+                for tile in cell.tiles():
+                    # bounds check seems to be faster
+                    # if aoi.intersects(box(*tile.latlon_bounds)):
+                    if aoi.intersects(tile.latlon_geometry):
+                        yield tile
 
     return list(tiles_generator())
+
+
+def bounds_to_geom(bounds: Bounds):
+    if bounds.left < -180:
+        part1 = Bounds(-180, bounds.bottom, bounds.right, bounds.top)
+        part2 = Bounds(bounds.left + 360, bounds.bottom, 180, bounds.top)
+        return unary_union([shape(part1), shape(part2)])
+    elif bounds.right > 180:
+        part1 = Bounds(-180, bounds.bottom, bounds.right - 360, bounds.top)
+        part2 = Bounds(bounds.left, bounds.bottom, 180, bounds.top)
+        return unary_union([shape(part1), shape(part2)])
+    else:
+        return shape(bounds)
 
 
 def transform_bounds(bounds: Bounds, src_crs: CRSLike, dst_crs: CRSLike) -> Bounds:

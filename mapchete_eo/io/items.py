@@ -135,9 +135,7 @@ def item_fix_footprint(
 
         latlon_bbox = box(-180, -90, 180, 90)
 
-        def shift(
-            geometry: dict, by: float = 360, only_negative_x: bool = False
-        ) -> dict:
+        def shift(geometry, by: float = 360, only_negative_x: bool = False) -> dict:
             coords = geometry["coordinates"][0]
             out_coords = []
             for x, y in coords:

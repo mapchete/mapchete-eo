@@ -14,6 +14,7 @@ from pystac.item import Item
 from shapely import intersects, transform
 from shapely.geometry import Polygon, box, shape
 
+from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.types import TimeRange
@@ -103,8 +104,9 @@ class UTMSearchCatalog(Catalog):
                     )
                     if item_path is None:
                         continue
-                    with item_path.open() as src:
-                        stac_items.append(Item.from_dict(json.loads(src.read())))
+
+                    stac_items.append(item_fix_footprint(Item.from_file(item_path)))
+
             return stac_items
 
         return IndexedFeatures(_get_items())

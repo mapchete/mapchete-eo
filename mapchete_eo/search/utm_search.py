@@ -64,6 +64,11 @@ class UTMSearchCatalog(Catalog):
             for n in range(int((end_date - start_date).days)):
                 yield start_date + datetime.timedelta(n)
 
+        def get_s2_tiles(self):
+            from mapchete_eo.search.s2_mgrs import s2_tiles_from_bounds
+
+            return s2_tiles_from_bounds(*self.bounds)
+
         def get_utm_s2_mgrs_granules(self):
             utm_s2_mgrs_granules = []
             with fiona_open(self.config.mgrs_s2_grid) as mgrs_src:
@@ -86,20 +91,20 @@ class UTMSearchCatalog(Catalog):
 
         def _get_items():
             stac_items = []
-            mgrs_granules_list = get_utm_s2_mgrs_granules(self)
-
+            s2_product_granules_list = get_s2_tiles(self)
             for single_date in daterange(
                 start_date=self.start_time, end_date=self.end_time
             ):
-                for mgrs in mgrs_granules_list:
+                for s2_product_tile in s2_product_granules_list:
                     item_path = item_path_constructor(
-                        root=MPath(self.client), single_date=single_date, mgrs=mgrs
+                        root=MPath(self.client),
+                        single_date=single_date,
+                        tile_id=s2_product_tile.tile_id,
                     )
                     if item_path is None:
                         continue
                     with item_path.open() as src:
                         stac_items.append(Item.from_dict(json.loads(src.read())))
-
             return stac_items
 
         return IndexedFeatures(_get_items())
@@ -139,11 +144,11 @@ def get_collection(path):
         return Collection.from_dict(json.loads(src.read()))
 
 
-def item_path_constructor(root, single_date, mgrs):
+def item_path_constructor(root, single_date, tile_id):
     date_str = single_date.strftime("%Y/%m/%d")
     out_date_path = MPath(f"{root}{date_str}/")
     out_item_path = None
     for p in out_date_path.ls():
-        if mgrs in p.name:
+        if tile_id in p.name:
             out_item_path = MPath(f"{str(out_date_path)}{p.name}")
     return out_item_path

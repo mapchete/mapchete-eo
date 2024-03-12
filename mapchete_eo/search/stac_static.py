@@ -21,19 +21,14 @@ StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCatalog(Catalog):
-    endpoint: str
-
     def __init__(
         self,
-        endpoint: Optional[MPathLike] = None,
         baseurl: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Bounds = None,
         **kwargs,
     ) -> None:
-        self.client = Client.from_file(
-            str(baseurl or endpoint or self.endpoint), stac_io=FSSpecStacIO()
-        )
+        self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
         self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
         self.time = time if isinstance(time, list) else [time] if time else []

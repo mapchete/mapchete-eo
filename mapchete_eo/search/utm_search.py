@@ -45,7 +45,7 @@ class UTMSearchCatalog(Catalog):
             if isinstance(time.end, datetime.date)
             else datetime.datetime.strptime(time.end, "%Y-%m-%d")
         )
-        self.client = endpoint or self.endpoint
+        self.client = endpoint
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
         self.collections = collections

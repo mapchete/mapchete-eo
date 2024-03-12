@@ -55,9 +55,8 @@ class Catalog(ABC):
         ...
 
     @property
-    @abstractmethod
     def endpoint(self) -> str:  # pragma: no cover
-        ...
+        return self.endpoint
 
     @property
     def baseurl(self) -> str:  # pragma: no cover

@@ -4,7 +4,7 @@ from mapchete_eo.io.assets import (
     get_assets,
     read_mask_as_raster,
 )
-from mapchete_eo.io.items import get_item_property, item_to_np_array
+from mapchete_eo.io.items import get_item_property, item_fix_footprint, item_to_np_array
 from mapchete_eo.io.levelled_cubes import (
     read_levelled_cube_to_np_array,
     read_levelled_cube_to_xarray,
@@ -27,6 +27,7 @@ __all__ = [
     "products_to_slices",
     "merge_products",
     "get_item_property",
+    "item_fix_footprint",
     "open_xml",
     "get_product_cache_path",
     "path_in_paths",

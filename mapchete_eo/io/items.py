@@ -5,10 +5,12 @@ import numpy.ma as ma
 import pystac
 from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
+from shapely.geometry import box, mapping, shape
+from shapely.ops import unary_union
 
 from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.io.assets import asset_to_np_array
-from mapchete_eo.types import BandLocation, NodataVals
+from mapchete_eo.types import BandLocation, Bounds, NodataVals
 
 logger = logging.getLogger(__name__)
 
@@ -121,3 +123,45 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
             f"({', '.join(item.properties.keys())}) or extra_fields "
             f"({', '.join(item.extra_fields.keys())})"
         )
+
+
+def item_fix_footprint(
+    item: pystac.Item, bbox_width_threshold: int = 180
+) -> pystac.Item:
+    bounds = Bounds.from_inp(item.bbox)
+
+    if bounds.width > bbox_width_threshold:
+        logger.debug("item %s crosses Antimeridian, fixing ...")
+
+        latlon_bbox = box(-180, -90, 180, 90)
+
+        def shift(
+            geometry: dict, by: float = 360, only_negative_x: bool = False
+        ) -> dict:
+            coords = geometry["coordinates"][0]
+            out_coords = []
+            for x, y in coords:
+                if only_negative_x:
+                    if x < 0:
+                        x += by
+                else:
+                    x += by
+                out_coords.append([x, y])
+            return dict(type=geometry["type"], coordinates=[out_coords])
+
+        # (1) shift only coordinates on the western hemisphere by 360°, thus "fixing"
+        # the footprint, but letting it cross the antimeridian
+        shifted_geometry = shape(shift(item.geometry, only_negative_x=True))
+        # (2) split up geometry in one outside of latlon bounds and one inside
+        inside = shifted_geometry.intersection(latlon_bbox)
+        outside = shifted_geometry.difference(latlon_bbox)
+        # (3) shift back only the polygon outside of latlon bounds by -360, thus moving
+        # it back to the western hemisphere
+        outside_shifted = shape(shift(mapping(outside), -360))
+        # (4) create a MultiPolygon out from these two polygons
+        split = mapping(unary_union([inside, outside_shifted]))
+
+        # (5) update item geometry
+        item.geometry = split
+
+    return item

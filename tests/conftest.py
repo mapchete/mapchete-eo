@@ -534,6 +534,11 @@ def full_stac_item_pb0509(s2_testdata_dir):
     )
 
 
+@pytest.fixture(scope="session")
+def antimeridian_item(testdata_dir):
+    return pystac.Item.from_file(testdata_dir / "antimeridian_item.json")
+
+
 @pytest.fixture()
 def product_empty_detector_footprints():
     return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/34/R/FN/2022/4/15/0/metadata.xml"

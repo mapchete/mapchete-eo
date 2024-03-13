@@ -69,7 +69,7 @@ def execute(
                 assets=assets,
                 **dict(
                     default_mosaic_settings,
-                    **region_specific_mosaic_settings.get(region, {})
+                    **region_specific_mosaic_settings.get(region_name, {})
                 )
             )
             if mosaic.mask.all():

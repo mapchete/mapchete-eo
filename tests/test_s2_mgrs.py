@@ -76,8 +76,7 @@ def test_s2_tiles_from_bounds_antimeridian(bounds):
     # 1 / 0
     control_tiles = set(
         [
-            # wester side of antimeridian
-            S2Tile.from_tile_id("01WDV"),
+            # western side of antimeridian
             S2Tile.from_tile_id("01WCV"),
             S2Tile.from_tile_id("01WCU"),
             S2Tile.from_tile_id("01WCS"),

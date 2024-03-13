@@ -48,7 +48,6 @@ class BaseDriverConfig(BaseModel):
     format: str
     time: Union[TimeRange, List[TimeRange]]
     cat_baseurl: Optional[str] = None
-    archive: Optional[Type[Archive]] = None
     cache: Optional[Any] = None
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
     preprocessing_tasks: bool = False

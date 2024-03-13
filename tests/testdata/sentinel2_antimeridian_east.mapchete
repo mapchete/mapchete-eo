@@ -1,0 +1,37 @@
+process: mapchete_eo.processes.eoxcloudless_mosaic
+input:
+  sentinel2:
+    format: Sentinel-2
+    archive: S2AWS_JP2
+    level: L2A
+    time:    
+        start: 2023-06-01
+        end: 2023-06-10
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel2_antimeridian_east
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 10
+bounds: [179.5, 67, 180, 67.3]
+# tmx bounds 13 1134 16353
+# bounds: [179.31884765625, 65.06103515625, 179.3408203125, 65.0830078125]
+
+
+process_parameters:
+  read_masks: true
+  mask_config:
+    # !! dicts with one entry cause a bug in mapchete
+    footprint: true
+    buffer: 16
+    l1c_cloud_type: all    
+    cloud_probability_threshold: 60
+    cloud_probability_resolution: 60    
+  resampling: bilinear
+  target_height: 10
+  read_masks: true
+  assets: ["red", "green", "blue"]
+  from_brightness_extract_method: third_quartile
+  merge_products_by: sentinel2:product_title

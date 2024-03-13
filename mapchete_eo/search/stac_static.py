@@ -23,7 +23,7 @@ StacIO.set_default(FSSpecStacIO)
 class STACStaticCatalog(Catalog):
     def __init__(
         self,
-        baseurl: MPathLike,
+        baseurl: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Bounds = None,
         **kwargs,

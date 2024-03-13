@@ -131,7 +131,7 @@ def item_fix_footprint(
     bounds = Bounds.from_inp(item.bbox)
 
     if bounds.width > bbox_width_threshold:
-        logger.debug("item %s crosses Antimeridian, fixing ...")
+        logger.debug("item %s crosses Antimeridian, fixing ...", item.id)
 
         latlon_bbox = box(-180, -90, 180, 90)
 

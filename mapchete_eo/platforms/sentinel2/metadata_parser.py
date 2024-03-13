@@ -3,6 +3,8 @@ A metadata parser helps to read additional Sentinel-2 metadata such as
 sun angles, quality masks, etc.
 """
 
+from __future__ import annotations
+
 import logging
 import xml.etree.ElementTree as etree
 from functools import cached_property
@@ -58,23 +60,26 @@ def open_granule_metadata_xml(metadata_xml: MPath) -> Element:
 
 def s2metadata_from_stac_item(
     item: pystac.Item,
-    metadata_assets: Union[List[str], str] = ["metadata", "granule_metadata"],
-    boa_offset_fields: Union[List[str], str] = [
+    metadata_assets: List[str] = ["metadata", "granule_metadata"],
+    boa_offset_fields: List[str] = [
         "sentinel:boa_offset_applied",
+        "sentinel2:boa_offset_applied",
         "earthsearch:boa_offset_applied",
     ],
-    processing_baseline_field: str = "s2:processing_baseline",
+    processing_baseline_fields: List[str] = [
+        "s2:processing_baseline",
+        "sentinel:processing_baseline",
+        "sentinel2:processing_baseline",
+    ],
     **kwargs,
-) -> "S2Metadata":
+) -> S2Metadata:
     """Custom code to initialize S2Metadata from a STAC item.
 
     Depending on from which catalog the STAC item comes, this function should correctly
     set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
     using the proper asset name.
     """
-    metadata_assets = (
-        [metadata_assets] if isinstance(metadata_assets, str) else metadata_assets
-    )
+    metadata_assets = metadata_assets
     for metadata_asset in metadata_assets:
         if metadata_asset in item.assets:
             metadata_path = MPath(item.assets[metadata_asset].href)
@@ -83,9 +88,7 @@ def s2metadata_from_stac_item(
         raise KeyError(
             f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
         )
-    for field in (
-        [boa_offset_fields] if isinstance(boa_offset_fields, str) else boa_offset_fields
-    ):
+    for field in boa_offset_fields:
         if item.properties.get(field):
             boa_offset_applied = True
             break
@@ -97,9 +100,19 @@ def s2metadata_from_stac_item(
     else:
         metadata_xml = MPath(item.self_href).parent / metadata_path
 
+    for processing_baseline_field in processing_baseline_fields:
+        try:
+            processing_baseline = item.properties[processing_baseline_field]
+            break
+        except KeyError:
+            pass
+    else:  # pragma: no cover
+        raise KeyError(
+            f"could not find processing baseline version in item properties: {item.properties}"
+        )
     return S2Metadata.from_metadata_xml(
         metadata_xml=metadata_xml,
-        processing_baseline=item.properties.get(processing_baseline_field),
+        processing_baseline=processing_baseline,
         boa_offset_applied=boa_offset_applied,
         **kwargs,
     )
@@ -163,7 +176,7 @@ class S2Metadata:
         processing_baseline: Optional[str] = None,
         path_mapper: Optional[S2PathMapper] = None,
         **kwargs,
-    ) -> "S2Metadata":
+    ) -> S2Metadata:
         metadata_xml = MPath.from_inp(metadata_xml, **kwargs)
         xml_root = open_granule_metadata_xml(metadata_xml)
         if path_mapper is None:
@@ -192,7 +205,7 @@ class S2Metadata:
         )
 
     @classmethod
-    def from_stac_item(cls, item: pystac.Item, **kwargs) -> "S2Metadata":
+    def from_stac_item(cls, item: pystac.Item, **kwargs) -> S2Metadata:
         return cls.from_stac_item_constructor(item, **kwargs)
 
     @cached_property

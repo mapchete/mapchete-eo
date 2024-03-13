@@ -1,15 +1,20 @@
 from enum import Enum
-from typing import List, Optional, Type, Union
+from typing import Any, List, Optional, Type, Union
 
 from mapchete.path import MPathLike
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from pydantic.functional_validators import BeforeValidator
+from typing_extensions import Annotated
 
 from mapchete_eo.archives.base import Archive
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 from mapchete_eo.io.path import ProductPathGenerationMethod
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
-from mapchete_eo.platforms.sentinel2.path_mappers import EarthSearchPathMapper
+from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
+from mapchete_eo.platforms.sentinel2.path_mappers import (
+    EarthSearchPathMapper,
+    SinergisePathMapper,
+)
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProcessingLevel,
@@ -21,6 +26,18 @@ from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
 
 
+def known_archive(v: Any, **args) -> Type[Archive]:
+    if isinstance(v, str):
+        return KnownArchives[v].value
+    elif isinstance(v, type(Archive)):
+        return v
+    else:
+        raise ValidationError(f"cannot validate {v} to archive")
+
+
+ArchiveClsFromString = Annotated[Type[Archive], BeforeValidator(known_archive)]
+
+
 class AWSL2ACOGv1(Archive):
     catalog_cls = EarthSearchV1S2L2A
     collection_name = "sentinel-2-l2a"
@@ -28,8 +45,16 @@ class AWSL2ACOGv1(Archive):
     path_mapper_cls = EarthSearchPathMapper
 
 
+class AWSL2AJP2(Archive):
+    catalog_cls = AWSSearchCatalogS2L2A
+    collection_name = "sentinel-s2-l2a"
+    processing_level = ProcessingLevel.level2a
+    path_mapper_cls = SinergisePathMapper
+
+
 class KnownArchives(Enum):
     S2AWS_COG = AWSL2ACOGv1
+    S2AWS_JP2 = AWSL2AJP2
 
 
 class BRDFConfig(BaseModel):
@@ -71,7 +96,7 @@ class CacheConfig(BaseModel):
 class Sentinel2DriverConfig(BaseDriverConfig):
     format: str = "Sentinel-2"
     time: Union[TimeRange, List[TimeRange]]
-    archive: Type[Archive] = KnownArchives.S2AWS_COG.value
+    archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
     max_cloud_percent: int = 100
     footprint_buffer: float = -500

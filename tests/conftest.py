@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
 
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
+from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.types import TimeRange
@@ -262,6 +262,19 @@ def e84_cog_catalog():
             end="2022-06-06",
         ),
         bounds=[16, 46, 17, 47],
+        collections=["sentinel-2-l2a"],
+    )
+
+
+@pytest.mark.remote
+@pytest.fixture(scope="session")
+def utm_search_catalog():
+    return AWSSearchCatalogS2L2A(
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-06",
+        ),
+        bounds=[-180, 65, -179, 65.3],
         collections=["sentinel-2-l2a"],
     )
 
@@ -553,4 +566,11 @@ def product_missing_detector_footprints():
 def stac_item_missing_detector_footprints():
     return pystac.Item.from_file(
         "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_37WEP_20231017_0_L2A"
+    )
+
+
+@pytest.fixture(scope="session")
+def stac_item_sentinel2_jp2():
+    return pystac.Item.from_file(
+        "s3://sentinel-s2-l2a-stac/2023/09/27/S2B_OPER_MSI_L2A_TL_2BPS_20230927T123351_A034253_T32MRS.json"
     )

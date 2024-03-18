@@ -61,9 +61,6 @@ def execute(
     region_footprints = []
     with Timer() as tt:
         for region_name, region in eo_region_cubes(mp, region_group_name):
-            if region.is_empty():
-                logger.debug("%s is emtpy", region_name)
-                continue
             mosaic = create_mosaic(
                 region,
                 assets=assets,
@@ -96,8 +93,12 @@ def execute(
     return merged
 
 
-# just for typing :)
+# just for typing
 def eo_region_cubes(
     mp: MapcheteProcess, group_name: str = "sentinel2"
 ) -> Generator[Tuple[str, InputTile], None, None]:
-    yield from mp.open(group_name)
+    for name, cube in mp.open(group_name):
+        if cube.is_empty():
+            logger.debug("%s is emtpy", name)
+        else:
+            yield (name, cube)

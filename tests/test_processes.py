@@ -6,8 +6,10 @@ from mapchete_eo.image_operations import FillSelectionMethod
 from mapchete_eo.processes import (
     dtype_scale,
     eoxcloudless_mosaic,
+    eoxcloudless_mosaic_merge,
     eoxcloudless_rgb_map,
     eoxcloudless_sentinel2_color_correction,
+    merge_rasters,
 )
 
 
@@ -63,7 +65,7 @@ def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):
 
 
 @pytest.mark.remote
-def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
+def test_eoxcloudless_mosaic(eoxcloudless_mosaic_mapchete):
     process_mp = eoxcloudless_mosaic_mapchete.process_mp()
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
@@ -74,4 +76,31 @@ def test_eoxcloudless_mosaic_mapchete(eoxcloudless_mosaic_mapchete):
     )
     assert isinstance(output, ma.MaskedArray)
     assert output.mask.any()
+    assert ma.mean(output) > 200
+
+
+@pytest.mark.skip(
+    reason="area parameter in raster_file driver has to be implemented by mapchete first"
+)
+def test_merge_rasters(merge_rasters_mapchete):
+    process_mp = merge_rasters_mapchete.process_mp()
+    # calling the execute() function directly from the process module means
+    # we have to provide all kwargs usually found in the process_parameters
+    output = merge_rasters.execute(
+        process_mp, **process_mp.params.get("process_parameters", {})
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert not output.mask.all()
+    assert ma.mean(output) > 200
+
+
+def test_eoxcloudless_mosaic_regions_merge(eoxcloudless_mosaic_regions_merge_mapchete):
+    process_mp = eoxcloudless_mosaic_regions_merge_mapchete.process_mp()
+    # calling the execute() function directly from the process module means
+    # we have to provide all kwargs usually found in the process_parameters
+    output = eoxcloudless_mosaic_merge.execute(
+        process_mp, **process_mp.params.get("process_parameters", {})
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert not output.mask.all()
     assert ma.mean(output) > 200

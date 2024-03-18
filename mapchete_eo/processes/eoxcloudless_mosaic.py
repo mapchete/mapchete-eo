@@ -8,12 +8,8 @@ from mapchete.errors import MapcheteNodataTile
 from orgonite import cloudless
 from rasterio.enums import Resampling
 
-from mapchete_eo.platforms.sentinel2.config import (
-    BRDFConfig,
-    BRDFModels,
-    MaskConfig,
-    parse_mask_config,
-)
+from mapchete_eo.platforms.sentinel2.config import BRDFConfig, BRDFModels, MaskConfig
+from mapchete_eo.platforms.sentinel2.driver import InputTile
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.sort import TargetDateSort
 from mapchete_eo.types import DateTimeLike, MergeMethod
@@ -36,10 +32,6 @@ def execute(
     considered_bands: int = 3,
     target_date: Optional[DateTimeLike] = None,
 ) -> ma.MaskedArray:
-    mask_config = parse_mask_config(mask_config)
-    if custom_mask_config is not None:
-        custom_mask_config = parse_mask_config(custom_mask_config)
-
     # clip geometry
     if "clip" in mp.params["input"]:
         clip_geom = mp.open("clip").read()
@@ -49,43 +41,78 @@ def execute(
     else:
         clip_geom = []
 
+    with mp.open("sentinel2") as src:
+        return create_mosaic(
+            src,
+            target_height=target_height,
+            assets=assets,
+            resampling=resampling,
+            nodata=nodata,
+            merge_products_by=merge_products_by,
+            read_masks=read_masks,
+            mask_config=mask_config,
+            custom_mask_config=custom_mask_config,
+            from_brightness_extract_method=from_brightness_extract_method,
+            from_brightness_average_over=from_brightness_average_over,
+            considered_bands=considered_bands,
+            target_date=target_date,
+        )
+
+
+def create_mosaic(
+    src: InputTile,
+    target_height: int = 6,
+    assets: list = ["red", "green", "blue", "nir"],
+    resampling: str = "bilinear",
+    nodata: Union[float, int, None] = 0.0,
+    merge_products_by: str = "s2:datastrip_id",
+    read_masks: bool = False,
+    mask_config: Union[MaskConfig, dict] = MaskConfig(cloud_probability_threshold=70),
+    custom_mask_config: Union[None, MaskConfig, dict] = None,
+    from_brightness_extract_method: str = "median",
+    from_brightness_average_over: int = 3,
+    considered_bands: int = 3,
+    target_date: Optional[DateTimeLike] = None,
+) -> ma.MaskedArray:
+    mask_config = MaskConfig.parse(mask_config)
+    if custom_mask_config is not None:
+        custom_mask_config = MaskConfig.parse(custom_mask_config)
+
     # Read all the data first and ideally just once
     # Masks reading should've been done while reading
-    with mp.open("sentinel2") as mp_src:
-        # Read Masks separately with different mask_config
-        # for other/later use
-        if read_masks:
-            if custom_mask_config is None:
-                custom_mask_config = mask_config
-            logger.debug("Reading Sentinel-2 custom masks stack.")
-            with Timer() as t:
-                s2_custom_mask = mp_src.read_masks(
-                    mask_config=custom_mask_config,
-                    sort=TargetDateSort(target_date=target_date),
-                )
-            logger.debug(
-                f"Sentinel-2 custom masks stack {s2_custom_mask.shape}. read in {t}"
-            )
 
-        logger.debug("Reading Sentinel-2 data stack.")
+    # Read Masks separately with different mask_config
+    # for other/later use
+    if read_masks:
+        if custom_mask_config is None:
+            custom_mask_config = mask_config
+        logger.debug("Reading Sentinel-2 custom masks stack.")
         with Timer() as t:
-            s2_arr = mp_src.read_levelled_np_array(
-                target_height=target_height,
-                assets=assets,
-                resampling=Resampling[resampling],
-                nodatavals=nodata,
-                merge_products_by=merge_products_by,
-                merge_method=MergeMethod.average,
-                raise_empty=True,
-                brdf_config=BRDFConfig(
-                    bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
-                ),
-                mask_config=mask_config,
+            s2_custom_mask = src.read_masks(
+                mask_config=custom_mask_config,
                 sort=TargetDateSort(target_date=target_date),
             )
         logger.debug(
-            "Sentinel-2 stack of shape %s read with BRDF took %s", s2_arr.shape, t
+            f"Sentinel-2 custom masks stack {s2_custom_mask.shape}. read in {t}"
         )
+
+    logger.debug("Reading Sentinel-2 data stack.")
+    with Timer() as t:
+        s2_arr = src.read_levelled_np_array(
+            target_height=target_height,
+            assets=assets,
+            resampling=Resampling[resampling],
+            nodatavals=nodata,
+            merge_products_by=merge_products_by,
+            merge_method=MergeMethod.average,
+            raise_empty=True,
+            brdf_config=BRDFConfig(
+                bands=assets, model=BRDFModels.HLS, resolution=Resolution["60m"]
+            ),
+            mask_config=mask_config,
+            sort=TargetDateSort(target_date=target_date),
+        )
+    logger.debug("Sentinel-2 stack of shape %s read with BRDF took %s", s2_arr.shape, t)
 
     return ma.MaskedArray(
         _extract_brightness_mosaic(

@@ -10,7 +10,6 @@ from mapchete_eo.platforms.sentinel2.config import (
     MaskConfig,
     SceneClassification,
     Sentinel2DriverConfig,
-    parse_mask_config,
 )
 from mapchete_eo.product import eo_bands_to_assets_indexes
 from mapchete_eo.sort import TargetDateSort
@@ -362,4 +361,4 @@ def test_read_levelled_cube_np_array_sort(sentinel2_stac_mapchete, test_tile):
     ],
 )
 def test_parse_mask_config(mask_config):
-    assert parse_mask_config(mask_config)
+    assert MaskConfig.parse(mask_config)

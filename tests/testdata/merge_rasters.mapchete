@@ -1,0 +1,30 @@
+process: mapchete_eo.processes.merge_rasters
+input:
+  rasters:
+    region1:
+      format: raster_file
+      path: sentinel2/full_products/sentinel-2-l2a/S2B_33TWM_20230810_0_L2A/B02.tif
+      # upper half of tile 13 2001 8910
+      area: "POLYGON ((15.79833984375 46.021728515625, 15.79833984375 46.03271484375, 15.7763671875 46.03271484375, 15.7763671875 46.021728515625, 15.79833984375 46.021728515625))"
+    region2:
+      format: raster_file
+      path: sentinel2/full_products/sentinel-2-l2a/S2A_33TWM_20230818_0_L2A/B02.tif
+      # lower half of tile 13 2001 8910
+      area: "POLYGON ((15.79833984375 46.0107421875, 15.79833984375 46.021728515625, 15.7763671875 46.021728515625, 15.7763671875 46.0107421875, 15.79833984375 46.0107421875))"
+output:
+  format: GTiff
+  bands: 3
+  path: eoxcloudless_tmp
+  dtype: uint16
+pyramid:
+  grid: geodetic
+  # this has to be set to match gradient_buffer
+  pixelbuffer: 10
+zoom_levels: 13
+# tile 13 2001 8910
+bounds: [15.7763671875, 46.0107421875, 15.79833984375, 46.03271484375]
+
+process_parameters:
+  # merge settings:
+  gradient_buffer: 10
+  merge_method: footprint_gradient

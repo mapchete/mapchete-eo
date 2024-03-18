@@ -239,6 +239,15 @@ def sentinel2_stac_area_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def merge_rasters_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "merge_rasters.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def cloudy_tile():
     return BufferedTilePyramid("geodetic").tile(13, 1986, 8557)
 

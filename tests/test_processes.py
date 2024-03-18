@@ -9,6 +9,7 @@ from mapchete_eo.processes import (
     eoxcloudless_mosaic_merge,
     eoxcloudless_rgb_map,
     eoxcloudless_sentinel2_color_correction,
+    merge_rasters,
 )
 
 
@@ -78,11 +79,14 @@ def test_eoxcloudless_mosaic(eoxcloudless_mosaic_mapchete):
     assert ma.mean(output) > 200
 
 
-def test_merge_rasters(eoxcloudless_mosaic_regions_merge_mapchete):
-    process_mp = eoxcloudless_mosaic_regions_merge_mapchete.process_mp()
+@pytest.mark.skip(
+    reason="area parameter in raster_file driver has to be implemented by mapchete first"
+)
+def test_merge_rasters(merge_rasters_mapchete):
+    process_mp = merge_rasters_mapchete.process_mp()
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
-    output = eoxcloudless_mosaic_merge.execute(
+    output = merge_rasters.execute(
         process_mp, **process_mp.params.get("process_parameters", {})
     )
     assert isinstance(output, ma.MaskedArray)

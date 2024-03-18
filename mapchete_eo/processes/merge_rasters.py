@@ -1,16 +1,17 @@
 import logging
 from enum import Enum
-from typing import List, Optional
+from typing import Generator, List, Optional, Tuple
 
 import numpy as np
 import numpy.ma as ma
+from mapchete import Timer
 from mapchete.errors import MapcheteNodataTile
+from mapchete.formats.base import InputTile
 from mapchete.io.vector import to_shape
 from mapchete.processing.mp import MapcheteProcess
 from mapchete.tile import BufferedTile
 from rasterio.features import geometry_mask
-from shapely.geometry import base, mapping, shape
-from shapely.ops import unary_union
+from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.image_operations import filters
 
@@ -24,95 +25,59 @@ class MergeMethod(str, Enum):
 
 def execute(
     mp: MapcheteProcess,
-    region_rasters_mapping: Optional[dict] = None,
+    region_group_name: str = "rasters",
     gradient_buffer: int = 10,
     merge_method: MergeMethod = MergeMethod.footprint_gradient,
 ):
     """
     Merge multiple rasters into one.
-
-    Parameters
-    ----------
-    regions_rasters_mapping : dict
-        Mapping between region name as provided in the "region" property
-        of the "regions" vector input and the input name of the desired raster(s).
-        e.g.:
-        {
-            4mo_north: ["4mo_north"],
-            6mo_north: ["6mo_north", "8mo_north"]
-        }
-        If multiple rasters are given they will be merged using a "fill until full"
-        approach.
-    gradient_buffer : int
-        Buffer of gradient in pixels. (default: 10)
-
-    Returns
-    -------
-    merged raster : numpy.ma.MaskedArray
     """
-    region_rasters_mapping = region_rasters_mapping or {}
-    # read region features
-    with mp.open("regions") as src:
-        if src.is_empty():
-            raise MapcheteNodataTile
+    rasters = []
+    region_footprints = []
 
-        regions = src.read()
+    with Timer() as tt:
+        for region_name, region in get_raster_inputs(mp, region_group_name):
+            raster = region.read()
+            if raster.mask.all():
+                logger.debug("%s raster is empty", region_name)
+                continue
 
-        # make regions unique in case we have multiple regions with same input raster
-        unique_regions: dict = {}
-        for r in regions:
-            if r["properties"]["region"] not in unique_regions:
-                unique_regions[r["properties"]["region"]] = []
-            unique_regions[r["properties"]["region"]].append(r)
-        regions = [
-            features[0]
-            if len(regions) == 1
-            else dict(
-                features[0],
-                geometry=mapping(unary_union([shape(f["geometry"]) for f in features])),
-            )
-            for region_name, features in unique_regions.items()
-        ]
-        logger.debug(
-            f"{len(regions)} unique region(s) over tile: {', '.join([r['properties']['region'] for r in regions])}"
+            rasters.append(raster)
+            region_footprints.append(region.area)
+
+    logger.debug("%s rasters created in %s", len(rasters), tt)
+
+    if len(rasters) == 0:
+        raise MapcheteNodataTile("no input rasters found")
+
+    with Timer() as tt:
+        merged = merge_rasters(
+            rasters,
+            mp.tile,
+            footprints=region_footprints,
+            method=merge_method,
+            gradient_buffer=gradient_buffer,
         )
+    logger.debug("%s mosaics merged in %s", len(rasters), tt)
+    return merged
 
-        ## if only one feature, read one raster and return
-        if len(regions) == 1:
-            region = regions[0]
-            region_name = region["properties"]["region"]
-            return merge_rasters(
-                [mp.open(m).read() for m in region_rasters_mapping[region_name]],
-                mp.tile,
-            )
 
-        ## if 2 or more features, merge
+# just for typing
+def get_raster_inputs(
+    mp: MapcheteProcess, group_name: str = "rasters"
+) -> Generator[Tuple[str, InputTile], None, None]:
+    for name, raster in mp.open(group_name):
+        if raster.is_empty():
+            logger.debug("%s is emtpy", name)
         else:
-            return merge_rasters(
-                [
-                    merge_rasters(
-                        [
-                            mp.open(m).read()
-                            for m in region_rasters_mapping[
-                                region["properties"]["region"]
-                            ]
-                        ],
-                        mp.tile,
-                    )
-                    for region in regions
-                ],
-                mp.tile,
-                method=merge_method,
-                footprints=regions,
-                gradient_buffer=gradient_buffer,
-            )
+            yield (name, raster)
 
 
 def merge_rasters(
     rasters: List[ma.MaskedArray],
     tile: BufferedTile,
     method: MergeMethod = MergeMethod.fill,
-    footprints: Optional[List[base.BaseGeometry]] = None,
+    footprints: Optional[List[BaseGeometry]] = None,
     gradient_buffer: int = 10,
 ) -> ma.MaskedArray:
     footprints = footprints or []
@@ -157,7 +122,7 @@ def fillnodata_merge(
 
 def gradient_merge(
     rasters: List[ma.MaskedArray],
-    footprints: List[base.BaseGeometry],
+    footprints: List[BaseGeometry],
     tile: BufferedTile,
     gradient_buffer: int = 10,
 ) -> ma.MaskedArray:

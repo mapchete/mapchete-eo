@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.3.1 - 2024-03-19
+---------------------
+
+* core
+  * fix handling of empty footprints in `merge_rasters()`
+
+
 2024.3.0 - 2024-03-18
 ---------------------
 

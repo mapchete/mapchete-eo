@@ -139,7 +139,7 @@ def gradient_merge(
     for raster, footprint in zip(rasters, footprints):
         # create gradient mask from footprint
         footprint_geom = to_shape(footprint)
-        if footprint_geom.is_empy():
+        if footprint_geom.is_empty:
             footprint_mask = np.ones(shape=raster.mask[0].shape, dtype=bool)
         else:
             footprint_mask = geometry_mask(

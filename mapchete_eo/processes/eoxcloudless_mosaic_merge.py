@@ -98,7 +98,7 @@ def eo_region_cubes(
     mp: MapcheteProcess, group_name: str = "sentinel2"
 ) -> Generator[Tuple[str, InputTile], None, None]:
     for name, cube in mp.open(group_name):
-        if cube.is_empty() or cube.area.is_empty():
+        if cube.is_empty() or cube.area.is_empty:
             logger.debug("%s is emtpy", name)
         else:
             yield (name, cube)

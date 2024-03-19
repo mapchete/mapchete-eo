@@ -11,6 +11,7 @@ from mapchete.io.vector import to_shape
 from mapchete.processing.mp import MapcheteProcess
 from mapchete.tile import BufferedTile
 from rasterio.features import geometry_mask
+from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.image_operations import filters
@@ -137,13 +138,17 @@ def gradient_merge(
 
     for raster, footprint in zip(rasters, footprints):
         # create gradient mask from footprint
-        footprint_mask = geometry_mask(
-            [to_shape(footprint)],
-            raster.mask[0].shape,
-            tile.transform,
-            all_touched=False,
-            invert=False,
-        )
+        footprint_geom = to_shape(footprint)
+        if footprint_geom.is_empty:
+            footprint_mask = np.ones(shape=raster.mask[0].shape, dtype=bool)
+        else:
+            footprint_mask = geometry_mask(
+                [mapping(footprint_geom)],
+                raster.mask[0].shape,
+                tile.transform,
+                all_touched=False,
+                invert=False,
+            )
 
         # TODO: the gaussian_blur function demands a 3-band array, so we have to
         # hack around that. This could be improved.

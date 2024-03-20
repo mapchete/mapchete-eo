@@ -82,19 +82,17 @@ def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic(
     eoxcloudless_mosaic_s2jp2_mapchete,
 ):
     process_mp = eoxcloudless_mosaic_s2jp2_mapchete.process_mp(tile=(9, 64, 1023))
-    output = eoxcloudless_rgb_map.execute(
-        process_mp,
+    output = eoxcloudless_mosaic.execute(
+        process_mp, assets=["red", "green", "nir08"], mask_config=dict(footprint=True)
     )
     assert isinstance(output, ma.MaskedArray)
     assert output.mask.any()
     assert ma.mean(output) > 200
 
-    # process_mp = eoxcloudless_mosaic_s2jp2_mapchete.process_mp(tile=(9, 64, 0))
-    # output = eoxcloudless_rgb_map.execute(
-    #     process_mp,
-    # )
-    # assert isinstance(output, ma.MaskedArray)
-    # assert not output.mask.any()
-    # assert ma.min(output) == 255
-    # assert ma.mean(output) == 255
-    # assert ma.max(output) == 255
+    process_mp = eoxcloudless_mosaic_s2jp2_mapchete.process_mp(tile=(9, 64, 0))
+    output = eoxcloudless_mosaic.execute(
+        process_mp, assets=["red", "green", "nir08"], mask_config=dict(footprint=True)
+    )
+    assert isinstance(output, ma.MaskedArray)
+    assert output.mask.any()
+    assert ma.mean(output) > 200

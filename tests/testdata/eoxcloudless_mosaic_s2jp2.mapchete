@@ -29,6 +29,6 @@ process_parameters:
   resampling: bilinear
   target_height: 10
   read_masks: true
-  assets: ["red", "green", "blue"]
+  assets: ["red", "green", "nir08"]
   from_brightness_extract_method: third_quartile
   merge_products_by: sentinel2:product_title

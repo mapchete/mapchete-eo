@@ -4,7 +4,6 @@ import logging
 from functools import cached_property
 from typing import Dict, List, Optional
 
-import numpy as np
 from mapchete.io import fiona_open
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath, MPathLike
@@ -12,11 +11,12 @@ from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.item import Item
 from shapely import intersects, transform
-from shapely.geometry import Polygon, box, shape
+from shapely.geometry import box, shape
 
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import UTMSearchConfig
+from mapchete_eo.search.s2_mgrs import s2_tiles_from_bounds
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -66,11 +66,12 @@ class UTMSearchCatalog(Catalog):
                 yield start_date + datetime.timedelta(n)
 
         def get_s2_tiles(self):
-            from mapchete_eo.search.s2_mgrs import s2_tiles_from_bounds
-
             return s2_tiles_from_bounds(*self.bounds)
 
         def get_utm_s2_mgrs_granules(self):
+            """
+            Backup s2 granules search UTM finder based on an external file.
+            """
             utm_s2_mgrs_granules = []
             with fiona_open(self.config.mgrs_s2_grid) as mgrs_src:
                 # see fiona filter while opening

@@ -33,6 +33,7 @@ class UTMSearchConfig:
         ),
     )
     mgrs_s2_grid: MPath = MPath(
-        "s3://eox-data/S2_Tiling_MGRS_Grid_S2A_OPER_GIP_TILPAR_MPC_B00.fgb"
+        "/home/suprd/S2_Tiling_MGRS_Grid_S2A_OPER_GIP_TILPAR_MPC_B00.fgb"
+        # "s3://eox-data/S2_Tiling_MGRS_Grid_S2A_OPER_GIP_TILPAR_MPC_B00.fgb"
     )
     utm_allowed_granules: Union[str, list] = "all"

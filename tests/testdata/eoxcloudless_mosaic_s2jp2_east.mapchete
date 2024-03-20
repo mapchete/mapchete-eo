@@ -15,6 +15,8 @@ output:
 pyramid:
   grid: geodetic
 zoom_levels: 9
+#tile: 9 64 1023
+bounds: [179.6484375, 67.1484375, 180.0, 67.5]
 
 
 process_parameters:

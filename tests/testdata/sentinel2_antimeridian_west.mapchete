@@ -1,0 +1,28 @@
+process: mapchete_eo.processes.eoxcloudless_mosaic
+input:
+  sentinel2:
+    format: Sentinel-2
+    archive: S2AWS_JP2
+    level: L2A
+    time:    
+        start: 2023-06-01
+        end: 2023-06-10
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel2_antimeridian_west
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 10
+# tmx bounds 13 1879 8938
+bounds: [-180, 67, -179.5, 67.3]
+
+
+process_parameters:
+  resampling: bilinear
+  target_height: 10
+  read_masks: true
+  assets: ["red", "green", "blue"]
+  from_brightness_extract_method: third_quartile
+  merge_products_by: sentinel2:product_title  

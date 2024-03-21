@@ -509,12 +509,14 @@ def test_from_stac_item(item_url):
         # lazy_fixture("stac_item_pb0211"),
         # lazy_fixture("stac_item_pb0212"),
         # lazy_fixture("stac_item_pb0213"),
+        lazy_fixture("stac_item_sentinel2_jp2_local"),
         lazy_fixture("stac_item_pb0214"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),
         lazy_fixture("stac_item_pb0400"),
         lazy_fixture("stac_item_pb0400_offset"),
         lazy_fixture("stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_from_stac_item_backwards(item):
@@ -529,7 +531,7 @@ def test_from_stac_item_backwards(item):
 
     # make sure baseline version is as expected
     assert s2_metadata.processing_baseline.version == item.properties.get(
-        "s2:processing_baseline"
+        "s2:processing_baseline", item.properties.get("sentinel2:processing_baseline")
     )
 
     # make sure offset is correct
@@ -599,6 +601,7 @@ def test_product_missing_detector_footprints(product_missing_detector_footprints
     "item",
     [
         lazy_fixture("full_stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_full_product_paths(item):
@@ -611,23 +614,14 @@ def test_full_product_paths(item):
 @pytest.mark.parametrize(
     "item",
     [
-        # deactivate tests for ancient metadata
-        # lazy_fixture("stac_item_pb_l1c_0204"),
-        # lazy_fixture("stac_item_pb_l1c_0205"),
-        # lazy_fixture("stac_item_pb_l1c_0206"),
-        # lazy_fixture("stac_item_pb0207"),
-        # lazy_fixture("stac_item_pb0208"),
-        # lazy_fixture("stac_item_pb0209"),
-        # lazy_fixture("stac_item_pb0210"),
-        # lazy_fixture("stac_item_pb0211"),
-        # lazy_fixture("stac_item_pb0212"),
-        # lazy_fixture("stac_item_pb0213"),
+        lazy_fixture("stac_item_sentinel2_jp2_local"),
         lazy_fixture("stac_item_pb0214"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),
         lazy_fixture("stac_item_pb0400"),
         lazy_fixture("stac_item_pb0400_offset"),
         lazy_fixture("stac_item_pb0509"),
+        lazy_fixture("stac_item_sentinel2_jp2"),
     ],
 )
 def test_full_remote_product_paths(item):

@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
 
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
+from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.types import TimeRange
@@ -185,6 +185,24 @@ def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def eoxcloudless_mosaic_s2jp2_east_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_east.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
+def eoxcloudless_mosaic_s2jp2_west_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_west.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def eoxcloudless_mosaic_regions_merge_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "eoxcloudless_mosaic_regions_merge.mapchete",
@@ -280,6 +298,19 @@ def e84_cog_catalog():
             end="2022-06-06",
         ),
         bounds=[16, 46, 17, 47],
+        collections=["sentinel-2-l2a"],
+    )
+
+
+@pytest.mark.remote
+@pytest.fixture(scope="session")
+def utm_search_catalog():
+    return AWSSearchCatalogS2L2A(
+        time=TimeRange(
+            start="2022-06-01",
+            end="2022-06-06",
+        ),
+        bounds=[-180, 65, -179, 65.3],
         collections=["sentinel-2-l2a"],
     )
 
@@ -552,6 +583,11 @@ def full_stac_item_pb0509(s2_testdata_dir):
     )
 
 
+@pytest.fixture(scope="session")
+def antimeridian_item(testdata_dir):
+    return pystac.Item.from_file(testdata_dir / "antimeridian_item.json")
+
+
 @pytest.fixture()
 def product_empty_detector_footprints():
     return "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/34/R/FN/2022/4/15/0/metadata.xml"
@@ -566,4 +602,23 @@ def product_missing_detector_footprints():
 def stac_item_missing_detector_footprints():
     return pystac.Item.from_file(
         "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_37WEP_20231017_0_L2A"
+    )
+
+
+@pytest.fixture(scope="session")
+def stac_item_sentinel2_jp2():
+    return pystac.Item.from_file(
+        "s3://sentinel-s2-l2a-stac/2023/09/27/S2B_OPER_MSI_L2A_TL_2BPS_20230927T123351_A034253_T32MRS.json"
+    )
+
+
+@pytest.fixture(scope="session")
+def stac_item_sentinel2_jp2_local(s2_testdata_dir):
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"""
+    return pystac.Item.from_file(
+        str(
+            s2_testdata_dir
+            / "stac_items"
+            / "S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCR.json"
+        )
     )

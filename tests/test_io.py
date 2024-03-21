@@ -3,8 +3,9 @@ from datetime import datetime
 import pytest
 from mapchete.path import MPath
 from pytest_lazyfixture import lazy_fixture
+from shapely.geometry import shape
 
-from mapchete_eo.io import get_item_property, products_to_slices
+from mapchete_eo.io import get_item_property, item_fix_footprint, products_to_slices
 from mapchete_eo.io.path import (
     ProductPathGenerationMethod,
     asset_mpath,
@@ -102,3 +103,10 @@ def test_products_to_slices(s2_stac_items):
         assert len(slice_.products) > 1
         for product in slice_.products:
             assert slice_.name == product.item.datetime.day
+
+
+def test_item_fix_footprint(antimeridian_item):
+    assert (
+        shape(item_fix_footprint(antimeridian_item).geometry).geom_type
+        == "MultiPolygon"
+    )

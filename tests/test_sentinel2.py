@@ -2,6 +2,7 @@ import numpy.ma as ma
 import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
+from mapchete.path import MPath
 
 from mapchete_eo.array.convert import to_masked_array
 from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
@@ -30,6 +31,18 @@ def test_config():
     assert conf.model_dump()
 
 
+def test_jp2_config():
+    conf = Sentinel2DriverConfig(
+        format="Sentinel-2",
+        archive="S2AWS_JP2",
+        time=dict(
+            start="2022-04-01",
+            end="2022-04-10",
+        ),
+    )
+    assert conf.model_dump()
+
+
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
     eo_bands = ["red", "green", "blue"]
     assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
@@ -43,6 +56,17 @@ def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
     eo_bands = ["foo"]
     with pytest.raises(KeyError):
         eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
+
+
+@pytest.mark.remote
+def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
+    eo_bands = ["red", "green", "blue", "nir08"]
+    assets_indexes = eo_bands_to_assets_indexes(stac_item_sentinel2_jp2, eo_bands)
+    assert len(eo_bands) == len(assets_indexes)
+    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
+        assert eo_band == asset
+        assert index == 1
+        assert MPath(stac_item_sentinel2_jp2.assets[asset].href).exists()
 
 
 @pytest.mark.remote

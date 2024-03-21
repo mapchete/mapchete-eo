@@ -187,7 +187,16 @@ def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
 @pytest.fixture
 def eoxcloudless_mosaic_s2jp2_east_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic_s2jp2_east.mapchete",
+        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_east.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
+def eoxcloudless_mosaic_s2jp2_west_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_west.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example

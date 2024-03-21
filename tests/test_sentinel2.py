@@ -32,6 +32,18 @@ def test_config():
     assert conf.model_dump()
 
 
+def test_jp2_config():
+    conf = Sentinel2DriverConfig(
+        format="Sentinel-2",
+        archive="S2AWS_JP2",
+        time=dict(
+            start="2022-04-01",
+            end="2022-04-10",
+        ),
+    )
+    assert conf.model_dump()
+
+
 def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
     eo_bands = ["red", "green", "blue"]
     assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)

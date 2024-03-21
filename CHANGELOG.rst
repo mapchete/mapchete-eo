@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+2024.3.2 - 2024-03-21
+---------------------
+
+* core
+  * add `utm_search.py` and `s2_mgrs` into utm_search
+  * `UTMSearchConfig` for a new archive named `S2AWS_JP2`
+    * This searches the STAC items directly via Bucket
+  * Antimeridian products focus to aleviate Element84 missing footprints and products over Antimeridian
+  * add tests for the above
+
+
 2024.3.1 - 2024-03-19
 ---------------------
 

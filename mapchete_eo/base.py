@@ -64,6 +64,7 @@ class InputTile(base.InputTile):
     tile: BufferedTile
     eo_bands: dict
     time: List[TimeRange]
+    area: BaseGeometry
 
     def __init__(
         self,
@@ -72,6 +73,7 @@ class InputTile(base.InputTile):
         eo_bands: dict,
         time: List[TimeRange],
         input_key: Optional[str] = None,
+        area: Optional[BaseGeometry] = None,
         **kwargs,
     ) -> None:
         """Initialize."""
@@ -80,6 +82,7 @@ class InputTile(base.InputTile):
         self.eo_bands = eo_bands
         self.time = time
         self.input_key = input_key
+        self.area = tile.bbox if area is None else area
 
     @cached_property
     def products(self) -> IndexedFeatures[EOProductProtocol]:
@@ -519,4 +522,5 @@ class InputData(base.InputData):
             time=self.time,
             # passing on the input key is essential so dependent preprocessing tasks can be found!
             input_key=self.input_key,
+            area=self.area.intersection(tile.bbox),
         )

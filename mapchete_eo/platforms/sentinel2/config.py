@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any, List, Optional, Type, Union
 
@@ -130,28 +132,28 @@ class MaskConfig(BaseModel):
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None
 
+    @staticmethod
+    def parse(config: Union[dict, MaskConfig]) -> MaskConfig:
+        """
+        Make sure all values are parsed correctly
+        """
+        if isinstance(config, MaskConfig):
+            return config
 
-def parse_mask_config(config: Union[dict, MaskConfig]) -> MaskConfig:
-    """
-    Make sure all values are parsed correctly
-    """
-    if isinstance(config, MaskConfig):
-        return config
+        elif isinstance(config, dict):
+            # convert SCL classes to correct SceneClassification item
+            scl_classes = config.get("scl_classes")
+            if scl_classes:
+                config["scl_classes"] = [
+                    scene_cls
+                    if isinstance(scene_cls, SceneClassification)
+                    else SceneClassification[scene_cls]
+                    for scene_cls in scl_classes
+                ]
 
-    elif isinstance(config, dict):
-        # convert SCL classes to correct SceneClassification item
-        scl_classes = config.get("scl_classes")
-        if scl_classes:
-            config["scl_classes"] = [
-                scene_cls
-                if isinstance(scene_cls, SceneClassification)
-                else SceneClassification[scene_cls]
-                for scene_cls in scl_classes
-            ]
+            return MaskConfig(**config)
 
-        return MaskConfig(**config)
-
-    else:
-        raise TypeError(
-            f"mask configuration should either be a dictionary or a MaskConfig object, not {config}"
-        )
+        else:
+            raise TypeError(
+                f"mask configuration should either be a dictionary or a MaskConfig object, not {config}"
+            )

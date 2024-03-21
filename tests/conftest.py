@@ -203,6 +203,15 @@ def eoxcloudless_mosaic_s2jp2_west_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def eoxcloudless_mosaic_regions_merge_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "eoxcloudless_mosaic_regions_merge.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2.mapchete",
@@ -242,6 +251,15 @@ def sentinel2_stac_mapchete(tmp_path, testdata_dir):
 def sentinel2_stac_area_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac_area.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
+def merge_rasters_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "merge_rasters.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example

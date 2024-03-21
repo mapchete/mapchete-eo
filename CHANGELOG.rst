@@ -3,6 +3,20 @@ Changelog
 #########
 
 
+2024.3.1 - 2024-03-19
+---------------------
+
+* core
+  * fix handling of empty footprints in `merge_rasters()`
+
+
+2024.3.0 - 2024-03-18
+---------------------
+
+* core
+  * add `merge_rasters()` and `eoxcloudless_mosaic_merge()` processes
+
+
 2024.2.6 - 2024-02-20
 ---------------------
 

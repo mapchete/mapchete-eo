@@ -509,6 +509,7 @@ def test_from_stac_item(item_url):
         # lazy_fixture("stac_item_pb0211"),
         # lazy_fixture("stac_item_pb0212"),
         # lazy_fixture("stac_item_pb0213"),
+        lazy_fixture("stac_item_jp2_schema"),
         lazy_fixture("stac_item_pb0214"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),
@@ -613,6 +614,7 @@ def test_full_product_paths(item):
 @pytest.mark.parametrize(
     "item",
     [
+        lazy_fixture("stac_item_jp2_schema"),
         lazy_fixture("stac_item_pb0214"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),

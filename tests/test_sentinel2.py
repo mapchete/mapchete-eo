@@ -60,7 +60,7 @@ def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
 
 @pytest.mark.remote
 def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
-    eo_bands = ["red", "green", "blue"]
+    eo_bands = ["red", "green", "blue", "nir08"]
     assets_indexes = eo_bands_to_assets_indexes(stac_item_sentinel2_jp2, eo_bands)
     assert len(eo_bands) == len(assets_indexes)
     for eo_band, (asset, index) in zip(eo_bands, assets_indexes):

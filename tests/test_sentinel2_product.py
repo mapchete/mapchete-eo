@@ -45,6 +45,7 @@ def test_product(item):
 @pytest.mark.parametrize(
     "item",
     [
+        lazy_fixture("stac_item_sentinel2_jp2_local"),
         lazy_fixture("stac_item_pb0300"),
         lazy_fixture("stac_item_pb0301"),
         lazy_fixture("stac_item_pb0400"),

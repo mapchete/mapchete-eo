@@ -610,3 +610,15 @@ def stac_item_sentinel2_jp2():
     return pystac.Item.from_file(
         "s3://sentinel-s2-l2a-stac/2023/09/27/S2B_OPER_MSI_L2A_TL_2BPS_20230927T123351_A034253_T32MRS.json"
     )
+
+
+@pytest.fixture(scope="session")
+def stac_item_sentinel2_jp2_local(s2_testdata_dir):
+    """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"""
+    return pystac.Item.from_file(
+        str(
+            s2_testdata_dir
+            / "stac_items"
+            / "S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCR.json"
+        )
+    )

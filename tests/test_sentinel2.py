@@ -386,3 +386,55 @@ def test_read_levelled_cube_np_array_sort(sentinel2_stac_mapchete, test_tile):
 )
 def test_parse_mask_config(mask_config):
     assert MaskConfig.parse(mask_config)
+
+
+def test_footprint_buffer(
+    sentinel2_stac_mapchete, sentinel2_stac_footprint_buffer_mapchete, test_edge_tile
+):
+    # read data from both processes and make sure footprint buffered data is masked out more
+
+    with sentinel2_stac_mapchete.process_mp(test_edge_tile).open("inp") as src:
+        unbuffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+            ),
+        )
+
+    with sentinel2_stac_footprint_buffer_mapchete.process_mp(test_edge_tile).open(
+        "inp"
+    ) as src:
+        buffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+            ),
+        )
+
+    assert buffered.mask.sum() > unbuffered.mask.sum()
+
+
+def test_footprint_buffer_antimeridian(
+    sentinel2_stac_mapchete, sentinel2_stac_footprint_buffer_mapchete, test_edge_tile
+):
+    # read data from both processes and make sure footprint buffered data is masked out more
+
+    with sentinel2_stac_mapchete.process_mp(test_edge_tile).open("inp") as src:
+        unbuffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+            ),
+        )
+
+    with sentinel2_stac_footprint_buffer_mapchete.process_mp(test_edge_tile).open(
+        "inp"
+    ) as src:
+        buffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+            ),
+        )
+
+    assert buffered.mask.sum() > unbuffered.mask.sum()

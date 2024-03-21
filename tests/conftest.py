@@ -248,6 +248,15 @@ def sentinel2_stac_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_stac_footprint_buffer_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_stac_footprint_buffer.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_stac_area_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac_area.mapchete",
@@ -274,6 +283,12 @@ def cloudy_tile():
 def test_tile():
     """Tile on the overlap between MGRS granules 33TWL and 33TWM."""
     return BufferedTilePyramid("geodetic").tile_from_xy(15.77928, 46.01972, 13)
+
+
+@pytest.fixture
+def test_edge_tile():
+    """Tile on the overlap between MGRS granules 33TWL and 33TWM but on the product edge."""
+    return BufferedTilePyramid("geodetic").tile_from_xy(15.00122, 45.98486, 13)
 
 
 @pytest.fixture(scope="session")

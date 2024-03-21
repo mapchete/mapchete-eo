@@ -49,6 +49,7 @@ class BaseDriverConfig(BaseModel):
     time: Union[TimeRange, List[TimeRange]]
     cat_baseurl: Optional[str] = None
     cache: Optional[Any] = None
+    footprint_buffer: float = 0
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
     preprocessing_tasks: bool = False
 
@@ -414,6 +415,7 @@ class InputData(base.InputData):
                     ),
                     bounds=self.bbox(mapchete_eo_settings.default_catalog_crs).bounds,
                     time=self.time,
+                    footprint_buffer=self.params.footprint_buffer,
                 )
             )
         elif self.params.archive:

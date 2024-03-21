@@ -10,6 +10,7 @@ from pystac.stac_io import StacIO
 from pystac_client import Client
 from tilematrix import Bounds
 
+from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import Catalog, FSSpecStacIO
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import DateTimeLike, TimeRange
@@ -26,12 +27,14 @@ class STACStaticCatalog(Catalog):
         baseurl: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Bounds = None,
+        footprint_buffer: float = 0,
         **kwargs,
     ) -> None:
         self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
         self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
         self.time = time if isinstance(time, list) else [time] if time else []
+        self.footprint_buffer = footprint_buffer
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -46,14 +49,16 @@ class STACStaticCatalog(Catalog):
                             timespan=(time_range.start, time_range.end),
                         ):
                             item.make_asset_hrefs_absolute()
-                            yield item
+                            yield item_fix_footprint(
+                                item, buffer_m=self.footprint_buffer
+                            )
                 else:
                     for item in _all_intersecting_items(
                         collection,
                         bounds=self.bounds,
                     ):
                         item.make_asset_hrefs_absolute()
-                        yield item
+                        yield item_fix_footprint(item, buffer_m=self.footprint_buffer)
 
         items = list(_gen_items())
         logger.debug("%s items found", len(items))

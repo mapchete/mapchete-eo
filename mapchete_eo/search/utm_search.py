@@ -106,7 +106,12 @@ class UTMSearchCatalog(Catalog):
                     if item_path is None:
                         continue
 
-                    stac_items.append(item_fix_footprint(Item.from_file(item_path)))
+                    stac_items.append(
+                        item_fix_footprint(
+                            Item.from_file(item_path),
+                            buffer_m=self.config.footprint_buffer,
+                        )
+                    )
 
             return stac_items
 

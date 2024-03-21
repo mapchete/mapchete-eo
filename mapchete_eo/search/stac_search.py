@@ -10,6 +10,7 @@ from pystac_client import Client
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import Catalog
 from mapchete_eo.search.config import StacSearchConfig
@@ -89,7 +90,9 @@ class STACSearchCatalog(Catalog):
                                 "item %s found in blacklist and skipping", item_path
                             )
                         else:
-                            yield item
+                            yield item_fix_footprint(
+                                item, buffer_m=self.config.footprint_buffer
+                            )
 
         if self.area is not None and self.area.is_empty:
             return IndexedFeatures([])

@@ -8,7 +8,7 @@ input:
       end: 2023-08-13
     cat_baseurl: sentinel2/full_products/catalog.json
     with_cloudmasks: true
-    footprint_buffer: -2000
+    footprint_buffer: -550
 output:
   format: GTiff
   bands: 3

@@ -188,6 +188,7 @@ def execute(
         sigmodial_constrast=rgb_composite.sigmodial_contrast,
         sigmodial_bias=rgb_composite.sigmodial_bias,
         saturation=rgb_composite.saturation,
+        calculations_dtype=rgb_composite.calculations_dtype,
     )
 
     # apply special color correction to desert areas and merge with corrected
@@ -229,6 +230,7 @@ def execute(
                     sigmodial_constrast=desert_rgb_composite.sigmodial_contrast,
                     sigmodial_bias=desert_rgb_composite.sigmodial_bias,
                     saturation=desert_rgb_composite.saturation,
+                    calculations_dtype=desert_rgb_composite.calculations_dtype,
                 ),
                 compositing.fuzzy_alpha_mask(
                     corrected,

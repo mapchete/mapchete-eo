@@ -19,3 +19,4 @@ class RGBCompositeConfig(BaseModel):
     sharpen: Optional[bool] = False
     smooth_water: Optional[bool] = False
     smooth_water_ndwi_threshold: float = 0.2
+    calculations_dtype: str = "float16"

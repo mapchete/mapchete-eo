@@ -19,6 +19,7 @@ def color_correct(
     sigmodial_constrast: int = 0,
     sigmodial_bias: float = 0.0,
     saturation: float = 3.2,
+    calculations_dtype: np.dtype = "float16",
 ) -> ma.MaskedArray:
     """
     Return color corrected 8 bit RGB array from 8 bit input RGB.
@@ -42,6 +43,13 @@ def color_correct(
     -------
     color corrected image : np.ndarray
     """
+    if isinstance(calculations_dtype, str):
+        calculations_dtype = np.dtype(getattr(np, calculations_dtype))
+    if not isinstance(calculations_dtype, np.dtype):
+        raise TypeError(
+            f"Harmonization dtype needs to be valid numpy dtype is: {type(calculations_dtype)}"
+        )
+
     if rgb.dtype != "uint8":
         raise TypeError("rgb must be of dtype np.uint8")
 
@@ -64,18 +72,25 @@ def color_correct(
 
     if sigmodial_flag is True:
         corrected = np.clip(
-            corrected.astype(np.float16, copy=False) / 255, 0, 1
-        ).astype(np.float16, copy=False)
-        corrected = sigmoidal(
-            corrected,
-            contrast=sigmodial_constrast,
-            bias=sigmodial_bias,
-            out_dtype=corrected.dtype,
-        ).astype(np.float16, copy=False)
-        corrected = np.clip(corrected * 255, 1, 255).astype(np.uint8, copy=False)
+            (
+                sigmoidal(
+                    np.clip(
+                        corrected.astype(calculations_dtype, copy=False) / 255, 0, 1
+                    ).astype(calculations_dtype, copy=False),
+                    contrast=sigmodial_constrast,
+                    bias=sigmodial_bias,
+                    out_dtype=calculations_dtype,
+                ).astype(calculations_dtype, copy=False)
+                * 255
+            ),
+            1,
+            255,
+        )
+        corrected = corrected.astype(np.uint8, copy=False)
+        # corrected =
 
     # Brightness
-    imghsv = cv2.cvtColor(corrected, cv2.COLOR_BGR2HSV).astype(np.float16)
+    imghsv = cv2.cvtColor(corrected, cv2.COLOR_BGR2HSV).astype(calculations_dtype)
     (h, s, v) = cv2.split(imghsv)
     v = np.clip(
         np.where((v / 255 * gamma) * 255 >= 255, 255, (v / 255 * gamma) * 255), 1, 255

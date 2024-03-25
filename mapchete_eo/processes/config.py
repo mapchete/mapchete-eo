@@ -12,7 +12,11 @@ class RGBCompositeConfig(BaseModel):
     clahe_flag: bool = True
     clahe_clip_limit: float = 3.2
     clahe_tile_grid_size: tuple = (32, 32)
+    sigmoidal_flag: bool = False
+    sigmoidal_contrast: int = 0
+    sigmoidal_bias: float = 0.0
     fuzzy_radius: Optional[int] = 0
     sharpen: Optional[bool] = False
     smooth_water: Optional[bool] = False
     smooth_water_ndwi_threshold: float = 0.2
+    calculations_dtype: str = "float16"

@@ -184,7 +184,11 @@ def execute(
         clahe_flag=rgb_composite.clahe_flag,
         clahe_clip_limit=rgb_composite.clahe_clip_limit,
         clahe_tile_grid_size=rgb_composite.clahe_tile_grid_size,
+        sigmoidal_flag=rgb_composite.sigmoidal_flag,
+        sigmoidal_constrast=rgb_composite.sigmoidal_contrast,
+        sigmoidal_bias=rgb_composite.sigmoidal_bias,
         saturation=rgb_composite.saturation,
+        calculations_dtype=rgb_composite.calculations_dtype,
     )
 
     # apply special color correction to desert areas and merge with corrected
@@ -222,7 +226,11 @@ def execute(
                     clahe_flag=desert_rgb_composite.clahe_flag,
                     clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
                     clahe_tile_grid_size=desert_rgb_composite.clahe_tile_grid_size,
+                    sigmoidal_flag=desert_rgb_composite.sigmoidal_flag,
+                    sigmoidal_constrast=desert_rgb_composite.sigmoidal_contrast,
+                    sigmoidal_bias=desert_rgb_composite.sigmoidal_bias,
                     saturation=desert_rgb_composite.saturation,
+                    calculations_dtype=desert_rgb_composite.calculations_dtype,
                 ),
                 compositing.fuzzy_alpha_mask(
                     corrected,

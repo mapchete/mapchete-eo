@@ -4,7 +4,7 @@ from typing import List, Optional, Type, Union
 from mapchete.types import Bounds
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.search.base import Catalog
+from mapchete_eo.search.base import CatalogProtocol
 from mapchete_eo.types import TimeRange
 
 
@@ -13,7 +13,7 @@ class Archive(ABC):
     An archive combines a Catalog and a Storage.
     """
 
-    catalog_cls: Type[Catalog]
+    catalog_cls: Type[CatalogProtocol]
     collection_name: str
 
     def __init__(

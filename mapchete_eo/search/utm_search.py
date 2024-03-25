@@ -1,8 +1,7 @@
 import datetime
-import json
 import logging
 from functools import cached_property
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 
 from mapchete.io import fiona_open
 from mapchete.io.vector import IndexedFeatures
@@ -14,15 +13,18 @@ from shapely import intersects, transform
 from shapely.geometry import box, shape
 
 from mapchete_eo.io.items import item_fix_footprint
-from mapchete_eo.search.base import Catalog
+from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
 from mapchete_eo.search.config import UTMSearchConfig
-from mapchete_eo.search.s2_mgrs import s2_tiles_from_bounds
+from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
+from mapchete_eo.time import day_range
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
 
 
-class UTMSearchCatalog(Catalog):
+class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
+    endpoint: str
+
     def __init__(
         self,
         time: TimeRange,
@@ -45,11 +47,12 @@ class UTMSearchCatalog(Catalog):
             if isinstance(time.end, datetime.date)
             else datetime.datetime.strptime(time.end, "%Y-%m-%d")
         )
-        self.client = endpoint or self.endpoint
+        self.endpoint = endpoint or self.endpoint
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
         self.collections = collections
         self.config = config
+        self.eo_bands = self._eo_bands()
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -61,77 +64,40 @@ class UTMSearchCatalog(Catalog):
         s3://sentinel-s2-l2a-stac/2023/06/04/S2B_OPER_MSI_L2A_TL_2BPS_20230604T235444_A032617_T01WCN.json
         """
 
-        def daterange(start_date, end_date):
-            for n in range(int((end_date - start_date).days)):
-                yield start_date + datetime.timedelta(n)
-
-        def get_s2_tiles(self):
-            return s2_tiles_from_bounds(*self.bounds)
-
-        def get_utm_s2_mgrs_granules(self):
-            """
-            Backup s2 granules search UTM finder based on an external file.
-            """
-            utm_s2_mgrs_granules = []
-            with fiona_open(self.config.mgrs_s2_grid) as mgrs_src:
-                # see fiona filter while opening
-                for f in mgrs_src:
-                    if intersects(shape(f["geometry"]), box(*self.bounds)):
-                        utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
-
-                    # Handle eastern Part of Antimedian, warp MGRS and process bounds by 360
-                    if (
-                        "01" in f["properties"]["MGRS"]
-                        and self.bounds[2] > 100
-                        and intersects(
-                            transform(shape(f["geometry"]), lambda x: x + [360, 0]),
-                            box(*self.bounds),
-                        )
-                    ):
-                        utm_s2_mgrs_granules.append(f["properties"]["MGRS"])
-            return utm_s2_mgrs_granules
-
         def _get_items():
-            stac_items = []
-            s2_product_granules_list = get_s2_tiles(self)
-            for single_date in daterange(
-                start_date=self.start_time, end_date=self.end_time
-            ):
-                for s2_product_tile in s2_product_granules_list:
-                    item_path = item_path_constructor(
-                        root=MPath(self.client),
-                        single_date=single_date,
-                        tile_id=s2_product_tile.tile_id,
-                    )
-                    if item_path is None:
-                        continue
+            # get Sentinel-2 tiles over given bounds
+            s2_tiles = s2_tiles_from_bounds(*self.bounds)
 
-                    stac_items.append(
-                        item_fix_footprint(
-                            Item.from_file(item_path),
-                            buffer_m=self.config.footprint_buffer,
-                        )
+            # for each day within time range, look for tiles
+            for day in day_range(start_date=self.start_time, end_date=self.end_time):
+                day_path = MPath(self.endpoint) / day.strftime("%Y/%m/%d")
+                for item in find_items(
+                    day_path, s2_tiles, product_endswith="T{tile_id}.json"
+                ):
+                    yield item_fix_footprint(
+                        item,
+                        buffer_m=self.config.footprint_buffer,
                     )
-
-            return stac_items
 
         return IndexedFeatures(_get_items())
 
-    @cached_property
-    def eo_bands(self) -> list:
+    def _eo_bands(self) -> list:
         for collection_name in self.collections:
             for collection_properties in self.config.sinergise_aws_collections.values():
                 if collection_properties["id"] == collection_name:
-                    collection = get_collection(collection_properties["path"])
+                    collection = Collection.from_dict(
+                        collection_properties["path"].read_json()
+                    )
                     if collection:
-                        item_assets = collection.summaries.to_dict()
-                        for k, v in item_assets.items():
-                            if "eo:bands" in k:
-                                return v
+                        summary = collection.summaries.to_dict()
+                        if "eo:bands" in summary:
+                            return summary["eo:bands"]
                     else:
                         raise ValueError(f"cannot find collection {collection}")
         else:
-            raise ValueError("cannot find eo:bands definition from collections")
+            raise ValueError(
+                f"cannot find eo:bands definition from collections {self.collections}"
+            )
 
     def get_collections(self):
         """
@@ -141,22 +107,20 @@ class UTMSearchCatalog(Catalog):
             etc.
         """
         for collection_properties in self.config.sinergise_aws_collections.values():
-            collection = get_collection(collection_properties["path"])
+            collection = Collection.from_dict(collection_properties["path"].read_json())
             for collection_name in self.collections:
                 if collection_name == collection.id:
                     yield collection
 
 
-def get_collection(path):
-    with path.open() as src:
-        return Collection.from_dict(json.loads(src.read()))
-
-
-def item_path_constructor(root, single_date, tile_id):
-    date_str = single_date.strftime("%Y/%m/%d")
-    out_date_path = MPath(f"{root}{date_str}/")
-    out_item_path = None
-    for p in out_date_path.ls():
-        if tile_id in p.name:
-            out_item_path = MPath(f"{str(out_date_path)}{p.name}")
-    return out_item_path
+def find_items(
+    path: MPath,
+    s2_tiles: List[S2Tile],
+    product_endswith: str = "T{tile_id}.json",
+) -> Generator[Item, None, None]:
+    match_parts = tuple(
+        product_endswith.format(tile_id=s2_tile.tile_id) for s2_tile in s2_tiles
+    )
+    for product_path in path.ls():
+        if product_path.endswith(match_parts):
+            yield Item.from_file(product_path)

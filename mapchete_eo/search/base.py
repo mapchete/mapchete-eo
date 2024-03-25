@@ -1,7 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Protocol, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures
@@ -24,8 +24,7 @@ class FSSpecStacIO(StacApiIO):
     """Custom class which allows I/O operations on object storage."""
 
     def read_text(self, source: MPathLike, *args, **kwargs) -> str:
-        path = MPath.from_inp(source)
-        return path.read_text()
+        return MPath.from_inp(source).read_text()
 
     def write_text(self, dest: MPathLike, txt: str, *args, **kwargs) -> None:
         path = MPath.from_inp(dest)
@@ -42,8 +41,9 @@ class FSSpecStacIO(StacApiIO):
             return dst.write(json.dumps(json_dict, indent=2))
 
 
-class Catalog(ABC):
-    client: Client
+class CatalogProtocol(Protocol):
+    items: IndexedFeatures
+    eo_bands: List[str]
 
     def __init__(
         self,
@@ -52,25 +52,28 @@ class Catalog(ABC):
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
     ):
-        ...
+        pass
 
-    @property
-    def endpoint(self) -> str:  # pragma: no cover
-        return self.endpoint
+    def write_static_catalog(
+        self,
+        output_path: MPathLike,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        assets: Optional[List[str]] = None,
+        assets_dst_resolution: Union[None, float, int] = None,
+        assets_convert_profile: Optional[Profile] = None,
+        copy_metadata: bool = False,
+        metadata_parser_classes: Optional[tuple] = None,
+        overwrite: bool = False,
+        stac_io: DefaultStacIO = FSSpecStacIO(),
+        progress_callback: Optional[Callable] = None,
+    ) -> MPath:
+        return
 
-    @property
-    def baseurl(self) -> str:  # pragma: no cover
-        return self.endpoint
 
-    @property
-    @abstractmethod
-    def items(self) -> IndexedFeatures:  # pragma: no cover
-        ...
-
-    @property
-    @abstractmethod
-    def eo_bands(self) -> list:  # pragma: no cover
-        ...
+class StaticCatalogWriterMixin(ABC):
+    client: Client
+    items: IndexedFeatures
 
     @abstractmethod
     def get_collections(self) -> List[Collection]:  # pragma: no cover

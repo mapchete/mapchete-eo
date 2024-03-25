@@ -11,7 +11,11 @@ from pystac_client import Client
 from tilematrix import Bounds
 
 from mapchete_eo.io.items import item_fix_footprint
-from mapchete_eo.search.base import Catalog, FSSpecStacIO
+from mapchete_eo.search.base import (
+    CatalogProtocol,
+    FSSpecStacIO,
+    StaticCatalogWriterMixin,
+)
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import DateTimeLike, TimeRange
 
@@ -21,7 +25,7 @@ logger = logging.getLogger(__name__)
 StacIO.set_default(FSSpecStacIO)
 
 
-class STACStaticCatalog(Catalog):
+class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     def __init__(
         self,
         baseurl: Optional[MPathLike] = None,
@@ -35,6 +39,7 @@ class STACStaticCatalog(Catalog):
         self.bounds = bounds
         self.time = time if isinstance(time, list) else [time] if time else []
         self.footprint_buffer = footprint_buffer
+        self.eo_bands = self._eo_bands()
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -64,8 +69,7 @@ class STACStaticCatalog(Catalog):
         logger.debug("%s items found", len(items))
         return IndexedFeatures(items)
 
-    @cached_property
-    def eo_bands(self) -> list:
+    def _eo_bands(self) -> List[str]:
         for collection in self.client.get_children():
             eo_bands = collection.extra_fields.get("properties", {}).get("eo:bands")
             if eo_bands:

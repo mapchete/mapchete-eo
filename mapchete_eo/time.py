@@ -1,5 +1,5 @@
 import datetime
-from typing import Tuple
+from typing import List, Tuple
 
 import dateutil.parser
 
@@ -37,3 +37,12 @@ def timedelta(date: DateTimeLike, target: DateTimeLike, seconds: bool = True):
         return abs(delta.total_seconds())
     else:
         return abs(delta.days)
+
+
+def day_range(
+    start_date: datetime.datetime, end_date: datetime.datetime
+) -> List[datetime.datetime]:
+    return [
+        start_date + datetime.timedelta(n)
+        for n in range(int((end_date - start_date).days))
+    ]

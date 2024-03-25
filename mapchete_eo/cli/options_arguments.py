@@ -6,8 +6,9 @@ from mapchete.path import MPath
 
 from mapchete_eo.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
-from mapchete_eo.platforms.sentinel2.config import SceneClassification
+from mapchete_eo.platforms.sentinel2.config import KnownArchives, SceneClassification
 from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
+from mapchete_eo.time import to_datetime
 
 
 class TqdmUpTo(tqdm.tqdm):
@@ -53,6 +54,18 @@ def _brdf_model_str_to_brdf(_, __, value):
 def _str_to_l2a_bands(_, __, value):
     if value:
         return [L2ABand[v] for v in value.split(",")]
+
+
+def _archive_name_to_archive_cls(_, __, value):
+    if value:
+        return KnownArchives[value]
+
+
+def _str_to_datetime(_, param, value):
+    if value:
+        return to_datetime(value)
+    else:
+        raise ValueError(f"--{param.name} is mandatory")
 
 
 arg_stac_item = click.argument("stac-item", type=click.Path(path_type=MPath))
@@ -127,13 +140,18 @@ opt_brdf_model = click.option(
     help="BRDF model.",
 )
 opt_mgrs_tile = click.option("--mgrs-tile", type=click.STRING)
-opt_start_time = click.option("--start-time", type=click.STRING, help="Start time")
-opt_end_time = click.option("--end-time", type=click.STRING, help="End time")
+opt_start_time = click.option(
+    "--start-time", type=click.STRING, callback=_str_to_datetime, help="Start time"
+)
+opt_end_time = click.option(
+    "--end-time", type=click.STRING, callback=_str_to_datetime, help="End time"
+)
 opt_archive = click.option(
     "--archive",
-    type=click.Choice(["sentinel-s2-l2a-cogs"]),
-    default="sentinel-s2-l2a-cogs",
+    type=click.Choice([archive.name for archive in KnownArchives]),
+    default="S2AWS_COG",
     help="Archive to read from.",
+    callback=_archive_name_to_archive_cls,
 )
 opt_collection = click.option(
     "--collection",
@@ -147,7 +165,7 @@ opt_endpoint = click.option(
 )
 opt_catalog_json = click.option(
     "--catalog-json",
-    type=click.STRING,
+    type=click.Path(path_type=MPath),
     help="JSON file for a static catalog.",
 )
 opt_name = click.option("--name", type=click.STRING, help="Static catalog name.")

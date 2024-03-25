@@ -12,7 +12,7 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
-from mapchete_eo.search.base import Catalog
+from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
@@ -20,7 +20,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class STACSearchCatalog(Catalog):
+class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     endpoint: str
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)
@@ -57,6 +57,7 @@ class STACSearchCatalog(Catalog):
         self.config = config
 
         self._collection_items: Dict = {}
+        self.eo_bands = self._eo_bands()
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -98,8 +99,7 @@ class STACSearchCatalog(Catalog):
             return IndexedFeatures([])
         return IndexedFeatures(_get_items())
 
-    @cached_property
-    def eo_bands(self) -> list:
+    def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
             collection = self.client.get_collection(collection_name)
             if collection:

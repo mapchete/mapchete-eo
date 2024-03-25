@@ -79,8 +79,9 @@ def test_eoxcloudless_mosaic(eoxcloudless_mosaic_mapchete):
     assert ma.mean(output) > 200
 
 
-def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic(
-    eoxcloudless_mosaic_s2jp2_east_mapchete, eoxcloudless_mosaic_s2jp2_west_mapchete
+@pytest.mark.remote
+def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic_west(
+    eoxcloudless_mosaic_s2jp2_east_mapchete,
 ):
     process_mp = eoxcloudless_mosaic_s2jp2_east_mapchete.process_mp(tile=(9, 64, 1023))
     output = eoxcloudless_mosaic.execute(
@@ -90,9 +91,14 @@ def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic(
         merge_products_by="sentinel2:product_title",
     )
     assert isinstance(output, ma.MaskedArray)
-    assert output.mask.any()
+    assert not output.mask.all()
     assert ma.mean(output) > 200
 
+
+@pytest.mark.remote
+def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic_east(
+    eoxcloudless_mosaic_s2jp2_west_mapchete,
+):
     process_mp = eoxcloudless_mosaic_s2jp2_west_mapchete.process_mp(tile=(9, 64, 1023))
     output = eoxcloudless_mosaic.execute(
         process_mp,
@@ -101,7 +107,7 @@ def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic(
         merge_products_by="sentinel2:product_title",
     )
     assert isinstance(output, ma.MaskedArray)
-    assert output.mask.any()
+    assert not output.mask.all()
 
 
 @pytest.mark.skip(

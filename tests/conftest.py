@@ -326,7 +326,7 @@ def utm_search_catalog():
             end="2022-06-06",
         ),
         bounds=[-180, 65, -179, 65.3],
-        collections=["sentinel-2-l2a"],
+        collections=["sentinel-s2-l2a"],
     )
 
 

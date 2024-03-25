@@ -79,37 +79,6 @@ def test_eoxcloudless_mosaic(eoxcloudless_mosaic_mapchete):
     assert ma.mean(output) > 200
 
 
-@pytest.mark.remote
-def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic_west(
-    eoxcloudless_mosaic_s2jp2_east_mapchete,
-):
-    process_mp = eoxcloudless_mosaic_s2jp2_east_mapchete.process_mp(tile=(9, 64, 1023))
-    output = eoxcloudless_mosaic.execute(
-        process_mp,
-        assets=["red_60m", "green_60m", "nir_60m"],
-        mask_config=dict(footprint=True, l1c_cloud_type="all"),
-        merge_products_by="sentinel2:product_title",
-    )
-    assert isinstance(output, ma.MaskedArray)
-    assert not output.mask.all()
-    assert ma.mean(output) > 200
-
-
-@pytest.mark.remote
-def test_eoxcloudless_mosaic_mapchete_antimeridian_mosaic_east(
-    eoxcloudless_mosaic_s2jp2_west_mapchete,
-):
-    process_mp = eoxcloudless_mosaic_s2jp2_west_mapchete.process_mp(tile=(9, 64, 1023))
-    output = eoxcloudless_mosaic.execute(
-        process_mp,
-        assets=["red_60m", "green_60m", "nir_60m"],
-        mask_config=dict(footprint=True, l1c_cloud_type="all"),
-        merge_products_by="sentinel2:product_title",
-    )
-    assert isinstance(output, ma.MaskedArray)
-    assert not output.mask.all()
-
-
 @pytest.mark.skip(
     reason="area parameter in raster_file driver has to be implemented by mapchete first"
 )

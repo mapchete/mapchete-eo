@@ -2,7 +2,7 @@ process: mapchete_eo.processes.eoxcloudless_mosaic
 input:
   sentinel2:
     format: Sentinel-2
-    archive: S2AWS_JP2
+    cat_baseurl: sentinel2/full_products_antimeridian/catalog.json
     level: L2A
     time:    
         start: 2023-06-01

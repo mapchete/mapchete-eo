@@ -294,6 +294,23 @@ def test_read_np_empty(sentinel2_stac_mapchete):
     assert stack.shape[0] == 2
 
 
+def test_read_np_masked_antimeridian(sentinel2_antimeridian_east_mapchete):
+    with sentinel2_antimeridian_east_mapchete.process_mp().open("inp") as src:
+        unmasked = src.read_np_array(assets=["red"])
+        masked = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(
+                footprint=True,
+                scl=True,
+                scl_classes=[
+                    SceneClassification.vegetation,
+                ],
+            ),
+        )
+    assert masked.any()
+    assert (unmasked.mask != masked.mask).any()
+
+
 # InputData.read_levelled() #
 #############################
 

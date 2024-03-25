@@ -1,8 +1,8 @@
-process: mapchete_eo.processes.eoxcloudless_mosaic
+process: read_xarray.py
 input:
   sentinel2:
     format: Sentinel-2
-    archive: S2AWS_JP2
+    cat_baseurl: sentinel2/full_products_antimeridian/catalog.json
     level: L2A
     time:    
         start: 2023-06-01
@@ -15,14 +15,4 @@ output:
 pyramid:
   grid: geodetic
 zoom_levels: 10
-# tmx bounds 13 1879 8938
 bounds: [-180, 67, -179.5, 67.3]
-
-
-process_parameters:
-  resampling: bilinear
-  target_height: 10
-  read_masks: true
-  assets: ["red", "green", "blue"]
-  from_brightness_extract_method: third_quartile
-  merge_products_by: sentinel2:product_title  

@@ -1,0 +1,19 @@
+{
+  "type": "Catalog",
+  "id": "sentinel-s2-l2a",
+  "stac_version": "1.0.0",
+  "description": "Static subset of Sentinel-2 L2A JPEG2000 archive on AWS.",
+  "links": [
+    {
+      "rel": "root",
+      "href": "./catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "child",
+      "href": "./sentinel-s2-l2a/collection.json",
+      "type": "application/json",
+      "title": "Sentinel-2 Level-2A"
+    }
+  ]
+}

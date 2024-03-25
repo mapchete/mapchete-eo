@@ -35,6 +35,9 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         **kwargs,
     ) -> None:
         self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
+        self.id = self.client.id
+        self.description = self.client.description
+        self.stac_extensions = self.client.stac_extensions
         self.collections = [c.id for c in self.client.get_children()]
         self.bounds = bounds
         self.time = time if isinstance(time, list) else [time] if time else []

@@ -52,6 +52,9 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
 
         self.time = time if isinstance(time, list) else [time]
         self.client = Client.open(endpoint or self.endpoint)
+        self.id = self.client.id
+        self.description = self.client.description
+        self.stac_extensions = self.client.stac_extensions
 
         self.collections = collections
         self.config = config

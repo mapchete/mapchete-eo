@@ -3,6 +3,8 @@ Catalogs define access to a search interface which provide products
 as pystac Items.
 """
 
+from typing import List
+
 from mapchete_eo.search import STACSearchCatalog, UTMSearchCatalog
 
 
@@ -21,6 +23,9 @@ class AWSSearchCatalogS2L2A(UTMSearchCatalog):
     """
 
     endpoint: str = "s3://sentinel-s2-l2a-stac/"
+    id: str = "sentinel-s2-l2a"
+    description: str = "Sentinel-2 L2A JPEG2000 archive on AWS."
+    stac_extensions: List[str] = []
 
 
 # TODO: DIAS OpenSearch: https://gitlab.eox.at/maps/mapchete_eo/-/issues/7

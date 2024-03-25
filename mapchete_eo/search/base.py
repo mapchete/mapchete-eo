@@ -44,6 +44,9 @@ class FSSpecStacIO(StacApiIO):
 class CatalogProtocol(Protocol):
     items: IndexedFeatures
     eo_bands: List[str]
+    id: str
+    description: str
+    stac_extensions: List[str]
 
     def __init__(
         self,
@@ -54,26 +57,13 @@ class CatalogProtocol(Protocol):
     ):
         pass
 
-    def write_static_catalog(
-        self,
-        output_path: MPathLike,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        assets: Optional[List[str]] = None,
-        assets_dst_resolution: Union[None, float, int] = None,
-        assets_convert_profile: Optional[Profile] = None,
-        copy_metadata: bool = False,
-        metadata_parser_classes: Optional[tuple] = None,
-        overwrite: bool = False,
-        stac_io: DefaultStacIO = FSSpecStacIO(),
-        progress_callback: Optional[Callable] = None,
-    ) -> MPath:
-        return
-
 
 class StaticCatalogWriterMixin(ABC):
     client: Client
     items: IndexedFeatures
+    id: str
+    description: str
+    stac_extensions: List[str]
 
     @abstractmethod
     def get_collections(self) -> List[Collection]:  # pragma: no cover
@@ -100,9 +90,9 @@ class StaticCatalogWriterMixin(ABC):
         # initialize catalog
         catalog_json = output_path / "catalog.json"
         catalog = pystac.Catalog(
-            name or f"{self.client.id}",
-            description or f"Static subset of {self.client.description}",
-            stac_extensions=self.client.stac_extensions,
+            name or f"{self.id}",
+            description or f"Static subset of {self.description}",
+            stac_extensions=self.stac_extensions,
             href=str(catalog_json),
             catalog_type=pystac.CatalogType.SELF_CONTAINED,
         )

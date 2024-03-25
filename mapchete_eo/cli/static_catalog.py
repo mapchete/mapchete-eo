@@ -74,23 +74,29 @@ def static_catalog(
         mgrs_tile=mgrs_tile,
     )
 
-    with options_arguments.TqdmUpTo(
-        unit="products", unit_scale=True, miniters=1, disable=opt_debug
-    ) as progress:
-        catalog_json = catalog.write_static_catalog(
-            dst_path,
-            name=name,
-            description=description,
-            assets=assets,
-            assets_dst_resolution=assets_dst_resolution.value,
-            assets_convert_profile=assets_dst_rio_profile,
-            copy_metadata=copy_metadata,
-            metadata_parser_classes=(S2Metadata,),
-            overwrite=overwrite,
-            progress_callback=progress.update_to,
-        )
+    if hasattr(catalog, "write_static_catalog"):
+        with options_arguments.TqdmUpTo(
+            unit="products", unit_scale=True, miniters=1, disable=opt_debug
+        ) as progress:
+            catalog_json = catalog.write_static_catalog(
+                dst_path,
+                name=name,
+                description=description,
+                assets=assets,
+                assets_dst_resolution=assets_dst_resolution.value,
+                assets_convert_profile=assets_dst_rio_profile,
+                copy_metadata=copy_metadata,
+                metadata_parser_classes=(S2Metadata,),
+                overwrite=overwrite,
+                progress_callback=progress.update_to,
+            )
 
-    click.echo(f"Catalog successfully written to {catalog_json}")
+        click.echo(f"Catalog successfully written to {catalog_json}")
+
+    else:
+        raise AttributeError(
+            f"catalog {catalog} does not support writing a static version"
+        )
 
 
 def get_catalog(

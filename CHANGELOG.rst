@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2024.3.3 - 2024-03-25
+---------------------
+
+* core
+  * add `image_operations.sigmodial` to `image_operations` and `image_operations.color_correction` submodule to mimic rio color even further and to have eox control over its array operations
+  * add `sigmodial_flag: bool = False`, `sigmodial_contrast: int = 0` and `sigmodial_bias: float = 0.0` to `RGBCompositeConfig` to have these for mapchete color corrections
+    
+   
+
+
 2024.3.2 - 2024-03-21
 ---------------------
 

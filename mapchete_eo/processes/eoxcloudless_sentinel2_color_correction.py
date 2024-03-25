@@ -184,6 +184,9 @@ def execute(
         clahe_flag=rgb_composite.clahe_flag,
         clahe_clip_limit=rgb_composite.clahe_clip_limit,
         clahe_tile_grid_size=rgb_composite.clahe_tile_grid_size,
+        sigmodial_flag=rgb_composite.sigmodial_flag,
+        sigmodial_constrast=rgb_composite.sigmodial_contrast,
+        sigmodial_bias=rgb_composite.sigmodial_bias,
         saturation=rgb_composite.saturation,
     )
 
@@ -222,6 +225,9 @@ def execute(
                     clahe_flag=desert_rgb_composite.clahe_flag,
                     clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
                     clahe_tile_grid_size=desert_rgb_composite.clahe_tile_grid_size,
+                    sigmodial_flag=desert_rgb_composite.sigmodial_flag,
+                    sigmodial_constrast=desert_rgb_composite.sigmodial_contrast,
+                    sigmodial_bias=desert_rgb_composite.sigmodial_bias,
                     saturation=desert_rgb_composite.saturation,
                 ),
                 compositing.fuzzy_alpha_mask(

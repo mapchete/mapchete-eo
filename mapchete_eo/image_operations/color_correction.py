@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import numpy.ma as ma
 
-from mapchete_eo.image_operations.sigmodial import sigmoidal
+from mapchete_eo.image_operations.sigmoidal import sigmoidal
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +15,9 @@ def color_correct(
     clahe_flag: bool = True,
     clahe_clip_limit: float = 1.25,
     clahe_tile_grid_size: tuple = (32, 32),
-    sigmodial_flag: bool = False,
-    sigmodial_constrast: int = 0,
-    sigmodial_bias: float = 0.0,
+    sigmoidal_flag: bool = False,
+    sigmoidal_constrast: int = 0,
+    sigmoidal_bias: float = 0.0,
     saturation: float = 3.2,
     calculations_dtype: np.dtype = "float16",
 ) -> ma.MaskedArray:
@@ -70,15 +70,15 @@ def color_correct(
         255,  # clip valid values to 1 and 255 to avoid accidental nodata values
     ).astype(np.uint8, copy=False)
 
-    if sigmodial_flag is True:
+    if sigmoidal_flag is True:
         corrected = np.clip(
             (
                 sigmoidal(
                     np.clip(
                         corrected.astype(calculations_dtype, copy=False) / 255, 0, 1
                     ).astype(calculations_dtype, copy=False),
-                    contrast=sigmodial_constrast,
-                    bias=sigmodial_bias,
+                    contrast=sigmoidal_constrast,
+                    bias=sigmoidal_bias,
                     out_dtype=calculations_dtype,
                 ).astype(calculations_dtype, copy=False)
                 * 255

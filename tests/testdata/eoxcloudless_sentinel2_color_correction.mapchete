@@ -29,8 +29,8 @@ process_parameters:
     saturation: 1.6
     clahe_clip_limit: 3.5
     clahe_flag: true
-    sigmodial_flag: true
-    sigmodial_contrast: 2
-    sigmodial_bias: 0.3
+    sigmoidal_flag: true
+    sigmoidal_contrast: 2
+    sigmoidal_bias: 0.3
     sharpen: true
     smooth_water: true

@@ -82,7 +82,7 @@ def sigmoidal(
         alpha = epsilon
 
     if beta == 0.0:
-        return arr
+        return arr.astype(out_dtype, copy=False)
 
     np.seterr(divide="ignore", invalid="ignore")
     if beta > 0:

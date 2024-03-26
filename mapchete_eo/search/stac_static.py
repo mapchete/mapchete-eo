@@ -32,7 +32,7 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         self,
         baseurl: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
-        bounds: Bounds = None,
+        bounds: Optional[Bounds] = None,
         footprint_buffer: float = 0,
         **kwargs,
     ) -> None:
@@ -49,6 +49,8 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     @cached_property
     def items(self) -> IndexedFeatures:
         def _gen_items():
+            if self.bounds is None:
+                return
             logger.debug("iterate through children")
             for collection in self.client.get_collections():
                 if self.time:

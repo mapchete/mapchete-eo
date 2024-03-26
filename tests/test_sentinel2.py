@@ -429,29 +429,3 @@ def test_footprint_buffer(sentinel2_stac_mapchete, test_edge_tile):
         )
 
     assert buffered.mask.sum() > unbuffered.mask.sum()
-
-
-# def test_footprint_buffer_antimeridian(
-#     sentinel2_stac_mapchete, sentinel2_stac_footprint_buffer_mapchete, test_edge_tile
-# ):
-#     # read data from both processes and make sure footprint buffered data is masked out more
-
-#     with sentinel2_stac_mapchete.process_mp(test_edge_tile).open("inp") as src:
-#         unbuffered = src.read_np_array(
-#             assets=["red"],
-#             mask_config=MaskConfig(
-#                 footprint=True,
-#             ),
-#         )
-
-#     with sentinel2_stac_footprint_buffer_mapchete.process_mp(test_edge_tile).open(
-#         "inp"
-#     ) as src:
-#         buffered = src.read_np_array(
-#             assets=["red"],
-#             mask_config=MaskConfig(
-#                 footprint=True,
-#             ),
-#         )
-
-#     assert buffered.mask.sum() > unbuffered.mask.sum()

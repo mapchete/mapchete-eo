@@ -415,7 +415,6 @@ class InputData(base.InputData):
                     ),
                     bounds=self.bbox(mapchete_eo_settings.default_catalog_crs).bounds,
                     time=self.time,
-                    footprint_buffer=self.params.footprint_buffer,
                 )
             )
         elif self.params.archive:

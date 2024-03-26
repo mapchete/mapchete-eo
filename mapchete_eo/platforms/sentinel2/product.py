@@ -26,6 +26,7 @@ from mapchete_eo.exceptions import (
     EmptyProductException,
 )
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
+from mapchete_eo.io.items import buffer_footprint
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
@@ -368,6 +369,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def footprint_nodata_mask(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["10m"],
+        buffer_m: float = 0,
     ) -> ReferencedRaster:
         """Return rasterized footprint mask."""
         grid = (
@@ -375,9 +377,13 @@ class S2Product(EOProduct, EOProductProtocol):
             if isinstance(grid, Resolution)
             else Grid.from_obj(grid)
         )
+        if buffer_m:
+            footprint = buffer_footprint(shape(self), buffer_m=buffer_m)
+        else:
+            footprint = shape(self)
         return ReferencedRaster(
             rasterize(
-                [reproject_geometry(self, self.crs, grid.crs)],
+                [reproject_geometry(footprint, self.crs, grid.crs)],
                 out_shape=grid.shape,
                 transform=grid.transform,
                 all_touched=True,
@@ -409,7 +415,9 @@ class S2Product(EOProduct, EOProductProtocol):
         try:
             _check_full(out)
             if mask_config.footprint:
-                out += self.footprint_nodata_mask(grid).data
+                out += self.footprint_nodata_mask(
+                    grid, buffer_m=mask_config.footprint_buffer_m
+                ).data
                 _check_full(out)
             if mask_config.l1c_cloud_type:
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data

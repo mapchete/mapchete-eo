@@ -197,6 +197,9 @@ def longitudinal_shift(
 
 
 def buffer_footprint(footprint: BaseGeometry, buffer_m: float = 0) -> BaseGeometry:
+    if not buffer_m:
+        return footprint
+
     if footprint.geom_type == "MultiPolygon":
         # we have a shifted footprint here!
         # (1) unshift one part
@@ -214,17 +217,24 @@ def buffer_footprint(footprint: BaseGeometry, buffer_m: float = 0) -> BaseGeomet
         return repair_antimeridian_geometry(buffered)
 
     # UTM zone CRS
-    utm_zone = math.floor((footprint.centroid.x + 180) / 6) + 1
-    hemisphere_code = "7" if footprint.centroid.y <= 0 else "6"
+    lon = footprint.centroid.x
+    lat = footprint.centroid.y
+    min_zone = 1
+    max_zone = 60
+    utm_zone = (
+        f"{max([min([(math.floor((lon + 180) / 6) + 1), max_zone]), min_zone]):02}"
+    )
+    hemisphere_code = "7" if lat <= 0 else "6"
     utm_crs = CRS.from_string(f"EPSG:32{hemisphere_code}{utm_zone}")
 
     latlon_crs = CRS.from_string("EPSG:4326")
     out_geom = reproject_geometry(
-        reproject_geometry(footprint, src_crs=latlon_crs, dst_crs=utm_crs).buffer(
-            buffer_m
-        ),
+        reproject_geometry(
+            footprint, src_crs=latlon_crs, dst_crs=utm_crs, clip_to_crs_bounds=False
+        ).buffer(buffer_m),
         src_crs=utm_crs,
         dst_crs=latlon_crs,
+        clip_to_crs_bounds=False,
     )
     if out_geom.is_empty and not footprint.is_empty:
         raise EmptyFootprintException(

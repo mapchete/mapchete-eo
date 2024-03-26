@@ -53,29 +53,41 @@ def color_correct(
     if rgb.dtype != "uint8":
         raise TypeError("rgb must be of dtype np.uint8")
 
-    # Some CLAHE info: https://imagej.net/plugins/clahe
-    lab = cv2.cvtColor(np.swapaxes(rgb, 0, 2), cv2.COLOR_BGR2LAB).astype(
-        np.uint8, copy=False
-    )
-    lab_planes = list(cv2.split(lab))
-    if clahe_flag is True:
-        clahe = cv2.createCLAHE(
-            clipLimit=clahe_clip_limit, tileGridSize=clahe_tile_grid_size
-        )
-        lab_planes[0] = clahe.apply(lab_planes[0])
-        lab = cv2.merge(lab_planes)
-    corrected = np.clip(
-        cv2.cvtColor(lab, cv2.COLOR_LAB2BGR),
-        1,
-        255,  # clip valid values to 1 and 255 to avoid accidental nodata values
-    ).astype(np.uint8, copy=False)
+    # get and keep original mask
+    rgb_src_mask = rgb.mask
+    rgb_src_fill_value = rgb.fill_value
 
+    # Move bands to the last axis
+    rgb = np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False)
+
+    # Saturation from OpenVC
+    if saturation != 1.0:
+        imghsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV).astype(
+            calculations_dtype, copy=False
+        )
+        (h, s, v) = cv2.split(imghsv)
+        # add all new HSV values into output
+        imghsv = cv2.merge([h, np.clip(s * saturation, 1, 255), v]).astype(
+            np.uint8, copy=False
+        )
+        rgb = np.clip(
+            cv2.cvtColor(imghsv, cv2.COLOR_HSV2RGB),
+            1,
+            255,  # clip valid values to 1 and 255 to avoid accidental nodata values
+        ).astype(np.uint8, copy=False)
+
+    # Sigmodial Contrast and Bias from rio-color
+    # Swap bands from last axis to the first one as we are acusstomed to
+    # For the sigmodial contrast
     if sigmoidal_flag is True:
-        corrected = np.clip(
+        rgb = np.clip(
             (
                 sigmoidal(
                     np.clip(
-                        corrected.astype(calculations_dtype, copy=False) / 255, 0, 1
+                        np.swapaxes(rgb, 0, 2).astype(calculations_dtype, copy=False)
+                        / 255,
+                        0,
+                        1,
                     ).astype(calculations_dtype, copy=False),
                     contrast=sigmoidal_constrast,
                     bias=sigmoidal_bias,
@@ -85,25 +97,37 @@ def color_correct(
             ),
             1,
             255,
+        ).astype(np.uint8, copy=False)
+    else:
+        rgb = np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False)
+
+    # Gamma from rio-color
+    if gamma != 1.0:
+        rgb = np.clip(
+            ((rgb.astype(calculations_dtype) / 255) ** (1.0 / gamma)) * 255, 1, 255
+        ).astype(np.uint8, copy=False)
+
+    # CLAHE from OpenVC
+    # Some CLAHE info: https://imagej.net/plugins/clahe
+    if clahe_flag is True:
+        lab = cv2.cvtColor(
+            np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False), cv2.COLOR_RGB2LAB
+        ).astype(np.uint8, copy=False)
+        lab_planes = list(cv2.split(lab))
+        clahe = cv2.createCLAHE(
+            clipLimit=clahe_clip_limit, tileGridSize=clahe_tile_grid_size
         )
-        corrected = corrected.astype(np.uint8, copy=False)
-        # corrected =
+        lab_planes[0] = clahe.apply(lab_planes[0])
+        lab = cv2.merge(lab_planes)
+        rgb = np.swapaxes(
+            np.clip(
+                cv2.cvtColor(lab, cv2.COLOR_LAB2RGB),
+                1,
+                255,  # clip valid values to 1 and 255 to avoid accidental nodata values
+            ),
+            0,
+            2,
+        ).astype(np.uint8, copy=False)
 
-    # Brightness
-    imghsv = cv2.cvtColor(corrected, cv2.COLOR_BGR2HSV).astype(calculations_dtype)
-    (h, s, v) = cv2.split(imghsv)
-    v = np.clip(
-        np.where((v / 255 * gamma) * 255 >= 255, 255, (v / 255 * gamma) * 255), 1, 255
-    )
-    # Saturation
-    s = np.clip(s * saturation, 1, 255)
-    # add all new HSV values into output
-    imghsv = cv2.merge([h, s, v]).astype(np.uint8)
-    corrected = cv2.cvtColor(imghsv, cv2.COLOR_HSV2BGR)
-    corrected = np.clip(
-        np.swapaxes(corrected, 2, 0),
-        1,
-        255,  # clip valid values to 1 and 255 to avoid accidental nodata values
-    ).astype(np.uint8, copy=False)
-
-    return ma.masked_array(data=corrected, mask=rgb.mask, fill_value=rgb.fill_value)
+    # Return array with original mask
+    return ma.masked_array(data=rgb, mask=rgb_src_mask, fill_value=rgb_src_fill_value)

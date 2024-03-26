@@ -922,7 +922,7 @@
       ]
     },
     "scl": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/SCL.jp2",
+      "href": "SCL.jp2",
       "type": "image/jp2",
       "title": "Scene classification map (SCL)",
       "proj:shape": [

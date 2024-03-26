@@ -238,8 +238,8 @@ def test_read_np(example_mapchete, tile):
     "example_mapchete,tile",
     [
         (lazy_fixture("sentinel2_stac_mapchete"), (13, 2003, 8906)),
-        (lazy_fixture("sentinel2_antimeridian_east_mapchete"), (13, 1039, 16379)),
-        (lazy_fixture("sentinel2_antimeridian_west_mapchete"), (13, 1024, 28)),
+        (lazy_fixture("sentinel2_antimeridian_east_mapchete"), (13, 1038, 16379)),
+        (lazy_fixture("sentinel2_antimeridian_west_mapchete"), (13, 1027, 28)),
     ],
 )
 def test_read_np_masked(example_mapchete, tile):
@@ -252,6 +252,7 @@ def test_read_np_masked(example_mapchete, tile):
                 scl=True,
                 scl_classes=[
                     SceneClassification.vegetation,
+                    SceneClassification.cloud_high_probability,
                 ],
             ),
         )

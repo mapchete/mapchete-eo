@@ -94,9 +94,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                                 "item %s found in blacklist and skipping", item_path
                             )
                         else:
-                            yield item_fix_footprint(
-                                item, buffer_m=self.config.footprint_buffer
-                            )
+                            yield item_fix_footprint(item)
 
         if self.area is not None and self.area.is_empty:
             return IndexedFeatures([])

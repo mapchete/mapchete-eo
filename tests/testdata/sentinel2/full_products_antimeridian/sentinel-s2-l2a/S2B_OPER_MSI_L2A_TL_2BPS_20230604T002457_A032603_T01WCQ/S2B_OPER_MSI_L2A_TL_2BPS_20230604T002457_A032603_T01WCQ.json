@@ -1,7 +1,7 @@
 {
   "type": "Feature",
   "stac_version": "1.0.0",
-  "id": "S2A_OPER_MSI_L2A_TL_2APS_20230603T031757_A041497_T01WCQ",
+  "id": "S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCQ",
   "properties": {
     "providers": [
       {
@@ -28,41 +28,41 @@
         "url": "https://registry.opendata.aws/sentinel-2/"
       }
     ],
-    "platform": "sentinel-2a",
+    "platform": "sentinel-2b",
     "constellation": "sentinel-2",
     "instruments": [
       "msi"
     ],
-    "eo:cloud_cover": 62.085807,
+    "eo:cloud_cover": 80.799174,
     "proj:epsg": 32601,
     "mgrs:utm_zone": 1,
     "mgrs:latitude_band": "W",
     "mgrs:grid_square": "CQ",
     "grid:code": "MGRS-1WCQ",
-    "view:sun_azimuth": 172.892739631099,
-    "view:sun_elevation": 45.0320776181391,
-    "s2:degraded_msi_data_percentage": 0.0404,
-    "s2:nodata_pixel_percentage": 72.532392,
+    "view:sun_azimuth": 179.378859138096,
+    "view:sun_elevation": 45.2861818508754,
+    "s2:degraded_msi_data_percentage": 0.0021,
+    "s2:nodata_pixel_percentage": 0.0,
     "s2:saturated_defective_pixel_percentage": 0.0,
-    "s2:dark_features_percentage": 0.041455,
-    "s2:cloud_shadow_percentage": 2.115389,
-    "s2:vegetation_percentage": 0.0,
-    "s2:not_vegetated_percentage": 2.359386,
-    "s2:water_percentage": 0.178553,
-    "s2:unclassified_percentage": 0.02254,
-    "s2:medium_proba_clouds_percentage": 9.070896,
-    "s2:high_proba_clouds_percentage": 42.452392,
-    "s2:thin_cirrus_percentage": 10.56252,
-    "s2:snow_ice_percentage": 33.196867,
+    "s2:dark_features_percentage": 0.097588,
+    "s2:cloud_shadow_percentage": 0.0,
+    "s2:vegetation_percentage": 1.3e-05,
+    "s2:not_vegetated_percentage": 0.558518,
+    "s2:water_percentage": 0.067561,
+    "s2:unclassified_percentage": 0.031636,
+    "s2:medium_proba_clouds_percentage": 16.425245,
+    "s2:high_proba_clouds_percentage": 30.098653,
+    "s2:thin_cirrus_percentage": 34.275275,
+    "s2:snow_ice_percentage": 18.445513,
     "s2:product_type": "S2MSI2A",
     "s2:processing_baseline": "05.09",
-    "s2:product_title": "S2A_MSIL2A_20230602T233651_N0509_R030_T01WCQ_20230603T031757",
-    "s2:generation_time": "2023-06-03T03:17:57.000000Z",
+    "s2:product_title": "S2B_MSIL2A_20230603T235619_N0509_R116_T01WCQ_20230604T002457",
+    "s2:generation_time": "2023-06-04T00:24:57.000000Z",
     "s2:orbit_direction": "DESCENDING",
-    "s2:relative_orbit_number": 30,
-    "s2:absolute_orbit_number": 41497,
-    "datetime": "2023-06-02T23:37:44.273000Z",
-    "s2:datastrip_id": "S2A_OPER_MSI_L2A_DS_2APS_20230603T031757_S20230602T233651_N05.09"
+    "s2:relative_orbit_number": 116,
+    "s2:absolute_orbit_number": 32603,
+    "datetime": "2023-06-03T23:57:40.595000Z",
+    "s2:datastrip_id": "S2B_OPER_MSI_L2A_DS_2BPS_20230604T002457_S20230603T235618_N05.09"
   },
   "geometry": {
     "type": "MultiPolygon",
@@ -71,19 +71,23 @@
         [
           [
             180.0,
-            66.84833635553642
+            66.59728727540211
+          ],
+          [
+            178.49018655168575,
+            66.56576593038615
+          ],
+          [
+            178.30364568281954,
+            67.54751994772417
           ],
           [
             180.0,
-            66.60120196487216
-          ],
-          [
-            179.75963034724103,
-            66.59716078639873
+            67.58319390936634
           ],
           [
             180.0,
-            66.84833635553642
+            66.59728727540211
           ]
         ]
       ],
@@ -95,15 +99,11 @@
           ],
           [
             -180.0,
-            66.60120196487216
+            66.59728727540211
           ],
           [
             -180.0,
-            66.84833635553642
-          ],
-          [
-            -179.28114899501006,
-            67.5995036024459
+            67.58319390936634
           ],
           [
             -179.12160049905867,
@@ -129,7 +129,7 @@
     },
     {
       "rel": "product",
-      "href": "s3://sentinel-s2-l2a/products/2023/6/2/S2A_MSIL2A_20230602T233651_N0509_R030_T01WCQ_20230603T031757/"
+      "href": "s3://sentinel-s2-l2a/products/2023/6/3/S2B_MSIL2A_20230603T235619_N0509_R116_T01WCQ_20230604T002457/"
     },
     {
       "rel": "collection",
@@ -146,7 +146,7 @@
   ],
   "assets": {
     "thumbnail": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/preview.jpg",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/preview.jpg",
       "type": "image/jpeg",
       "title": "Thumbnail image",
       "roles": [
@@ -162,7 +162,7 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         }
       ],
@@ -201,7 +201,7 @@
       ]
     },
     "green": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/B03.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/B03.jp2",
       "type": "image/jp2",
       "title": "Green (band 3) - 10m",
       "eo:bands": [
@@ -209,7 +209,7 @@
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         }
       ],
@@ -248,7 +248,7 @@
       ]
     },
     "blue": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/B02.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/B02.jp2",
       "type": "image/jp2",
       "title": "Blue (band 2) - 10m",
       "eo:bands": [
@@ -256,7 +256,7 @@
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -295,7 +295,7 @@
       ]
     },
     "wvp_10m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/WVP.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/WVP.jp2",
       "type": "image/jp2",
       "title": "Water vapour (WVP)",
       "proj:shape": [
@@ -332,7 +332,7 @@
       ]
     },
     "aot_10m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/AOT.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/AOT.jp2",
       "type": "image/jp2",
       "title": "Aerosol optical thickness (AOT)",
       "proj:shape": [
@@ -369,7 +369,7 @@
       ]
     },
     "visual": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/TCI.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/TCI.jp2",
       "type": "image/jp2",
       "title": "True color image",
       "eo:bands": [
@@ -377,21 +377,21 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         },
         {
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         },
         {
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -418,7 +418,7 @@
       ]
     },
     "nir": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R10m/B08.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R10m/B08.jp2",
       "type": "image/jp2",
       "title": "NIR 1 (band 8) - 10m",
       "eo:bands": [
@@ -426,7 +426,7 @@
           "name": "nir",
           "common_name": "nir",
           "description": "NIR 1 (band 8)",
-          "center_wavelength": 0.8328,
+          "center_wavelength": 0.8329,
           "full_width_half_max": 0.106
         }
       ],
@@ -465,7 +465,7 @@
       ]
     },
     "swir22": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B12.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B12.jp2",
       "type": "image/jp2",
       "title": "SWIR 2 (band 12) - 20m",
       "eo:bands": [
@@ -473,8 +473,8 @@
           "name": "swir22",
           "common_name": "swir22",
           "description": "SWIR 2 (band 12)",
-          "center_wavelength": 2.2024,
-          "full_width_half_max": 0.175
+          "center_wavelength": 2.1857,
+          "full_width_half_max": 0.185
         }
       ],
       "gsd": 20,
@@ -512,7 +512,7 @@
       ]
     },
     "rededge2": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B06.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B06.jp2",
       "type": "image/jp2",
       "title": "Red edge 2 (band 6) - 20m",
       "eo:bands": [
@@ -520,7 +520,7 @@
           "name": "rededge2",
           "common_name": "rededge",
           "description": "Red edge 2 (band 6)",
-          "center_wavelength": 0.7405,
+          "center_wavelength": 0.7391,
           "full_width_half_max": 0.015
         }
       ],
@@ -559,7 +559,7 @@
       ]
     },
     "rededge3": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B07.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B07.jp2",
       "type": "image/jp2",
       "title": "Red edge 3 (band 7) - 20m",
       "eo:bands": [
@@ -567,7 +567,7 @@
           "name": "rededge3",
           "common_name": "rededge",
           "description": "Red edge 3 (band 7)",
-          "center_wavelength": 0.7828,
+          "center_wavelength": 0.7797,
           "full_width_half_max": 0.02
         }
       ],
@@ -606,7 +606,7 @@
       ]
     },
     "rededge1": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B05.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B05.jp2",
       "type": "image/jp2",
       "title": "Red edge 1 (band 5) - 20m",
       "eo:bands": [
@@ -614,8 +614,8 @@
           "name": "rededge1",
           "common_name": "rededge",
           "description": "Red edge 1 (band 5)",
-          "center_wavelength": 0.7041,
-          "full_width_half_max": 0.015
+          "center_wavelength": 0.7038,
+          "full_width_half_max": 0.016
         }
       ],
       "gsd": 20,
@@ -653,7 +653,7 @@
       ]
     },
     "swir16": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B11.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B11.jp2",
       "type": "image/jp2",
       "title": "SWIR 1 (band 11) - 20m",
       "eo:bands": [
@@ -661,8 +661,8 @@
           "name": "swir16",
           "common_name": "swir16",
           "description": "SWIR 1 (band 11)",
-          "center_wavelength": 1.6137,
-          "full_width_half_max": 0.091
+          "center_wavelength": 1.6104,
+          "full_width_half_max": 0.094
         }
       ],
       "gsd": 20,
@@ -700,7 +700,7 @@
       ]
     },
     "red_20m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B04.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B04.jp2",
       "type": "image/jp2",
       "title": "Red (band 4) - 20m",
       "eo:bands": [
@@ -708,7 +708,7 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         }
       ],
@@ -746,7 +746,7 @@
       ]
     },
     "green_20m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B03.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B03.jp2",
       "type": "image/jp2",
       "title": "Green (band 3) - 20m",
       "eo:bands": [
@@ -754,7 +754,7 @@
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         }
       ],
@@ -792,7 +792,7 @@
       ]
     },
     "blue_20m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B02.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B02.jp2",
       "type": "image/jp2",
       "title": "Blue (band 2) - 20m",
       "eo:bands": [
@@ -800,7 +800,7 @@
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -838,7 +838,7 @@
       ]
     },
     "wvp": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/WVP.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/WVP.jp2",
       "type": "image/jp2",
       "title": "Water vapour (WVP)",
       "proj:shape": [
@@ -875,7 +875,7 @@
       ]
     },
     "nir08": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B8A.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B8A.jp2",
       "type": "image/jp2",
       "title": "NIR 2 (band 8A) - 20m",
       "eo:bands": [
@@ -883,8 +883,8 @@
           "name": "nir08",
           "common_name": "nir08",
           "description": "NIR 2 (band 8A)",
-          "center_wavelength": 0.8647,
-          "full_width_half_max": 0.021
+          "center_wavelength": 0.864,
+          "full_width_half_max": 0.022
         }
       ],
       "gsd": 20,
@@ -922,7 +922,7 @@
       ]
     },
     "scl": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/SCL.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/SCL.jp2",
       "type": "image/jp2",
       "title": "Scene classification map (SCL)",
       "proj:shape": [
@@ -956,7 +956,7 @@
       ]
     },
     "aot": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/AOT.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/AOT.jp2",
       "type": "image/jp2",
       "title": "Aerosol optical thickness (AOT)",
       "proj:shape": [
@@ -993,7 +993,7 @@
       ]
     },
     "visual_20m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/TCI.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/TCI.jp2",
       "type": "image/jp2",
       "title": "True color image",
       "eo:bands": [
@@ -1001,21 +1001,21 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         },
         {
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         },
         {
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -1042,7 +1042,7 @@
       ]
     },
     "nir_20m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R20m/B08.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R20m/B08.jp2",
       "type": "image/jp2",
       "title": "NIR 1 (band 8) - 20m",
       "eo:bands": [
@@ -1050,7 +1050,7 @@
           "name": "nir",
           "common_name": "nir",
           "description": "NIR 1 (band 8)",
-          "center_wavelength": 0.8328,
+          "center_wavelength": 0.8329,
           "full_width_half_max": 0.106
         }
       ],
@@ -1088,7 +1088,7 @@
       ]
     },
     "swir22_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B12.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B12.jp2",
       "type": "image/jp2",
       "title": "SWIR 2 (band 12) - 60m",
       "eo:bands": [
@@ -1096,8 +1096,8 @@
           "name": "swir22",
           "common_name": "swir22",
           "description": "SWIR 2 (band 12)",
-          "center_wavelength": 2.2024,
-          "full_width_half_max": 0.175
+          "center_wavelength": 2.1857,
+          "full_width_half_max": 0.185
         }
       ],
       "proj:shape": [
@@ -1134,7 +1134,7 @@
       ]
     },
     "rededge2_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B06.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B06.jp2",
       "type": "image/jp2",
       "title": "Red edge 2 (band 6) - 60m",
       "eo:bands": [
@@ -1142,7 +1142,7 @@
           "name": "rededge2",
           "common_name": "rededge",
           "description": "Red edge 2 (band 6)",
-          "center_wavelength": 0.7405,
+          "center_wavelength": 0.7391,
           "full_width_half_max": 0.015
         }
       ],
@@ -1180,7 +1180,7 @@
       ]
     },
     "rededge3_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B07.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B07.jp2",
       "type": "image/jp2",
       "title": "Red edge 3 (band 7) - 60m",
       "eo:bands": [
@@ -1188,7 +1188,7 @@
           "name": "rededge3",
           "common_name": "rededge",
           "description": "Red edge 3 (band 7)",
-          "center_wavelength": 0.7828,
+          "center_wavelength": 0.7797,
           "full_width_half_max": 0.02
         }
       ],
@@ -1226,7 +1226,7 @@
       ]
     },
     "rededge1_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B05.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B05.jp2",
       "type": "image/jp2",
       "title": "Red edge 1 (band 5) - 60m",
       "eo:bands": [
@@ -1234,8 +1234,8 @@
           "name": "rededge1",
           "common_name": "rededge",
           "description": "Red edge 1 (band 5)",
-          "center_wavelength": 0.7041,
-          "full_width_half_max": 0.015
+          "center_wavelength": 0.7038,
+          "full_width_half_max": 0.016
         }
       ],
       "proj:shape": [
@@ -1272,7 +1272,7 @@
       ]
     },
     "swir16_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B11.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B11.jp2",
       "type": "image/jp2",
       "title": "SWIR 1 (band 11) - 60m",
       "eo:bands": [
@@ -1280,8 +1280,8 @@
           "name": "swir16",
           "common_name": "swir16",
           "description": "SWIR 1 (band 11)",
-          "center_wavelength": 1.6137,
-          "full_width_half_max": 0.091
+          "center_wavelength": 1.6104,
+          "full_width_half_max": 0.094
         }
       ],
       "proj:shape": [
@@ -1318,7 +1318,7 @@
       ]
     },
     "red_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B04.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B04.jp2",
       "type": "image/jp2",
       "title": "Red (band 4) - 60m",
       "eo:bands": [
@@ -1326,7 +1326,7 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         }
       ],
@@ -1364,7 +1364,7 @@
       ]
     },
     "coastal": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B01.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B01.jp2",
       "type": "image/jp2",
       "title": "Coastal aerosol (band 1) - 60m",
       "eo:bands": [
@@ -1372,7 +1372,7 @@
           "name": "coastal",
           "common_name": "coastal",
           "description": "Coastal aerosol (band 1)",
-          "center_wavelength": 0.4427,
+          "center_wavelength": 0.4422,
           "full_width_half_max": 0.021
         }
       ],
@@ -1411,7 +1411,7 @@
       ]
     },
     "green_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B03.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B03.jp2",
       "type": "image/jp2",
       "title": "Green (band 3) - 60m",
       "eo:bands": [
@@ -1419,7 +1419,7 @@
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         }
       ],
@@ -1457,7 +1457,7 @@
       ]
     },
     "blue_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B02.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B02.jp2",
       "type": "image/jp2",
       "title": "Blue (band 2) - 60m",
       "eo:bands": [
@@ -1465,7 +1465,7 @@
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -1503,7 +1503,7 @@
       ]
     },
     "wvp_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/WVP.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/WVP.jp2",
       "type": "image/jp2",
       "title": "Water vapour (WVP)",
       "proj:shape": [
@@ -1540,7 +1540,7 @@
       ]
     },
     "nir08_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B8A.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B8A.jp2",
       "type": "image/jp2",
       "title": "NIR 2 (band 8A) - 60m",
       "eo:bands": [
@@ -1548,8 +1548,8 @@
           "name": "nir08",
           "common_name": "nir08",
           "description": "NIR 2 (band 8A)",
-          "center_wavelength": 0.8647,
-          "full_width_half_max": 0.021
+          "center_wavelength": 0.864,
+          "full_width_half_max": 0.022
         }
       ],
       "proj:shape": [
@@ -1586,7 +1586,7 @@
       ]
     },
     "scl_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/SCL.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/SCL.jp2",
       "type": "image/jp2",
       "title": "Scene classification map (SCL)",
       "proj:shape": [
@@ -1620,7 +1620,7 @@
       ]
     },
     "aot_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/AOT.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/AOT.jp2",
       "type": "image/jp2",
       "title": "Aerosol optical thickness (AOT)",
       "proj:shape": [
@@ -1657,7 +1657,7 @@
       ]
     },
     "nir09": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B09.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B09.jp2",
       "type": "image/jp2",
       "title": "NIR 3 (band 9) - 60m",
       "eo:bands": [
@@ -1665,8 +1665,8 @@
           "name": "nir09",
           "common_name": "nir09",
           "description": "NIR 3 (band 9)",
-          "center_wavelength": 0.9451,
-          "full_width_half_max": 0.02
+          "center_wavelength": 0.9432,
+          "full_width_half_max": 0.021
         }
       ],
       "gsd": 60,
@@ -1704,7 +1704,7 @@
       ]
     },
     "visual_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/TCI.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/TCI.jp2",
       "type": "image/jp2",
       "title": "True color image",
       "eo:bands": [
@@ -1712,21 +1712,21 @@
           "name": "red",
           "common_name": "red",
           "description": "Red (band 4)",
-          "center_wavelength": 0.6646,
+          "center_wavelength": 0.6649,
           "full_width_half_max": 0.031
         },
         {
           "name": "green",
           "common_name": "green",
           "description": "Green (band 3)",
-          "center_wavelength": 0.5598,
+          "center_wavelength": 0.559,
           "full_width_half_max": 0.036
         },
         {
           "name": "blue",
           "common_name": "blue",
           "description": "Blue (band 2)",
-          "center_wavelength": 0.4924,
+          "center_wavelength": 0.4921,
           "full_width_half_max": 0.066
         }
       ],
@@ -1753,7 +1753,7 @@
       ]
     },
     "nir_60m": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/R60m/B08.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/R60m/B08.jp2",
       "type": "image/jp2",
       "title": "NIR 1 (band 8) - 60m",
       "eo:bands": [
@@ -1761,7 +1761,7 @@
           "name": "nir",
           "common_name": "nir",
           "description": "NIR 1 (band 8)",
-          "center_wavelength": 0.8328,
+          "center_wavelength": 0.8329,
           "full_width_half_max": 0.106
         }
       ],
@@ -1806,7 +1806,7 @@
       ]
     },
     "tileinfo_metadata": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/1/tileInfo.json",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/3/0/tileInfo.json",
       "type": "application/json",
       "roles": [
         "metadata"
@@ -1815,7 +1815,7 @@
   },
   "bbox": [
     -180.0,
-    66.59716078639873,
+    66.56576593038615,
     180.0,
     67.60166645946141
   ],

@@ -41,27 +41,28 @@
     "grid:code": "MGRS-1WCQ",
     "view:sun_azimuth": 182.74889625925,
     "view:sun_elevation": 45.0169448782431,
-    "sentinel2:degraded_msi_data_percentage": 0.0245,
-    "sentinel2:nodata_pixel_percentage": 31.093246,
-    "sentinel2:saturated_defective_pixel_percentage": 0.0,
-    "sentinel2:dark_features_percentage": 0.00819,
-    "sentinel2:cloud_shadow_percentage": 1.127218,
-    "sentinel2:vegetation_percentage": 1.4e-05,
-    "sentinel2:not_vegetated_percentage": 0.145778,
-    "sentinel2:water_percentage": 0.005166,
-    "sentinel2:unclassified_percentage": 0.000737,
-    "sentinel2:medium_proba_clouds_percentage": 19.017781,
-    "sentinel2:high_proba_clouds_percentage": 48.762774,
-    "sentinel2:thin_cirrus_percentage": 11.159178,
-    "sentinel2:snow_ice_percentage": 19.773167,
-    "sentinel2:product_type": "S2MSI2A",
-    "sentinel2:processing_baseline": "05.09",
-    "sentinel2:product_title": "S2A_MSIL2A_20230602T000611_N0509_R016_T01WCQ_20230602T025701",
-    "sentinel2:generation_time": "2023-06-02T02:57:01.000000Z",
-    "sentinel2:orbit_direction": "DESCENDING",
-    "sentinel2:relative_orbit_number": 16,
-    "sentinel2:absolute_orbit_number": 41483,
-    "datetime": "2023-06-02T00:07:37.093000Z"
+    "s2:degraded_msi_data_percentage": 0.0245,
+    "s2:nodata_pixel_percentage": 31.093246,
+    "s2:saturated_defective_pixel_percentage": 0.0,
+    "s2:dark_features_percentage": 0.00819,
+    "s2:cloud_shadow_percentage": 1.127218,
+    "s2:vegetation_percentage": 1.4e-05,
+    "s2:not_vegetated_percentage": 0.145778,
+    "s2:water_percentage": 0.005166,
+    "s2:unclassified_percentage": 0.000737,
+    "s2:medium_proba_clouds_percentage": 19.017781,
+    "s2:high_proba_clouds_percentage": 48.762774,
+    "s2:thin_cirrus_percentage": 11.159178,
+    "s2:snow_ice_percentage": 19.773167,
+    "s2:product_type": "S2MSI2A",
+    "s2:processing_baseline": "05.09",
+    "s2:product_title": "S2A_MSIL2A_20230602T000611_N0509_R016_T01WCQ_20230602T025701",
+    "s2:generation_time": "2023-06-02T02:57:01.000000Z",
+    "s2:orbit_direction": "DESCENDING",
+    "s2:relative_orbit_number": 16,
+    "s2:absolute_orbit_number": 41483,
+    "datetime": "2023-06-02T00:07:37.093000Z",
+    "s2:datastrip_id": "S2A_OPER_MSI_L2A_DS_2APS_20230602T025701_S20230602T000614_N05.09"
   },
   "geometry": {
     "type": "MultiPolygon",
@@ -153,7 +154,7 @@
       ]
     },
     "red": {
-      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/0/R10m/B04.jp2",
+      "href": "B04.jp2",
       "type": "image/jp2",
       "title": "Red (band 4) - 10m",
       "eo:bands": [
@@ -1317,7 +1318,7 @@
       ]
     },
     "red_60m": {
-      "href": "B04.jp2",
+      "href": "s3://sentinel-s2-l2a/tiles/1/W/CQ/2023/6/2/0/R60m/B04.jp2",
       "type": "image/jp2",
       "title": "Red (band 4) - 60m",
       "eo:bands": [
@@ -1813,9 +1814,9 @@
     }
   },
   "bbox": [
-    -179.18636848515953,
+    -180.0,
     66.56666027401839,
-    179.47978459993433,
+    180.0,
     67.60080739696834
   ],
   "stac_extensions": [

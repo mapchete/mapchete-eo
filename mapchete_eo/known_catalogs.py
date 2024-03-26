@@ -5,6 +5,8 @@ as pystac Items.
 
 from typing import List
 
+from pystac import Item
+
 from mapchete_eo.search import STACSearchCatalog, UTMSearchCatalog
 
 
@@ -27,5 +29,20 @@ class AWSSearchCatalogS2L2A(UTMSearchCatalog):
     description: str = "Sentinel-2 L2A JPEG2000 archive on AWS."
     stac_extensions: List[str] = []
 
+    def standardize_item(self, item: Item) -> Item:
+        """Make sure item metadata is following the standard."""
 
-# TODO: DIAS OpenSearch: https://gitlab.eox.at/maps/mapchete_eo/-/issues/7
+        # change 'sentinel2' prefix to 's2'
+        properties = {
+            k.replace("sentinel2:", "s2:"): v for k, v in item.properties.items()
+        }
+
+        # add datastrip id as 's2:datastrip_id'
+        if "s2:datastrip_id" not in properties:
+            from mapchete_eo.platforms.sentinel2 import S2Metadata
+
+            s2_metadata = S2Metadata.from_stac_item(item)
+            properties["s2:datastrip_id"] = s2_metadata.datastrip_id
+
+        item.properties = properties
+        return item

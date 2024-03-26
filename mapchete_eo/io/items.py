@@ -68,7 +68,10 @@ def expand_params(param, length):
     return [param for _ in range(length)]
 
 
-def get_item_property(item: pystac.Item, property: str) -> Any:
+def get_item_property(
+    item: pystac.Item,
+    property: str,
+) -> Any:
     """
     Return item property.
 
@@ -130,7 +133,7 @@ def get_item_property(item: pystac.Item, property: str) -> Any:
 
 
 def item_fix_footprint(
-    item: pystac.Item, bbox_width_threshold: int = 180, buffer_m: float = 0
+    item: pystac.Item, bbox_width_threshold: int = 180
 ) -> pystac.Item:
     bounds = Bounds.from_inp(item.bbox)
 
@@ -138,16 +141,11 @@ def item_fix_footprint(
         logger.debug("item %s crosses Antimeridian, fixing ...", item.id)
 
         if item.geometry:
-            item.geometry = mapping(
-                repair_antimeridian_geometry(geometry=shape(item.geometry))
-            )
+            geometry = repair_antimeridian_geometry(geometry=shape(item.geometry))
+            item.geometry = mapping(geometry)
+            item.bbox = list(geometry.bounds)
         else:
             raise ValueError("item geometry is None")
-
-    if buffer_m != 0:
-        item.geometry = mapping(
-            buffer_footprint(shape(item.geometry), buffer_m=buffer_m)
-        )
 
     return item
 

@@ -25,6 +25,16 @@
       "type": "application/json"
     },
     {
+      "rel": "item",
+      "href": "./S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCQ/S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCQ.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCR/S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCR.json",
+      "type": "application/json"
+    },
+    {
       "rel": "parent",
       "href": "../catalog.json",
       "type": "application/json"
@@ -38,9 +48,9 @@
     "spatial": {
       "bbox": [
         [
-          -179.30619597392555,
+          -180.0,
           66.56576593038615,
-          179.75963034724103,
+          180.0,
           68.49813373282021
         ]
       ]

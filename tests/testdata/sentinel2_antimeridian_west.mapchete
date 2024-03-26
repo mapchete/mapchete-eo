@@ -1,6 +1,6 @@
 process: read_xarray.py
 input:
-  sentinel2:
+  inp:
     format: Sentinel-2
     cat_baseurl: sentinel2/full_products_antimeridian/catalog.json
     level: L2A
@@ -14,5 +14,5 @@ output:
   dtype: uint16
 pyramid:
   grid: geodetic
-zoom_levels: 10
-bounds: [-180, 67, -179.5, 67.3]
+zoom_levels: 13
+bounds: [-180, 66.6, -179, 68.5]

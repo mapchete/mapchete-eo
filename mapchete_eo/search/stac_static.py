@@ -1,13 +1,15 @@
 import logging
 import warnings
 from functools import cached_property
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from mapchete.path import MPathLike
+from mapchete.types import BoundsLike
 from pystac.stac_io import StacIO
 from pystac_client import Client
+from shapely.geometry import box, shape
 from tilematrix import Bounds
 
 from mapchete_eo.io.items import item_fix_footprint
@@ -57,16 +59,14 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                             timespan=(time_range.start, time_range.end),
                         ):
                             item.make_asset_hrefs_absolute()
-                            yield item_fix_footprint(
-                                item, buffer_m=self.footprint_buffer
-                            )
+                            yield item_fix_footprint(item)
                 else:
                     for item in _all_intersecting_items(
                         collection,
                         bounds=self.bounds,
                     ):
                         item.make_asset_hrefs_absolute()
-                        yield item_fix_footprint(item, buffer_m=self.footprint_buffer)
+                        yield item_fix_footprint(item)
 
         items = list(_gen_items())
         logger.debug("%s items found", len(items))
@@ -143,11 +143,21 @@ def _all_intersecting_items(
             yield from _all_intersecting_items(child, **kwargs)
 
 
-def _item_extent_intersects(item, bounds=None, timespan=None):
-    spatial_intersect = bounds_intersect(item.bbox, bounds) if bounds else True
-    if timespan:
+def _item_extent_intersects(
+    item: pystac.Item,
+    bounds: Optional[BoundsLike] = None,
+    timespan: Optional[Tuple[DateTimeLike, DateTimeLike]] = None,
+) -> bool:
+    # NOTE: bounds intersect is faster but in the current implementation cannot
+    # handle item footprints going over the Antimeridian (and have been split up into
+    # MultiPolygon geometries)
+    # spatial_intersect = bounds_intersect(item.bbox, bounds) if bounds else True
+    spatial_intersect = (
+        shape(item.geometry).intersects(box(*bounds)) if bounds else True
+    )
+    if timespan and item.datetime:
         temporal_intersect = time_ranges_intersect(
-            [item.datetime, item.datetime], timespan
+            (item.datetime, item.datetime), timespan
         )
         logger.debug(
             "spatial intersect: %s, temporal intersect: %s",

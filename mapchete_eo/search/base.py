@@ -57,6 +57,9 @@ class CatalogProtocol(Protocol):
     ):
         pass
 
+    def standardize_item(self, item: pystac.Item) -> pystac.Item:
+        return item
+
 
 class StaticCatalogWriterMixin(ABC):
     client: Client

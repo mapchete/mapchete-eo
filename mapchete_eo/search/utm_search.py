@@ -63,6 +63,12 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         products and return them as STAC items, like with the element 84 endpoint, just without the search client.
         s3://sentinel-s2-l2a-stac/2023/06/04/S2B_OPER_MSI_L2A_TL_2BPS_20230604T235444_A032617_T01WCN.json
         """
+        logger.debug(
+            "determine items from %s to %s over %s...",
+            self.start_time,
+            self.end_time,
+            self.bounds,
+        )
 
         def _get_items():
             # get Sentinel-2 tiles over given bounds
@@ -74,10 +80,7 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                 for item in find_items(
                     day_path, s2_tiles, product_endswith="T{tile_id}.json"
                 ):
-                    yield item_fix_footprint(
-                        item,
-                        buffer_m=self.config.footprint_buffer,
-                    )
+                    yield item_fix_footprint(self.standardize_item(item))
 
         return IndexedFeatures(_get_items())
 

@@ -101,7 +101,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
     max_cloud_percent: int = 100
-    footprint_buffer: float = -500
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None

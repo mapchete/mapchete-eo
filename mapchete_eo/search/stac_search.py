@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from functools import cached_property
 from typing import Dict, Iterator, List, Optional, Set, Union
 
@@ -141,9 +142,19 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                 raise ValueError("area empty")
             kwargs.update(intersects=self.area)
 
+        start = (
+            time_range.start.date()
+            if isinstance(time_range.start, datetime)
+            else time_range.start
+        )
+        end = (
+            time_range.end.date()
+            if isinstance(time_range.end, datetime)
+            else time_range.end
+        )
         search_params = dict(
             self.default_search_params,
-            datetime=f"{time_range.start}/{time_range.end}",
+            datetime=f"{start}/{end}",
             **kwargs,
         )
         logger.debug("query catalog using params: %s", search_params)

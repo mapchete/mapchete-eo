@@ -408,13 +408,12 @@ class InputData(base.InputData):
 
         # set archive
         if self.params.cat_baseurl:
-            bbox = self.bbox(mapchete_eo_settings.default_catalog_crs)
             self.archive = StaticArchive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=input_params["conf_dir"]
                     ),
-                    bounds=None if bbox.is_empty else bbox.bounds,
+                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
                 )
             )

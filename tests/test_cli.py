@@ -74,7 +74,7 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
     "flag,value,collection",
     [
         ("--catalog-json", lazy_fixture("s2_stac_collection"), None),
-        ("--archive", "sentinel-s2-l2a-cogs", None),
+        ("--archive", "S2AWS_COG", None),
         ("--endpoint", EarthSearchV1S2L2A.endpoint, "sentinel-2-l2a"),
     ],
 )

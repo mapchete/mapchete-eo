@@ -9,6 +9,7 @@ from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
+from shapely.geometry import box
 
 from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -347,7 +348,7 @@ def static_catalog_small(s2_stac_collection):
     return STACStaticCatalog(
         s2_stac_collection,
         TimeRange(start="2023-08-10", end="2023-08-11"),
-        (15.71762, 46.22546, 15.78400, 46.27169),
+        area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
 
 

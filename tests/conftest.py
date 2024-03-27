@@ -9,6 +9,7 @@ from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
+from shapely.geometry import box
 
 from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -185,18 +186,18 @@ def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
-def eoxcloudless_mosaic_s2jp2_east_mapchete(tmp_path, testdata_dir):
+def sentinel2_antimeridian_east_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_east.mapchete",
+        testdata_dir / "sentinel2_antimeridian_east.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
 
 
 @pytest.fixture
-def eoxcloudless_mosaic_s2jp2_west_mapchete(tmp_path, testdata_dir):
+def sentinel2_antimeridian_west_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic_s2jp2_antimeridian_west.mapchete",
+        testdata_dir / "sentinel2_antimeridian_west.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
@@ -248,6 +249,15 @@ def sentinel2_stac_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_stac_footprint_buffer_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_stac_footprint_buffer.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_stac_area_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac_area.mapchete",
@@ -274,6 +284,12 @@ def cloudy_tile():
 def test_tile():
     """Tile on the overlap between MGRS granules 33TWL and 33TWM."""
     return BufferedTilePyramid("geodetic").tile_from_xy(15.77928, 46.01972, 13)
+
+
+@pytest.fixture
+def test_edge_tile():
+    """Tile on the overlap between MGRS granules 33TWL and 33TWM but on the product edge."""
+    return BufferedTilePyramid("geodetic").tile_from_xy(15.00122, 45.98486, 13)
 
 
 @pytest.fixture(scope="session")
@@ -311,7 +327,7 @@ def utm_search_catalog():
             end="2022-06-06",
         ),
         bounds=[-180, 65, -179, 65.3],
-        collections=["sentinel-2-l2a"],
+        collections=["sentinel-s2-l2a"],
     )
 
 
@@ -332,7 +348,7 @@ def static_catalog_small(s2_stac_collection):
     return STACStaticCatalog(
         s2_stac_collection,
         TimeRange(start="2023-08-10", end="2023-08-11"),
-        (15.71762, 46.22546, 15.78400, 46.27169),
+        area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
 
 

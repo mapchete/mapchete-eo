@@ -101,7 +101,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
     max_cloud_percent: int = 100
-    footprint_buffer: float = -500
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None
@@ -113,6 +112,8 @@ class Sentinel2DriverConfig(BaseDriverConfig):
 class MaskConfig(BaseModel):
     # mask by footprint geometry
     footprint: bool = True
+    # apply buffer (in meters!) to footprint
+    footprint_buffer_m: float = -500
     # add pixel buffer to all masks
     buffer: int = 0
     # mask by L1C cloud types (either opaque, cirrus or all)
@@ -145,9 +146,11 @@ class MaskConfig(BaseModel):
             scl_classes = config.get("scl_classes")
             if scl_classes:
                 config["scl_classes"] = [
-                    scene_cls
-                    if isinstance(scene_cls, SceneClassification)
-                    else SceneClassification[scene_cls]
+                    (
+                        scene_cls
+                        if isinstance(scene_cls, SceneClassification)
+                        else SceneClassification[scene_cls]
+                    )
                     for scene_cls in scl_classes
                 ]
 

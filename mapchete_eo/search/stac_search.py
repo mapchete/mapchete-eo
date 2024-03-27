@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from functools import cached_property
 from typing import Dict, Iterator, List, Optional, Set, Union
 
@@ -10,8 +11,9 @@ from pystac_client import Client
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
-from mapchete_eo.search.base import Catalog
+from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
@@ -19,7 +21,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class STACSearchCatalog(Catalog):
+class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     endpoint: str
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)
@@ -51,11 +53,15 @@ class STACSearchCatalog(Catalog):
 
         self.time = time if isinstance(time, list) else [time]
         self.client = Client.open(endpoint or self.endpoint)
+        self.id = self.client.id
+        self.description = self.client.description
+        self.stac_extensions = self.client.stac_extensions
 
         self.collections = collections
         self.config = config
 
         self._collection_items: Dict = {}
+        self.eo_bands = self._eo_bands()
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -89,14 +95,13 @@ class STACSearchCatalog(Catalog):
                                 "item %s found in blacklist and skipping", item_path
                             )
                         else:
-                            yield item
+                            yield item_fix_footprint(item)
 
         if self.area is not None and self.area.is_empty:
             return IndexedFeatures([])
         return IndexedFeatures(_get_items())
 
-    @cached_property
-    def eo_bands(self) -> list:
+    def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
             collection = self.client.get_collection(collection_name)
             if collection:
@@ -137,9 +142,19 @@ class STACSearchCatalog(Catalog):
                 raise ValueError("area empty")
             kwargs.update(intersects=self.area)
 
+        start = (
+            time_range.start.date()
+            if isinstance(time_range.start, datetime)
+            else time_range.start
+        )
+        end = (
+            time_range.end.date()
+            if isinstance(time_range.end, datetime)
+            else time_range.end
+        )
         search_params = dict(
             self.default_search_params,
-            datetime=f"{time_range.start}/{time_range.end}",
+            datetime=f"{start}/{end}",
             **kwargs,
         )
         logger.debug("query catalog using params: %s", search_params)

@@ -3,6 +3,7 @@ import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
 from mapchete.path import MPath
+from pytest_lazyfixture import lazy_fixture
 
 from mapchete_eo.array.convert import to_masked_array
 from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
@@ -217,16 +218,32 @@ def test_read_sorted(sentinel2_stac_mapchete):
 #############################
 
 
-def test_read_np(sentinel2_stac_mapchete):
-    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+@pytest.mark.parametrize(
+    "example_mapchete,tile",
+    [
+        (lazy_fixture("sentinel2_stac_mapchete"), (13, 2003, 8906)),
+        (lazy_fixture("sentinel2_antimeridian_east_mapchete"), (13, 1039, 16379)),
+        (lazy_fixture("sentinel2_antimeridian_west_mapchete"), (13, 1039, 1)),
+    ],
+)
+def test_read_np(example_mapchete, tile):
+    with example_mapchete.process_mp(tile).open("inp") as src:
         cube = src.read_np_array(assets=["red"])
     assert isinstance(cube, ma.MaskedArray)
     assert cube.any()
     assert cube.shape[0] == 2
 
 
-def test_read_np_masked(sentinel2_stac_mapchete):
-    with sentinel2_stac_mapchete.process_mp((13, 1980, 8906)).open("inp") as src:
+@pytest.mark.parametrize(
+    "example_mapchete,tile",
+    [
+        (lazy_fixture("sentinel2_stac_mapchete"), (13, 2003, 8906)),
+        (lazy_fixture("sentinel2_antimeridian_east_mapchete"), (13, 1038, 16379)),
+        (lazy_fixture("sentinel2_antimeridian_west_mapchete"), (13, 1027, 28)),
+    ],
+)
+def test_read_np_masked(example_mapchete, tile):
+    with example_mapchete.process_mp(tile).open("inp") as src:
         unmasked = src.read_np_array(assets=["red"])
         masked = src.read_np_array(
             assets=["red"],
@@ -235,6 +252,7 @@ def test_read_np_masked(sentinel2_stac_mapchete):
                 scl=True,
                 scl_classes=[
                     SceneClassification.vegetation,
+                    SceneClassification.cloud_high_probability,
                 ],
             ),
         )
@@ -242,8 +260,16 @@ def test_read_np_masked(sentinel2_stac_mapchete):
     assert (unmasked.mask != masked.mask).any()
 
 
-def test_read_np_brdf(sentinel2_stac_mapchete):
-    with sentinel2_stac_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
+@pytest.mark.parametrize(
+    "example_mapchete,tile",
+    [
+        (lazy_fixture("sentinel2_stac_mapchete"), (13, 2003, 8906)),
+        (lazy_fixture("sentinel2_antimeridian_east_mapchete"), (13, 1039, 16379)),
+        (lazy_fixture("sentinel2_antimeridian_west_mapchete"), (13, 1039, 1)),
+    ],
+)
+def test_read_np_brdf(example_mapchete, tile):
+    with example_mapchete.process_mp(tile).open("inp") as src:
         uncorrected = src.read_np_array(assets=["red"])
         corrected = src.read_np_array(assets=["red"], brdf_config=BRDFConfig())
     assert corrected.any()
@@ -386,3 +412,21 @@ def test_read_levelled_cube_np_array_sort(sentinel2_stac_mapchete, test_tile):
 )
 def test_parse_mask_config(mask_config):
     assert MaskConfig.parse(mask_config)
+
+
+def test_footprint_buffer(sentinel2_stac_mapchete, test_edge_tile):
+    # read data from both processes and make sure footprint buffered data is masked out more
+
+    with sentinel2_stac_mapchete.process_mp(test_edge_tile).open("inp") as src:
+        unbuffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(footprint=True, footprint_buffer_m=0),
+        )
+
+    with sentinel2_stac_mapchete.process_mp(test_edge_tile).open("inp") as src:
+        buffered = src.read_np_array(
+            assets=["red"],
+            mask_config=MaskConfig(footprint=True, footprint_buffer_m=-500),
+        )
+
+    assert buffered.mask.sum() > unbuffered.mask.sum()

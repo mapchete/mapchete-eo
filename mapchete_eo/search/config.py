@@ -9,6 +9,7 @@ class StacSearchConfig(BaseModel):
     catalog_chunk_threshold: int = 10_000
     catalog_chunk_zoom: int = 5
     catalog_pagesize: int = 500
+    footprint_buffer: float = 0
 
 
 class UTMSearchConfig:
@@ -36,3 +37,4 @@ class UTMSearchConfig:
         "s3://eox-data/S2_Tiling_MGRS_Grid_S2A_OPER_GIP_TILPAR_MPC_B00.fgb"
     )
     utm_allowed_granules: Union[str, list] = "all"
+    footprint_buffer: float = 0

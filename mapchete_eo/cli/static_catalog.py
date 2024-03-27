@@ -1,12 +1,19 @@
+from datetime import datetime
+from typing import List, Optional
+
 import click
 from mapchete.cli.options import opt_bounds, opt_debug
+from mapchete.path import MPath
+from mapchete.types import Bounds
+from rasterio.profiles import Profile
 
+from mapchete_eo.archives.base import Archive
 from mapchete_eo.cli import options_arguments
-from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2 import S2Metadata
-from mapchete_eo.platforms.sentinel2.config import AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.config import KnownArchives
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
+from mapchete_eo.search.base import CatalogProtocol
 from mapchete_eo.types import TimeRange
 
 
@@ -29,23 +36,23 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_overwrite
 @opt_debug
 def static_catalog(
-    dst_path,
-    bounds=None,
-    mgrs_tile=None,
-    start_time=None,
-    end_time=None,
-    archive=None,
-    collection=None,
-    endpoint=None,
-    catalog_json=None,
-    name=None,
-    description=None,
-    assets=None,
-    assets_dst_resolution=None,
-    assets_dst_rio_profile=None,
-    copy_metadata=False,
-    overwrite=False,
-    **kwargs,
+    dst_path: MPath,
+    start_time: datetime,
+    end_time: datetime,
+    bounds: Optional[Bounds] = None,
+    mgrs_tile: Optional[str] = None,
+    archive: Optional[KnownArchives] = None,
+    collection: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    catalog_json: Optional[MPath] = None,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    assets: Optional[List[str]] = None,
+    assets_dst_resolution: Resolution = Resolution.original,
+    assets_dst_rio_profile: Optional[Profile] = None,
+    copy_metadata: bool = False,
+    overwrite: bool = False,
+    **__,
 ):
     """Write a static STAC catalog for selected area."""
     if catalog_json and endpoint:  # pragma: no cover
@@ -56,9 +63,54 @@ def static_catalog(
         raise click.ClickException("--start-time and --end-time are mandatory")
     if all([bounds is None, mgrs_tile is None]):  # pragma: no cover
         raise click.ClickException("--bounds or --mgrs-tile are required")
+    catalog = get_catalog(
+        catalog_json=catalog_json,
+        endpoint=endpoint,
+        bounds=bounds,
+        start_time=start_time,
+        end_time=end_time,
+        known_archive=archive,
+        collection=collection,
+        mgrs_tile=mgrs_tile,
+    )
 
+    if hasattr(catalog, "write_static_catalog"):
+        with options_arguments.TqdmUpTo(
+            unit="products", unit_scale=True, miniters=1, disable=opt_debug
+        ) as progress:
+            catalog_json = catalog.write_static_catalog(
+                dst_path,
+                name=name,
+                description=description,
+                assets=assets,
+                assets_dst_resolution=assets_dst_resolution.value,
+                assets_convert_profile=assets_dst_rio_profile,
+                copy_metadata=copy_metadata,
+                metadata_parser_classes=(S2Metadata,),
+                overwrite=overwrite,
+                progress_callback=progress.update_to,
+            )
+
+        click.echo(f"Catalog successfully written to {catalog_json}")
+
+    else:
+        raise AttributeError(
+            f"catalog {catalog} does not support writing a static version"
+        )
+
+
+def get_catalog(
+    catalog_json: Optional[MPath],
+    endpoint: Optional[MPath],
+    bounds: Bounds,
+    start_time: datetime,
+    end_time: datetime,
+    known_archive: Optional[KnownArchives] = None,
+    collection: Optional[str] = None,
+    mgrs_tile: Optional[str] = None,
+) -> CatalogProtocol:
     if catalog_json:
-        catalog = STACStaticCatalog(
+        return STACStaticCatalog(
             baseurl=catalog_json,
             bounds=bounds,
             time=TimeRange(
@@ -67,44 +119,26 @@ def static_catalog(
             ),
         )
     elif endpoint:
-        catalog = STACSearchCatalog(
-            endpoint=endpoint,
-            collections=[collection],
-            bounds=bounds,
-            time=TimeRange(
-                start=start_time,
-                end=end_time,
-            ),
-        )
-    else:
-        if archive == "sentinel-s2-l2a-cogs":
-            catalog = AWSL2ACOGv1(
+        if collection:
+            return STACSearchCatalog(
+                endpoint=endpoint,
+                collections=[collection],
                 bounds=bounds,
                 time=TimeRange(
                     start=start_time,
                     end=end_time,
                 ),
-                mgrs_tile=mgrs_tile,
-            ).catalog
-        else:  # pragma: no cover
-            raise ValueError(
-                "currently ony archive 'sentinel-s2-l2a-cogs' is supported"
             )
-
-    with options_arguments.TqdmUpTo(
-        unit="products", unit_scale=True, miniters=1, disable=opt_debug
-    ) as progress:
-        catalog_json = catalog.write_static_catalog(
-            dst_path,
-            name=name,
-            description=description,
-            assets=assets,
-            assets_dst_resolution=assets_dst_resolution.value,
-            assets_convert_profile=assets_dst_rio_profile,
-            copy_metadata=copy_metadata,
-            metadata_parser_classes=(S2Metadata,),
-            overwrite=overwrite,
-            progress_callback=progress.update_to,
-        )
-
-    click.echo(f"Catalog successfully written to {catalog_json}")
+        else:
+            raise ValueError("collection must be provided")
+    elif known_archive:
+        return known_archive.value(
+            bounds=bounds,
+            time=TimeRange(
+                start=start_time,
+                end=end_time,
+            ),
+            mgrs_tile=mgrs_tile,
+        ).catalog
+    else:
+        raise TypeError("cannot determine catalog")

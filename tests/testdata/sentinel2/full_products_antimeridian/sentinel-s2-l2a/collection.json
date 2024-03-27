@@ -1,0 +1,174 @@
+{
+  "type": "Collection",
+  "id": "sentinel-s2-l2a",
+  "stac_version": "1.0.0",
+  "description": "Sentinel 2 imagery processed to level 2A, which contains Bottom-Of-Atmosphere reflectances in cartographic geometry",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCQ/S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCQ.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCR/S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCR.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2A_OPER_MSI_L2A_TL_2APS_20230603T031757_A041497_T01WCQ/S2A_OPER_MSI_L2A_TL_2APS_20230603T031757_A041497_T01WCQ.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCQ/S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCQ.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCR/S2B_OPER_MSI_L2A_TL_2BPS_20230604T002457_A032603_T01WCR.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json"
+    }
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/eo/v1.0.0/schema.json"
+  ],
+  "title": "Sentinel-2 Level-2A",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -180.0,
+          66.56576593038615,
+          180.0,
+          68.49813373282021
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2023-06-02T00:07:24.355000Z",
+          "2023-06-03T23:57:40.595000Z"
+        ]
+      ]
+    }
+  },
+  "license": "proprietary",
+  "keywords": [
+    "eu",
+    "esa",
+    "copernicus",
+    "sentinel",
+    "optical",
+    "msi"
+  ],
+  "providers": [
+    {
+      "name": "ESA",
+      "roles": [
+        "producer",
+        "processor",
+        "licensor"
+      ],
+      "url": "https://earth.esa.int/web/guest/home"
+    },
+    {
+      "name": "Sinergise",
+      "roles": [
+        "processor"
+      ],
+      "url": "https://sinergise.com/"
+    },
+    {
+      "name": "AWS",
+      "roles": [
+        "host"
+      ],
+      "url": "https://registry.opendata.aws/sentinel-2/"
+    }
+  ],
+  "summaries": {
+    "eo:bands": [
+      {
+        "name": "B01",
+        "common_name": "coastal",
+        "center_wavelength": 0.4427,
+        "full_width_half_max": 0.021
+      },
+      {
+        "name": "B02",
+        "common_name": "blue",
+        "center_wavelength": 0.4924,
+        "full_width_half_max": 0.066
+      },
+      {
+        "name": "B03",
+        "common_name": "green",
+        "center_wavelength": 0.5598,
+        "full_width_half_max": 0.036
+      },
+      {
+        "name": "B04",
+        "common_name": "red",
+        "center_wavelength": 0.6646,
+        "full_width_half_max": 0.031
+      },
+      {
+        "name": "B05",
+        "center_wavelength": 0.7041,
+        "full_width_half_max": 0.015
+      },
+      {
+        "name": "B06",
+        "center_wavelength": 0.7405,
+        "full_width_half_max": 0.015
+      },
+      {
+        "name": "B07",
+        "center_wavelength": 0.7828,
+        "full_width_half_max": 0.02
+      },
+      {
+        "name": "B08",
+        "common_name": "nir",
+        "center_wavelength": 0.8328,
+        "full_width_half_max": 0.106
+      },
+      {
+        "name": "B8A",
+        "common_name": "nir08",
+        "center_wavelength": 0.8647,
+        "full_width_half_max": 0.021
+      },
+      {
+        "name": "B09",
+        "common_name": "nir09",
+        "center_wavelength": 0.9451,
+        "full_width_half_max": 0.02
+      },
+      {
+        "name": "B11",
+        "common_name": "swir16",
+        "center_wavelength": 1.6137,
+        "full_width_half_max": 0.091
+      },
+      {
+        "name": "B12",
+        "common_name": "swir22",
+        "center_wavelength": 2.2024,
+        "full_width_half_max": 0.175
+      }
+    ]
+  }
+}

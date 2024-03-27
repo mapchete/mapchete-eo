@@ -49,6 +49,7 @@ class BaseDriverConfig(BaseModel):
     time: Union[TimeRange, List[TimeRange]]
     cat_baseurl: Optional[str] = None
     cache: Optional[Any] = None
+    footprint_buffer: float = 0
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
     preprocessing_tasks: bool = False
 
@@ -412,7 +413,7 @@ class InputData(base.InputData):
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=input_params["conf_dir"]
                     ),
-                    bounds=self.bbox(mapchete_eo_settings.default_catalog_crs).bounds,
+                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
                 )
             )

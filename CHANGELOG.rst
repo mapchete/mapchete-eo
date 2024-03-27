@@ -3,6 +3,19 @@ Changelog
 #########
 
 
+2024.3.5 - 2024-03-27
+---------------------
+
+* core
+  * `MaskConfig` was extended by the `footprint_buffer_m` value (default: -500) to clip Sentinel-2 products
+  * extended CLI to be able to handle `S2AWS_JP2` archive
+  * streamline STAC items from AWS JP2 archive to match the naming schemes of AWS COG; also add datastrip_id
+  * added much typing information on the go
+  * replaced `Catalog` abstract base class with `CatalogProtocol` protocol
+  * enabled `UTMSearchCatalog` to write static STAC catalog (used to create testdata fixtures over Antimeridian)
+  * improved `UTMSearchCatalog` search algorithm by querying multiple S2Tiles per day at once
+
+
 2024.3.4 - 2024-03-26
 ---------------------
 

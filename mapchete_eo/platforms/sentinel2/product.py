@@ -23,6 +23,7 @@ from mapchete_eo.exceptions import (
     AssetError,
     BRDFError,
     CorruptedProduct,
+    EmptyFootprintException,
     EmptyProductException,
 )
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
@@ -415,10 +416,13 @@ class S2Product(EOProduct, EOProductProtocol):
         try:
             _check_full(out)
             if mask_config.footprint:
-                out += self.footprint_nodata_mask(
-                    grid, buffer_m=mask_config.footprint_buffer_m
-                ).data
-                _check_full(out)
+                try:
+                    out += self.footprint_nodata_mask(
+                        grid, buffer_m=mask_config.footprint_buffer_m
+                    ).data
+                    _check_full(out)
+                except EmptyFootprintException:
+                    raise AllMasked()
             if mask_config.l1c_cloud_type:
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)

@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.3.6 - 2024-03-29
+---------------------
+
+* core
+  * `S2Product.get_mask()`: don't fail on EmptyFootprintException after buffering footprint
+
+
 2024.3.5 - 2024-03-27
 ---------------------
 

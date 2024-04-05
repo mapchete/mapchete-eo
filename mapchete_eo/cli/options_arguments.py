@@ -73,9 +73,9 @@ arg_stac_item = click.argument("stac-item", type=click.Path(path_type=MPath))
 arg_stac_items = click.argument(
     "stac-items", type=click.Path(path_type=MPath), nargs=-1
 )
-arg_dst_path = click.argument("dst_path", type=click.Path(path_type=MPath))
+arg_dst_path = click.argument("dst-path", type=click.Path(path_type=MPath))
 opt_dst_path = click.option(
-    "--dst_path", type=click.Path(path_type=MPath), default=".", show_default=True
+    "--dst-path", type=click.Path(path_type=MPath), default=".", show_default=True
 )
 opt_blacklist = click.option(
     "--blacklist",

@@ -37,6 +37,7 @@ def test_s2_rgb(s2_stac_json_half_footprint, tmp_mpath):
             str(s2_stac_json_half_footprint),
             "--resolution",
             "120m",
+            "--dst-path",
             str(out_path),
         ],
     )

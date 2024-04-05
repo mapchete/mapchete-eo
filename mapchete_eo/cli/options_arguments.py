@@ -31,6 +31,7 @@ class TqdmUpTo(tqdm.tqdm):
 def _str_to_list(_, __, value):
     if value:
         return value.split(",")
+    return []
 
 
 def _str_to_resolution(_, __, value):
@@ -73,6 +74,15 @@ arg_stac_items = click.argument(
     "stac-items", type=click.Path(path_type=MPath), nargs=-1
 )
 arg_dst_path = click.argument("dst_path", type=click.Path(path_type=MPath))
+opt_dst_path = click.option(
+    "--dst_path", type=click.Path(path_type=MPath), default=".", show_default=True
+)
+opt_blacklist = click.option(
+    "--blacklist",
+    type=click.Path(path_type=MPath),
+    default="s3://eox-mhub-cache/blacklist.txt",
+    show_default=True,
+)
 opt_s2_l2a_bands = click.option(
     "--l2a-bands",
     type=click.STRING,
@@ -81,7 +91,7 @@ opt_s2_l2a_bands = click.option(
     show_default=True,
     default="B04,B03,B02",
 )
-opt_assets = click.option(
+opt_assets_rgb = click.option(
     "--assets",
     "-a",
     type=click.STRING,
@@ -172,11 +182,11 @@ opt_name = click.option("--name", type=click.STRING, help="Static catalog name."
 opt_description = click.option(
     "--description", type=click.STRING, help="Static catalog description."
 )
-opt_assets_copy = click.option(
+opt_assets = click.option(
     "--assets",
     type=click.STRING,
     callback=_str_to_list,
-    help="Also copy/convert assets to catalog.",
+    help="STAC item assets.",
 )
 opt_assets_dst_resolution = click.option(
     "--assets-dst-resolution",

@@ -29,7 +29,7 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_catalog_json
 @options_arguments.opt_name
 @options_arguments.opt_description
-@options_arguments.opt_assets_copy
+@options_arguments.opt_assets
 @options_arguments.opt_assets_dst_resolution
 @options_arguments.opt_assets_dst_rio_profile
 @options_arguments.opt_copy_metadata

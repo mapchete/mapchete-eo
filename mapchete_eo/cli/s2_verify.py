@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import List
 
@@ -11,6 +12,8 @@ from tqdm import tqdm
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.platforms.sentinel2.product import asset_mpath
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -70,14 +73,18 @@ def verify_item(
     missing_assets = []
     color_artefacts = False
     for asset in assets:
+        logger.debug("verify asset %s is available", asset)
         if asset not in item.assets:
             missing_asset_entries.append(asset)
         if asset_exists_check:
             path = asset_mpath(item=item, asset=asset)
+            logger.debug("check if asset %s (%s) exists", asset, str(path))
             if not path.exists():
                 missing_assets.append(path)
     if check_thumbnail:
-        thumbnail = read_raster_no_crs(item.assets["thumbnail"].href)
+        thumbnail_href = item.assets["thumbnail"].href
+        logger.debug("check thumbnail %s for artefacts ...", thumbnail_href)
+        thumbnail = read_raster_no_crs(thumbnail_href)
         color_artefacts = outlier_pixels_detected(thumbnail)
     return Report(
         item,
@@ -88,6 +95,24 @@ def verify_item(
 
 
 def outlier_pixels_detected(
-    arr: np.ndarray, axis: int = 0, range_threshold: int = 250
+    arr: np.ndarray,
+    axis: int = 0,
+    range_threshold: int = 100,
+    allowed_error_percentage: float = 1,
 ) -> bool:
-    return (arr.max(axis=axis) - arr.min(axis=axis)).max() >= range_threshold
+    """
+    Checks whether number of outlier pixels is larger than allowed.
+
+    An outlier pixel is a pixel, where the value range between bands exceeds
+    the range_threshold.
+    """
+    _, width, height = arr.shape
+    pixels = width * height
+    outlier_pixels = (arr.max(axis=axis) - arr.min(axis=axis) >= range_threshold).sum()
+    outlier_percent = outlier_pixels / pixels * 100
+    logger.debug(
+        "%s (%s %%) suspicious pixels detected",
+        outlier_pixels,
+        round(outlier_percent, 2),
+    )
+    return outlier_percent > allowed_error_percentage

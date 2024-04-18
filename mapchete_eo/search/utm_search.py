@@ -3,14 +3,13 @@ import logging
 from functools import cached_property
 from typing import Dict, Generator, List, Optional
 
-from mapchete.io import fiona_open
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.item import Item
-from shapely import intersects, transform
-from shapely.geometry import box, shape
+from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
@@ -31,11 +30,20 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         endpoint: Optional[MPathLike] = None,
         collections: List[str] = [],
         bounds: Bounds = None,
+        area: Optional[BaseGeometry] = None,
         config: UTMSearchConfig = UTMSearchConfig(),
         **kwargs,
     ) -> None:
+        if area is not None:
+            self.area = area
+            self.bounds = Bounds.from_inp(self.area)
+        elif bounds is not None:
+            self.bounds = Bounds.from_inp(bounds)
+            self.area = shape(self.bounds)
+        else:  # pragma: no cover
+            raise ValueError("either bounds or area have to be given")
+
         self._collection_items: Dict = {}
-        self.bounds = bounds
         self.time = time if isinstance(time, list) else [time]
         self.start_time = (
             time.start
@@ -82,6 +90,8 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                 ):
                     yield item_fix_footprint(self.standardize_item(item))
 
+        if (self.area is not None and self.area.is_empty) or self.bounds is None:
+            return IndexedFeatures([])
         return IndexedFeatures(_get_items())
 
     def _eo_bands(self) -> list:

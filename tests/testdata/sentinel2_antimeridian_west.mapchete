@@ -5,8 +5,8 @@ input:
     cat_baseurl: sentinel2/full_products_antimeridian/catalog.json
     level: L2A
     time:    
-        start: 2023-06-01
-        end: 2023-06-10
+      start: 2023-06-01
+      end: 2023-06-10
 output:
   format: GTiff
   bands: 3

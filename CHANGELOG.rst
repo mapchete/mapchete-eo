@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+2024.4.0 - 2024-04-18
+---------------------
+
+* core
+  * make `UTMSearchCatalog` handle empty areas
+
+* CLI
+  * add `s2-find-broken-products` subcommand
+  * `s2-verify`: extend verification by analyzing outliers in thumbnail
+
+
 2024.3.6 - 2024-03-29
 ---------------------
 

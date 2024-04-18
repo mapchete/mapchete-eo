@@ -8,7 +8,7 @@ from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.item import Item
-from shapely.geometry import box
+from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.items import item_fix_footprint
@@ -38,8 +38,8 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             self.area = area
             self.bounds = Bounds.from_inp(self.area)
         elif bounds is not None:
-            self.bounds = bounds
-            self.area = Bounds.from_inp(box(*bounds))
+            self.bounds = Bounds.from_inp(bounds)
+            self.area = shape(self.bounds)
         else:  # pragma: no cover
             raise ValueError("either bounds or area have to be given")
 

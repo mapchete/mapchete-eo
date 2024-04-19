@@ -90,16 +90,6 @@ def s2metadata_from_stac_item(
         )
 
     def _determine_offset():
-        # for Sinergise JP2 items
-        # TODO this is VERY hacky but it seems that also E84 has the offset provided in the STAC raster
-        # extension so we should rather use this when actually reading the asset
-        for asset in item.assets.values():
-            if "data" in asset.roles:
-                band_properties = asset.extra_fields.get("raster:bands", [{}])[0]
-                if band_properties.get("offset"):
-                    return True
-
-        # for COG items
         for field in boa_offset_fields:
             if item.properties.get(field):
                 return True
@@ -143,7 +133,6 @@ class S2Metadata:
         metadata_xml: MPath,
         path_mapper: S2PathMapper,
         xml_root: Optional[etree.Element] = None,
-        boa_offset: float = -1000,
         boa_offset_applied: bool = False,
         **kwargs,
     ):
@@ -151,7 +140,6 @@ class S2Metadata:
         self._cached_xml_root = xml_root
         self.path_mapper = path_mapper
         self.processing_baseline = path_mapper.processing_baseline
-        self.default_boa_offset = boa_offset
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
         self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
@@ -260,16 +248,6 @@ class S2Metadata:
             )
             sun_angles[angle].update(raster=raster, mean=mean)
         return sun_angles
-
-    @property
-    def reflectance_offset(self) -> float:
-        """
-        Reflectance offset of -1000 to be applied when reading bands.
-        """
-        if self.boa_offset_applied:
-            return self.default_boa_offset
-        else:
-            return 0
 
     @property
     def assets(self) -> dict:

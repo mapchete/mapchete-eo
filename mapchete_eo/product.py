@@ -107,6 +107,8 @@ class EOProduct(EOProductProtocol):
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
+        apply_offset: bool = True,
+        apply_scale: bool = False,
         **kwargs,
     ) -> ma.MaskedArray:
         assets = assets or []
@@ -121,6 +123,7 @@ class EOProduct(EOProductProtocol):
                 resampling=resampling,
                 nodatavals=nodatavals,
                 raise_empty=raise_empty,
+                apply_offset=apply_offset,
             )
         logger.debug("%s: read in %s", self, t)
         return out

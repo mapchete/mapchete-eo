@@ -193,6 +193,8 @@ class S2Product(EOProduct, EOProductProtocol):
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
+        apply_offset: bool = True,
+        apply_scale: bool = False,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
@@ -201,6 +203,7 @@ class S2Product(EOProduct, EOProductProtocol):
     ) -> ma.MaskedArray:
         assets = assets or []
         eo_bands = eo_bands or []
+        apply_offset = apply_offset and not self.metadata.boa_offset_applied
         if eo_bands:
             count = len(eo_bands)
             raise NotImplementedError("please use asset names for now")
@@ -225,13 +228,14 @@ class S2Product(EOProduct, EOProductProtocol):
 
         if only_mask:
             return ma.MaskedArray(ma.expand_dims(mask, axis=0), fill_value=nodatavals)
-
         arr = super().read_np_array(
             assets=assets,
             eo_bands=eo_bands,
             grid=grid,
             resampling=resampling,
             raise_empty=False,
+            apply_offset=apply_offset,
+            apply_scale=apply_scale,
         )
 
         # bring mask to same shape as data array

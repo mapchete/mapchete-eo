@@ -16,6 +16,7 @@ from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from numpy.typing import DTypeLike
 from pydantic import BaseModel
+from rasterio.dtypes import dtype_ranges
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
@@ -89,9 +90,12 @@ def asset_to_np_array(
         data = data * stac_raster_bands.scale
         # apply offset
         data += stac_raster_bands.offset
-        # unscale data
+        # unscale data and avoid overflow by clipping values to output datatype range
         data = (
-            (data * 1 / stac_raster_bands.scale).round().astype(data_type, copy=False)
+            (data * 1 / stac_raster_bands.scale)
+            .round()
+            .clip(*dtype_ranges[str(data_type)])
+            .astype(data_type, copy=False)
         )
 
     return data

@@ -472,6 +472,7 @@ def test_read_levelled_cube_broken_slice(stac_item_missing_detector_footprints):
 @pytest.mark.parametrize(
     "asset",
     ["coastal"],
+    # "red" asset fails because the local version has lower resolution and lossy compressed
 )
 def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     assets = [asset]

@@ -622,10 +622,15 @@ def stac_item_missing_detector_footprints():
 
 
 @pytest.fixture(scope="session")
-def stac_item_sentinel2_jp2():
-    return pystac.Item.from_file(
+def stac_item_path_sentinel2_jp2():
+    return MPath(
         "s3://sentinel-s2-l2a-stac/2023/09/27/S2B_OPER_MSI_L2A_TL_2BPS_20230927T123351_A034253_T32MRS.json"
     )
+
+
+@pytest.fixture(scope="session")
+def stac_item_sentinel2_jp2(stac_item_path_sentinel2_jp2):
+    return pystac.Item.from_file(stac_item_path_sentinel2_jp2)
 
 
 @pytest.fixture(scope="session")

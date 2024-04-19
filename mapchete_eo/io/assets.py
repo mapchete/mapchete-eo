@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 from typing import Callable, List, Optional, Union
@@ -13,6 +15,7 @@ from mapchete.io.raster import ReferencedRaster, read_raster, resample_from_arra
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from numpy.typing import DTypeLike
+from pydantic import BaseModel
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
@@ -25,6 +28,30 @@ from mapchete_eo.types import Grid, NodataVal
 logger = logging.getLogger(__name__)
 
 
+class STACRasterBandProperties(BaseModel):
+    nodata: NodataVal = None
+    data_type: Optional[str] = None
+    scale: float = 1.0
+    offset: float = 0.0
+
+    @staticmethod
+    def from_asset(
+        asset: pystac.Asset,
+        nodataval: NodataVal = None,
+    ) -> STACRasterBandProperties:
+        properties = asset.extra_fields.get("raster:bands", [{}])[0]
+        properties.update(
+            nodata=(
+                nodataval
+                if properties.get("nodata") is None
+                else properties.get("nodata")
+            ),
+        )
+        return STACRasterBandProperties(
+            **properties,
+        )
+
+
 def asset_to_np_array(
     item: pystac.Item,
     asset: str,
@@ -32,6 +59,7 @@ def asset_to_np_array(
     grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
+    apply_offset: bool = True,
 ) -> ma.MaskedArray:
     """
     Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
@@ -39,14 +67,34 @@ def asset_to_np_array(
     This is the main read method which is one way or the other being called from everywhere
     whenever a band is being read!
     """
+    # find out asset details if raster:bands is available
+    stac_raster_bands = STACRasterBandProperties.from_asset(
+        item.assets[asset], nodataval=nodataval
+    )
+
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
-    return read_raster(
+    data = read_raster(
         inp=asset_mpath(item, asset),
         indexes=indexes,
         grid=grid,
         resampling=resampling.name,
-        dst_nodata=nodataval,
+        dst_nodata=stac_raster_bands.nodata,
     ).data
+
+    data_type = stac_raster_bands.data_type or data.dtype
+    apply_offset = apply_offset and stac_raster_bands.offset != 0.0
+
+    if apply_offset:
+        # first, scale data:
+        data = data * stac_raster_bands.scale
+        # apply offset
+        data += stac_raster_bands.offset
+        # unscale data
+        data = (
+            (data * 1 / stac_raster_bands.scale).round().astype(data_type, copy=False)
+        )
+
+    return data
 
 
 def get_assets(
@@ -373,13 +421,15 @@ def read_mask_as_raster(
                 for feature in features
             ]
             return ReferencedRaster(
-                data=rasterize(
-                    features_values,
-                    out_shape=dst_grid.shape,
-                    transform=dst_grid.transform,
-                ).astype(dtype)
-                if features_values
-                else np.zeros(dst_grid.shape, dtype=dtype),
+                data=(
+                    rasterize(
+                        features_values,
+                        out_shape=dst_grid.shape,
+                        transform=dst_grid.transform,
+                    ).astype(dtype)
+                    if features_values
+                    else np.zeros(dst_grid.shape, dtype=dtype)
+                ),
                 transform=dst_grid.transform,
                 crs=dst_grid.crs,
                 bounds=dst_grid.bounds,

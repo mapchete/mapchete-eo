@@ -116,6 +116,15 @@ def s2_stac_item(s2_stac_collection):
 
 
 @pytest.fixture
+def s2_stac_item_jp2():
+    item = pystac.pystac.Item.from_file(
+        "s3://sentinel-s2-l2a-stac/2023/08/10/S2B_OPER_MSI_L2A_TL_2BPS_20230810T130104_A033567_T33TWM.json"
+    )
+    item.make_asset_hrefs_absolute()
+    return item
+
+
+@pytest.fixture
 def s2_remote_stac_item():
     item = pystac.pystac.Item.from_file(
         "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/U/WP/2023/7/S2B_33UWP_20230704_0_L2A/S2B_33UWP_20230704_0_L2A.json"

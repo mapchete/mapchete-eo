@@ -26,6 +26,7 @@ def item_to_np_array(
     resampling: Resampling = Resampling.nearest,
     nodatavals: NodataVals = None,
     raise_empty: bool = False,
+    apply_offset: bool = True,
 ) -> ma.MaskedArray:
     """
     Read window of STAC Item and merge into a 3D ma.MaskedArray.
@@ -40,6 +41,7 @@ def item_to_np_array(
                 grid=grid,
                 resampling=expanded_resampling,
                 nodataval=nodataval,
+                apply_offset=apply_offset,
             )
             for band_location, expanded_resampling, nodataval in zip(
                 band_locations,

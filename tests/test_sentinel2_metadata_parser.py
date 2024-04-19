@@ -485,13 +485,25 @@ def test_from_stac_item(item_url):
     item = Item.from_file(item_url)
     s2_metadata = S2Metadata.from_stac_item(item)
     assert s2_metadata.processing_baseline.version == "04.00"
-    if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
-        "earthsearch:boa_offset_applied", False
+    if (
+        item.properties.get("sentinel:boa_offset_applied", False)
+        or item.properties.get("earthsearch:boa_offset_applied", False)
+        or item.assets["red"].extra_fields.get("raster:bands", [{}])[0].get("offset")
     ):
         offset = -1000
     else:
         offset = 0
     assert s2_metadata.reflectance_offset == offset
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "item",
+    [lazy_fixture("stac_item_sentinel2_jp2")],
+)
+def test_jp2_item_offset(item):
+    s2_metadata = S2Metadata.from_stac_item(item)
+    assert s2_metadata.reflectance_offset == -1000
 
 
 @pytest.mark.remote
@@ -522,8 +534,10 @@ def test_from_stac_item(item_url):
 def test_from_stac_item_backwards(item):
     s2_metadata = S2Metadata.from_stac_item(item)
     assert s2_metadata.datastrip_id
-    if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
-        "earthsearch:boa_offset_applied", False
+    if (
+        item.properties.get("sentinel:boa_offset_applied", False)
+        or item.properties.get("earthsearch:boa_offset_applied", False)
+        or item.assets["red"].extra_fields.get("raster:bands", [{}])[0].get("offset")
     ):
         offset = -1000
     else:

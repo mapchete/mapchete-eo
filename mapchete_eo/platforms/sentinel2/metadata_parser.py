@@ -88,12 +88,25 @@ def s2metadata_from_stac_item(
         raise KeyError(
             f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
         )
-    for field in boa_offset_fields:
-        if item.properties.get(field):
-            boa_offset_applied = True
-            break
-        else:
-            boa_offset_applied = False
+
+    def _determine_offset():
+        # for Sinergise JP2 items
+        # TODO this is VERY hacky but it seems that also E84 has the offset provided in the STAC raster
+        # extension so we should rather use this when actually reading the asset
+        for asset in item.assets.values():
+            if "data" in asset.roles:
+                band_properties = asset.extra_fields.get("raster:bands", [{}])[0]
+                if band_properties.get("offset"):
+                    return True
+
+        # for COG items
+        for field in boa_offset_fields:
+            if item.properties.get(field):
+                return True
+
+        return False
+
+    boa_offset_applied = _determine_offset()
 
     if metadata_path.is_remote() or metadata_path.is_absolute():
         metadata_xml = metadata_path

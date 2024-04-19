@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.4.1 - 2024-04-19
+---------------------
+
+* core
+  * determine `boa_offset_applied` also for S2AWS_JP2 items
+
+
 2024.4.0 - 2024-04-18
 ---------------------
 

@@ -153,6 +153,9 @@ def item_fix_footprint(
 
 
 def repair_antimeridian_geometry(geometry: BaseGeometry) -> BaseGeometry:
+    # repair geometry if it is broken
+    geometry = geometry.buffer(0)
+
     if geometry.geom_type == "MultiPolygon":
         return geometry
 
@@ -199,6 +202,9 @@ def longitudinal_shift(
 
 
 def buffer_footprint(footprint: BaseGeometry, buffer_m: float = 0) -> BaseGeometry:
+    # repair geometry if it is broken
+    footprint = footprint.buffer(0)
+
     if not buffer_m:
         return footprint
 

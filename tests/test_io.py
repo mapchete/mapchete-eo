@@ -125,3 +125,7 @@ def test_item_buffer_antimeridian_footprint(antimeridian_item):
     bounds = Bounds.from_inp(buffered)
     assert bounds.left == -180
     assert bounds.right == 180
+
+
+def test_broken_antimeridian_footprint(broken_footprint):
+    assert buffer_footprint(broken_footprint, -500)

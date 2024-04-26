@@ -365,7 +365,7 @@ def s2_tiles_from_bounds(
     return list(tiles_generator())
 
 
-def bounds_to_geom(bounds: Bounds):
+def bounds_to_geom(bounds: Bounds) -> BaseGeometry:
     if bounds.left < -180:
         part1 = Bounds(-180, bounds.bottom, bounds.right, bounds.top)
         part2 = Bounds(bounds.left + 360, bounds.bottom, 180, bounds.top)

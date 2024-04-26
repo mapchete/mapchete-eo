@@ -420,6 +420,7 @@ class S2Product(EOProduct, EOProductProtocol):
         try:
             _check_full(out)
             if mask_config.footprint:
+                logger.debug("generate footprint nodata mask ...")
                 try:
                     out += self.footprint_nodata_mask(
                         grid, buffer_m=mask_config.footprint_buffer_m
@@ -428,9 +429,14 @@ class S2Product(EOProduct, EOProductProtocol):
                 except EmptyFootprintException:
                     raise AllMasked()
             if mask_config.l1c_cloud_type:
+                logger.debug("generate L1C mask ...")
                 out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
                 _check_full(out)
             if mask_config.cloud_probability_threshold != 100:
+                logger.debug(
+                    "generate cloud probability (%s) mask ...",
+                    mask_config.cloud_probability_threshold,
+                )
                 cld_prb = self.read_cloud_probability(
                     grid, from_resolution=mask_config.cloud_probability_resolution
                 ).data
@@ -439,6 +445,12 @@ class S2Product(EOProduct, EOProductProtocol):
                 )
                 _check_full(out)
             if mask_config.scl_classes:
+                logger.debug(
+                    "generate SCL mask using %s ...",
+                    ", ".join(
+                        [scl_class.name for scl_class in mask_config.scl_classes]
+                    ),
+                )
                 # convert SCL classes to pixel values
                 scl_values = [scl.value for scl in mask_config.scl_classes]
                 # read SCL mask
@@ -447,9 +459,14 @@ class S2Product(EOProduct, EOProductProtocol):
                 out += np.isin(scl_arr, scl_values)
                 _check_full(out)
             if mask_config.snow_ice:
+                logger.debug("generate snow & ice mask ...")
                 out += self.read_snow_ice_mask(grid).data
                 _check_full(out)
             if mask_config.snow_probability_threshold != 100:
+                logger.debug(
+                    "generate snow probability (%s) mask ...",
+                    mask_config.snow_probability_threshold,
+                )
                 snw_prb = self.read_snow_probability(
                     grid, from_resolution=mask_config.snow_probability_resolution
                 ).data
@@ -458,6 +475,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 )
                 _check_full(out)
             if mask_config.buffer:
+                logger.debug(
+                    "apply buffer (%s) to combined mask ...", mask_config.buffer
+                )
                 out = buffer_array(array=out, buffer=mask_config.buffer)
                 _check_full(out)
         except AllMasked:

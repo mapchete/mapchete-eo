@@ -11,6 +11,7 @@ from mapchete.path import MPath
 from tqdm import tqdm
 
 from mapchete_eo.cli import options_arguments
+from mapchete_eo.exceptions import AssetKeyError
 from mapchete_eo.platforms.sentinel2.product import asset_mpath
 
 logger = logging.getLogger(__name__)
@@ -77,10 +78,13 @@ def verify_item(
         if asset not in item.assets:
             missing_asset_entries.append(asset)
         if asset_exists_check:
-            path = asset_mpath(item=item, asset=asset)
-            logger.debug("check if asset %s (%s) exists", asset, str(path))
-            if not path.exists():
-                missing_assets.append(path)
+            try:
+                path = asset_mpath(item=item, asset=asset)
+                logger.debug("check if asset %s (%s) exists", asset, str(path))
+                if not path.exists():
+                    missing_assets.append(path)
+            except AssetKeyError:
+                missing_asset_entries.append(asset)
     if check_thumbnail:
         thumbnail_href = item.assets["thumbnail"].href
         logger.debug("check thumbnail %s for artefacts ...", thumbnail_href)

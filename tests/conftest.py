@@ -9,7 +9,8 @@ from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
-from shapely.geometry import box
+from shapely import wkt
+from shapely.geometry import base, box
 
 from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -651,4 +652,11 @@ def stac_item_sentinel2_jp2_local(s2_testdata_dir):
             / "stac_items"
             / "S2A_OPER_MSI_L2A_TL_2APS_20230602T025701_A041483_T01WCR.json"
         )
+    )
+
+
+@pytest.fixture(scope="session")
+def broken_footprint() -> base.BaseGeometry:
+    return wkt.loads(
+        "MULTIPOLYGON (((-179.03242760827868 28.825599176471762, -179.0308811577117 28.826887224571962, -179.02586222138643 28.825701299969626, -179.03242760827868 28.825599176471762)), ((179.92625843344484 28.80535581623132, 179.91906671908546 29.04865837641597, -179.98863882201528 29.030540342977034, -179.98511826102327 29.03153223273561, -179.74178951639604 28.982689739628036, -179.7378129230277 28.979721579768817, -179.5115274606451 28.932071807545526, -179.50249930933524 28.933629861785928, -179.26687296455978 28.881090523674473, -179.26356470312984 28.87706829232248, -179.1624685280018 28.853736688656234, -179.03689747719628 28.82552946553057, 179.92625843344484 28.80535581623132)))"
     )

@@ -44,5 +44,5 @@ def day_range(
 ) -> List[datetime.datetime]:
     return [
         start_date + datetime.timedelta(n)
-        for n in range(int((end_date - start_date).days))
+        for n in range(int((end_date - start_date).days) + 1)
     ]

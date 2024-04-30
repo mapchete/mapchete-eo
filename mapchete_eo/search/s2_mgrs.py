@@ -11,9 +11,11 @@ from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
 from shapely import prepare
-from shapely.geometry import box, mapping, shape
+from shapely.geometry import Point, box, mapping, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
+
+from mapchete_eo.io.items import longitudinal_shift, repair_antimeridian_geometry
 
 LATLON_LEFT = -180
 LATLON_RIGHT = 180
@@ -30,84 +32,17 @@ UTM_ZONES = [f"{ii:02d}" for ii in range(1, LATLON_WIDTH // UTM_ZONE_WIDTH + 1)]
 
 # NOTE: each latitude band is 8° high except the most northern one ("X") is 12°
 LATITUDE_BAND_HEIGHT = 8
-LATITUDE_BANDS = [
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-]
+LATITUDE_BANDS = list("CDEFGHJKLMNPQRSTUVWX")
 
 # column names seem to span over three UTM zones (8 per zone)
 COLUMNS_PER_ZONE = 8
-SQUARE_COLUMNS = [
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-]
+SQUARE_COLUMNS = list("ABCDEFGHJKLMNPQRSTUVWXYZ")
 
 # rows are weird. zone 01 starts at -80° with "M", then zone 02 with "S", then zone 03 with "M" and so on
 # SQUARE_ROW_START = ["M", "S"]
 # SQUARE_ROW_START = ["B", "G"]  # manual offset so the naming starts on the South Pole
 SQUARE_ROW_START = ["A", "F"]
-SQUARE_ROWS = [
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-]
+SQUARE_ROWS = list("ABCDEFGHJKLMNPQRSTUV")
 
 # 100 x 100 km
 TILE_WIDTH_M = 100_000
@@ -119,6 +54,10 @@ TILE_OVERLAP_M = 9_800
 # UTM_TILE_SOURCE_LEFT = 99_960.0
 UTM_TILE_SOURCE_LEFT = 100_000
 UTM_TILE_SOURCE_BOTTOM = 0
+
+
+class InvalidMGRSSquare(Exception):
+    """Raised when an invalid square index has been given"""
 
 
 @dataclass(frozen=True)
@@ -137,7 +76,7 @@ class MGRSCell:
                     column_index=column_index,
                     row_index=row_index,
                 )
-                if tile.latlon_bounds.intersects(self.latlon_bounds):
+                if tile.latlon_geometry.intersects(self.latlon_geometry):
                     yield tile
 
         return list(tiles_generator())
@@ -156,7 +95,9 @@ class MGRSCell:
                 ):
                     break
             else:  # pragma: no cover
-                raise ValueError("global square index could not be determined!")
+                raise InvalidMGRSSquare(
+                    f"global square index could not be determined for {self.utm_zone}{self.latitude_band}{grid_square}"
+                )
 
         return S2Tile(
             utm_zone=self.utm_zone,
@@ -259,9 +200,7 @@ class S2Tile:
 
     @cached_property
     def latlon_geometry(self) -> BaseGeometry:
-        return reproject_geometry(
-            box(*self.bounds), src_crs=self.crs, dst_crs="EPSG:4326"
-        )
+        return repair_antimeridian_geometry(shape(self.latlon_bounds))
 
     @cached_property
     def latlon_bounds(self) -> BaseGeometry:
@@ -297,10 +236,13 @@ class S2Tile:
             ):
                 return (column_index, row_index)
         else:  # pragma: no cover
-            raise ValueError("global square index could not be determined!")
+            raise InvalidMGRSSquare(
+                f"global square index could not be determined for {self.utm_zone}{self.latitude_band}{self.grid_square}"
+            )
 
     @staticmethod
     def from_tile_id(tile_id: str) -> S2Tile:
+        tile_id = tile_id.lstrip("T")
         utm_zone = tile_id[:2]
         latitude_band = tile_id[2]
         grid_square = tile_id[3:]
@@ -382,6 +324,14 @@ def transform_bounds(bounds: Bounds, src_crs: CRSLike, dst_crs: CRSLike) -> Boun
     in_coords_x = [bounds.left, bounds.right, bounds.right, bounds.left]
     in_coords_y = [bounds.bottom, bounds.bottom, bounds.top, bounds.top]
     out_coords_x, out_coords_y = transform(src_crs, dst_crs, in_coords_x, in_coords_y)
+    if max(out_coords_x) - min(out_coords_x) > 180.0:
+        # we have an antimeridian crossing here!
+        shifted_points = [
+            longitudinal_shift(Point(*point_coords), only_negative_coords=True)
+            for point_coords in zip(out_coords_x, out_coords_y)
+        ]
+        out_coords_x = [point.coords[0][0] for point in shifted_points]
+        out_coords_y = [point.coords[0][1] for point in shifted_points]
     left = min(out_coords_x)
     bottom = min(out_coords_y)
     right = max(out_coords_x)

@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import numpy.ma as ma
 import pystac
@@ -8,7 +8,7 @@ from fiona.crs import CRS
 from mapchete.io.vector import reproject_geometry
 from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
-from shapely.geometry import MultiPolygon, Polygon, box, mapping, shape
+from shapely.geometry import MultiPolygon, Point, Polygon, box, mapping, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
@@ -152,53 +152,64 @@ def item_fix_footprint(
     return item
 
 
-def repair_antimeridian_geometry(geometry: BaseGeometry) -> BaseGeometry:
+def repair_antimeridian_geometry(
+    geometry: BaseGeometry, width_threshold: float = 180.0
+) -> BaseGeometry:
     # repair geometry if it is broken
     geometry = geometry.buffer(0)
-
-    if geometry.geom_type == "MultiPolygon":
-        return geometry
-
     latlon_bbox = box(-180, -90, 180, 90)
 
-    # (1) shift only coordinates on the western hemisphere by 360°, thus "fixing"
-    # the footprint, but letting it cross the antimeridian
-    shifted_geometry = longitudinal_shift(geometry, only_negative_coords=True)
+    # only attempt to fix if geometry is too wide or reaches over the lat/lon bounds
+    if (
+        Bounds.from_inp(geometry).width >= width_threshold
+        or not geometry.difference(latlon_bbox).is_empty
+    ):
+        # (1) shift only coordinates on the western hemisphere by 360°, thus "fixing"
+        # the footprint, but letting it cross the antimeridian
+        shifted_geometry = longitudinal_shift(geometry, only_negative_coords=True)
 
-    # (2) split up geometry in one outside of latlon bounds and one inside
-    inside = shifted_geometry.intersection(latlon_bbox)
-    outside = shifted_geometry.difference(latlon_bbox)
+        # (2) split up geometry in one outside of latlon bounds and one inside
+        inside = shifted_geometry.intersection(latlon_bbox)
+        outside = shifted_geometry.difference(latlon_bbox)
 
-    # (3) shift back only the polygon outside of latlon bounds by -360, thus moving
-    # it back to the western hemisphere
-    outside_shifted = longitudinal_shift(outside, -360)
+        # (3) shift back only the polygon outside of latlon bounds by -360, thus moving
+        # it back to the western hemisphere
+        outside_shifted = longitudinal_shift(outside, -360)
 
-    # (4) create a MultiPolygon out from these two polygons
-    split = unary_union([inside, outside_shifted])
+        # (4) create a MultiPolygon out from these two polygons
+        geometry = unary_union([inside, outside_shifted])
 
-    # (5) update item geometry
-    return split
+    return geometry
 
 
 def longitudinal_shift(
     geometry: BaseGeometry, by: float = 360, only_negative_coords: bool = False
 ) -> BaseGeometry:
+    def _shift_coordinates(
+        coords: List[Tuple[float, float]]
+    ) -> List[Tuple[float, float]]:
+        out_coords = []
+        for lon, lat in coords:
+            if only_negative_coords:
+                if lon < 0:
+                    lon += by
+            else:
+                lon += by
+            out_coords.append((lon, lat))
+        return out_coords
+
     if geometry.geom_type == "MultiPolygon":
         logger.debug("geometry is already a MultiPolygon and probably shifted")
         return geometry
     elif geometry.is_empty:
         return geometry
 
-    coords = mapping(geometry)["coordinates"][0]
-    out_coords = []
-    for lon, lat in coords:
-        if only_negative_coords:
-            if lon < 0:
-                lon += by
-        else:
-            lon += by
-        out_coords.append([lon, lat])
-    return shape(dict(type=geometry.geom_type, coordinates=[out_coords]))
+    if geometry.geom_type == "Point":
+        coords = _shift_coordinates(geometry.coords)
+        return Point(*coords[0])
+    else:
+        coords = _shift_coordinates(mapping(geometry)["coordinates"][0])
+        return shape(dict(type=geometry.geom_type, coordinates=[coords]))
 
 
 def buffer_footprint(footprint: BaseGeometry, buffer_m: float = 0) -> BaseGeometry:

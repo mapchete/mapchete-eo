@@ -1,9 +1,10 @@
 import pytest
 from mapchete.io.vector import reproject_geometry
+from mapchete.types import Bounds
 from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import box, shape
 
-from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
+from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile, s2_tiles_from_bounds
 
 
 @pytest.mark.parametrize(
@@ -71,9 +72,7 @@ def test_s2_tiles_from_bounds():
     ],
 )
 def test_s2_tiles_from_bounds_antimeridian(bounds):
-    tiles = s2_tiles_from_bounds(*bounds)
-    # print(len(tiles))
-    # 1 / 0
+    tiles = set(s2_tiles_from_bounds(*bounds))
     control_tiles = set(
         [
             # western side of antimeridian
@@ -94,4 +93,36 @@ def test_s2_tiles_from_bounds_antimeridian(bounds):
             S2Tile.from_tile_id("60WXE"),
         ]
     )
-    assert control_tiles <= set(tiles)
+    # assert control_tiles <= tiles
+
+    for control_tile in control_tiles:
+        assert control_tile in tiles
+
+
+@pytest.mark.parametrize(
+    "tile_id",
+    [
+        "27CWJ",  # this is way south on Antarctica
+    ],
+)
+def test_s2tile_from_tile_id_invalid_square(tile_id):
+    with pytest.raises(InvalidMGRSSquare):
+        assert S2Tile.from_tile_id(tile_id)
+
+
+@pytest.mark.parametrize(
+    "tile_id,control_geom_type",
+    [
+        ("30VXL", "Polygon"),  # crosses Meridian
+        ("01UCV", "MultiPolygon"),  # crosses Antimeridian
+    ],
+)
+def test_s2tile_antimeridian_footprint(tile_id, control_geom_type):
+    s2tile = S2Tile.from_tile_id(tile_id)
+    assert s2tile.latlon_geometry.geom_type == control_geom_type
+    if s2tile.latlon_geometry.geom_type == "MultiPolygon":
+        for subgeom in s2tile.latlon_geometry.geoms:
+            bounds = Bounds.from_inp(subgeom)
+            assert bounds.width < 10
+    else:
+        assert Bounds.from_inp(s2tile.latlon_geometry).width < 10

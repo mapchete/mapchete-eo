@@ -3,6 +3,7 @@ import click
 from mapchete_eo.cli.bounds import bounds
 from mapchete_eo.cli.s2_brdf import s2_brdf
 from mapchete_eo.cli.s2_find_broken_products import s2_find_broken_products
+from mapchete_eo.cli.s2_jp2_static_catalog import s2_jp2_static_catalog
 from mapchete_eo.cli.s2_mask import s2_mask
 from mapchete_eo.cli.s2_mgrs import s2_mgrs
 from mapchete_eo.cli.s2_rgb import s2_rgb
@@ -19,6 +20,7 @@ def eo(ctx):
 eo.add_command(bounds)
 eo.add_command(s2_brdf)
 eo.add_command(s2_find_broken_products)
+eo.add_command(s2_jp2_static_catalog)
 eo.add_command(s2_mask)
 eo.add_command(s2_mgrs)
 eo.add_command(s2_rgb)

@@ -27,7 +27,7 @@ from mapchete_eo.exceptions import (
     EmptyProductException,
 )
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
-from mapchete_eo.io.items import buffer_footprint
+from mapchete_eo.io.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
@@ -383,7 +383,7 @@ class S2Product(EOProduct, EOProductProtocol):
             else Grid.from_obj(grid)
         )
         if buffer_m:
-            footprint = buffer_footprint(shape(self), buffer_m=buffer_m)
+            footprint = buffer_antimeridian_safe(shape(self), buffer_m=buffer_m)
         else:
             footprint = shape(self)
         return ReferencedRaster(

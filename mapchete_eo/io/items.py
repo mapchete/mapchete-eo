@@ -131,7 +131,7 @@ def get_item_property(
 
 
 def item_fix_footprint(
-    item: pystac.Item, bbox_width_threshold: int = 180
+    item: pystac.Item, bbox_width_threshold: float = 180.0
 ) -> pystac.Item:
     bounds = Bounds.from_inp(item.bbox)
 
@@ -142,7 +142,5 @@ def item_fix_footprint(
             geometry = repair_antimeridian_geometry(geometry=shape(item.geometry))
             item.geometry = mapping(geometry)
             item.bbox = list(geometry.bounds)
-        else:
-            raise ValueError("item geometry is None")
 
     return item

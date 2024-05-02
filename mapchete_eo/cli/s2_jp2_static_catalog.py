@@ -15,11 +15,12 @@ from mapchete.io.vector import fiona_open
 from mapchete.path import MPath
 from mapchete.types import Bounds
 from pystac import Item
+from shapely import prepare
 from shapely.geometry import mapping, shape
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.io.items import item_fix_footprint
-from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile
+from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile, bounds_to_geom
 from mapchete_eo.time import day_range
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,8 @@ def s2_jp2_static_catalog(
     - each S2Tile file contains for each STAC item one entry with geometry and href
     """
     bounds = bounds or Bounds(-180, -90, 180, 90)
+    aoi = bounds_to_geom(bounds)
+    prepare(aoi)
     items_per_tile = defaultdict(list)
     for day in day_range(start_date=start_time, end_date=end_time):
         day_path = basepath / day.strftime("%Y/%m/%d")
@@ -125,7 +128,7 @@ def s2_jp2_static_catalog(
             except InvalidMGRSSquare as exc:
                 logger.debug("omitting S2Tile because of %s", str(exc))
                 continue
-            if s2tile.latlon_geometry.intersects(shape(bounds)):
+            if aoi.intersects(s2tile.latlon_geometry):
                 tqdm.tqdm.write(f"adding {s2tile.tile_id} ...")
                 relative_tile_index_path = s2tile_directory / f"{s2tile.tile_id}.fgb"
                 with VectorDataSource(

@@ -79,16 +79,14 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         )
 
         def _get_items():
-            # get Sentinel-2 tiles over given bounds
-            s2_tiles = s2_tiles_from_bounds(*self.bounds)
-
-            # for each day within time range, look for tiles
-            for day in day_range(start_date=self.start_time, end_date=self.end_time):
-                day_path = MPath(self.endpoint) / day.strftime("%Y/%m/%d")
-                for item in find_items(
-                    day_path, s2_tiles, product_endswith="T{tile_id}.json"
-                ):
-                    yield item_fix_footprint(self.standardize_item(item))
+            for item in items_from_directories(
+                bounds=self.bounds,
+                start_time=self.start_time,
+                end_time=self.end_time,
+                endpoint=self.endpoint,
+            ):
+                if self.area.intersects(shape(item.geometry)):
+                    yield self.standardize_item(item)
 
         if (self.area is not None and self.area.is_empty) or self.bounds is None:
             return IndexedFeatures([])
@@ -124,6 +122,30 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             for collection_name in self.collections:
                 if collection_name == collection.id:
                     yield collection
+
+
+def items_from_directories(
+    bounds: Bounds,
+    start_time: datetime.datetime,
+    end_time: datetime.datetime,
+    endpoint: MPathLike,
+    day_subdir_schema: str = "{year}/{month:02d}/{day:02d}",
+    stac_json_endswith: str = "T{tile_id}.json",
+) -> Generator[Item, None, None]:
+    # get Sentinel-2 tiles over given bounds
+    s2_tiles = s2_tiles_from_bounds(*bounds)
+
+    # for each day within time range, look for tiles
+    for day in day_range(start_date=start_time, end_date=end_time):
+        day_path = MPath.from_inp(endpoint) / day_subdir_schema.format(
+            year=day.year, month=day.month, day=day.day
+        )
+        for item in find_items(
+            day_path,
+            s2_tiles,
+            product_endswith=stac_json_endswith,
+        ):
+            yield item_fix_footprint(item)
 
 
 def find_items(

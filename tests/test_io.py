@@ -7,7 +7,7 @@ from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import shape
 
 from mapchete_eo.io import get_item_property, item_fix_footprint, products_to_slices
-from mapchete_eo.io.items import buffer_footprint
+from mapchete_eo.io.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.path import (
     ProductPathGenerationMethod,
     asset_mpath,
@@ -116,7 +116,7 @@ def test_item_fix_antimeridian_footprint(antimeridian_item):
 
 def test_item_buffer_antimeridian_footprint(antimeridian_item):
     fixed_footprint = shape(item_fix_footprint(antimeridian_item).geometry)
-    buffered = buffer_footprint(fixed_footprint, buffer_m=-500)
+    buffered = buffer_antimeridian_safe(fixed_footprint, buffer_m=-500)
 
     # buffered should be smaller than original
     assert buffered.area < fixed_footprint.area
@@ -128,4 +128,4 @@ def test_item_buffer_antimeridian_footprint(antimeridian_item):
 
 
 def test_broken_antimeridian_footprint(broken_footprint):
-    assert buffer_footprint(broken_footprint, -500)
+    assert buffer_antimeridian_safe(broken_footprint, -500)

@@ -90,7 +90,9 @@ def buffer_antimeridian_safe(
 ) -> BaseGeometry:
     """Buffer geometry by meters and make it Antimeridian-safe.
 
-    Safe means that if it crosses the Antimeridian
+    Safe means that if it crosses the Antimeridian and is a MultiPolygon,
+    the buffer will only be applied to the edges facing away from the Antimeridian
+    thus leaving the polygon intact if shifted back.
     """
     # repair geometry if it is broken
     footprint = footprint.buffer(0)

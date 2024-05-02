@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from array import array
 from dataclasses import dataclass
 from functools import cached_property
 from itertools import product
@@ -11,7 +12,19 @@ from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from rasterio.crs import CRS
 from shapely import prepare
-from shapely.geometry import Point, box, mapping, shape
+from shapely.geometry import (
+    GeometryCollection,
+    LinearRing,
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+    box,
+    mapping,
+    shape,
+)
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
@@ -200,11 +213,12 @@ class S2Tile:
 
     @cached_property
     def latlon_geometry(self) -> BaseGeometry:
-        return repair_antimeridian_geometry(shape(self.latlon_bounds))
+        # return repair_antimeridian_geometry(shape(self.latlon_bounds))
+        return repair_antimeridian_geometry(transform_to_latlon(shape(self), self.crs))
 
     @cached_property
-    def latlon_bounds(self) -> BaseGeometry:
-        return transform_bounds(self.bounds, self.crs, "EPSG:4326")
+    def latlon_bounds(self) -> Bounds:
+        return Bounds.from_inp(self.latlon_geometry)
 
     @cached_property
     def tile_id(self) -> str:
@@ -308,6 +322,7 @@ def s2_tiles_from_bounds(
 
 
 def bounds_to_geom(bounds: Bounds) -> BaseGeometry:
+    # TODO: move into core package
     if bounds.left < -180:
         part1 = Bounds(-180, bounds.bottom, bounds.right, bounds.top)
         part2 = Bounds(bounds.left + 360, bounds.bottom, 180, bounds.top)
@@ -320,20 +335,70 @@ def bounds_to_geom(bounds: Bounds) -> BaseGeometry:
         return shape(bounds)
 
 
-def transform_bounds(bounds: Bounds, src_crs: CRSLike, dst_crs: CRSLike) -> Bounds:
-    in_coords_x = [bounds.left, bounds.right, bounds.right, bounds.left]
-    in_coords_y = [bounds.bottom, bounds.bottom, bounds.top, bounds.top]
-    out_coords_x, out_coords_y = transform(src_crs, dst_crs, in_coords_x, in_coords_y)
-    if max(out_coords_x) - min(out_coords_x) > 180.0:
-        # we have an antimeridian crossing here!
-        shifted_points = [
-            longitudinal_shift(Point(*point_coords), only_negative_coords=True)
-            for point_coords in zip(out_coords_x, out_coords_y)
-        ]
-        out_coords_x = [point.coords[0][0] for point in shifted_points]
-        out_coords_y = [point.coords[0][1] for point in shifted_points]
-    left = min(out_coords_x)
-    bottom = min(out_coords_y)
-    right = max(out_coords_x)
-    top = max(out_coords_y)
-    return Bounds(left, bottom, right, top)
+def transform_to_latlon(
+    geometry: BaseGeometry, crs: CRSLike, width_threshold: float = 180.0
+) -> BaseGeometry:
+    latlon_crs = CRS.from_epsg(4326)
+
+    def _point(point: Point) -> Point:
+        return Point(_xy(point.xy))
+
+    def _multipoint(multipoint: MultiPoint) -> MultiPoint:
+        return MultiPoint([_point(point) for point in multipoint])
+
+    def _linestring(linestring: LineString) -> LineString:
+        return LineString(_xy(linestring.xy))
+
+    def _multilinestring(multilinestring: MultiLineString) -> MultiLineString:
+        return MultiLineString(
+            [_linestring(linestring) for linestring in multilinestring.geoms]
+        )
+
+    def _linearring(linearring: LinearRing) -> LinearRing:
+        return LinearRing(_xy(linearring.xy))
+
+    def _polygon(polygon: Polygon) -> Polygon:
+        return Polygon(
+            _linearring(polygon.exterior),
+            holes=list(map(_linearring, polygon.interiors)),
+        )
+
+    def _multipolygon(multipolygon: MultiPolygon) -> MultiPolygon:
+        return MultiPolygon([_polygon(polygon) for polygon in multipolygon.geoms])
+
+    def _geometrycollection(
+        geometrycollection: GeometryCollection,
+    ) -> GeometryCollection:
+        return GeometryCollection(
+            [_any_geometry(subgeometry) for subgeometry in geometrycollection.geoms]
+        )
+
+    def _xy(coords: Tuple[array, array]) -> List[Tuple[float, float]]:
+        out_x_coords, out_y_coords = transform(crs, latlon_crs, *coords)
+        if max(out_x_coords) - min(out_x_coords) > width_threshold:
+            # we probably have an antimeridian crossing here!
+            shifted_points = [
+                longitudinal_shift(Point(*point_coords), only_negative_coords=True)
+                for point_coords in zip(out_x_coords, out_y_coords)
+            ]
+            out_x_coords = [point.coords[0][0] for point in shifted_points]
+            out_y_coords = [point.coords[0][1] for point in shifted_points]
+        return list(zip(out_x_coords, out_y_coords))
+
+    transform_funcs = {
+        Point: _point,
+        MultiPoint: _multipoint,
+        LineString: _linestring,
+        MultiLineString: _multilinestring,
+        Polygon: _polygon,
+        MultiPolygon: _multipolygon,
+        GeometryCollection: _geometrycollection,
+    }
+
+    def _any_geometry(geometry: BaseGeometry) -> BaseGeometry:
+        try:
+            return transform_funcs[type(geometry)](geometry)
+        except KeyError:
+            raise TypeError(f"unknown geometry {geometry} of type {type(geometry)}")
+
+    return _any_geometry(geometry)

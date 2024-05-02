@@ -30,6 +30,33 @@ CoordArrays = Tuple[Iterable[float], Iterable[float]]
 logger = logging.getLogger(__name__)
 
 
+def transform_to_latlon(
+    geometry: BaseGeometry, src_crs: CRSLike, width_threshold: float = 180.0
+) -> BaseGeometry:
+    """Transforms a geometry to lat/lon coordinates.
+
+    If resulting geometry crosses the Antimeridian it will be fixed by moving coordinates
+    from the Western Hemisphere to outside of the lat/lon bounds on the East, making sure
+    the correct geometry shape is preserved.
+
+    As a next step, repair_antimeridian_geometry() can be applied, which then splits up
+    this geometry into a multipart geometry where all of its subgeometries are within the
+    lat/lon bounds again.
+    """
+    latlon_crs = CRS.from_epsg(4326)
+
+    def transform_shift_coords(coords: CoordArrays) -> CoordArrays:
+        out_x_coords, out_y_coords = fiona_transform(src_crs, latlon_crs, *coords)
+        if max(out_x_coords) - min(out_x_coords) > width_threshold:
+            # we probably have an antimeridian crossing here!
+            out_x_coords, out_y_coords = coords_longitudinal_shift(
+                coords_transform(coords, src_crs, latlon_crs), only_negative_coords=True
+            )
+        return (out_x_coords, out_y_coords)
+
+    return custom_transform(geometry, transform_shift_coords)
+
+
 def repair_antimeridian_geometry(
     geometry: BaseGeometry, width_threshold: float = 180.0
 ) -> BaseGeometry:
@@ -71,20 +98,6 @@ def repair_antimeridian_geometry(
     return geometry
 
 
-def longitudinal_shift(
-    geometry: BaseGeometry, offset: float = 360.0, only_negative_coords: bool = False
-) -> BaseGeometry:
-    """Return geometry with coordinates shifted by some offset."""
-    return custom_transform(
-        geometry,
-        partial(
-            coords_longitudinal_shift,
-            by=offset,
-            only_negative_coords=only_negative_coords,
-        ),
-    )
-
-
 def buffer_antimeridian_safe(
     footprint: BaseGeometry, buffer_m: float = 0
 ) -> BaseGeometry:
@@ -117,7 +130,7 @@ def buffer_antimeridian_safe(
         return repair_antimeridian_geometry(buffered)
 
     # UTM zone CRS
-    utm_crs = lat_lon_to_utm_crs(footprint.centroid.y, footprint.centroid.x)
+    utm_crs = latlon_to_utm_crs(footprint.centroid.y, footprint.centroid.x)
     latlon_crs = CRS.from_string("EPSG:4326")
 
     out_geom = reproject_geometry(
@@ -135,7 +148,21 @@ def buffer_antimeridian_safe(
     return out_geom
 
 
-def lat_lon_to_utm_crs(lat: float, lon: float) -> CRS:
+def longitudinal_shift(
+    geometry: BaseGeometry, offset: float = 360.0, only_negative_coords: bool = False
+) -> BaseGeometry:
+    """Return geometry with either all or Western hemisphere coordinates shifted by some offset."""
+    return custom_transform(
+        geometry,
+        partial(
+            coords_longitudinal_shift,
+            by=offset,
+            only_negative_coords=only_negative_coords,
+        ),
+    )
+
+
+def latlon_to_utm_crs(lat: float, lon: float) -> CRS:
     min_zone = 1
     max_zone = 60
     utm_zone = (
@@ -212,23 +239,6 @@ def custom_transform(geometry: BaseGeometry, func: Callable) -> BaseGeometry:
             raise TypeError(f"unknown geometry {geometry} of type {type(geometry)}")
 
     return _any_geometry(geometry)
-
-
-def transform_to_latlon(
-    geometry: BaseGeometry, crs: CRSLike, width_threshold: float = 180.0
-) -> BaseGeometry:
-    latlon_crs = CRS.from_epsg(4326)
-
-    def transform_shift_coords(coords: CoordArrays) -> CoordArrays:
-        out_x_coords, out_y_coords = fiona_transform(crs, latlon_crs, *coords)
-        if max(out_x_coords) - min(out_x_coords) > width_threshold:
-            # we probably have an antimeridian crossing here!
-            out_x_coords, out_y_coords = coords_longitudinal_shift(
-                coords_transform(coords, crs, latlon_crs), only_negative_coords=True
-            )
-        return (out_x_coords, out_y_coords)
-
-    return custom_transform(geometry, transform_shift_coords)
 
 
 def coords_transform(

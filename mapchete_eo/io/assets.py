@@ -14,6 +14,7 @@ from mapchete.io import copy, fiona_open, rasterio_open
 from mapchete.io.raster import ReferencedRaster, read_raster, resample_from_array
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
+from mapchete.settings import IORetrySettings
 from numpy.typing import DTypeLike
 from pydantic import BaseModel
 from rasterio.dtypes import dtype_ranges
@@ -21,6 +22,7 @@ from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
+from retry import retry
 
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
@@ -233,6 +235,7 @@ def convert_asset(
     return item
 
 
+@retry(logger=logger, **dict(IORetrySettings()))
 def convert_raster(
     src_path: MPath,
     dst_path: MPath,
@@ -336,6 +339,7 @@ def get_metadata_assets(
     return item
 
 
+@retry(logger=logger, **dict(IORetrySettings()))
 def should_be_converted(
     path: MPath,
     resolution: Union[None, float, int] = None,
@@ -373,6 +377,7 @@ def _read_vector_mask(mask_path):
                 raise
 
 
+@retry(logger=logger, **dict(IORetrySettings()))
 def read_mask_as_raster(
     path: MPath,
     indexes: Optional[List[int]] = None,

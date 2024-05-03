@@ -32,6 +32,7 @@ dependencies = [
     "pydantic",
     "pystac[urllib3]>=1.8.3",
     "pystac-client>=0.7.5",
+    "retry",
     "rtree",
     "scipy",
     "retry",

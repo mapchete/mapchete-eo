@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.5.0 - 2024-05-03
+---------------------
+
+* core
+  * add retries around various `rasterio_open` calls
+
+
 2024.4.3 - 2024-04-26
 ---------------------
 

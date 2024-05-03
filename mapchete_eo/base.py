@@ -400,9 +400,7 @@ class InputData(base.InputData):
             ).absolute_path(base_dir=input_params.get("conf_dir"))
 
         self.area = self._init_area(input_params)
-
         self.time = self.params.time
-
         if self.readonly:  # pragma: no cover
             return
 
@@ -419,9 +417,7 @@ class InputData(base.InputData):
             )
         elif self.params.archive:
             self.archive = self.params.archive(
-                time=self.time,
-                bounds=self.area.bounds,
-                area=self.area,
+                time=self.time, bounds=self.area.bounds, area=self.area
             )
 
         # don't use preprocessing tasks for Sentinel-2 products:

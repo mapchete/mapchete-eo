@@ -24,8 +24,10 @@ class AWSSearchCatalogS2L2A(UTMSearchCatalog):
     https://sentinel-s2-l2a-stac.s3.amazonaws.com/sentinel-s2-l2a.json
     """
 
-    endpoint: str = "s3://sentinel-s2-l2a-stac/"
     id: str = "sentinel-s2-l2a"
+    endpoint: str = "s3://sentinel-s2-l2a-stac/"
+    day_subdir_schema: str = "{year}/{month:02d}/{day:02d}"
+    stac_json_endswith: str = "T{tile_id}.json"
     description: str = "Sentinel-2 L2A JPEG2000 archive on AWS."
     stac_extensions: List[str] = []
 

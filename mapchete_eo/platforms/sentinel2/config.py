@@ -24,7 +24,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     Resolution,
     SceneClassification,
 )
-from mapchete_eo.search.config import StacSearchConfig
+from mapchete_eo.search.config import StacSearchConfig, UTMSearchConfig
 from mapchete_eo.types import TimeRange
 
 
@@ -101,7 +101,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
     max_cloud_percent: int = 100
-    stac_config: StacSearchConfig = StacSearchConfig()
+    stac_config: Union[StacSearchConfig, UTMSearchConfig] = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None
     with_scl: bool = False

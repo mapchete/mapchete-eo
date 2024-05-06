@@ -338,7 +338,7 @@ def e84_cog_catalog():
 
 
 @pytest.mark.remote
-@pytest.fixture(scope="session")
+@pytest.fixture
 def utm_search_catalog():
     return AWSSearchCatalogS2L2A(
         time=TimeRange(

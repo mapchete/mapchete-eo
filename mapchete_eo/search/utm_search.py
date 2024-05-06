@@ -37,11 +37,11 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         bounds: Bounds = None,
         area: Optional[BaseGeometry] = None,
         config: UTMSearchConfig = UTMSearchConfig(),
-        cat_baseurl: Optional[MPath] = None,
+        search_index: Optional[MPath] = None,
         **kwargs,
     ) -> None:
-        if cat_baseurl:
-            config.search_index = cat_baseurl
+        if search_index:
+            config.search_index = search_index
         if area is not None:
             self.area = area
             self.bounds = Bounds.from_inp(self.area)
@@ -156,8 +156,11 @@ def items_from_static_index(
     index_path: MPathLike,
 ) -> Generator[Item, None, None]:
     index_path = MPath.from_inp(index_path)
+
     start_time = to_datetime(start_time)
+    # add day at end_time to include last day
     end_time = to_datetime(end_time + datetime.timedelta(days=1))
+
     # open index and determine which S2Tiles are covered
     with fiona_open(index_path) as index:
         # look at entries in every S2Tile and match with timestamp
@@ -171,7 +174,6 @@ def items_from_static_index(
                         item_feature.properties["datetime"]
                     ).replace(tzinfo=None)
 
-                    # add day at end_time to include last day
                     if start_time <= timestamp <= end_time:
                         yield item_fix_footprint(
                             Item.from_dict(

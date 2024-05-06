@@ -62,6 +62,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     time: Union[TimeRange, List[TimeRange]]
     archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
+    search_index: Optional[MPathLike] = None
     max_cloud_percent: int = 100
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
@@ -69,7 +70,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     with_scl: bool = False
     brdf: Optional[BRDFConfig] = None
     cache: Optional[CacheConfig] = None
-    search_index: Optional[MPathLike] = None
 
 
 class MaskConfig(BaseModel):

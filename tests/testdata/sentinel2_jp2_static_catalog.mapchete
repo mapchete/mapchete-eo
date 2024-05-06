@@ -4,7 +4,7 @@ input:
     format: Sentinel-2
     level: L2A
     archive: S2AWS_JP2
-    cat_baseurl: s2-jp2-fgb-catalog/index.fgb
+    search_index: s2-jp2-fgb-catalog/index.fgb
     max_cloud_percent: 90
     time:
       start: 2023-06-06

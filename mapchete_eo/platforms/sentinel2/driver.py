@@ -31,28 +31,30 @@ class InputData(base.InputData):
     # Sentinel-2 driver specific parameters:
     default_preprocessing_task = staticmethod(parse_s2_product)
     driver_config_model = Sentinel2DriverConfig
+    params: Sentinel2DriverConfig
     input_tile_cls = InputTile
 
     def set_archive(self, base_dir: MPath):
         if self.params.cat_baseurl:
-            baseurl = MPath(self.params.cat_baseurl).absolute_path(base_dir=base_dir)
-        else:
-            baseurl = None
-
-        if self.params.archive:
+            self.archive = StaticArchive(
+                catalog=STACStaticCatalog(
+                    baseurl=MPath(self.params.cat_baseurl).absolute_path(
+                        base_dir=base_dir
+                    ),
+                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
+                    time=self.time,
+                )
+            )
+        elif self.params.archive:
             self.archive = self.params.archive(
                 time=self.time,
                 bounds=self.area.bounds,
                 area=self.area,
-                cat_baseurl=baseurl,
-            )
-        elif baseurl:
-            self.archive = StaticArchive(
-                catalog=STACStaticCatalog(
-                    baseurl=baseurl,
-                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
-                    time=self.time,
-                )
+                search_index=(
+                    MPath(self.params.search_index).absolute_path(base_dir=base_dir)
+                    if self.params.search_index
+                    else None
+                ),
             )
         else:
             raise ValueError("either 'archive' or 'cat_baseurl' or both is required.")

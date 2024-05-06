@@ -232,6 +232,15 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_jp2_static_catalog_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_jp2_static_catalog.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_area_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_area.mapchete",

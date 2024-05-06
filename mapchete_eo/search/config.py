@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mapchete.path import MPath, MPathLike
+from mapchete.path import MPath
 from pydantic import BaseModel
 
 

@@ -7,10 +7,9 @@ from mapchete.path import MPath
 from mapchete.types import Bounds
 from rasterio.profiles import Profile
 
-from mapchete_eo.archives.base import Archive
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.platforms.sentinel2 import S2Metadata
-from mapchete_eo.platforms.sentinel2.config import KnownArchives
+from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.search.base import CatalogProtocol

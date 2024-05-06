@@ -16,7 +16,6 @@ from mapchete.path import MPath
 from mapchete.types import Bounds
 from pystac import Item
 from shapely import prepare
-from shapely.geometry import mapping, shape
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.io.items import item_fix_footprint

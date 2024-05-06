@@ -10,7 +10,7 @@ from tqdm import tqdm
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.cli.s2_verify import verify_item
 from mapchete_eo.cli.static_catalog import get_catalog
-from mapchete_eo.platforms.sentinel2.config import KnownArchives
+from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.product import add_to_blacklist, blacklist_products
 
 

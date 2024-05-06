@@ -126,3 +126,9 @@ def test_s2tile_antimeridian_footprint(tile_id, control_geom_type):
             assert bounds.width < 10
     else:
         assert Bounds.from_inp(s2tile.latlon_geometry).width < 10
+
+
+def test_sentinel2_jp2_static_catalog(sentinel2_jp2_static_catalog_mapchete):
+    mp = sentinel2_jp2_static_catalog_mapchete.mp()
+    assert mp.config.at_zoom(13)["input"]["inp"].archive.catalog.config.search_index
+    assert mp.config.at_zoom(13)["input"]["inp"].products

@@ -1,10 +1,9 @@
 import pytest
 from mapchete.tile import BufferedTilePyramid
-from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
-from mapchete_eo.platforms.sentinel2.config import AWSL2AJP2, AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.archives import AWSL2AJP2, AWSL2ACOGv1
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.types import TimeRange
 

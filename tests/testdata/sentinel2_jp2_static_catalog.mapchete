@@ -7,8 +7,8 @@ input:
     search_index: s2-jp2-fgb-catalog/index.fgb
     max_cloud_percent: 90
     time:
-      start: 2023-06-06
-      end: 2023-06-06
+      start: 2022-06-06
+      end: 2022-06-06
 output:
   format: GTiff
   bands: 3

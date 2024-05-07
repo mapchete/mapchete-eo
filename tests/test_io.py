@@ -107,15 +107,20 @@ def test_products_to_slices(s2_stac_items):
             assert slice_.name == product.item.datetime.day
 
 
-def test_item_fix_antimeridian_footprint(antimeridian_item):
-    assert (
-        shape(item_fix_footprint(antimeridian_item).geometry).geom_type
-        == "MultiPolygon"
-    )
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("antimeridian_item"),
+        lazy_fixture("antimeridian_item2"),
+        # lazy_fixture("antimeridian_item3"), --> this footprint is unfuckingfixable
+    ],
+)
+def test_item_fix_antimeridian_footprint(item):
+    assert shape(item_fix_footprint(item).geometry).geom_type == "MultiPolygon"
 
 
-def test_item_buffer_antimeridian_footprint(antimeridian_item):
-    fixed_footprint = shape(item_fix_footprint(antimeridian_item).geometry)
+def test_item_buffer_antimeridian_footprint(item):
+    fixed_footprint = shape(item_fix_footprint(item).geometry)
     buffered = buffer_antimeridian_safe(fixed_footprint, buffer_m=-500)
 
     # buffered should be smaller than original

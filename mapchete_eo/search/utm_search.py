@@ -1,7 +1,7 @@
 import datetime
 import logging
 from functools import cached_property
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional, Set
 
 from mapchete.io.vector import IndexedFeatures, fiona_open
 from mapchete.path import MPath, MPathLike
@@ -12,9 +12,11 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.items import item_fix_footprint
+from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.time import day_range, to_datetime
 from mapchete_eo.types import TimeRange
 
@@ -28,6 +30,11 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     stac_json_endswith: str
     description: str
     stac_extensions: List[str]
+    blacklist: Set[str] = (
+        blacklist_products(mapchete_eo_settings.blacklist)
+        if mapchete_eo_settings.blacklist
+        else set()
+    )
 
     def __init__(
         self,
@@ -97,8 +104,13 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                     end_time=self.end_time,
                     index_path=self.config.search_index,
                 ):
-                    if self.area.intersects(shape(item.geometry)):
-                        yield self.standardize_item(item)
+                    item_path = item.get_self_href()
+                    if item_path in self.blacklist:  # pragma: no cover
+                        logger.debug(
+                            "item %s found in blacklist and skipping", item_path
+                        )
+                    elif self.area.intersects(shape(item.geometry)):
+                        yield self.standardize_item(item_fix_footprint(item))
 
             else:
                 logger.debug("using dumb ls directory search at %s", str(self.endpoint))
@@ -110,8 +122,13 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                     day_subdir_schema=self.day_subdir_schema,
                     stac_json_endswith=self.stac_json_endswith,
                 ):
-                    if self.area.intersects(shape(item.geometry)):
-                        yield self.standardize_item(item)
+                    item_path = item.get_self_href()
+                    if item_path in self.blacklist:  # pragma: no cover
+                        logger.debug(
+                            "item %s found in blacklist and skipping", item_path
+                        )
+                    elif self.area.intersects(shape(item.geometry)):
+                        yield self.standardize_item(item_fix_footprint(item))
 
         if (self.area is not None and self.area.is_empty) or self.bounds is None:
             return IndexedFeatures([])
@@ -175,12 +192,8 @@ def items_from_static_index(
                     ).replace(tzinfo=None)
 
                     if start_time <= timestamp <= end_time:
-                        yield item_fix_footprint(
-                            Item.from_dict(
-                                MPath.from_inp(
-                                    item_feature.properties["path"]
-                                ).read_json()
-                            )
+                        yield Item.from_dict(
+                            MPath.from_inp(item_feature.properties["path"]).read_json()
                         )
 
 
@@ -205,7 +218,7 @@ def items_from_directories(
             s2_tiles,
             product_endswith=stac_json_endswith,
         ):
-            yield item_fix_footprint(item)
+            yield item
 
 
 def find_items(

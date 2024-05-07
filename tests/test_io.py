@@ -107,15 +107,33 @@ def test_products_to_slices(s2_stac_items):
             assert slice_.name == product.item.datetime.day
 
 
-def test_item_fix_antimeridian_footprint(antimeridian_item):
-    assert (
-        shape(item_fix_footprint(antimeridian_item).geometry).geom_type
-        == "MultiPolygon"
-    )
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("antimeridian_item1"),
+        lazy_fixture("antimeridian_item2"),
+        lazy_fixture("antimeridian_item4"),
+    ],
+)
+def test_item_fix_antimeridian_footprint(item):
+    fixed_geom = shape(item_fix_footprint(item).geometry)
+    assert fixed_geom.geom_type == "MultiPolygon"
+    # make sure it touches the Antimeridian
+    bounds = Bounds.from_inp(fixed_geom)
+    assert bounds.left == -180
+    assert bounds.right == 180
 
 
-def test_item_buffer_antimeridian_footprint(antimeridian_item):
-    fixed_footprint = shape(item_fix_footprint(antimeridian_item).geometry)
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("antimeridian_item1"),
+        lazy_fixture("antimeridian_item2"),
+        lazy_fixture("antimeridian_item4"),
+    ],
+)
+def test_item_buffer_antimeridian_footprint(item):
+    fixed_footprint = shape(item_fix_footprint(item).geometry)
     buffered = buffer_antimeridian_safe(fixed_footprint, buffer_m=-500)
 
     # buffered should be smaller than original

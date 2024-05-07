@@ -356,6 +356,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def read_scl(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return SCL mask."""
         logger.debug("read SCL mask for %s", str(self))
@@ -369,6 +370,7 @@ class S2Product(EOProduct, EOProductProtocol):
             dst_grid=grid,
             resampling=Resampling.nearest,
             masked=True,
+            cached_read=cached_read,
         )
 
     def footprint_nodata_mask(
@@ -454,7 +456,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 # convert SCL classes to pixel values
                 scl_values = [scl.value for scl in mask_config.scl_classes]
                 # read SCL mask
-                scl_arr = self.read_scl(grid).data
+                scl_arr = self.read_scl(
+                    grid, cached_read=mask_config.scl_cached_read
+                ).data
                 # mask out specific pixel values
                 out += np.isin(scl_arr, scl_values)
                 _check_full(out)

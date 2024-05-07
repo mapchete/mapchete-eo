@@ -11,7 +11,12 @@ import pystac
 from affine import Affine
 from mapchete import Timer
 from mapchete.io import copy, fiona_open, rasterio_open
-from mapchete.io.raster import ReferencedRaster, read_raster, resample_from_array
+from mapchete.io.raster import (
+    ReferencedRaster,
+    read_raster,
+    read_raster_window,
+    resample_from_array,
+)
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.settings import IORetrySettings
@@ -377,7 +382,6 @@ def _read_vector_mask(mask_path):
                 raise
 
 
-@retry(logger=logger, **dict(IORetrySettings()))
 def read_mask_as_raster(
     path: MPath,
     indexes: Optional[List[int]] = None,
@@ -387,61 +391,67 @@ def read_mask_as_raster(
     rasterize_feature_filter: Callable = lambda feature: True,
     dtype: Optional[DTypeLike] = None,
     masked: bool = True,
+    cached_read: bool = False,
 ) -> ReferencedRaster:
     """
     Read mask as array regardless of source data type (raster or vector).
     """
     if dst_grid:
         dst_grid = Grid.from_obj(dst_grid)
-    if path.suffix in COMMON_RASTER_EXTENSIONS:
-        with rasterio_open(path) as src:
-            mask = ReferencedRaster(
-                src.read(indexes, masked=masked).sum(axis=0, dtype=src.dtypes[0]),
-                transform=src.transform,
-                bounds=src.bounds,
-                crs=src.crs,
-            )
-        # TODO: this can be replaced by using the updated mapchete.io.raster.read_raster_window()
-        # function which will be able to handle the GridProtocol.
-        if dst_grid:
-            arr = resample_from_array(
-                mask, out_grid=dst_grid, resampling=resampling, keep_2d=True
-            )
-            mask = ReferencedRaster(
-                arr if masked else arr.data,
-                transform=dst_grid.transform,
-                crs=dst_grid.crs,
-                bounds=dst_grid.bounds,
-            )
-        # make sure output has correct dtype
-        if dtype:
-            mask.data = mask.data.astype(dtype)
-        return mask
+    with cached_path(path, active=cached_read) as path:
+        if path.suffix in COMMON_RASTER_EXTENSIONS:
+            if dst_grid:
+                array = read_raster_window(
+                    path, grid=dst_grid, indexes=indexes, resampling=resampling
+                )
+                # sum up bands to 2D mask and keep dtype
+                array = array.sum(axis=0, dtype=array.dtype)
+                mask = ReferencedRaster(
+                    data=array if masked else array.data,
+                    transform=dst_grid.transform,
+                    bounds=dst_grid.bounds,
+                    crs=dst_grid.crs,
+                )
+            else:
+                with rasterio_open(path) as src:
+                    mask = ReferencedRaster(
+                        src.read(indexes, masked=masked).sum(
+                            axis=0, dtype=src.dtypes[0]
+                        ),
+                        transform=src.transform,
+                        bounds=src.bounds,
+                        crs=src.crs,
+                    )
 
-    else:
-        if dst_grid:
-            features = [
-                feature
-                for feature in _read_vector_mask(path)
-                if rasterize_feature_filter(feature)
-            ]
-            features_values = [
-                (feature["geometry"], rasterize_value_func(feature))
-                for feature in features
-            ]
-            return ReferencedRaster(
-                data=(
-                    rasterize(
-                        features_values,
-                        out_shape=dst_grid.shape,
-                        transform=dst_grid.transform,
-                    ).astype(dtype)
-                    if features_values
-                    else np.zeros(dst_grid.shape, dtype=dtype)
-                ),
-                transform=dst_grid.transform,
-                crs=dst_grid.crs,
-                bounds=dst_grid.bounds,
-            )
-        else:  # pragma: no cover
-            raise ValueError("out_shape and out_transform have to be provided.")
+            # make sure output has correct dtype
+            if dtype:
+                mask.data = mask.data.astype(dtype)
+            return mask
+
+        else:
+            if dst_grid:
+                features = [
+                    feature
+                    for feature in _read_vector_mask(path)
+                    if rasterize_feature_filter(feature)
+                ]
+                features_values = [
+                    (feature["geometry"], rasterize_value_func(feature))
+                    for feature in features
+                ]
+                return ReferencedRaster(
+                    data=(
+                        rasterize(
+                            features_values,
+                            out_shape=dst_grid.shape,
+                            transform=dst_grid.transform,
+                        ).astype(dtype)
+                        if features_values
+                        else np.zeros(dst_grid.shape, dtype=dtype)
+                    ),
+                    transform=dst_grid.transform,
+                    crs=dst_grid.crs,
+                    bounds=dst_grid.bounds,
+                )
+            else:  # pragma: no cover
+                raise ValueError("out_shape and out_transform have to be provided.")

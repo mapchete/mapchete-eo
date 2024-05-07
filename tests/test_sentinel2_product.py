@@ -179,6 +179,20 @@ def test_product_read_snow_probability_tile(s2_stac_item):
     assert snow_probability.data.ndim == 2
 
 
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "cached_read",
+    [True, False],
+)
+def test_product_read_scl_remote(s2_l2a_earthsearch_remote_item, cached_read):
+    product = S2Product(s2_l2a_earthsearch_remote_item)
+    scl = product.read_scl(cached_read=cached_read)
+    assert isinstance(scl, ReferencedRaster)
+    assert isinstance(scl.data, ma.MaskedArray)
+    assert scl.data.dtype == np.uint8
+    assert scl.data.ndim == 2
+
+
 def test_product_read_scl(s2_stac_item):
     product = S2Product(s2_stac_item)
     scl = product.read_scl()

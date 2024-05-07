@@ -95,6 +95,8 @@ class MaskConfig(BaseModel):
     ]
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None
+    # download SCL masks before reading
+    scl_cached_read: bool = False
 
     @staticmethod
     def parse(config: Union[dict, MaskConfig]) -> MaskConfig:

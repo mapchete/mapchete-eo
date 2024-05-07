@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.5.2 - 2024-05-07
+---------------------
+
+* core
+  * add blacklist capability for `S2AWS_JP2` archive
+  * fix antimeridian-crossing footprint reprojection issue
+
+
 2024.5.1 - 2024-05-07
 ---------------------
 

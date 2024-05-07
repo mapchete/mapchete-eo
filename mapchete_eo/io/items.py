@@ -1,19 +1,15 @@
 import logging
-import math
 from typing import Any, List, Optional
 
 import numpy.ma as ma
 import pystac
-from fiona.crs import CRS
-from mapchete.io.vector import reproject_geometry
 from mapchete.protocols import GridProtocol
 from rasterio.enums import Resampling
-from shapely.geometry import MultiPolygon, Polygon, box, mapping, shape
-from shapely.geometry.base import BaseGeometry
-from shapely.ops import unary_union
+from shapely.geometry import mapping, shape
 
-from mapchete_eo.exceptions import EmptyFootprintException, EmptyProductException
+from mapchete_eo.exceptions import EmptyProductException
 from mapchete_eo.io.assets import asset_to_np_array
+from mapchete_eo.io.geometry import repair_antimeridian_geometry
 from mapchete_eo.types import BandLocation, Bounds, NodataVals
 
 logger = logging.getLogger(__name__)
@@ -135,7 +131,7 @@ def get_item_property(
 
 
 def item_fix_footprint(
-    item: pystac.Item, bbox_width_threshold: int = 180
+    item: pystac.Item, bbox_width_threshold: float = 180.0
 ) -> pystac.Item:
     bounds = Bounds.from_inp(item.bbox)
 
@@ -146,106 +142,5 @@ def item_fix_footprint(
             geometry = repair_antimeridian_geometry(geometry=shape(item.geometry))
             item.geometry = mapping(geometry)
             item.bbox = list(geometry.bounds)
-        else:
-            raise ValueError("item geometry is None")
 
     return item
-
-
-def repair_antimeridian_geometry(geometry: BaseGeometry) -> BaseGeometry:
-    # repair geometry if it is broken
-    geometry = geometry.buffer(0)
-
-    if geometry.geom_type == "MultiPolygon":
-        return geometry
-
-    latlon_bbox = box(-180, -90, 180, 90)
-
-    # (1) shift only coordinates on the western hemisphere by 360°, thus "fixing"
-    # the footprint, but letting it cross the antimeridian
-    shifted_geometry = longitudinal_shift(geometry, only_negative_coords=True)
-
-    # (2) split up geometry in one outside of latlon bounds and one inside
-    inside = shifted_geometry.intersection(latlon_bbox)
-    outside = shifted_geometry.difference(latlon_bbox)
-
-    # (3) shift back only the polygon outside of latlon bounds by -360, thus moving
-    # it back to the western hemisphere
-    outside_shifted = longitudinal_shift(outside, -360)
-
-    # (4) create a MultiPolygon out from these two polygons
-    split = unary_union([inside, outside_shifted])
-
-    # (5) update item geometry
-    return split
-
-
-def longitudinal_shift(
-    geometry: BaseGeometry, by: float = 360, only_negative_coords: bool = False
-) -> BaseGeometry:
-    if geometry.geom_type == "MultiPolygon":
-        logger.debug("geometry is already a MultiPolygon and probably shifted")
-        return geometry
-    elif geometry.is_empty:
-        return geometry
-
-    coords = mapping(geometry)["coordinates"][0]
-    out_coords = []
-    for lon, lat in coords:
-        if only_negative_coords:
-            if lon < 0:
-                lon += by
-        else:
-            lon += by
-        out_coords.append([lon, lat])
-    return shape(dict(type=geometry.geom_type, coordinates=[out_coords]))
-
-
-def buffer_footprint(footprint: BaseGeometry, buffer_m: float = 0) -> BaseGeometry:
-    # repair geometry if it is broken
-    footprint = footprint.buffer(0)
-
-    if not buffer_m:
-        return footprint
-
-    if footprint.geom_type == "MultiPolygon":
-        # we have a shifted footprint here!
-        # (1) unshift one part
-        subpolygons = []
-        for polygon in footprint.geoms:
-            lon = polygon.centroid.x
-            if lon < 0:
-                polygon = longitudinal_shift(polygon)
-            subpolygons.append(polygon)
-        # (2) merge to single polygon
-        merged = unary_union(subpolygons)
-        # (3) apply buffer
-        buffered = buffer_footprint(merged, buffer_m=buffer_m)
-        # (4) fix again
-        return repair_antimeridian_geometry(buffered)
-
-    # UTM zone CRS
-    lon = footprint.centroid.x
-    lat = footprint.centroid.y
-    min_zone = 1
-    max_zone = 60
-    utm_zone = (
-        f"{max([min([(math.floor((lon + 180) / 6) + 1), max_zone]), min_zone]):02}"
-    )
-    hemisphere_code = "7" if lat <= 0 else "6"
-    utm_crs = CRS.from_string(f"EPSG:32{hemisphere_code}{utm_zone}")
-
-    latlon_crs = CRS.from_string("EPSG:4326")
-    out_geom = reproject_geometry(
-        reproject_geometry(
-            footprint, src_crs=latlon_crs, dst_crs=utm_crs, clip_to_crs_bounds=False
-        ).buffer(buffer_m),
-        src_crs=utm_crs,
-        dst_crs=latlon_crs,
-        clip_to_crs_bounds=False,
-    )
-    if out_geom.is_empty and not footprint.is_empty:
-        raise EmptyFootprintException(
-            f"buffer value of {buffer_m} results in an empty geometry for footprint {footprint.wkt}"
-        )
-    return out_geom

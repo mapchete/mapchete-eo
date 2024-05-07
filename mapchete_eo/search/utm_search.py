@@ -3,7 +3,7 @@ import logging
 from functools import cached_property
 from typing import Dict, Generator, List, Optional
 
-from mapchete.io.vector import IndexedFeatures
+from mapchete.io.vector import IndexedFeatures, fiona_open
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
@@ -15,7 +15,7 @@ from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
-from mapchete_eo.time import day_range
+from mapchete_eo.time import day_range, to_datetime
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     endpoint: str
+    id: str
+    day_subdir_schema: str
+    stac_json_endswith: str
+    description: str
+    stac_extensions: List[str]
 
     def __init__(
         self,
@@ -32,8 +37,11 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         bounds: Bounds = None,
         area: Optional[BaseGeometry] = None,
         config: UTMSearchConfig = UTMSearchConfig(),
+        search_index: Optional[MPath] = None,
         **kwargs,
     ) -> None:
+        if search_index:
+            config.search_index = search_index
         if area is not None:
             self.area = area
             self.bounds = Bounds.from_inp(self.area)
@@ -71,24 +79,39 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         products and return them as STAC items, like with the element 84 endpoint, just without the search client.
         s3://sentinel-s2-l2a-stac/2023/06/04/S2B_OPER_MSI_L2A_TL_2BPS_20230604T235444_A032617_T01WCN.json
         """
-        logger.debug(
-            "determine items from %s to %s over %s...",
-            self.start_time,
-            self.end_time,
-            self.bounds,
-        )
 
         def _get_items():
-            # get Sentinel-2 tiles over given bounds
-            s2_tiles = s2_tiles_from_bounds(*self.bounds)
-
-            # for each day within time range, look for tiles
-            for day in day_range(start_date=self.start_time, end_date=self.end_time):
-                day_path = MPath(self.endpoint) / day.strftime("%Y/%m/%d")
-                for item in find_items(
-                    day_path, s2_tiles, product_endswith="T{tile_id}.json"
+            logger.debug(
+                "determine items from %s to %s over %s...",
+                self.start_time,
+                self.end_time,
+                self.bounds,
+            )
+            if self.config.search_index:
+                logger.debug(
+                    "use existing search index at %s", str(self.config.search_index)
+                )
+                for item in items_from_static_index(
+                    bounds=self.bounds,
+                    start_time=self.start_time,
+                    end_time=self.end_time,
+                    index_path=self.config.search_index,
                 ):
-                    yield item_fix_footprint(self.standardize_item(item))
+                    if self.area.intersects(shape(item.geometry)):
+                        yield self.standardize_item(item)
+
+            else:
+                logger.debug("using dumb ls directory search at %s", str(self.endpoint))
+                for item in items_from_directories(
+                    bounds=self.bounds,
+                    start_time=self.start_time,
+                    end_time=self.end_time,
+                    endpoint=self.endpoint,
+                    day_subdir_schema=self.day_subdir_schema,
+                    stac_json_endswith=self.stac_json_endswith,
+                ):
+                    if self.area.intersects(shape(item.geometry)):
+                        yield self.standardize_item(item)
 
         if (self.area is not None and self.area.is_empty) or self.bounds is None:
             return IndexedFeatures([])
@@ -124,6 +147,65 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             for collection_name in self.collections:
                 if collection_name == collection.id:
                     yield collection
+
+
+def items_from_static_index(
+    bounds: Bounds,
+    start_time: datetime.datetime,
+    end_time: datetime.datetime,
+    index_path: MPathLike,
+) -> Generator[Item, None, None]:
+    index_path = MPath.from_inp(index_path)
+
+    start_time = to_datetime(start_time)
+    # add day at end_time to include last day
+    end_time = to_datetime(end_time + datetime.timedelta(days=1))
+
+    # open index and determine which S2Tiles are covered
+    with fiona_open(index_path) as index:
+        # look at entries in every S2Tile and match with timestamp
+        for s2tile_feature in index.filter(bbox=bounds):
+            with fiona_open(
+                index_path.parent / s2tile_feature.properties["path"]
+            ) as s2tile:
+                for item_feature in s2tile.filter(bbox=bounds):
+                    # remove timezone info in order to compare with start_time and end_time
+                    timestamp = to_datetime(
+                        item_feature.properties["datetime"]
+                    ).replace(tzinfo=None)
+
+                    if start_time <= timestamp <= end_time:
+                        yield item_fix_footprint(
+                            Item.from_dict(
+                                MPath.from_inp(
+                                    item_feature.properties["path"]
+                                ).read_json()
+                            )
+                        )
+
+
+def items_from_directories(
+    bounds: Bounds,
+    start_time: datetime.datetime,
+    end_time: datetime.datetime,
+    endpoint: MPathLike,
+    day_subdir_schema: str = "{year}/{month:02d}/{day:02d}",
+    stac_json_endswith: str = "T{tile_id}.json",
+) -> Generator[Item, None, None]:
+    # get Sentinel-2 tiles over given bounds
+    s2_tiles = s2_tiles_from_bounds(*bounds)
+
+    # for each day within time range, look for tiles
+    for day in day_range(start_date=start_time, end_date=end_time):
+        day_path = MPath.from_inp(endpoint) / day_subdir_schema.format(
+            year=day.year, month=day.month, day=day.day
+        )
+        for item in find_items(
+            day_path,
+            s2_tiles,
+            product_endswith=stac_json_endswith,
+        ):
+            yield item_fix_footprint(item)
 
 
 def find_items(

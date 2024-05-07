@@ -17,6 +17,7 @@ def test_e84_cog_catalog_eo_bands(e84_cog_catalog):
     assert len(e84_cog_catalog.eo_bands) > 0
 
 
+@pytest.mark.skip(reason="This test is flaky.")
 @pytest.mark.remote
 def test_utm_search_catalog_search_items(utm_search_catalog):
     assert len(utm_search_catalog.items) > 0

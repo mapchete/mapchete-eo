@@ -9,7 +9,6 @@ import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.config.parse import guess_geometry
-from mapchete.executor import Executor
 from mapchete.formats import base
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
@@ -52,6 +51,7 @@ class BaseDriverConfig(BaseModel):
     footprint_buffer: float = 0
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
     preprocessing_tasks: bool = False
+    archive: Optional[Type[Archive]] = None
 
 
 class InputTile(base.InputTile):
@@ -400,29 +400,11 @@ class InputData(base.InputData):
             ).absolute_path(base_dir=input_params.get("conf_dir"))
 
         self.area = self._init_area(input_params)
-
         self.time = self.params.time
-
         if self.readonly:  # pragma: no cover
             return
 
-        # set archive
-        if self.params.cat_baseurl:
-            self.archive = StaticArchive(
-                catalog=STACStaticCatalog(
-                    baseurl=MPath(self.params.cat_baseurl).absolute_path(
-                        base_dir=input_params["conf_dir"]
-                    ),
-                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
-                    time=self.time,
-                )
-            )
-        elif self.params.archive:
-            self.archive = self.params.archive(
-                time=self.time,
-                bounds=self.area.bounds,
-                area=self.area,
-            )
+        self.set_archive(base_dir=input_params["conf_dir"])
 
         # don't use preprocessing tasks for Sentinel-2 products:
         if self.params.preprocessing_tasks or self.params.cache is not None:
@@ -463,6 +445,21 @@ class InputData(base.InputData):
                 )
             )
         return process_area
+
+    def set_archive(self, base_dir: MPath):
+        # this only works with some static archive:
+        if self.params.cat_baseurl:
+            self.archive = StaticArchive(
+                catalog=STACStaticCatalog(
+                    baseurl=MPath(self.params.cat_baseurl).absolute_path(
+                        base_dir=base_dir
+                    ),
+                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
+                    time=self.time,
+                )
+            )
+        else:
+            raise NotImplementedError()
 
     def bbox(self, out_crs: Optional[str] = None) -> BaseGeometry:
         """Return data bounding box."""

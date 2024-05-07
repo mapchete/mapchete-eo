@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 
 from mapchete.path import MPath
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ class StacSearchConfig(BaseModel):
     footprint_buffer: float = 0
 
 
-class UTMSearchConfig:
+class UTMSearchConfig(BaseModel):
     sinergise_aws_collections: dict = dict(
         S2_L2A=dict(
             id="sentinel-s2-l2a",
@@ -33,8 +33,4 @@ class UTMSearchConfig:
             ),
         ),
     )
-    mgrs_s2_grid: MPath = MPath(
-        "s3://eox-data/S2_Tiling_MGRS_Grid_S2A_OPER_GIP_TILPAR_MPC_B00.fgb"
-    )
-    utm_allowed_granules: Union[str, list] = "all"
-    footprint_buffer: float = 0
+    search_index: Optional[str] = None

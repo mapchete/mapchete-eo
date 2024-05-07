@@ -110,9 +110,10 @@ def test_products_to_slices(s2_stac_items):
 @pytest.mark.parametrize(
     "item",
     [
-        lazy_fixture("antimeridian_item"),
+        lazy_fixture("antimeridian_item1"),
         lazy_fixture("antimeridian_item2"),
-        # lazy_fixture("antimeridian_item3"), --> this footprint is unfuckingfixable
+        lazy_fixture("antimeridian_item3"),
+        lazy_fixture("antimeridian_item4"),
     ],
 )
 def test_item_fix_antimeridian_footprint(item):
@@ -122,9 +123,10 @@ def test_item_fix_antimeridian_footprint(item):
 @pytest.mark.parametrize(
     "item",
     [
-        lazy_fixture("antimeridian_item"),
+        lazy_fixture("antimeridian_item1"),
         lazy_fixture("antimeridian_item2"),
-        # lazy_fixture("antimeridian_item3"), --> this footprint is unfuckingfixable
+        lazy_fixture("antimeridian_item3"),
+        lazy_fixture("antimeridian_item4"),
     ],
 )
 def test_item_buffer_antimeridian_footprint(item):

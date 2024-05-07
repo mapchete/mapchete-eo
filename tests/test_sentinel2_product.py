@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.ma as ma
+import pystac
 import pytest
 import xarray as xr
 from mapchete.io.raster import ReferencedRaster
@@ -16,6 +17,7 @@ from mapchete_eo.exceptions import (
     EmptyStackException,
 )
 from mapchete_eo.io import read_levelled_cube_to_np_array, read_levelled_cube_to_xarray
+from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import (
@@ -228,6 +230,28 @@ def test_footprint_nodata_mask_tile(s2_stac_item_half_footprint):
     assert isinstance(footprint_nodata_mask, ReferencedRaster)
     assert not isinstance(footprint_nodata_mask.data, ma.MaskedArray)
     assert not footprint_nodata_mask.data.any()
+    assert footprint_nodata_mask.data.dtype == bool
+    assert footprint_nodata_mask.data.ndim == 2
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        lazy_fixture("antimeridian_item1"),
+        lazy_fixture("antimeridian_item2"),
+        lazy_fixture("antimeridian_item3"),
+        lazy_fixture("antimeridian_item4"),
+    ],
+)
+def test_footprint_nodata_mask_tile_antimeridian(item):
+    product = S2Product(item_fix_footprint(item))
+    footprint_nodata_mask = product.footprint_nodata_mask(
+        grid=BufferedTilePyramid("geodetic", metatiling=4).tile(13, 170, 0),
+        buffer_m=-500,
+    )
+    assert isinstance(footprint_nodata_mask, ReferencedRaster)
+    assert not isinstance(footprint_nodata_mask.data, ma.MaskedArray)
+    assert footprint_nodata_mask.data.any()
     assert footprint_nodata_mask.data.dtype == bool
     assert footprint_nodata_mask.data.ndim == 2
 

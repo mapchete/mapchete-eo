@@ -419,6 +419,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 raise AllMasked()
 
         out = np.zeros(shape=grid.shape, dtype=bool)
+        logger.debug("generate mask for product %s ...", str(self))
         try:
             _check_full(out)
             if mask_config.footprint:

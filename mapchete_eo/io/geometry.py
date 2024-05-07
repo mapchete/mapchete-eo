@@ -133,13 +133,11 @@ def buffer_antimeridian_safe(
     utm_crs = latlon_to_utm_crs(footprint.centroid.y, footprint.centroid.x)
     latlon_crs = CRS.from_string("EPSG:4326")
 
-    out_geom = reproject_geometry(
+    out_geom = transform_to_latlon(
         reproject_geometry(
             footprint, src_crs=latlon_crs, dst_crs=utm_crs, clip_to_crs_bounds=False
         ).buffer(buffer_m),
         src_crs=utm_crs,
-        dst_crs=latlon_crs,
-        clip_to_crs_bounds=False,
     )
     if out_geom.is_empty and not footprint.is_empty:
         raise EmptyFootprintException(

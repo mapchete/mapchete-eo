@@ -619,7 +619,7 @@ def full_stac_item_pb0509(s2_testdata_dir):
 
 
 @pytest.fixture(scope="session")
-def antimeridian_item(testdata_dir):
+def antimeridian_item1(testdata_dir):
     return pystac.Item.from_file(
         testdata_dir
         / "antimeridian_items"
@@ -638,6 +638,25 @@ def antimeridian_item2(testdata_dir):
 
 @pytest.fixture(scope="session")
 def antimeridian_item3(testdata_dir):
+    return pystac.Item.from_file(
+        testdata_dir
+        / "antimeridian_items"
+        / "S2B_OPER_MSI_L2A_TL_2BPS_20230512T234921_A032288_T01VCG.json"
+    )
+
+
+@pytest.fixture(scope="session")
+def antimeridian_item4(testdata_dir):
+    return pystac.Item.from_file(
+        testdata_dir
+        / "antimeridian_items"
+        / "S2B_OPER_MSI_L2A_TL_2BPS_20230513T005426_A032288_T01VCG.json"
+    )
+
+
+@pytest.fixture(scope="session")
+def antimeridian_broken_item(testdata_dir):
+    # this footprint is unfuckingfixable
     return pystac.Item.from_file(
         testdata_dir
         / "antimeridian_items"

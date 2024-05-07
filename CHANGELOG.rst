@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2024.5.1 - 2024-05-07
+---------------------
+
+* core
+  * add static search catalog for antimeridian products
+  * `io.assets.read_mask_as_raster()`
+    * use `read_raster_window()` when `dst_grid` is given
+    * optionally cache file locally before reading by activating `cachde_reading` flag
+
+
 2024.5.0 - 2024-05-03
 ---------------------
 

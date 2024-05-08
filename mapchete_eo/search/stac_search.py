@@ -8,9 +8,11 @@ from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
 from pystac_client import Client
+from shapely.errors import GEOSException
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.exceptions import ItemGeometryError
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
@@ -89,13 +91,18 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
 
                 for search in searches:
                     for item in search.items():
-                        item_path = item.get_self_href()
-                        if item_path in self.blacklist:  # pragma: no cover
-                            logger.debug(
-                                "item %s found in blacklist and skipping", item_path
+                        try:
+                            item_path = item.get_self_href()
+                            if item_path in self.blacklist:  # pragma: no cover
+                                logger.debug(
+                                    "item %s found in blacklist and skipping", item_path
+                                )
+                            else:
+                                yield item_fix_footprint(item)
+                        except GEOSException as exc:
+                            raise ItemGeometryError(
+                                f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
                             )
-                        else:
-                            yield item_fix_footprint(item)
 
         if self.area is not None and self.area.is_empty:
             return IndexedFeatures([])

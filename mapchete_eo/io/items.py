@@ -8,8 +8,8 @@ from rasterio.enums import Resampling
 from shapely.geometry import mapping, shape
 
 from mapchete_eo.exceptions import EmptyProductException
+from mapchete_eo.geometry import repair_antimeridian_geometry
 from mapchete_eo.io.assets import asset_to_np_array
-from mapchete_eo.io.geometry import repair_antimeridian_geometry
 from mapchete_eo.types import BandLocation, Bounds, NodataVals
 
 logger = logging.getLogger(__name__)

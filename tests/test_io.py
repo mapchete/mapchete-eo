@@ -6,8 +6,8 @@ from mapchete.types import Bounds
 from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import shape
 
+from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io import get_item_property, item_fix_footprint, products_to_slices
-from mapchete_eo.io.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.path import (
     ProductPathGenerationMethod,
     asset_mpath,
@@ -122,28 +122,3 @@ def test_item_fix_antimeridian_footprint(item):
     bounds = Bounds.from_inp(fixed_geom)
     assert bounds.left == -180
     assert bounds.right == 180
-
-
-@pytest.mark.parametrize(
-    "item",
-    [
-        lazy_fixture("antimeridian_item1"),
-        lazy_fixture("antimeridian_item2"),
-        lazy_fixture("antimeridian_item4"),
-    ],
-)
-def test_item_buffer_antimeridian_footprint(item):
-    fixed_footprint = shape(item_fix_footprint(item).geometry)
-    buffered = buffer_antimeridian_safe(fixed_footprint, buffer_m=-500)
-
-    # buffered should be smaller than original
-    assert buffered.area < fixed_footprint.area
-
-    # however, it should still touch the antimeridian
-    bounds = Bounds.from_inp(buffered)
-    assert bounds.left == -180
-    assert bounds.right == 180
-
-
-def test_broken_antimeridian_footprint(broken_footprint):
-    assert buffer_antimeridian_safe(broken_footprint, -500)

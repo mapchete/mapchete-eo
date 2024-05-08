@@ -220,21 +220,23 @@ def custom_transform(geometry: BaseGeometry, func: Callable) -> BaseGeometry:
             [_any_geometry(subgeometry) for subgeometry in geometrycollection.geoms]
         )
 
-    transform_funcs = {
-        Point: _point,
-        MultiPoint: _multipoint,
-        LineString: _linestring,
-        MultiLineString: _multilinestring,
-        Polygon: _polygon,
-        MultiPolygon: _multipolygon,
-        GeometryCollection: _geometrycollection,
-    }
-
     def _any_geometry(geometry: BaseGeometry) -> BaseGeometry:
+        transform_funcs = {
+            Point: _point,
+            MultiPoint: _multipoint,
+            LineString: _linestring,
+            MultiLineString: _multilinestring,
+            Polygon: _polygon,
+            MultiPolygon: _multipolygon,
+            GeometryCollection: _geometrycollection,
+        }
         try:
             return transform_funcs[type(geometry)](geometry)
         except KeyError:
             raise TypeError(f"unknown geometry {geometry} of type {type(geometry)}")
+
+    if geometry.is_empty:
+        return geometry
 
     return _any_geometry(geometry)
 

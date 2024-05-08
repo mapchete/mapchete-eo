@@ -81,3 +81,7 @@ class CorruptedProductMetadata(CorruptedProduct):
 
 class CorruptedSlice(Exception):
     """Raised when all products in a slice are damaged and cannot be read."""
+
+
+class ItemGeometryError(Exception):
+    """Raised when STAC item geometry cannot be resolved."""

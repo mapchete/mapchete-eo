@@ -8,9 +8,11 @@ from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.item import Item
+from shapely.errors import GEOSException
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
+from mapchete_eo.exceptions import ItemGeometryError
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
@@ -104,13 +106,18 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                     end_time=self.end_time,
                     index_path=self.config.search_index,
                 ):
-                    item_path = item.get_self_href()
-                    if item_path in self.blacklist:  # pragma: no cover
-                        logger.debug(
-                            "item %s found in blacklist and skipping", item_path
+                    try:
+                        item_path = item.get_self_href()
+                        if item_path in self.blacklist:  # pragma: no cover
+                            logger.debug(
+                                "item %s found in blacklist and skipping", item_path
+                            )
+                        elif self.area.intersects(shape(item.geometry)):
+                            yield self.standardize_item(item_fix_footprint(item))
+                    except GEOSException as exc:
+                        raise ItemGeometryError(
+                            f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
                         )
-                    elif self.area.intersects(shape(item.geometry)):
-                        yield self.standardize_item(item_fix_footprint(item))
 
             else:
                 logger.debug("using dumb ls directory search at %s", str(self.endpoint))
@@ -122,13 +129,18 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                     day_subdir_schema=self.day_subdir_schema,
                     stac_json_endswith=self.stac_json_endswith,
                 ):
-                    item_path = item.get_self_href()
-                    if item_path in self.blacklist:  # pragma: no cover
-                        logger.debug(
-                            "item %s found in blacklist and skipping", item_path
+                    try:
+                        item_path = item.get_self_href()
+                        if item_path in self.blacklist:  # pragma: no cover
+                            logger.debug(
+                                "item %s found in blacklist and skipping", item_path
+                            )
+                        elif self.area.intersects(shape(item.geometry)):
+                            yield self.standardize_item(item_fix_footprint(item))
+                    except GEOSException as exc:
+                        raise ItemGeometryError(
+                            f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
                         )
-                    elif self.area.intersects(shape(item.geometry)):
-                        yield self.standardize_item(item_fix_footprint(item))
 
         if (self.area is not None and self.area.is_empty) or self.bounds is None:
             return IndexedFeatures([])

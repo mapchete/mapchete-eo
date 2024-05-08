@@ -13,7 +13,7 @@ from shapely import prepare
 from shapely.geometry import box, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.io.geometry import (
+from mapchete_eo.geometry import (
     bounds_to_geom,
     repair_antimeridian_geometry,
     transform_to_latlon,

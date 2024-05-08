@@ -26,8 +26,8 @@ from mapchete_eo.exceptions import (
     EmptyFootprintException,
     EmptyProductException,
 )
+from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
-from mapchete_eo.io.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle

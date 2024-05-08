@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2024.5.3 - 2024-05-08
+---------------------
+
+* core
+  * move `io.geometry` module to root
+  * `geometry.custom_transform()`: enable handling empty geometry
+  * added `exceptions.ItemGeometryError` and raise it when parsing geometries of STAC items fails
+
+
 2024.5.2 - 2024-05-07
 ---------------------
 

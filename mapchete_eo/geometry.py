@@ -251,7 +251,8 @@ def custom_transform(geometry: BaseGeometry, func: Callable) -> BaseGeometry:
     if geometry.is_empty:
         return geometry
 
-    return _any_geometry(geometry)
+    # make valid by buffering
+    return _any_geometry(geometry).buffer(0)
 
 
 def coords_transform(

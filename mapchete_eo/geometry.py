@@ -107,6 +107,9 @@ def buffer_antimeridian_safe(
     the buffer will only be applied to the edges facing away from the Antimeridian
     thus leaving the polygon intact if shifted back.
     """
+    if footprint.is_empty:
+        return footprint
+
     # repair geometry if it is broken
     footprint = footprint.buffer(0)
 
@@ -124,8 +127,18 @@ def buffer_antimeridian_safe(
             subpolygons.append(polygon)
         # (2) merge to single polygon
         merged = unary_union(subpolygons)
+
         # (3) apply buffer
-        buffered = buffer_antimeridian_safe(merged, buffer_m=buffer_m)
+        if isinstance(merged, MultiPolygon):
+            buffered = unary_union(
+                [
+                    buffer_antimeridian_safe(polygon, buffer_m=buffer_m)
+                    for polygon in merged.geoms
+                ]
+            )
+        else:
+            buffered = buffer_antimeridian_safe(merged, buffer_m=buffer_m)
+
         # (4) fix again
         return repair_antimeridian_geometry(buffered)
 

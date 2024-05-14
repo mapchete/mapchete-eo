@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.5.4 - 2024-05-14
+---------------------
+
+* core
+  * `io.geometry.buffer_antimeridian_safe()`: avoid recursion by buffering subpolygons separately instead of again trying to buffer a MultiPolygon
+
+
 2024.5.3 - 2024-05-08
 ---------------------
 

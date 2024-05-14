@@ -20,6 +20,7 @@ def test_transform_to_latlon_empty():
         lazy_fixture("antimeridian_item1"),
         lazy_fixture("antimeridian_item2"),
         lazy_fixture("antimeridian_item4"),
+        lazy_fixture("antimeridian_item5"),
     ],
 )
 def test_item_buffer_antimeridian_footprint(item):

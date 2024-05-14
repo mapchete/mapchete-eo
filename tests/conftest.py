@@ -655,6 +655,15 @@ def antimeridian_item4(testdata_dir):
 
 
 @pytest.fixture(scope="session")
+def antimeridian_item5(testdata_dir):
+    return pystac.Item.from_file(
+        testdata_dir
+        / "antimeridian_items"
+        / "S2A_OPER_MSI_L2A_TL_2APS_20230730T020155_A042312_T01VCC.json"
+    )
+
+
+@pytest.fixture(scope="session")
 def antimeridian_broken_item(testdata_dir):
     # this footprint is unfuckingfixable
     return pystac.Item.from_file(

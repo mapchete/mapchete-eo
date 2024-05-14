@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.5.5 - 2024-05-14
+---------------------
+
+* core
+  * `geometry.custom_transform()`: try to make output geometry valid
+
+
 2024.5.4 - 2024-05-14
 ---------------------
 

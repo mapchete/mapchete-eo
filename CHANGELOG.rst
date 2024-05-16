@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+
+2024.5.6 - 2024-05-16
+---------------------
+
+* core
+  * `geometry.buffer_antimeridian_safe()`: don't raise `EmptyFootprintException` on emtpy output (sub)geometry
+
+
+
 2024.5.5 - 2024-05-14
 ---------------------
 

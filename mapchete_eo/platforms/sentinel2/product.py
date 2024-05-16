@@ -386,8 +386,13 @@ class S2Product(EOProduct, EOProductProtocol):
         )
         if buffer_m:
             footprint = buffer_antimeridian_safe(shape(self), buffer_m=buffer_m)
+            if footprint.is_empty:
+                raise EmptyFootprintException(
+                    f"buffer value of {buffer_m} results in an empty geometry for footprint {shape(self).wkt}"
+                )
         else:
             footprint = shape(self)
+
         return ReferencedRaster(
             rasterize(
                 [reproject_geometry(footprint, self.crs, grid.crs)],

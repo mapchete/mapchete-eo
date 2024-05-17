@@ -1,11 +1,12 @@
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import click
 import numpy as np
 import pystac
 from mapchete.cli.options import opt_debug
+from mapchete.io import copy
 from mapchete.io.raster import read_raster_no_crs
 from mapchete.path import MPath
 from tqdm import tqdm
@@ -69,6 +70,7 @@ def verify_item(
     assets: List[str],
     asset_exists_check: bool = False,
     check_thumbnail: bool = True,
+    thumbnail_dir: Optional[MPath] = None,
 ):
     missing_asset_entries = []
     missing_assets = []
@@ -86,10 +88,14 @@ def verify_item(
             except AssetKeyError:
                 missing_asset_entries.append(asset)
     if check_thumbnail:
-        thumbnail_href = item.assets["thumbnail"].href
+        thumbnail_href = MPath.from_inp(item.assets["thumbnail"].href)
         logger.debug("check thumbnail %s for artefacts ...", thumbnail_href)
-        thumbnail = read_raster_no_crs(thumbnail_href)
-        color_artefacts = outlier_pixels_detected(thumbnail)
+        if thumbnail_dir:
+            thumbnail_path = thumbnail_dir / item.id + ".jpg"
+            copy(thumbnail_href, thumbnail_path)
+        else:
+            thumbnail_path = thumbnail_href
+        color_artefacts = outlier_pixels_detected(read_raster_no_crs(thumbnail_href))
     return Report(
         item,
         missing_asset_entries=missing_asset_entries,

@@ -78,6 +78,9 @@ arg_dst_path = click.argument("dst-path", type=click.Path(path_type=MPath))
 opt_dst_path = click.option(
     "--dst-path", type=click.Path(path_type=MPath), default=".", show_default=True
 )
+opt_thumbnail_dir = click.option(
+    "--thumbnail-dir", type=click.Path(path_type=MPath), default=None, show_default=True
+)
 opt_blacklist = click.option(
     "--blacklist",
     type=click.Path(path_type=MPath),

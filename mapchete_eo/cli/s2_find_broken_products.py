@@ -24,6 +24,7 @@ from mapchete_eo.product import add_to_blacklist, blacklist_products
 @options_arguments.opt_catalog_json
 @options_arguments.opt_assets
 @options_arguments.opt_blacklist
+@options_arguments.opt_thumbnail_dir
 @opt_debug
 def s2_find_broken_products(
     start_time: datetime,
@@ -37,6 +38,7 @@ def s2_find_broken_products(
     assets: List[str] = [],
     asset_exists_check: bool = True,
     blacklist: MPath = MPath("s3://eox-mhub-cache/blacklist.txt"),
+    thumbnail_dir: Optional[MPath] = None,
     **__,
 ):
     """Find broken Sentinel-2 products."""
@@ -60,7 +62,12 @@ def s2_find_broken_products(
     )
     blacklisted_products = blacklist_products(blacklist)
     for item in tqdm(catalog.items):
-        report = verify_item(item, assets=assets, asset_exists_check=asset_exists_check)
+        report = verify_item(
+            item,
+            assets=assets,
+            asset_exists_check=asset_exists_check,
+            thumbnail_dir=thumbnail_dir,
+        )
         for asset in report.missing_asset_entries:
             tqdm.write(f"[ERROR] {report.item.id} has no asset named '{asset}")
         for path in report.missing_assets:

@@ -494,7 +494,9 @@ class S2Product(EOProduct, EOProductProtocol):
             logger.debug(
                 "mask for product %s already full, skip reading other masks", self.id
             )
-        return ReferencedRaster(out, grid.transform, grid.bounds, grid.crs)
+        return ReferencedRaster(
+            out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
+        )
 
 
 def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:

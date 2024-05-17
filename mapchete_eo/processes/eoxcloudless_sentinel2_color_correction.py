@@ -263,7 +263,11 @@ def execute(
         else:
             corrected = filters.sharpen(corrected)
 
-    return ma.masked_where(corrected == out_nodata, corrected, copy=False)
+    return ma.masked_where(
+        np.repeat(np.expand_dims(nodata_mask, axis=0), corrected.shape[0], axis=0),
+        corrected,
+        copy=False,
+    )
 
 
 def _percent_masked(

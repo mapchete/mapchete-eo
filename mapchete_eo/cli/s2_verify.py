@@ -10,6 +10,7 @@ from mapchete.io.raster import read_raster_no_crs
 from mapchete.path import MPath
 from tqdm import tqdm
 
+from mapchete_eo.array.color import outlier_pixels
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.exceptions import AssetKeyError
 from mapchete_eo.platforms.sentinel2.product import asset_mpath
@@ -112,11 +113,11 @@ def outlier_pixels_detected(
     """
     _, width, height = arr.shape
     pixels = width * height
-    outlier_pixels = (arr.max(axis=axis) - arr.min(axis=axis) >= range_threshold).sum()
-    outlier_percent = outlier_pixels / pixels * 100
+    outliers = outlier_pixels(arr, axis=axis, range_threshold=range_threshold).sum()
+    outlier_percent = outliers / pixels * 100
     logger.debug(
         "%s (%s %%) suspicious pixels detected",
-        outlier_pixels,
+        outliers,
         round(outlier_percent, 2),
     )
     return outlier_percent > allowed_error_percentage

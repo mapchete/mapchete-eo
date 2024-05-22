@@ -4,6 +4,16 @@ Changelog
 
 
 
+2024.5.7 - 2024-05-22
+---------------------
+
+* core
+  * `processes.eoxcloudless_sentinel2_color_correction`: add optional `glacier_mask` input and fix nodata masking
+
+* CLI
+  * `s2-find-broken-products`: add option to dump product thumbnails
+
+
 2024.5.6 - 2024-05-16
 ---------------------
 

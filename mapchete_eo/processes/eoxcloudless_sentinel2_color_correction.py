@@ -4,11 +4,13 @@ from typing import Optional, Union
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
+from rasterio.features import rasterize
 from shapely import unary_union
 from shapely.geometry import shape
 
 from mapchete_eo import image_operations
 from mapchete_eo.array.buffer import buffer_array
+from mapchete_eo.array.convert import to_bands_mask
 from mapchete_eo.image_operations import compositing, filters
 from mapchete_eo.processes.config import RGBCompositeConfig
 from mapchete_eo.types import NodataVal
@@ -239,6 +241,19 @@ def execute(
                 ),
             )[:3]
 
+    if "glacier_mask" in mp.params["input"]:
+        glaciers = [feature["geometry"] for feature in mp.open("glacier_mask").read()]
+        if glaciers:
+            glacier_mask = to_bands_mask(
+                rasterize(
+                    glaciers,
+                    mp.tile.shape,
+                    transform=mp.tile.transform,
+                ).astype(bool),
+                bands=corrected.shape[0],
+            )
+            corrected[glacier_mask] = 255
+
     # Post Color Correction operations on RGB composites
 
     # smooth out water areas
@@ -263,7 +278,11 @@ def execute(
         else:
             corrected = filters.sharpen(corrected)
 
-    return ma.masked_where(corrected == out_nodata, corrected, copy=False)
+    return ma.masked_where(
+        to_bands_mask(nodata_mask, bands=corrected.shape[0]),
+        corrected,
+        copy=False,
+    )
 
 
 def _percent_masked(

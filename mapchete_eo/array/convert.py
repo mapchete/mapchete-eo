@@ -142,3 +142,17 @@ def to_dataset(
 
     else:  # pragma: no cover
         raise TypeError("only a 3D or 4D ma.MaskedArray is allowed.")
+
+
+def to_bands_mask(arr: np.ndarray, bands: int = 1) -> np.ndarray:
+    """Expands a 2D mask to a full band mask."""
+    if arr.ndim != 2:
+        raise TypeError("input array has to have exactly 2 dimensions.")
+    return np.repeat(
+        np.expand_dims(
+            arr,
+            axis=0,
+        ),
+        bands,
+        axis=0,
+    )

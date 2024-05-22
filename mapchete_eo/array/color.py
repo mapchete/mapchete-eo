@@ -18,3 +18,12 @@ def hex_to_rgb(hex_color):
     """
     channels = iter(hex_color.lstrip("#"))
     return tuple(int("".join(channel), 16) for channel in zip(channels, channels))
+
+
+def outlier_pixels(
+    arr: np.ndarray,
+    axis: int = 0,
+    range_threshold: int = 100,
+) -> np.ndarray:
+    """Detect outlier pixels containing extreme colors."""
+    return arr.max(axis=axis) - arr.min(axis=axis) >= range_threshold

@@ -13,7 +13,7 @@ from mapchete_eo import image_operations
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_bands_mask
 from mapchete_eo.image_operations import compositing, filters
-from mapchete_eo.processes.config import RGBCompositeConfig
+from mapchete_eo.processes.config import RGBCompositeConfig, SmoothConfig
 from mapchete_eo.types import NodataVal
 
 logger = logging.getLogger(__name__)
@@ -119,16 +119,8 @@ def execute(
         if isinstance(fillnodata_method, str)
         else fillnodata_method
     )
-    rgb_composite = (
-        RGBCompositeConfig(**rgb_composite)
-        if isinstance(rgb_composite, dict)
-        else rgb_composite
-    )
-    desert_rgb_composite = (
-        RGBCompositeConfig(**desert_rgb_composite)
-        if isinstance(desert_rgb_composite, dict)
-        else desert_rgb_composite
-    )
+    rgb_composite = RGBCompositeConfig.parse(rgb_composite)
+    desert_rgb_composite = RGBCompositeConfig.parse(desert_rgb_composite)
 
     logger.debug("read input mosaic")
     with mp.open("mosaic") as mosaic_inp:
@@ -258,20 +250,34 @@ def to_corrected_rgb(
     if water_mask.any():
         logger.debug("smooth water areas")
         corrected = ma.where(
-            water_mask,
-            filters.gaussian_blur(corrected, radius=6),
-            corrected,
-        )
-        corrected = ma.where(
             buffer_array(water_mask, buffer=2),
-            filters.smooth_more(corrected),
+            _smooth(corrected, config.smooth_water_config),
             corrected,
         )
 
     if config.sharpen:
         corrected = ma.where(water_mask, corrected, filters.sharpen(corrected))
 
+    if config.smooth:
+        corrected = _smooth(corrected, config.smooth_config)
+
     return corrected
+
+
+def _smooth(
+    rgb: ma.MaskedArray, smooth_config: SmoothConfig = SmoothConfig()
+) -> ma.MaskedArray:
+    smoothed = rgb
+
+    # gauss blur using radius
+    if smooth_config.radius:
+        smoothed = filters.gaussian_blur(rgb, radius=smooth_config.radius)
+
+    # using simple smooth_more
+    if smooth_config.smooth_more:
+        smoothed = filters.smooth_more(smoothed)
+
+    return smoothed
 
 
 def _water_mask(bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2) -> np.ndarray:
@@ -279,12 +285,12 @@ def _water_mask(bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2) -> np.
         raise ValueError("smooth_water only works with RGBNir bands")
 
     red, green, blue, nir = bands_array.astype(np.float16, copy=False)
-    return (
+    return to_bands_mask(
         np.where(
             ((green - nir) / (green + nir) > ndwi_threshold)
             & ((blue + green) / 2 > red),
             True,
             False,
-        )
-        + bands_array[0].mask
-    ).astype(bool)
+        ),
+        bands=len(bands_array),
+    )

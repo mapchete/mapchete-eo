@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.5.9 - 2024-05-23
+---------------------
+
+* core
+  * `image_operations`: add typing
+  * `image_operations.compositing.to_rgba`: fix cases where mask of masked_array is a single bool value
+
+
 2024.5.8 - 2024-05-23
 ---------------------
 

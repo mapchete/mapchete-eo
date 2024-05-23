@@ -4,6 +4,7 @@ from typing import Optional, Union
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
+from numpy.typing import DTypeLike
 from rasterio.features import rasterize
 from shapely import unary_union
 from shapely.geometry import shape
@@ -12,7 +13,7 @@ from mapchete_eo import image_operations
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_bands_mask
 from mapchete_eo.image_operations import compositing, filters
-from mapchete_eo.processes.config import RGBCompositeConfig
+from mapchete_eo.processes.config import RGBCompositeConfig, SmoothConfig
 from mapchete_eo.types import NodataVal
 
 logger = logging.getLogger(__name__)
@@ -118,16 +119,8 @@ def execute(
         if isinstance(fillnodata_method, str)
         else fillnodata_method
     )
-    rgb_composite = (
-        RGBCompositeConfig(**rgb_composite)
-        if isinstance(rgb_composite, dict)
-        else rgb_composite
-    )
-    desert_rgb_composite = (
-        RGBCompositeConfig(**desert_rgb_composite)
-        if isinstance(desert_rgb_composite, dict)
-        else desert_rgb_composite
-    )
+    rgb_composite = RGBCompositeConfig.parse(rgb_composite)
+    desert_rgb_composite = RGBCompositeConfig.parse(desert_rgb_composite)
 
     logger.debug("read input mosaic")
     with mp.open("mosaic") as mosaic_inp:
@@ -161,37 +154,8 @@ def execute(
         )
         nodata_mask = mosaic.mask[0].copy()
 
-    # get water masks
-    if rgb_composite.smooth_water:
-        water_mask = _water_mask(
-            mosaic, ndwi_threshold=rgb_composite.smooth_water_ndwi_threshold
-        )
-        logger.debug(
-            "Input mosaic tile is "
-            f"{_percent_masked(water_mask, nodata_mask)} % water"
-        )
-
     # apply color correction
-    corrected = image_operations.color_correct(
-        rgb=image_operations.linear_normalization(
-            bands=mosaic[:3],
-            bands_minmax_values=(
-                rgb_composite.red,
-                rgb_composite.green,
-                rgb_composite.blue,
-            ),
-            out_dtype=str(out_dtype),
-        ),
-        gamma=rgb_composite.gamma,
-        clahe_flag=rgb_composite.clahe_flag,
-        clahe_clip_limit=rgb_composite.clahe_clip_limit,
-        clahe_tile_grid_size=rgb_composite.clahe_tile_grid_size,
-        sigmoidal_flag=rgb_composite.sigmoidal_flag,
-        sigmoidal_constrast=rgb_composite.sigmoidal_contrast,
-        sigmoidal_bias=rgb_composite.sigmoidal_bias,
-        saturation=rgb_composite.saturation,
-        calculations_dtype=rgb_composite.calculations_dtype,
-    )
+    corrected = to_corrected_rgb(mosaic, config=rgb_composite, out_dtype=out_dtype)
 
     # apply special color correction to desert areas and merge with corrected
     if desert_color_correction_flag:
@@ -205,38 +169,23 @@ def execute(
             )
 
         if not desert_mask.is_empty:
-            # clip original mosaic with desert mask
+            logger.debug("apply other color correction for desert areas")
             desert_mosaic = mp.clip(
                 mosaic, [dict(geometry=desert_mask)], inverted=False
-            ).astype("uint16")[:3]
-            logger.debug("apply other color correction for desert areas")
-            # apply custom scaling to 8bit
-            # apply custom color correction
+            )
+            desert_corrected = to_corrected_rgb(
+                # clip original mosaic with desert mask
+                desert_mosaic,
+                config=desert_rgb_composite,
+                out_dtype=out_dtype,
+            )
+
             # merge with existing corrected pixels
             corrected = compositing.normal(
-                image_operations.color_correct(
-                    rgb=image_operations.linear_normalization(
-                        bands=desert_mosaic,
-                        bands_minmax_values=(
-                            desert_rgb_composite.red,
-                            desert_rgb_composite.green,
-                            desert_rgb_composite.blue,
-                        ),
-                        out_dtype=str(out_dtype),
-                    ),
-                    gamma=desert_rgb_composite.gamma,
-                    clahe_flag=desert_rgb_composite.clahe_flag,
-                    clahe_clip_limit=desert_rgb_composite.clahe_clip_limit,
-                    clahe_tile_grid_size=desert_rgb_composite.clahe_tile_grid_size,
-                    sigmoidal_flag=desert_rgb_composite.sigmoidal_flag,
-                    sigmoidal_constrast=desert_rgb_composite.sigmoidal_contrast,
-                    sigmoidal_bias=desert_rgb_composite.sigmoidal_bias,
-                    saturation=desert_rgb_composite.saturation,
-                    calculations_dtype=desert_rgb_composite.calculations_dtype,
-                ),
+                desert_corrected,
                 compositing.fuzzy_alpha_mask(
                     corrected,
-                    mask=desert_mosaic.mask,
+                    mask=desert_mosaic.mask[:3],
                     radius=desert_rgb_composite.fuzzy_radius,
                 ),
             )[:3]
@@ -252,31 +201,10 @@ def execute(
                 ).astype(bool),
                 bands=corrected.shape[0],
             )
+            nodata_mask[glacier_mask[0]] = False
             corrected[glacier_mask] = 255
 
     # Post Color Correction operations on RGB composites
-
-    # smooth out water areas
-    if rgb_composite.smooth_water and water_mask.any():
-        logger.debug("smooth water areas")
-        corrected = ma.where(
-            water_mask,
-            filters.gaussian_blur(corrected, radius=6),
-            corrected,
-        )
-        corrected = ma.where(
-            buffer_array(water_mask, buffer=2),
-            filters.smooth_more(corrected),
-            corrected,
-        )
-
-    # sharpen non-water areas
-    if rgb_composite.sharpen:
-        if rgb_composite.smooth_water and not water_mask.all():
-            logger.debug("sharpen output")
-            corrected = ma.where(water_mask, corrected, filters.sharpen(corrected))
-        else:
-            corrected = filters.sharpen(corrected)
 
     return ma.masked_where(
         to_bands_mask(nodata_mask, bands=corrected.shape[0]),
@@ -285,33 +213,84 @@ def execute(
     )
 
 
-def _percent_masked(
-    mask: np.ndarray,
-    nodata_mask: np.ndarray,
-    round_by: int = 2,
-) -> float:
-    # divide number of masked and valid pixels by number of valid pixels
-    return round(
-        100
-        * np.where(nodata_mask, False, mask).sum()
-        / (nodata_mask.size - nodata_mask.sum()),
-        round_by,
-    )
-
-
-def _water_mask(
-    bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2
+def to_corrected_rgb(
+    mosaic: ma.MaskedArray,
+    config: RGBCompositeConfig = RGBCompositeConfig(),
+    out_dtype: DTypeLike = np.uint8,
 ) -> ma.MaskedArray:
+    corrected = image_operations.color_correct(
+        rgb=image_operations.linear_normalization(
+            bands=mosaic[:3],
+            bands_minmax_values=(
+                config.red,
+                config.green,
+                config.blue,
+            ),
+            out_dtype=out_dtype,
+        ),
+        gamma=config.gamma,
+        clahe_flag=config.clahe_flag,
+        clahe_clip_limit=config.clahe_clip_limit,
+        clahe_tile_grid_size=config.clahe_tile_grid_size,
+        sigmoidal_flag=config.sigmoidal_flag,
+        sigmoidal_constrast=config.sigmoidal_contrast,
+        sigmoidal_bias=config.sigmoidal_bias,
+        saturation=config.saturation,
+        calculations_dtype=np.dtype(config.calculations_dtype),
+    )
+    # get water masks
+    if config.smooth_water:
+        water_mask = _water_mask(
+            mosaic, ndwi_threshold=config.smooth_water_ndwi_threshold
+        )[:3]
+    else:
+        water_mask = np.zeros(mosaic.shape, dtype=bool)[:3]
+
+    # smooth out water areas
+    if water_mask.any():
+        logger.debug("smooth water areas")
+        corrected = ma.where(
+            buffer_array(water_mask, buffer=2),
+            _smooth(corrected, config.smooth_water_config),
+            corrected,
+        )
+
+    if config.sharpen:
+        corrected = ma.where(water_mask, corrected, filters.sharpen(corrected))
+
+    if config.smooth:
+        corrected = _smooth(corrected, config.smooth_config)
+
+    return corrected
+
+
+def _smooth(
+    rgb: ma.MaskedArray, smooth_config: SmoothConfig = SmoothConfig()
+) -> ma.MaskedArray:
+    smoothed = rgb
+
+    # gauss blur using radius
+    if smooth_config.radius:
+        smoothed = filters.gaussian_blur(rgb, radius=smooth_config.radius)
+
+    # using simple smooth_more
+    if smooth_config.smooth_more:
+        smoothed = filters.smooth_more(smoothed)
+
+    return smoothed
+
+
+def _water_mask(bands_array: ma.MaskedArray, ndwi_threshold: float = 0.2) -> np.ndarray:
     if len(bands_array) != 4:  # pragma: no cover
         raise ValueError("smooth_water only works with RGBNir bands")
 
     red, green, blue, nir = bands_array.astype(np.float16, copy=False)
-    return ma.MaskedArray(
-        data=np.where(
+    return to_bands_mask(
+        np.where(
             ((green - nir) / (green + nir) > ndwi_threshold)
             & ((blue + green) / 2 > red),
             True,
             False,
         ),
-        mask=bands_array[0].mask,
+        bands=len(bands_array),
     )

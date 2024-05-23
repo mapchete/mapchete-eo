@@ -3,6 +3,12 @@ Changelog
 #########
 
 
+2024.5.8 - 2024-05-23
+---------------------
+
+* core
+  * `processes.eoxcloudless_sentinel2_color_correction`: streamline code; enable configuration of smooth operations
+
 
 2024.5.7 - 2024-05-22
 ---------------------

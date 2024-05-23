@@ -27,7 +27,7 @@ class RGBCompositeConfig(BaseModel):
     saturation: float = 1.3
     clahe_flag: bool = True
     clahe_clip_limit: float = 3.2
-    clahe_tile_grid_size: tuple = (32, 32)
+    clahe_tile_grid_size: Tuple[int, int] = (32, 32)
     sigmoidal_flag: bool = False
     sigmoidal_contrast: int = 0
     sigmoidal_bias: float = 0.0

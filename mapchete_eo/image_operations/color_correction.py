@@ -1,8 +1,11 @@
 import logging
+from typing import Tuple
 
 import cv2
 import numpy as np
 import numpy.ma as ma
+from numpy.typing import DTypeLike
+from rasterio.plot import reshape_as_image, reshape_as_raster
 
 from mapchete_eo.image_operations.sigmoidal import sigmoidal
 
@@ -14,12 +17,12 @@ def color_correct(
     gamma: float = 1.15,
     clahe_flag: bool = True,
     clahe_clip_limit: float = 1.25,
-    clahe_tile_grid_size: tuple = (32, 32),
+    clahe_tile_grid_size: Tuple[int, int] = (32, 32),
     sigmoidal_flag: bool = False,
     sigmoidal_constrast: int = 0,
     sigmoidal_bias: float = 0.0,
     saturation: float = 3.2,
-    calculations_dtype: np.dtype = "float16",
+    calculations_dtype: DTypeLike = np.float16,
 ) -> ma.MaskedArray:
     """
     Return color corrected 8 bit RGB array from 8 bit input RGB.
@@ -58,11 +61,12 @@ def color_correct(
     rgb_src_fill_value = rgb.fill_value
 
     # Move bands to the last axis
-    rgb = np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False)
+    # rgb = np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False)
+    rgb_image = reshape_as_image(rgb)
 
     # Saturation from OpenVC
     if saturation != 1.0:
-        imghsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV).astype(
+        imghsv = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV).astype(
             calculations_dtype, copy=False
         )
         (h, s, v) = cv2.split(imghsv)
@@ -70,7 +74,7 @@ def color_correct(
         imghsv = cv2.merge([h, np.clip(s * saturation, 1, 255), v]).astype(
             np.uint8, copy=False
         )
-        rgb = np.clip(
+        rgb_image = np.clip(
             cv2.cvtColor(imghsv, cv2.COLOR_HSV2RGB),
             1,
             255,  # clip valid values to 1 and 255 to avoid accidental nodata values
@@ -80,12 +84,11 @@ def color_correct(
     # Swap bands from last axis to the first one as we are acusstomed to
     # For the sigmodial contrast
     if sigmoidal_flag is True:
-        rgb = np.clip(
+        rgb_image = np.clip(
             (
                 sigmoidal(
                     np.clip(
-                        np.swapaxes(rgb, 0, 2).astype(calculations_dtype, copy=False)
-                        / 255,
+                        rgb_image.astype(calculations_dtype, copy=False) / 255,
                         0,
                         1,
                     ).astype(calculations_dtype, copy=False),
@@ -98,20 +101,20 @@ def color_correct(
             1,
             255,
         ).astype(np.uint8, copy=False)
-    else:
-        rgb = np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False)
 
     # Gamma from rio-color
     if gamma != 1.0:
-        rgb = np.clip(
-            ((rgb.astype(calculations_dtype) / 255) ** (1.0 / gamma)) * 255, 1, 255
+        rgb_image = np.clip(
+            ((rgb_image.astype(calculations_dtype) / 255) ** (1.0 / gamma)) * 255,
+            1,
+            255,
         ).astype(np.uint8, copy=False)
 
     # CLAHE from OpenVC
     # Some CLAHE info: https://imagej.net/plugins/clahe
     if clahe_flag is True:
         lab = cv2.cvtColor(
-            np.swapaxes(rgb, 0, 2).astype(np.uint8, copy=False), cv2.COLOR_RGB2LAB
+            rgb_image.astype(np.uint8, copy=False), cv2.COLOR_RGB2LAB
         ).astype(np.uint8, copy=False)
         lab_planes = list(cv2.split(lab))
         clahe = cv2.createCLAHE(
@@ -119,15 +122,15 @@ def color_correct(
         )
         lab_planes[0] = clahe.apply(lab_planes[0])
         lab = cv2.merge(lab_planes)
-        rgb = np.swapaxes(
-            np.clip(
-                cv2.cvtColor(lab, cv2.COLOR_LAB2RGB),
-                1,
-                255,  # clip valid values to 1 and 255 to avoid accidental nodata values
-            ),
-            0,
-            2,
+        rgb_image = np.clip(
+            cv2.cvtColor(lab, cv2.COLOR_LAB2RGB),
+            1,
+            255,  # clip valid values to 1 and 255 to avoid accidental nodata values
         ).astype(np.uint8, copy=False)
 
     # Return array with original mask
-    return ma.masked_array(data=rgb, mask=rgb_src_mask, fill_value=rgb_src_fill_value)
+    return ma.masked_array(
+        data=reshape_as_raster(rgb_image),
+        mask=rgb_src_mask,
+        fill_value=rgb_src_fill_value,
+    )

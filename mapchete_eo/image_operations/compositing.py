@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 def to_rgba(arr: np.ndarray) -> np.ndarray:
+    def _expanded_mask(arr: ma.MaskedArray) -> np.ndarray:
+        if isinstance(arr.mask, np.bool_):
+            return np.full(arr.shape, fill_value=arr.mask, dtype=bool)
+        else:
+            return arr.mask
+
     # make sure array is a proper MaskedArray with expanded mask
     if not isinstance(arr, ma.MaskedArray):
         arr = ma.masked_array(arr, mask=np.zeros(arr.shape, dtype=bool))
@@ -20,14 +26,20 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
         raise TypeError(f"image array must be of type uint8, not {str(arr.dtype)}")
     num_bands = arr.shape[0]
     if num_bands == 1:
-        alpha = np.where(~arr[0].mask, 255, 0).astype(np.uint8, copy=False)
+        alpha = np.where(~_expanded_mask(arr[0]), 255, 0).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[0], arr[0], alpha]).data
     elif num_bands == 2:
         out = np.stack([arr[0], arr[0], arr[0], arr[1]]).data
     elif num_bands == 3:
-        alpha = np.where((~arr[0].mask & ~arr[1].mask & ~arr[2].mask), 255, 0).astype(
-            np.uint8, copy=False
-        )
+        alpha = np.where(
+            (
+                ~_expanded_mask(arr[0])
+                & ~_expanded_mask(arr[1])
+                & ~_expanded_mask(arr[2])
+            ),
+            255,
+            0,
+        ).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data
     elif num_bands == 4:
         out = arr.data

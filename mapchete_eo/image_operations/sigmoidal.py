@@ -1,7 +1,5 @@
-from typing import Union
-
 import numpy as np
-import numpy.ma as ma
+from numpy.typing import DTypeLike
 
 # The type to be used for all intermediate math
 # operations. Should be a float because values will
@@ -9,14 +7,14 @@ import numpy.ma as ma
 
 math_type = np.float16
 
-epsilon = np.finfo(math_type).eps
+epsilon = float(np.finfo(math_type).eps)
 
 
 def sigmoidal(
-    arr: Union[np.array, ma.masked_array],
+    arr: np.ndarray,
     contrast: int,
     bias: float,
-    out_dtype: Union[str, np.dtype] = "float16",
+    out_dtype: DTypeLike = np.float16,
 ):
     """
     Taken from rio-color (consult sevcikp for changes)

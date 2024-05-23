@@ -31,7 +31,7 @@ FILTER_FUNCTIONS = {
 }
 
 
-def _apply_filter(arr, img_filter, **kwargs):
+def _apply_filter(arr: np.ndarray, img_filter: str, **kwargs) -> np.ndarray:
     if arr.dtype != "uint8":
         raise TypeError("input array type must be uint8")
     if arr.ndim != 3:
@@ -56,9 +56,11 @@ def _apply_filter(arr, img_filter, **kwargs):
             1,
             255,
         ).astype("uint8", copy=False)
+    else:
+        raise KeyError(f"{img_filter} not found")
 
 
-def blur(arr):
+def blur(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL blur filter to array and return.
 
@@ -73,7 +75,7 @@ def blur(arr):
     return _apply_filter(arr, "blur")
 
 
-def contour(arr):
+def contour(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL contour filter to array and return.
 
@@ -88,7 +90,7 @@ def contour(arr):
     return _apply_filter(arr, "contour")
 
 
-def detail(arr):
+def detail(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL detail filter to array and return.
 
@@ -103,7 +105,7 @@ def detail(arr):
     return _apply_filter(arr, "detail")
 
 
-def edge_enhance(arr):
+def edge_enhance(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL edge_enhance filter to array and return.
 
@@ -118,7 +120,7 @@ def edge_enhance(arr):
     return _apply_filter(arr, "edge_enhance")
 
 
-def edge_enhance_more(arr):
+def edge_enhance_more(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL edge_enhance_more filter to array and return.
 
@@ -133,7 +135,7 @@ def edge_enhance_more(arr):
     return _apply_filter(arr, "edge_enhance_more")
 
 
-def emboss(arr):
+def emboss(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL emboss filter to array and return.
 
@@ -148,7 +150,7 @@ def emboss(arr):
     return _apply_filter(arr, "emboss")
 
 
-def find_edges(arr):
+def find_edges(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL find_edges filter to array and return.
 
@@ -163,7 +165,7 @@ def find_edges(arr):
     return _apply_filter(arr, "find_edges")
 
 
-def sharpen(arr):
+def sharpen(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL sharpen filter to array and return.
 
@@ -178,7 +180,7 @@ def sharpen(arr):
     return _apply_filter(arr, "sharpen")
 
 
-def smooth(arr):
+def smooth(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL smooth filter to array and return.
 
@@ -193,7 +195,7 @@ def smooth(arr):
     return _apply_filter(arr, "smooth")
 
 
-def smooth_more(arr):
+def smooth_more(arr: np.ndarray) -> np.ndarray:
     """
     Apply PIL smooth_more filter to array and return.
 
@@ -208,7 +210,9 @@ def smooth_more(arr):
     return _apply_filter(arr, "smooth_more")
 
 
-def unsharp_mask(arr, radius=2, percent=150, threshold=3):
+def unsharp_mask(
+    arr: np.ndarray, radius: int = 2, percent: float = 150, threshold: float = 3
+) -> np.ndarray:
     """
     Apply PIL UnsharpMask filter to array and return.
 
@@ -225,7 +229,7 @@ def unsharp_mask(arr, radius=2, percent=150, threshold=3):
     )
 
 
-def median(arr, size=3):
+def median(arr: np.ndarray, size: int = 3) -> np.ndarray:
     """
     Apply PIL MedianFilter to array and return.
 
@@ -240,7 +244,7 @@ def median(arr, size=3):
     return _apply_filter(arr, "median", size=size)
 
 
-def gaussian_blur(arr, radius=2):
+def gaussian_blur(arr: np.ndarray, radius: int = 2) -> np.ndarray:
     """
     Apply PIL GaussianBlur to array and return.
 
@@ -259,7 +263,7 @@ def gaussian_blur(arr, radius=2):
 ##########################
 
 
-def sharpen_16bit(src):
+def sharpen_16bit(arr: np.ndarray) -> np.ndarray:
     # kernel_3x3_highpass = np.array([
     #     0, -1, 0,
     #     -1, 5, -1,
@@ -305,11 +309,11 @@ def sharpen_16bit(src):
         [
             ndimage.percentile_filter(
                 b
-                + (b - ndimage.percentile_filter(b, 35, src.shape[0], mode="nearest")),
+                + (b - ndimage.percentile_filter(b, 35, arr.shape[0], mode="nearest")),
                 45,
                 2,
                 mode="nearest",
             )
-            for b in src
+            for b in arr
         ]
-    ).astype(np.uint16, copy=False)
+    ).astype(arr.dtype, copy=False)

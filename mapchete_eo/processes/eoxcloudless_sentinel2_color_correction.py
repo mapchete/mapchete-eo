@@ -188,7 +188,7 @@ def execute(
                     mask=desert_mosaic.mask[:3],
                     radius=desert_rgb_composite.fuzzy_radius,
                 ),
-            )[:3]
+            )
 
     if "glacier_mask" in mp.params["input"]:
         glaciers = [feature["geometry"] for feature in mp.open("glacier_mask").read()]
@@ -271,11 +271,13 @@ def _smooth(
 
     # gauss blur using radius
     if smooth_config.radius:
-        smoothed = filters.gaussian_blur(rgb, radius=smooth_config.radius)
+        smoothed = ma.masked_array(
+            filters.gaussian_blur(rgb, radius=smooth_config.radius)
+        )
 
     # using simple smooth_more
     if smooth_config.smooth_more:
-        smoothed = filters.smooth_more(smoothed)
+        smoothed = ma.masked_array(filters.smooth_more(smoothed))
 
     return smoothed
 

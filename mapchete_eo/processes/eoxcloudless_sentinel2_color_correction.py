@@ -188,7 +188,7 @@ def execute(
                     mask=desert_mosaic.mask[:3],
                     radius=desert_rgb_composite.fuzzy_radius,
                 ),
-            )
+            )[:3]
 
     if "glacier_mask" in mp.params["input"]:
         glaciers = [feature["geometry"] for feature in mp.open("glacier_mask").read()]

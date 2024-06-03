@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.6.0 - 2024-06-03
+---------------------
+
+* core
+  * `processes.eoxcloudless_sentinel2_color_correction`: fix 3-band issue
+
+
 2024.5.9 - 2024-05-23
 ---------------------
 

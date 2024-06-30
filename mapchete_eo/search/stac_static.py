@@ -6,10 +6,10 @@ from typing import List, Optional, Tuple, Union
 import pystac
 from mapchete.io.vector import IndexedFeatures, bounds_intersect
 from mapchete.path import MPathLike
-from mapchete.types import BaseGeometry
 from pystac.stac_io import StacIO
 from pystac_client import Client
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.search.base import (

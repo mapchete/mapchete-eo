@@ -2,7 +2,6 @@ blend-modes
 click
 croniter
 lxml
-mapchete-xarray
 mapchete>=2024.7.1
 opencv-python
 orgonite
@@ -10,9 +9,6 @@ pillow
 pydantic
 pystac-client>=0.7.5
 pystac[urllib3]>=1.8.3
-pytest-coverage
-pytest-lazy-fixture
-pytest<8
 retry
 rtree
 scipy

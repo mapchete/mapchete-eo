@@ -13,8 +13,8 @@ Changelog
 * packaging
   * bump `mapchete` to 2024.7.1
   * align dependencies `requirements.txt`, `requirements-dev.txt` with `pyproject.toml` with `hatch` package
-    * `hatch dep show requirements --all`
-    * `hatch dep show requirements --all >> requirements.txt`  
+    * `hatch dep show requirements`
+    * `hatch dep show requirements >> requirements.txt`  
   * `requrements-dev.txt` still need to be managed manually when required
 
 

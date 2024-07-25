@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 import numpy.ma as ma
+from mapchete.io.raster.array import clip_array_with_vector
 from shapely import unary_union
 from shapely.geometry import Polygon, shape
 
@@ -66,9 +67,12 @@ def execute(
             if fillnodata:
                 out = ma.clip(out, 1, 255).astype(np.uint8, copy=False)
     if not mask_geom.is_empty or not mask_geom.equals(mp.tile.bbox):
-        out = mp.clip(out, [{"geometry": mask_geom}], inverted=True).astype(
-            np.uint8, copy=False
-        )
+        out = clip_array_with_vector(
+            array=out,
+            array_affine=mp.tile.affine,
+            geometries=[{"geometry": mask_geom}],
+            inverted=True,
+        ).astype(np.uint8, copy=False)
 
     # interpolate tiny nodata gaps
     if fillnodata:
@@ -84,8 +88,11 @@ def execute(
     if "land_mask" in mp.input:
         with mp.open("land_mask") as src:
             out = compositing.normal(
-                mp.clip(
-                    color_array(mp.tile.shape, land_color), src.read(), inverted=False
+                clip_array_with_vector(
+                    array=color_array(mp.tile.shape, land_color),
+                    array_affine=mp.tile.affine,
+                    geometries=src.read(),
+                    inverted=False,
                 ),
                 out,
             )

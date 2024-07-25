@@ -4,6 +4,7 @@ from typing import Optional, Union
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
+from mapchete.io.raster.array import clip_array_with_vector
 from numpy.typing import DTypeLike
 from rasterio.features import rasterize
 from shapely import unary_union
@@ -170,8 +171,12 @@ def execute(
 
         if not desert_mask.is_empty:
             logger.debug("apply other color correction for desert areas")
-            desert_mosaic = mp.clip(
-                mosaic, [dict(geometry=desert_mask)], inverted=False
+            desert_mosaic = clip_array_with_vector(
+                array=mosaic,
+                array_affine=mp.tile.affine,
+                geometries=[dict(geometry=desert_mask)],
+                inverted=False,
+                clip_buffer=0,
             )
             desert_corrected = to_corrected_rgb(
                 # clip original mosaic with desert mask

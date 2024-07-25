@@ -3,6 +3,22 @@ Changelog
 #########
 
 
+2024.7.0 - 2024-07-25
+---------------------
+
+* core
+  * fix import for `BaseGeometry` in ``stac_static.py``, now imported from `shapely.geometry.base` and not from `mapchete.types`
+  * replace `mp.clip` with `from mapchete.io.raster.array import clip_array_with_vector` in processes `rgb_map` and `sentinel2_color_correction`
+* CI
+  * use `2024.7.0` docker-base mapchete image for tests
+* packaging
+  * bump `mapchete` to 2024.7.1
+  * align dependencies `requirements.txt`, `requirements-dev.txt` with `pyproject.toml` with `hatch` package
+    * `hatch dep show requirements`
+    * `hatch dep show requirements >> requirements.txt`  
+  * `requrements-dev.txt` still need to be managed manually when required
+
+
 2024.6.0 - 2024-06-03
 ---------------------
 

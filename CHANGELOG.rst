@@ -3,6 +3,21 @@ Changelog
 #########
 
 
+2024.7.0 - 2024-07-25
+---------------------
+
+* core
+  * fix import for `BaseGeometry` in ``stac_static.py``, now imported from `shapely.geometry.base` and not from `mapchete.types`
+* CI
+  * use `2024.7.0` docker-base mapchete image for tests
+* packaging
+  * bump `mapchete` to 2024.7.1
+  * align dependencies `requirements.txt`, `requirements-dev.txt` with `pyproject.toml` with `hatch` package
+    * `hatch dep show requirements --all`
+    * `hatch dep show requirements --all >> requirements.txt`  
+  * `requrements-dev.txt` still need to be managed manually when required
+
+
 2024.6.0 - 2024-06-03
 ---------------------
 

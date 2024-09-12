@@ -1,3 +1,4 @@
+from mapchete import MapcheteNodataTile
 import numpy.ma as ma
 import pytest
 
@@ -8,6 +9,7 @@ from mapchete_eo.processes import (
     eoxcloudless_mosaic_merge,
     eoxcloudless_rgb_map,
     eoxcloudless_sentinel2_color_correction,
+    eoxcloudless_scl_mosaic,
     merge_rasters,
 )
 
@@ -103,3 +105,25 @@ def test_eoxcloudless_mosaic_regions_merge(eoxcloudless_mosaic_regions_merge_map
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.all()
     assert ma.mean(output) > 200
+
+
+@pytest.mark.parametrize(
+    "selection_method",
+    [
+        eoxcloudless_scl_mosaic.SelectionMethod.first_permanent,
+        eoxcloudless_scl_mosaic.SelectionMethod.majority,
+    ],
+)
+def test_eoxcloudless_scl_mosaic(eoxcloudless_mosaic_mapchete, selection_method):
+    sentinel2_input_tile = eoxcloudless_mosaic_mapchete.process_mp().open("sentinel2")
+    eoxcloudless_scl_mosaic.execute(
+        sentinel2_input_tile, selection_method=selection_method
+    )
+
+
+def test_eoxcloudless_scl_mosaic_empty(eoxcloudless_mosaic_mapchete):
+    sentinel2_input_tile = eoxcloudless_mosaic_mapchete.process_mp(tile=(9, 0, 0)).open(
+        "sentinel2"
+    )
+    with pytest.raises(MapcheteNodataTile):
+        eoxcloudless_scl_mosaic.execute(sentinel2_input_tile)

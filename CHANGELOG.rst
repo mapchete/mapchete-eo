@@ -3,14 +3,35 @@ Changelog
 #########
 
 
+2024.9.0 - 2024-09-12
+---------------------
+
+* core
+
+  * `mapchete_eo.io.assets._read_vector_mask()`: fix deprecation bug due to Fiona changing error messages
+  * add `processes.eoxcloudless_scl_mosaic` process
+  * replace `mp.clip` with `clip_array_with_vector` from latest mapchete version
+  * `mapchete_eo.processes`: use typing to define inputs
+
+* CI
+
+  * use `2024.9.1` docker-base mapchete image for tests
+
+* packaging
+
+  * use `ruff` instead of `black`, `flake8` and `isort`
+
+
 2024.7.0 - 2024-07-25
 ---------------------
 
 * core
   * fix import for `BaseGeometry` in ``stac_static.py``, now imported from `shapely.geometry.base` and not from `mapchete.types`
   * replace `mp.clip` with `from mapchete.io.raster.array import clip_array_with_vector` in processes `rgb_map` and `sentinel2_color_correction`
+
 * CI
   * use `2024.7.0` docker-base mapchete image for tests
+
 * packaging
   * bump `mapchete` to 2024.7.1
   * align dependencies `requirements.txt`, `requirements-dev.txt` with `pyproject.toml` with `hatch` package

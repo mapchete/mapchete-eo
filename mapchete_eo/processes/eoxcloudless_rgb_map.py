@@ -1,8 +1,9 @@
 import logging
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import numpy.ma as ma
+from mapchete import MapcheteNodataTile, RasterInput, VectorInput
 from mapchete.io.raster.array import clip_array_with_vector
 from shapely import unary_union
 from shapely.geometry import Polygon, shape
@@ -15,7 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def execute(
-    mp,
+    mosaic: RasterInput,
+    mosaic_mask: Optional[VectorInput] = None,
+    land_mask: Optional[VectorInput] = None,
+    fuzzy_ocean_mask: Optional[RasterInput] = None,
+    ocean_depth: Optional[RasterInput] = None,
+    bathymetry: Optional[RasterInput] = None,
     matching_method: str = "min",
     matching_max_zoom: int = 13,
     matching_precision: int = 8,
@@ -33,43 +39,42 @@ def execute(
     fillnodata_max_nodata_neighbors: int = 9,
     fillnodata_max_search_distance: float = 0.5,
     fillnodata_smoothing_iterations: int = 3,
-):
+) -> ma.MaskedArray:
     fillnodata_method = (
         image_operations.FillSelectionMethod[fillnodata_method]
         if isinstance(fillnodata_method, str)
         else fillnodata_method
     )
+    tile = mosaic.tile
 
     # read bad aois mask
-    if "mosaic_mask" in mp.params["input"]:
-        mask_geom = unary_union(
-            [shape(f["geometry"]) for f in mp.open("mosaic_mask").read()]
-        )
+    if mosaic_mask:
+        mask_geom = unary_union([shape(f["geometry"]) for f in mosaic_mask.read()])
     else:
         mask_geom = Polygon()
 
     # just return empty array, when mask covers tile completely
-    if mask_geom.equals(mp.tile.bbox):
-        out_shape = (3, *mp.tile.shape)
-        out = ma.masked_array(
+    if mask_geom.equals(tile.bbox):
+        out_shape = (3, *tile.shape)
+        out: ma.MaskedArray = ma.MaskedArray(
             data=np.zeros(out_shape, dtype=np.uint8),
             mask=np.ones(out_shape, dtype=bool),
-        ).astype(np.uint8, copy=False)
+            dtype=np.uint8,
+        )
     else:
-        with mp.open("mosaic") as src:
-            out = src.read(
-                resampling=resampling,
-                matching_method=matching_method,
-                matching_max_zoom=matching_max_zoom,
-                matching_precision=matching_precision,
-                fallback_to_higher_zoom=fallback_to_higher_zoom,
-            )
-            if fillnodata:
-                out = ma.clip(out, 1, 255).astype(np.uint8, copy=False)
-    if not mask_geom.is_empty or not mask_geom.equals(mp.tile.bbox):
+        out = mosaic.read(
+            resampling=resampling,
+            matching_method=matching_method,
+            matching_max_zoom=matching_max_zoom,
+            matching_precision=matching_precision,
+            fallback_to_higher_zoom=fallback_to_higher_zoom,
+        )
+        if fillnodata:
+            out = ma.clip(out, 1, 255, dtype=np.uint8)
+    if not mask_geom.is_empty or not mask_geom.equals(tile.bbox):
         out = clip_array_with_vector(
             array=out,
-            array_affine=mp.tile.affine,
+            array_affine=tile.affine,
             geometries=[{"geometry": mask_geom}],
             inverted=True,
         ).astype(np.uint8, copy=False)
@@ -83,43 +88,39 @@ def execute(
             max_nodata_neighbors=fillnodata_max_nodata_neighbors,
             max_search_distance=fillnodata_max_search_distance,
             smoothing_iterations=fillnodata_smoothing_iterations,
-        ).astype(np.uint8, copy=False)
+        )
 
-    if "land_mask" in mp.input:
-        with mp.open("land_mask") as src:
-            out = compositing.normal(
-                clip_array_with_vector(
-                    array=color_array(mp.tile.shape, land_color),
-                    array_affine=mp.tile.affine,
-                    geometries=src.read(),
-                    inverted=False,
-                ),
-                out,
-            )
+    if land_mask:
+        out = compositing.normal(
+            clip_array_with_vector(
+                array=color_array(tile.shape, land_color),
+                array_affine=tile.affine,
+                geometries=land_mask.read(),
+                inverted=False,
+            ),
+            out,
+        )
 
-    if "fuzzy_ocean_mask" in mp.input:
-        with mp.open("fuzzy_ocean_mask") as src:
-            out = compositing.normal(
-                out,
-                src.read(),
-            )
+    if fuzzy_ocean_mask:
+        out = compositing.normal(
+            out,
+            fuzzy_ocean_mask.read(),
+        )
 
-    if "ocean_depth" in mp.input:
-        with mp.open("ocean_depth") as src:
-            out = compositing.multiply(out, src.read(), opacity=ocean_depth_opacity)
+    if ocean_depth:
+        out = compositing.multiply(out, ocean_depth.read(), opacity=ocean_depth_opacity)
 
-    if "bathymetry" in mp.input:
-        with mp.open("bathymetry") as src:
-            out = compositing.multiply(out, src.read(), opacity=bathymetry_opacity)
+    if bathymetry:
+        out = compositing.multiply(out, bathymetry.read(), opacity=bathymetry_opacity)
 
     if out.mask.all():
-        return "empty"
+        raise MapcheteNodataTile
 
     # fix accidental 0 values and avoid them getting nodata
     out[~out.mask] = out.clip(1, None)[~out.mask]
 
     if out.mask.any():
-        blue = color_array(mp.tile.shape, ocean_color)
+        blue = color_array(tile.shape, ocean_color)
         out = compositing.normal(blue, out)
 
     return out[:3]

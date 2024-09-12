@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from mapchete import MapcheteProcess, RasterInput
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
@@ -13,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def execute(
-    mp,
+    mp: MapcheteProcess,
+    inp: RasterInput,
     bands: list = [1, 2, 3, 4],
     resampling: str = "nearest",
     matching_method: Optional[str] = "gdal",
@@ -26,12 +28,12 @@ def execute(
     max_output_value: Optional[float] = None,
 ) -> ma.MaskedArray:
     """
-    Scale mosaic to different value range.
+    Scale input to different value range.
 
     Inputs:
     -------
-    mosaic
-        mosaic to be scaled
+    inp
+        raster input to be scaled
 
     Parameters:
     -----------
@@ -73,25 +75,24 @@ def execute(
         stretched input bands
     """
     logger.debug("read input mosaic")
-    with mp.open("inp") as mosaic_inp:
-        if mosaic_inp.is_empty():
-            logger.debug("mosaic empty")
-            raise MapcheteNodataTile
-        try:
-            mosaic = mosaic_inp.read(
-                indexes=bands,
-                resampling=resampling,
-                matching_method=matching_method,
-                matching_max_zoom=matching_max_zoom,
-                matching_precision=matching_precision,
-                fallback_to_higher_zoom=fallback_to_higher_zoom,
-            ).astype(np.int16, copy=False)
-        except EmptyStackException:
-            logger.debug("mosaic empty: EmptyStackException")
-            raise MapcheteNodataTile
-        if mosaic[0].mask.all():
-            logger.debug("mosaic empty: all masked")
-            raise MapcheteNodataTile
+    if inp.is_empty():
+        logger.debug("mosaic empty")
+        raise MapcheteNodataTile
+    try:
+        mosaic = inp.read(
+            indexes=bands,
+            resampling=resampling,
+            matching_method=matching_method,
+            matching_max_zoom=matching_max_zoom,
+            matching_precision=matching_precision,
+            fallback_to_higher_zoom=fallback_to_higher_zoom,
+        ).astype(np.int16, copy=False)
+    except EmptyStackException:
+        logger.debug("mosaic empty: EmptyStackException")
+        raise MapcheteNodataTile
+    if mosaic[0].mask.all():
+        logger.debug("mosaic empty: all masked")
+        raise MapcheteNodataTile
 
     if mp.output_params and mp.output_params.get("nodata") and out_nodata is None:
         out_nodata = mp.output_params.get("nodata")

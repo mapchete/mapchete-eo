@@ -12,7 +12,7 @@ METADATA: dict = {
 }
 
 
-class InputTile(base.InputTile):
+class InputTile(base.EODataCube):
     """
     Target Tile representation of input data.
 

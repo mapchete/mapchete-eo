@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Union
 
+from mapchete import RasterInput, VectorInput
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
@@ -21,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 def execute(
-    mp,
+    mosaic: RasterInput,
+    desert_mask: Optional[VectorInput] = None,
+    glacier_mask: Optional[VectorInput] = None,
     bands: list = [1, 2, 3, 4],
     resampling: str = "nearest",
     matching_method: Optional[str] = "gdal",
@@ -124,57 +127,58 @@ def execute(
     desert_rgb_composite = RGBCompositeConfig.parse(desert_rgb_composite)
 
     logger.debug("read input mosaic")
-    with mp.open("mosaic") as mosaic_inp:
-        if mosaic_inp.is_empty():  # pragma: no cover
-            logger.debug("mosaic empty")
-            raise MapcheteNodataTile
-        mosaic = mosaic_inp.read(
-            indexes=bands,
-            resampling=resampling,
-            matching_method=matching_method,
-            matching_max_zoom=matching_max_zoom,
-            matching_precision=matching_precision,
-            fallback_to_higher_zoom=fallback_to_higher_zoom,
-            src_nodata=0,
-            nodata=0,
-        ).astype(np.int16, copy=False)
-        nodata_mask = mosaic[0].mask
-        if nodata_mask.all():  # pragma: no cover
-            logger.debug("mosaic empty: all masked")
-            raise MapcheteNodataTile
+    if mosaic.is_empty():  # pragma: no cover
+        logger.debug("mosaic empty")
+        raise MapcheteNodataTile
+    mosaic_array = mosaic.read(
+        indexes=bands,
+        resampling=resampling,
+        matching_method=matching_method,
+        matching_max_zoom=matching_max_zoom,
+        matching_precision=matching_precision,
+        fallback_to_higher_zoom=fallback_to_higher_zoom,
+        src_nodata=0,
+        nodata=0,
+    ).astype(np.int16, copy=False)
+    nodata_mask = mosaic_array[0].mask
+    if nodata_mask.all():  # pragma: no cover
+        logger.debug("mosaic empty: all masked")
+        raise MapcheteNodataTile
 
     # interpolate tiny nodata gaps
     if fillnodata:
-        mosaic = image_operations.fillnodata(
-            mosaic,
+        mosaic_array = image_operations.fillnodata(
+            mosaic_array,
             method=fillnodata_method,
             max_patch_size=fillnodata_max_patch_size,
             max_nodata_neighbors=fillnodata_max_nodata_neighbors,
             max_search_distance=fillnodata_max_search_distance,
             smoothing_iterations=fillnodata_smoothing_iterations,
         )
-        nodata_mask = mosaic.mask[0].copy()
+        nodata_mask = mosaic_array.mask[0].copy()
 
     # apply color correction
-    corrected = to_corrected_rgb(mosaic, config=rgb_composite, out_dtype=out_dtype)
+    corrected = to_corrected_rgb(
+        mosaic_array, config=rgb_composite, out_dtype=out_dtype
+    )
 
     # apply special color correction to desert areas and merge with corrected
     if desert_color_correction_flag:
-        if "desert_mask" in mp.params["input"]:
-            desert_mask = unary_union(
-                [shape(f["geometry"]) for f in mp.open("desert_mask").read()]
+        if desert_mask:
+            desert_mask_geoms = unary_union(
+                [shape(f["geometry"]) for f in desert_mask.read()]
             )
         else:  # pragma: no cover
             raise ValueError(
                 "a vector input with the key 'desert_mask' has to be provided"
             )
 
-        if not desert_mask.is_empty:
+        if not desert_mask_geoms.is_empty:
             logger.debug("apply other color correction for desert areas")
             desert_mosaic = clip_array_with_vector(
-                array=mosaic,
-                array_affine=mp.tile.affine,
-                geometries=[dict(geometry=desert_mask)],
+                array=mosaic_array,
+                array_affine=mosaic.tile.affine,
+                geometries=[dict(geometry=desert_mask_geoms)],
                 inverted=False,
                 clip_buffer=0,
             )
@@ -195,14 +199,14 @@ def execute(
                 ),
             )[:3]
 
-    if "glacier_mask" in mp.params["input"]:
-        glaciers = [feature["geometry"] for feature in mp.open("glacier_mask").read()]
+    if glacier_mask:
+        glaciers = [feature["geometry"] for feature in glacier_mask.read()]
         if glaciers:
             glacier_mask = to_bands_mask(
                 rasterize(
                     glaciers,
-                    mp.tile.shape,
-                    transform=mp.tile.transform,
+                    mosaic.tile.shape,
+                    transform=mosaic.tile.transform,
                 ).astype(bool),
                 bands=corrected.shape[0],
             )

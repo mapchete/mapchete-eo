@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from mapchete.path import MPath
 from mapchete.types import NodataVal
@@ -20,7 +20,7 @@ METADATA: dict = {
 }
 
 
-class InputTile(base.InputTile):
+class Sentinel2Cube(base.EODataCube):
     # Sentinel-2 driver specific default values:
     default_read_merge_method: MergeMethod = MergeMethod.average
     default_read_merge_products_by: Optional[str] = "s2:datastrip_id"
@@ -28,12 +28,15 @@ class InputTile(base.InputTile):
     default_read_resampling: Resampling = Resampling.bilinear
 
 
+Sentinel2CubeGroup = List[Tuple[str, Sentinel2Cube]]
+
+
 class InputData(base.InputData):
     # Sentinel-2 driver specific parameters:
     default_preprocessing_task = staticmethod(parse_s2_product)
     driver_config_model = Sentinel2DriverConfig
     params: Sentinel2DriverConfig
-    input_tile_cls = InputTile
+    input_tile_cls = Sentinel2Cube
 
     def set_archive(self, base_dir: MPath):
         if self.params.cat_baseurl:

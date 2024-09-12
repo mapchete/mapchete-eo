@@ -8,7 +8,7 @@ from rasterio.enums import Resampling
 from scipy.stats import mode
 
 from mapchete_eo.platforms.sentinel2.config import MaskConfig, SceneClassification
-from mapchete_eo.platforms.sentinel2.driver import InputTile
+from mapchete_eo.platforms.sentinel2.driver import Sentinel2Cube
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class SelectionMethod(str, Enum):
 
 
 def execute(
-    sentinel2: InputTile,
+    sentinel2: Sentinel2Cube,
     scl_asset_name: str = "scl",
     selection_method: SelectionMethod = SelectionMethod.majority,
     permanent_classes: Tuple[SceneClassification, ...] = (

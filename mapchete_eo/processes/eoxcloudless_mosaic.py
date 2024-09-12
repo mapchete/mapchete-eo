@@ -3,13 +3,13 @@ from typing import Optional, Union
 
 import numpy as np
 import numpy.ma as ma
-from mapchete import Timer
+from mapchete import Timer, VectorInput
 from mapchete.errors import MapcheteNodataTile
 from orgonite import cloudless
 from rasterio.enums import Resampling
 
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig, BRDFModels, MaskConfig
-from mapchete_eo.platforms.sentinel2.driver import InputTile
+from mapchete_eo.platforms.sentinel2.driver import Sentinel2Cube
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.sort import TargetDateSort
 from mapchete_eo.types import DateTimeLike, MergeMethod
@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def execute(
-    mp,
+    sentinel2: Sentinel2Cube,
+    clip: Optional[VectorInput] = None,
     target_height: int = 6,
     assets: list = ["red", "green", "blue", "nir"],
     resampling: str = "bilinear",
@@ -33,34 +34,33 @@ def execute(
     target_date: Optional[DateTimeLike] = None,
 ) -> ma.MaskedArray:
     # clip geometry
-    if "clip" in mp.params["input"]:
-        clip_geom = mp.open("clip").read()
+    if clip:
+        clip_geom = clip.read()
         if not clip_geom:
             logger.debug("no clip data over tile")
             raise MapcheteNodataTile("no clip data over tile")
     else:
         clip_geom = []
 
-    with mp.open("sentinel2") as src:
-        return create_mosaic(
-            src,
-            target_height=target_height,
-            assets=assets,
-            resampling=resampling,
-            nodata=nodata,
-            merge_products_by=merge_products_by,
-            read_masks=read_masks,
-            mask_config=mask_config,
-            custom_mask_config=custom_mask_config,
-            from_brightness_extract_method=from_brightness_extract_method,
-            from_brightness_average_over=from_brightness_average_over,
-            considered_bands=considered_bands,
-            target_date=target_date,
-        )
+    return create_mosaic(
+        sentinel2,
+        target_height=target_height,
+        assets=assets,
+        resampling=resampling,
+        nodata=nodata,
+        merge_products_by=merge_products_by,
+        read_masks=read_masks,
+        mask_config=mask_config,
+        custom_mask_config=custom_mask_config,
+        from_brightness_extract_method=from_brightness_extract_method,
+        from_brightness_average_over=from_brightness_average_over,
+        considered_bands=considered_bands,
+        target_date=target_date,
+    )
 
 
 def create_mosaic(
-    src: InputTile,
+    src: Sentinel2Cube,
     target_height: int = 6,
     assets: list = ["red", "green", "blue", "nir"],
     resampling: str = "bilinear",

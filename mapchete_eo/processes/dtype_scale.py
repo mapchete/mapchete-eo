@@ -4,10 +4,10 @@ from typing import Optional
 import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
+from mapchete.types import NodataVal
 
 from mapchete_eo.exceptions import EmptyStackException
 from mapchete_eo.image_operations import dtype_scale
-from mapchete_eo.types import NodataVal
 
 logger = logging.getLogger(__name__)
 

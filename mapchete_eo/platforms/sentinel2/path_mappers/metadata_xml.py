@@ -2,6 +2,7 @@
 A path mapper maps from an metadata XML file to additional metadata
 on a given archive or a local SAFE file.
 """
+
 import logging
 import xml.etree.ElementTree as etree
 from functools import cached_property

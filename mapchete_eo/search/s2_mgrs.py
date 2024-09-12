@@ -7,7 +7,7 @@ from itertools import product
 from typing import List, Literal, Optional, Tuple, Union
 
 from mapchete.io.vector import reproject_geometry
-from mapchete.types import Bounds, CRSLike
+from mapchete.types import Bounds
 from rasterio.crs import CRS
 from shapely import prepare
 from shapely.geometry import box, mapping, shape

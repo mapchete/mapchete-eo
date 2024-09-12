@@ -5,13 +5,12 @@ from typing import Any, Dict, List, Optional, Protocol
 import numpy.ma as ma
 import pystac
 import xarray as xr
-from affine import Affine
 from mapchete.protocols import GridProtocol
-from mapchete.types import Bounds
+from mapchete.types import Bounds, NodataVals
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 
-from mapchete_eo.types import DateTimeLike, NodataVals
+from mapchete_eo.types import DateTimeLike
 
 
 class EOProductProtocol(Protocol):
@@ -20,8 +19,7 @@ class EOProductProtocol(Protocol):
     __geo_interface__: Optional[Dict[str, Any]]
 
     @classmethod
-    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol:
-        ...
+    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol: ...
 
     def read(
         self,
@@ -33,8 +31,7 @@ class EOProductProtocol(Protocol):
         x_axis_name: str = "x",
         y_axis_name: str = "y",
         **kwargs,
-    ) -> xr.Dataset:
-        ...
+    ) -> xr.Dataset: ...
 
     def read_np_array(
         self,
@@ -44,15 +41,12 @@ class EOProductProtocol(Protocol):
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         **kwargs,
-    ) -> ma.MaskedArray:
-        ...
+    ) -> ma.MaskedArray: ...
 
-    def get_property(self, property: str) -> Any:
-        ...
+    def get_property(self, property: str) -> Any: ...
 
     @property
-    def item(self) -> pystac.Item:
-        ...
+    def item(self) -> pystac.Item: ...
 
 
 class DateTimeProtocol(Protocol):

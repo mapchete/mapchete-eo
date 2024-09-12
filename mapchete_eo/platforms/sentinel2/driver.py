@@ -1,6 +1,7 @@
 from typing import Optional
 
 from mapchete.path import MPath
+from mapchete.types import NodataVal
 from rasterio.enums import Resampling
 
 from mapchete_eo import base
@@ -9,7 +10,7 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import mapchete_eo_settings
-from mapchete_eo.types import MergeMethod, NodataVal
+from mapchete_eo.types import MergeMethod
 
 METADATA: dict = {
     "driver_name": "Sentinel-2",

@@ -4,12 +4,12 @@ from typing import Iterator, List, Optional
 import numpy.ma as ma
 import xarray as xr
 from mapchete.protocols import GridProtocol
+from mapchete.types import NodataVals
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import NoSourceProducts
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.types import NodataVals
 
 logger = logging.getLogger(__name__)
 

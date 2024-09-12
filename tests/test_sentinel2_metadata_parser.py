@@ -5,7 +5,7 @@ import numpy.ma as ma
 import pytest
 from affine import Affine
 from mapchete.io.raster import ReferencedRaster
-from mapchete.types import Bounds
+from mapchete.types import Bounds, Grid
 from pystac import Item
 from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS
@@ -29,7 +29,6 @@ from mapchete_eo.platforms.sentinel2.types import (
     SunAngle,
     ViewAngle,
 )
-from mapchete_eo.types import Grid
 
 
 def test_xml_mapper(s2_l2a_metadata_xml):

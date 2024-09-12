@@ -20,7 +20,7 @@ from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
-from mapchete.types import Bounds
+from mapchete.types import Bounds, Grid
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
@@ -46,7 +46,6 @@ from mapchete_eo.platforms.sentinel2.types import (
     SunAngle,
     ViewAngle,
 )
-from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 
@@ -262,10 +261,10 @@ class S2Metadata:
                 )
             else:
                 for resolution in ProductQIMaskResolution:
-                    out[
-                        f"{product_qi_mask.name}-{resolution.name}"
-                    ] = self.path_mapper.product_qi_mask(
-                        product_qi_mask, resolution=resolution
+                    out[f"{product_qi_mask.name}-{resolution.name}"] = (
+                        self.path_mapper.product_qi_mask(
+                            product_qi_mask, resolution=resolution
+                        )
                     )
 
         for band_qi_mask in BandQI:

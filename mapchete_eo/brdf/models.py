@@ -5,12 +5,12 @@ import numpy as np
 import numpy.ma as ma
 from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.protocols import GridProtocol
+from mapchete.types import Grid
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 
 from mapchete_eo.brdf.config import BRDFModels
-from mapchete_eo.types import Grid
 
 logger = logging.getLogger(__name__)
 

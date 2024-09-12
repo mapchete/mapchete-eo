@@ -1,7 +1,6 @@
 from typing import Optional
 
 import numpy as np
-import numpy.ma as ma
 from numpy.typing import DTypeLike
 from scipy.ndimage import binary_dilation
 

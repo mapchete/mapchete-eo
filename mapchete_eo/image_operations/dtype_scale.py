@@ -2,9 +2,8 @@ from typing import Optional
 
 import numpy as np
 import numpy.ma as ma
+from mapchete.types import NodataVal
 from numpy.typing import DTypeLike
-
-from mapchete_eo.types import NodataVal
 
 
 def dtype_scale(

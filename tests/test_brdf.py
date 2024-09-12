@@ -8,7 +8,6 @@ from mapchete_eo.brdf import (
     get_brdf_param,
     get_constant_sun_angle,
 )
-from mapchete_eo.brdf.config import F_MODIS_PARAMS
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.brdf import L2ABandFParams
 from mapchete_eo.platforms.sentinel2.types import (

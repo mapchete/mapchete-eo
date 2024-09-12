@@ -8,6 +8,7 @@ import numpy.ma as ma
 import xarray as xr
 from mapchete.config import get_hash
 from mapchete.protocols import GridProtocol
+from mapchete.types import NodataVals
 from rasterio.enums import Resampling
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
@@ -22,7 +23,7 @@ from mapchete_eo.exceptions import (
 from mapchete_eo.io.items import get_item_property
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig
-from mapchete_eo.types import MergeMethod, NodataVals
+from mapchete_eo.types import MergeMethod
 
 logger = logging.getLogger(__name__)
 

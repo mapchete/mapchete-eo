@@ -21,14 +21,14 @@ class Archive(ABC):
         time: Union[TimeRange, List[TimeRange]],
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
-        **kwargs
+        **kwargs,
     ):
         self.catalog = self.catalog_cls(
             collections=[self.collection_name],
             time=time,
             bounds=bounds,
             area=area,
-            **kwargs
+            **kwargs,
         )
 
 

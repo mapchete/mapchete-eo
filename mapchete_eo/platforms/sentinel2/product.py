@@ -11,7 +11,7 @@ from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_fr
 from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
-from mapchete.types import Bounds
+from mapchete.types import Bounds, Grid, NodataVals
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
@@ -42,7 +42,6 @@ from mapchete_eo.platforms.sentinel2.types import (
 from mapchete_eo.product import EOProduct, add_to_blacklist
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.settings import mapchete_eo_settings
-from mapchete_eo.types import Grid, NodataVals
 
 logger = logging.getLogger(__name__)
 

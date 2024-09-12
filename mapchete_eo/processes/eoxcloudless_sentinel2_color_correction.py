@@ -5,6 +5,7 @@ import numpy as np
 import numpy.ma as ma
 from mapchete.errors import MapcheteNodataTile
 from mapchete.io.raster.array import clip_array_with_vector
+from mapchete.types import NodataVal
 from numpy.typing import DTypeLike
 from rasterio.features import rasterize
 from shapely import unary_union
@@ -15,7 +16,6 @@ from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_bands_mask
 from mapchete_eo.image_operations import compositing, filters
 from mapchete_eo.processes.config import RGBCompositeConfig, SmoothConfig
-from mapchete_eo.types import NodataVal
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,5 @@
 import numpy.ma as ma
 import pytest
-from mapchete.tile import BufferedTile
 
 from mapchete_eo.image_operations import FillSelectionMethod
 from mapchete_eo.processes import (

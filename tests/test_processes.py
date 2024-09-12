@@ -16,7 +16,7 @@ from mapchete_eo.processes import (
 
 def test_eoxcloudless_8bit_dtype_scale_mapchete(eoxcloudless_8bit_dtype_scale_mapchete):
     process_mp = eoxcloudless_8bit_dtype_scale_mapchete.process_mp()
-    output = dtype_scale.execute(process_mp)
+    output = dtype_scale.execute(process_mp, process_mp.open("inp"))
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
     assert ma.mean(output) < 100
@@ -33,7 +33,8 @@ def test_eoxcloudless_sentinel2_color_correction(
 ):
     process_mp = eoxcloudless_sentinel2_color_correction_mapchete.process_mp()
     output = eoxcloudless_sentinel2_color_correction.execute(
-        process_mp,
+        process_mp.open("mosaic"),
+        desert_mask=process_mp.open("desert_mask"),
         fillnodata=fillnodata,
         fillnodata_method=fillnodata_method,
         desert_color_correction_flag=desert_color_correction_flag,
@@ -46,7 +47,12 @@ def test_eoxcloudless_sentinel2_color_correction(
 def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
     process_mp = eoxcloudless_rgb_map_mapchete.process_mp()
     output = eoxcloudless_rgb_map.execute(
-        process_mp,
+        process_mp.open("mosaic"),
+        process_mp.open("mosaic_mask"),
+        process_mp.open("land_mask"),
+        process_mp.open("fuzzy_ocean_mask"),
+        process_mp.open("ocean_depth"),
+        process_mp.open("bathymetry"),
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
@@ -56,7 +62,12 @@ def test_eoxcloudless_rgb_map(eoxcloudless_rgb_map_mapchete):
 def test_eoxcloudless_rgb_map_mosaic_mask(eoxcloudless_rgb_map_mapchete):
     process_mp = eoxcloudless_rgb_map_mapchete.process_mp(tile=(6, 56, 103))
     output = eoxcloudless_rgb_map.execute(
-        process_mp,
+        process_mp.open("mosaic"),
+        process_mp.open("mosaic_mask"),
+        process_mp.open("land_mask"),
+        process_mp.open("fuzzy_ocean_mask"),
+        process_mp.open("ocean_depth"),
+        process_mp.open("bathymetry"),
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.any()
@@ -71,7 +82,7 @@ def test_eoxcloudless_mosaic(eoxcloudless_mosaic_mapchete):
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
     output = eoxcloudless_mosaic.execute(
-        process_mp,
+        process_mp.open("sentinel2"),
         assets=["red", "green", "blue", "nir"],
         mask_config=dict(scl_classes=["vegetation"]),
     )
@@ -100,7 +111,9 @@ def test_eoxcloudless_mosaic_regions_merge(eoxcloudless_mosaic_regions_merge_map
     # calling the execute() function directly from the process module means
     # we have to provide all kwargs usually found in the process_parameters
     output = eoxcloudless_mosaic_merge.execute(
-        process_mp, **process_mp.params.get("process_parameters", {})
+        process_mp.open("sentinel2"),
+        process_mp,
+        **process_mp.params.get("process_parameters", {}),
     )
     assert isinstance(output, ma.MaskedArray)
     assert not output.mask.all()

@@ -1,12 +1,12 @@
 import logging
-from typing import Generator, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy.ma as ma
 from mapchete import Timer
 from mapchete.errors import MapcheteNodataTile
 from mapchete.processing.mp import MapcheteProcess
 
-from mapchete_eo.base import InputTile
+from mapchete_eo.platforms.sentinel2 import Sentinel2CubeGroup
 from mapchete_eo.platforms.sentinel2.config import MaskConfig
 from mapchete_eo.processes.eoxcloudless_mosaic import create_mosaic
 from mapchete_eo.processes.merge_rasters import MergeMethod, merge_rasters
@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 def execute(
+    sentinel2: Sentinel2CubeGroup,
     mp: MapcheteProcess,
     target_height: int = 6,
     merge_method: MergeMethod = MergeMethod.footprint_gradient,
     gradient_buffer: int = 10,
-    region_group_name: str = "sentinel2",
     assets: list = ["red", "green", "blue", "nir"],
     # default mosaic settings
     resampling: str = "bilinear",
@@ -60,7 +60,7 @@ def execute(
     mosaics = []
     region_footprints = []
     with Timer() as tt:
-        for region_name, region in eo_region_cubes(mp, region_group_name):
+        for region_name, region in sentinel2:
             mosaic = create_mosaic(
                 region,
                 assets=assets,
@@ -91,14 +91,3 @@ def execute(
         )
     logger.debug("%s mosaics merged in %s", len(mosaics), tt)
     return merged
-
-
-# just for typing
-def eo_region_cubes(
-    mp: MapcheteProcess, group_name: str = "sentinel2"
-) -> Generator[Tuple[str, InputTile], None, None]:
-    for name, cube in mp.open(group_name):
-        if cube.is_empty() or cube.area.is_empty:
-            logger.debug("%s is emtpy", name)
-        else:
-            yield (name, cube)

@@ -48,7 +48,7 @@ class BaseDriverConfig(BaseModel):
     archive: Optional[Type[Archive]] = None
 
 
-class InputTile(base.InputTile):
+class EODataCube(base.InputTile):
     """Target Tile representation of input data."""
 
     default_read_merge_method: MergeMethod = MergeMethod.first
@@ -499,7 +499,7 @@ class InputData(base.InputData):
                 f"products are not ready yet because {len(self.preprocessing_tasks)} preprocessing task(s) were not executed."
             )
 
-    def open(self, tile, **kwargs) -> InputTile:
+    def open(self, tile, **kwargs) -> EODataCube:
         """
         Return InputTile object.
         """

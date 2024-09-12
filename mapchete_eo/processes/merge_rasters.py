@@ -1,12 +1,11 @@
 import logging
 from enum import Enum
-from typing import Generator, List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 import numpy.ma as ma
-from mapchete import Timer
+from mapchete import RasterInputGroup, Timer
 from mapchete.errors import MapcheteNodataTile
-from mapchete.formats.base import InputTile
 from mapchete.io.vector import to_shape
 from mapchete.processing.mp import MapcheteProcess
 from mapchete.tile import BufferedTile
@@ -25,53 +24,42 @@ class MergeMethod(str, Enum):
 
 
 def execute(
+    rasters: RasterInputGroup,
     mp: MapcheteProcess,
-    region_group_name: str = "rasters",
     gradient_buffer: int = 10,
     merge_method: MergeMethod = MergeMethod.footprint_gradient,
-):
+) -> ma.MaskedArray:
     """
     Merge multiple rasters into one.
     """
-    rasters = []
+    raster_arrays = []
     region_footprints = []
 
     with Timer() as tt:
-        for region_name, region in get_raster_inputs(mp, region_group_name):
+        for region_name, region in rasters:
             raster = region.read()
             if raster.mask.all():
                 logger.debug("%s raster is empty", region_name)
                 continue
 
-            rasters.append(raster)
+            raster_arrays.append(raster)
             region_footprints.append(region.area)
 
-    logger.debug("%s rasters created in %s", len(rasters), tt)
+    logger.debug("%s rasters created in %s", len(raster_arrays), tt)
 
-    if len(rasters) == 0:
+    if len(raster_arrays) == 0:
         raise MapcheteNodataTile("no input rasters found")
 
     with Timer() as tt:
         merged = merge_rasters(
-            rasters,
+            raster_arrays,
             mp.tile,
             footprints=region_footprints,
             method=merge_method,
             gradient_buffer=gradient_buffer,
         )
-    logger.debug("%s mosaics merged in %s", len(rasters), tt)
+    logger.debug("%s mosaics merged in %s", len(raster_arrays), tt)
     return merged
-
-
-# just for typing
-def get_raster_inputs(
-    mp: MapcheteProcess, group_name: str = "rasters"
-) -> Generator[Tuple[str, InputTile], None, None]:
-    for name, raster in mp.open(group_name):
-        if raster.is_empty():
-            logger.debug("%s is emtpy", name)
-        else:
-            yield (name, raster)
 
 
 def merge_rasters(

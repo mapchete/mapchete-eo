@@ -11,7 +11,7 @@ import xarray as xr
 from mapchete import Timer
 from mapchete.path import MPath, MPathLike
 from mapchete.protocols import GridProtocol
-from mapchete.types import Bounds
+from mapchete.types import Bounds, NodataVals
 from numpy.typing import DTypeLike
 from rasterio.enums import Resampling
 from shapely.geometry import shape
@@ -20,7 +20,7 @@ from mapchete_eo.array.convert import to_dataarray
 from mapchete_eo.io import get_item_property, item_to_np_array
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.settings import mapchete_eo_settings
-from mapchete_eo.types import BandLocation, NodataVals
+from mapchete_eo.types import BandLocation
 
 logger = logging.getLogger(__name__)
 

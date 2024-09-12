@@ -3,8 +3,7 @@ from typing import List, Optional, Union
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
-
-from mapchete_eo.types import NodataVal
+from mapchete.types import NodataVal
 
 # dtypes from https://numpy.org/doc/stable/user/basics.types.html
 _NUMPY_FLOAT_DTYPES = [

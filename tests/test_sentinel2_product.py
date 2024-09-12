@@ -1,6 +1,5 @@
 import numpy as np
 import numpy.ma as ma
-import pystac
 import pytest
 import xarray as xr
 from mapchete.io.raster import ReferencedRaster

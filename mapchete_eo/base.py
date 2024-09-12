@@ -13,7 +13,7 @@ from mapchete.formats import base
 from mapchete.io.vector import IndexedFeatures, reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
-from mapchete.types import MPathLike
+from mapchete.types import MPathLike, NodataVal, NodataVals
 from pydantic import BaseModel
 from rasterio.enums import Resampling
 from shapely.geometry.base import BaseGeometry
@@ -32,13 +32,7 @@ from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.time import to_datetime
-from mapchete_eo.types import (
-    DateTimeLike,
-    MergeMethod,
-    NodataVal,
-    NodataVals,
-    TimeRange,
-)
+from mapchete_eo.types import DateTimeLike, MergeMethod, TimeRange
 
 logger = logging.getLogger(__name__)
 

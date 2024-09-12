@@ -1,5 +1,4 @@
 from mapchete_eo.product import add_to_blacklist, blacklist_products
-from mapchete_eo.settings import Settings
 
 
 def test_blacklist(s2_stac_item, tmp_mpath):

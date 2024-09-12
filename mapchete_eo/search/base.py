@@ -15,7 +15,7 @@ from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.assets import get_assets, get_metadata_assets
-from mapchete_eo.types import DateTimeLike, TimeRange
+from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
 

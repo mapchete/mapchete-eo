@@ -6,7 +6,6 @@ from mapchete.types import Bounds
 from pytest_lazyfixture import lazy_fixture
 from shapely.geometry import shape
 
-from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io import get_item_property, item_fix_footprint, products_to_slices
 from mapchete_eo.io.path import (
     ProductPathGenerationMethod,

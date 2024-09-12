@@ -22,8 +22,6 @@ from shapely.geometry import (
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
-from mapchete_eo.exceptions import EmptyFootprintException
-
 CoordArrays = Tuple[Iterable[float], Iterable[float]]
 
 
@@ -210,7 +208,7 @@ def custom_transform(geometry: BaseGeometry, func: Callable) -> BaseGeometry:
         )
 
     def _linearring(linearring: LinearRing) -> LinearRing:
-        return LinearRing(((x, y) for x, y, in zip(*func(linearring.xy))))
+        return LinearRing(((x, y) for x, y in zip(*func(linearring.xy))))
 
     def _polygon(polygon: Polygon) -> Polygon:
         return Polygon(

@@ -7,7 +7,6 @@ from mapchete_eo.exceptions import CorruptedProductMetadata
 from mapchete_eo.platforms.sentinel2.config import CacheConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.product import add_to_blacklist
-from mapchete_eo.settings import mapchete_eo_settings
 
 logger = logging.getLogger(__name__)
 

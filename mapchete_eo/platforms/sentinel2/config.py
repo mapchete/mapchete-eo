@@ -6,7 +6,6 @@ from typing import List, Optional, Union
 from mapchete.path import MPathLike
 from pydantic import BaseModel
 
-from mapchete_eo.archives.base import Archive
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 from mapchete_eo.io.path import ProductPathGenerationMethod

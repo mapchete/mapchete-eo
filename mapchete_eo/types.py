@@ -3,12 +3,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Union
 
-from affine import Affine
-from mapchete.types import Bounds, Grid, NodataVal, NodataVals
-from rasterio.crs import CRS
-from rasterio.transform import array_bounds
-from tilematrix import Shape
-
 
 class GeodataType(str, Enum):
     vector = "vector"

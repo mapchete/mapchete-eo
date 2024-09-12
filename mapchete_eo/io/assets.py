@@ -11,15 +11,11 @@ import pystac
 from affine import Affine
 from mapchete import Timer
 from mapchete.io import copy, fiona_open, rasterio_open
-from mapchete.io.raster import (
-    ReferencedRaster,
-    read_raster,
-    read_raster_window,
-    resample_from_array,
-)
+from mapchete.io.raster import ReferencedRaster, read_raster, read_raster_window
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.settings import IORetrySettings
+from mapchete.types import Grid, NodataVal
 from numpy.typing import DTypeLike
 from pydantic import BaseModel
 from rasterio.dtypes import dtype_ranges
@@ -31,7 +27,6 @@ from retry import retry
 
 from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
 from mapchete_eo.io.profiles import COGDeflateProfile
-from mapchete_eo.types import Grid, NodataVal
 
 logger = logging.getLogger(__name__)
 

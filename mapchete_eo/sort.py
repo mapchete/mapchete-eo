@@ -19,7 +19,7 @@ def sort_objects_by_target_date(
     objects: List[DateTimeProtocol],
     target_date: Optional[DateTimeLike] = None,
     reverse: bool = False,
-    **kwargs
+    **kwargs,
 ) -> List[DateTimeProtocol]:
     """
     Return sorted list of onjects according to their distance to the target_date.

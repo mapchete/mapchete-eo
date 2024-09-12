@@ -1,6 +1,7 @@
 """
 Driver class for EOSTAC static STAC catalogs.
 """
+
 from mapchete_eo import base
 
 METADATA: dict = {

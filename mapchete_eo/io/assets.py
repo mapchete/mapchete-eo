@@ -369,10 +369,9 @@ def _read_vector_mask(mask_path):
                 return list([dict(f) for f in src])
         except ValueError as e:
             # this happens if GML file is empty
-            if str(
-                e
-            ) == "Null layer: ''" or "'hLayer' is NULL in 'OGR_L_GetName'" in str(e):
-                return []
+            for message in ["Null layer: ", "'hLayer' is NULL in 'OGR_L_GetName'"]:
+                if message in str(e):
+                    return []
             else:  # pragma: no cover
                 raise
 

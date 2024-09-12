@@ -1,3 +1,4 @@
+from mapchete import MapcheteNodataTile
 import numpy.ma as ma
 import pytest
 
@@ -118,3 +119,11 @@ def test_eoxcloudless_scl_mosaic(eoxcloudless_mosaic_mapchete, selection_method)
     eoxcloudless_scl_mosaic.execute(
         sentinel2_input_tile, selection_method=selection_method
     )
+
+
+def test_eoxcloudless_scl_mosaic_empty(eoxcloudless_mosaic_mapchete):
+    sentinel2_input_tile = eoxcloudless_mosaic_mapchete.process_mp(tile=(9, 0, 0)).open(
+        "sentinel2"
+    )
+    with pytest.raises(MapcheteNodataTile):
+        eoxcloudless_scl_mosaic.execute(sentinel2_input_tile)

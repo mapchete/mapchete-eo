@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.9.1 - 2024-09-18
+---------------------
+
+* core
+
+  * `mapchete_eo.processes`: remove all `eoxcloudless_*` processes
+
+
 2024.9.0 - 2024-09-12
 ---------------------
 

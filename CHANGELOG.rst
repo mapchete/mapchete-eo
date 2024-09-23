@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.9.2 - 2024-09-23
+---------------------
+
+* core
+
+  * `mapchete_eo.search.stac_search`: fix chunked search
+
+
 2024.9.1 - 2024-09-18
 ---------------------
 

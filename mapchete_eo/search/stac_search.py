@@ -83,7 +83,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                         len(spatial_search_chunks),
                     )
                     searches = (
-                        self._search(**chunk_kwargs)
+                        self._search(time_range=time_range, **chunk_kwargs)
                         for chunk_kwargs in spatial_search_chunks
                     )
                 else:

@@ -41,6 +41,7 @@ def correction_grid(
     sun_zenith_angle: Optional[np.ndarray] = None,
     model: BRDFModels = BRDFModels.default,
     resolution: Resolution = Resolution["60m"],
+    footprints_cached_read: bool = False,
 ) -> ReferencedRaster:
     with Timer() as t:
         brdf_params = get_brdf_param(
@@ -49,7 +50,9 @@ def correction_grid(
             product_crs=s2_metadata.crs,
             sun_azimuth_angle_array=s2_metadata.sun_angles[SunAngle.azimuth],
             sun_zenith_angle_array=s2_metadata.sun_angles[SunAngle.zenith],
-            detector_footprints=s2_metadata.detector_footprints(band),
+            detector_footprints=s2_metadata.detector_footprints(
+                band, cached_read=footprints_cached_read
+            ),
             viewing_azimuth=s2_metadata.viewing_incidence_angles(band)[
                 ViewAngle.azimuth
             ]["detector"],

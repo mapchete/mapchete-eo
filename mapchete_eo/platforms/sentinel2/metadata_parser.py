@@ -300,6 +300,7 @@ class S2Metadata:
         self,
         cloud_type: CloudType = CloudType.all,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """
         Return L1C classification cloud mask.
@@ -327,9 +328,14 @@ class S2Metadata:
             rasterize_value_func=lambda feature: True,
             dtype=bool,
             masked=False,
+            cached_read=cached_read,
         )
 
-    def snow_ice_mask(self, dst_grid: Union[GridProtocol, Resolution, None] = None):
+    def snow_ice_mask(
+        self,
+        dst_grid: Union[GridProtocol, Resolution, None] = None,
+        cached_read: bool = False,
+    ):
         dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
@@ -341,6 +347,7 @@ class S2Metadata:
             rasterize_value_func=lambda feature: True,
             dtype=bool,
             masked=False,
+            cached_read=cached_read,
         )
 
     def cloud_probability(
@@ -348,6 +355,7 @@ class S2Metadata:
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
         from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -360,6 +368,7 @@ class S2Metadata:
             resampling=resampling,
             rasterize_value_func=lambda feature: True,
             masked=False,
+            cached_read=cached_read,
         )
 
     def snow_probability(
@@ -367,6 +376,7 @@ class S2Metadata:
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         resampling: Resampling = Resampling.bilinear,
         from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         dst_grid = dst_grid or Resolution["20m"]
@@ -379,6 +389,7 @@ class S2Metadata:
             resampling=resampling,
             rasterize_value_func=lambda feature: True,
             masked=False,
+            cached_read=cached_read,
         )
 
     ##############
@@ -388,6 +399,7 @@ class S2Metadata:
         self,
         band: L2ABand,
         dst_grid: Union[GridProtocol, Resolution] = Resolution["60m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """
         Return detector footprints.
@@ -406,6 +418,7 @@ class S2Metadata:
                 ),
                 dst_grid=dst_grid,
                 rasterize_value_func=_get_detector_id,
+                cached_read=cached_read,
             )
         except FileNotFoundError as exc:
             raise AssetMissing(exc)
@@ -492,6 +505,7 @@ class S2Metadata:
         resolution: Resolution = Resolution["120m"],
         resampling: Resampling = Resampling.nearest,
         smoothing_iterations: int = 10,
+        cached_read: bool = False,
     ) -> np.ndarray:
         bands = list(L2ABand) if bands is None else bands
         bands = [bands] if isinstance(bands, L2ABand) else bands
@@ -501,7 +515,9 @@ class S2Metadata:
             band_angles = ma.masked_equal(
                 np.zeros(self.shape(resolution), dtype=np.float32), 0
             )
-            detector_footprints = self.detector_footprints(band, dst_grid=resolution)
+            detector_footprints = self.detector_footprints(
+                band, dst_grid=resolution, cached_read=cached_read
+            )
             detector_ids = [x for x in np.unique(detector_footprints.data) if x != 0]
 
             for detector_id in detector_ids:

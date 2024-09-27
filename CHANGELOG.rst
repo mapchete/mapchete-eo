@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2024.9.3 - 2024-09-27
+---------------------
+
+* core
+
+  * add configuration flags to cache certain QI and mask files before reading them to avoid unnecessary requests
+
+* packaging
+
+  * remove eoxcloudless processes from pyproject.toml
+
+
 2024.9.2 - 2024-09-23
 ---------------------
 

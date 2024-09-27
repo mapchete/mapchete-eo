@@ -24,6 +24,7 @@ class BRDFConfig(BaseModel):
     model: BRDFModels = BRDFModels.HLS
     bands: List[str] = ["blue", "green", "red", "nir"]
     resolution: Resolution = Resolution["60m"]
+    footprints_cached_read: bool = False
 
 
 class L2ABandFParams(Enum):
@@ -94,7 +95,11 @@ class MaskConfig(BaseModel):
     ]
     # mask using one or more of the SCL classes
     scl_classes: Optional[List[SceneClassification]] = None
-    # download SCL masks before reading
+    # download masks before reading
+    l1c_cloud_mask_cached_read: bool = False
+    snow_ice_mask_cached_read: bool = False
+    cloud_probability_cached_read: bool = False
+    snow_probability_cached_read: bool = False
     scl_cached_read: bool = False
 
     @staticmethod

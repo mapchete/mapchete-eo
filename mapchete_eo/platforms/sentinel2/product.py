@@ -300,6 +300,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     band,
                     model=brdf_config.model,
                     resolution=brdf_config.resolution,
+                    footprints_cached_read=brdf_config.footprints_cached_read,
                 ),
                 out_grid=grid,
                 resampling=resampling,
@@ -315,29 +316,37 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         cloud_type: CloudType = CloudType.all,
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification cloud mask."""
         logger.debug("read classification cloud mask for %s", str(self))
-        return self.metadata.l1c_cloud_mask(cloud_type, dst_grid=grid)
+        return self.metadata.l1c_cloud_mask(
+            cloud_type, dst_grid=grid, cached_read=cached_read
+        )
 
     def read_snow_ice_mask(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read classification snow and ice mask for %s", str(self))
-        return self.metadata.snow_ice_mask(dst_grid=grid)
+        return self.metadata.snow_ice_mask(dst_grid=grid, cached_read=cached_read)
 
     def read_cloud_probability(
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
         from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
         logger.debug("read cloud probability mask for %s", str(self))
         return self.metadata.cloud_probability(
-            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+            dst_grid=grid,
+            resampling=resampling,
+            from_resolution=from_resolution,
+            cached_read=cached_read,
         )
 
     def read_snow_probability(
@@ -345,11 +354,15 @@ class S2Product(EOProduct, EOProductProtocol):
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         resampling: Resampling = Resampling.bilinear,
         from_resolution: ProductQIMaskResolution = ProductQIMaskResolution["20m"],
+        cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
         logger.debug("read snow probability mask for %s", str(self))
         return self.metadata.snow_probability(
-            dst_grid=grid, resampling=resampling, from_resolution=from_resolution
+            dst_grid=grid,
+            resampling=resampling,
+            from_resolution=from_resolution,
+            cached_read=cached_read,
         )
 
     def read_scl(
@@ -437,7 +450,11 @@ class S2Product(EOProduct, EOProductProtocol):
                     raise AllMasked()
             if mask_config.l1c_cloud_type:
                 logger.debug("generate L1C mask ...")
-                out += self.read_l1c_cloud_mask(grid, mask_config.l1c_cloud_type).data
+                out += self.read_l1c_cloud_mask(
+                    grid,
+                    mask_config.l1c_cloud_type,
+                    cached_read=mask_config.l1c_cloud_mask_cached_read,
+                ).data
                 _check_full(out)
             if mask_config.cloud_probability_threshold != 100:
                 logger.debug(
@@ -445,7 +462,9 @@ class S2Product(EOProduct, EOProductProtocol):
                     mask_config.cloud_probability_threshold,
                 )
                 cld_prb = self.read_cloud_probability(
-                    grid, from_resolution=mask_config.cloud_probability_resolution
+                    grid,
+                    from_resolution=mask_config.cloud_probability_resolution,
+                    cached_read=mask_config.cloud_probability_cached_read,
                 ).data
                 out += np.where(
                     cld_prb >= mask_config.cloud_probability_threshold, True, False
@@ -469,7 +488,9 @@ class S2Product(EOProduct, EOProductProtocol):
                 _check_full(out)
             if mask_config.snow_ice:
                 logger.debug("generate snow & ice mask ...")
-                out += self.read_snow_ice_mask(grid).data
+                out += self.read_snow_ice_mask(
+                    grid, cached_read=mask_config.snow_ice_mask_cached_read
+                ).data
                 _check_full(out)
             if mask_config.snow_probability_threshold != 100:
                 logger.debug(
@@ -477,7 +498,9 @@ class S2Product(EOProduct, EOProductProtocol):
                     mask_config.snow_probability_threshold,
                 )
                 snw_prb = self.read_snow_probability(
-                    grid, from_resolution=mask_config.snow_probability_resolution
+                    grid,
+                    from_resolution=mask_config.snow_probability_resolution,
+                    cached_read=mask_config.snow_probability_cached_read,
                 ).data
                 out += np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False

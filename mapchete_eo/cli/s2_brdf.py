@@ -8,6 +8,7 @@ from mapchete_eo.cli import options_arguments
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
+from mapchete_eo.platforms.sentinel2.metadata_parser import Resolution
 
 
 @click.command()
@@ -30,6 +31,8 @@ def s2_brdf(
     """Generate 8bit RGB image from Sentinel-2 product."""
     item = pystac.Item.from_file(stac_item)
     product = S2Product.from_stac_item(item)
+    if not resolution.value:
+        resolution = Resolution["10m"]
     grid = product.metadata.grid(resolution)
     click.echo(product)
     for band in l2a_bands:

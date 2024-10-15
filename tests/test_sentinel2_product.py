@@ -317,13 +317,40 @@ def test_read_brdf(s2_stac_item_half_footprint):
 
     uncorrected = product.read(assets=assets, grid=tile)
     corrected = product.read(
-        assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
+        assets=assets,
+        grid=tile,
+        brdf_config=BRDFConfig(bands=assets),
     )
 
     assert isinstance(corrected, xr.Dataset)
     for asset in assets:
         assert corrected[asset].any()
         assert (uncorrected[asset] != corrected[asset]).any()
+
+
+@pytest.mark.parametrize("correction_weight", (0.9, 1.1))
+def test_read_brdf_correction_weight(s2_stac_item_half_footprint, correction_weight):
+    assets = ["red", "green", "blue"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    corrected = product.read(
+        assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets)
+    )
+    weighted_corrected = product.read(
+        assets=assets,
+        grid=tile,
+        brdf_config=BRDFConfig(bands=assets, correction_weight=correction_weight),
+    )
+
+    assert isinstance(weighted_corrected, xr.Dataset)
+    for asset in assets:
+        assert weighted_corrected[asset].any()
+        assert (corrected[asset] != weighted_corrected[asset]).any()
+        if correction_weight < 1:
+            assert weighted_corrected[asset].data.mean() > corrected[asset].data.mean()
+        else:
+            assert weighted_corrected[asset].data.mean() < corrected[asset].data.mean()
 
 
 @pytest.mark.remote

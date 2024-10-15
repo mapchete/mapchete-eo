@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -139,6 +139,7 @@ class Cache:
 class S2Product(EOProduct, EOProductProtocol):
     item_dict: dict
     cache: Optional[Cache] = None
+    _scl_cache: Dict[GridProtocol, np.ndarray]
 
     def __init__(
         self,
@@ -150,6 +151,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.id = item.id
 
         self._metadata = metadata
+        self._scl_cache = dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -262,6 +264,7 @@ class S2Product(EOProduct, EOProductProtocol):
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
+                    correction_weight=brdf_config.correction_weight,
                 )
         return ma.MaskedArray(arr, fill_value=fill_value)
 
@@ -371,19 +374,21 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return SCL mask."""
-        logger.debug("read SCL mask for %s", str(self))
-        grid = (
-            self.metadata.grid(grid)
-            if isinstance(grid, Resolution)
-            else Grid.from_obj(grid)
-        )
-        return read_mask_as_raster(
-            asset_mpath(self.item, "scl"),
-            dst_grid=grid,
-            resampling=Resampling.nearest,
-            masked=True,
-            cached_read=cached_read,
-        )
+        if grid not in self._scl_cache:
+            logger.debug("read SCL mask for %s", str(self))
+            grid = (
+                self.metadata.grid(grid)
+                if isinstance(grid, Resolution)
+                else Grid.from_obj(grid)
+            )
+            self._scl_cache[grid] = read_mask_as_raster(
+                asset_mpath(self.item, "scl"),
+                dst_grid=grid,
+                resampling=Resampling.nearest,
+                masked=True,
+                cached_read=cached_read,
+            )
+        return self._scl_cache[grid]
 
     def footprint_nodata_mask(
         self,

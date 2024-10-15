@@ -419,6 +419,7 @@ class S2Metadata:
                 dst_grid=dst_grid,
                 rasterize_value_func=_get_detector_id,
                 cached_read=cached_read,
+                dtype=np.uint8,
             )
         except FileNotFoundError as exc:
             raise AssetMissing(exc)

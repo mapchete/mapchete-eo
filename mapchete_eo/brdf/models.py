@@ -253,6 +253,8 @@ def get_corrected_band_reflectance(
             else np.where(band == nodata, True, False)
         )
         if correction_weight != 1.0:
+            # a correction_weight value of >1 should increase the correction, whereas a
+            # value <1 should decrease the correction
             correction = 1 - (1 - correction) * correction_weight
         corrected = (band * correction).astype(band.dtype, copy=False)
         if nodata == 0:

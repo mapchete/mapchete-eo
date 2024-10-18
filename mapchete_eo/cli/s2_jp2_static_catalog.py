@@ -139,15 +139,16 @@ def s2_jp2_static_catalog(
                 ) as tile_index:
                     for json_path in json_paths:
                         item = item_fix_footprint(Item.from_file(json_path))
-                        tile_index.write(
-                            item.id,
-                            dict(
-                                geometry=dict(item.geometry),
-                                properties=dict(
-                                    path=str(json_path), datetime=str(item.datetime)
+                        if item.geometry:
+                            tile_index.write(
+                                item.id,
+                                dict(
+                                    geometry=dict(item.geometry),
+                                    properties=dict(
+                                        path=str(json_path), datetime=str(item.datetime)
+                                    ),
                                 ),
-                            ),
-                        )
+                            )
 
                 index.write(
                     feature_id=s2tile.tile_id,

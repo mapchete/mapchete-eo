@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -276,8 +276,8 @@ def get_brdf_param(
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
     detector_footprints: ReferencedRaster,
-    viewing_zenith: dict,
-    viewing_azimuth: dict,
+    viewing_zenith_per_detector: Dict[int, ReferencedRaster],
+    viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
     sun_zenith_angle: float,
     f_band_params: Tuple[float, float, float],
     model: BRDFModels = BRDFModels.default,
@@ -317,10 +317,10 @@ def get_brdf_param(
 
         # handle rare cases where detector geometries are available but no respective
         # angle arrays:
-        if detector_id not in viewing_zenith:  # pragma: no cover
+        if detector_id not in viewing_zenith_per_detector:  # pragma: no cover
             logger.debug("no zenith angles grid found for detector %s", detector_id)
             continue
-        if detector_id not in viewing_azimuth:  # pragma: no cover
+        if detector_id not in viewing_azimuth_per_detector:  # pragma: no cover
             logger.debug("no azimuth angles grid found for detector %s", detector_id)
             continue
 
@@ -337,10 +337,10 @@ def get_brdf_param(
         # run low resolution model
         detector_model = DirectionalModels(
             angles=(
-                sun_zenith_angle_array["raster"].data,
-                sun_azimuth_angle_array["raster"].data,
-                viewing_zenith[detector_id]["raster"].data,
-                viewing_azimuth[detector_id]["raster"].data,
+                sun_zenith_angle_array.data,
+                sun_azimuth_angle_array.data,
+                viewing_zenith_per_detector[detector_id].data,
+                viewing_azimuth_per_detector[detector_id].data,
             ),
             f_band_params=f_band_params,
             sza=sun_zenith_angle,
@@ -356,7 +356,7 @@ def get_brdf_param(
         detector_brdf = resample_from_array(
             detector_brdf_param,
             out_grid=grid,
-            array_transform=viewing_zenith[detector_id]["raster"].transform,
+            array_transform=viewing_zenith_per_detector[detector_id].transform,
             in_crs=product_crs,
             nodata=0,
             resampling=Resampling.bilinear,
@@ -437,8 +437,8 @@ def apply_brdf_correction(
             sun_azimuth_angle_array=sun_azimuth_angle_array,
             sun_zenith_angle_array=sun_zenith_angle_array,
             detector_footprints=detector_footprints,
-            viewing_zenith=viewing_zenith,
-            viewing_azimuth=viewing_azimuth,
+            viewing_zenith_per_detector=viewing_zenith,
+            viewing_azimuth_per_detector=viewing_azimuth,
             sun_zenith_angle=sun_zenith_angle,
             f_band_params=f_band_params,
             model=model,

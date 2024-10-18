@@ -78,12 +78,12 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
         sun_azimuth_angle_array=metadata.sun_angles[SunAngle.azimuth],
         sun_zenith_angle_array=metadata.sun_angles[SunAngle.zenith],
         detector_footprints=metadata.detector_footprints(band),
-        viewing_azimuth=metadata.viewing_incidence_angles(band)[ViewAngle.azimuth][
-            "detector"
-        ],
-        viewing_zenith=metadata.viewing_incidence_angles(band)[ViewAngle.zenith][
-            "detector"
-        ],
+        viewing_azimuth_per_detector=metadata.viewing_incidence_angles(band)[
+            ViewAngle.azimuth
+        ]["detector"],
+        viewing_zenith_per_detector=metadata.viewing_incidence_angles(band)[
+            ViewAngle.zenith
+        ]["detector"],
         sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )

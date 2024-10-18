@@ -101,7 +101,7 @@ def test_earthsearch_mapper_jp2(s2_l2a_earthsearch_xml_remote):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_product_id(metadata):
+def test_metadata_product_id(metadata: S2Metadata):
     # product ID
     assert "L2A" in metadata.product_id
 
@@ -116,7 +116,7 @@ def test_metadata_product_id(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_product_id(metadata):
+def test_remote_metadata_product_id(metadata: S2Metadata):
     # product ID
     assert "L2A" in metadata.product_id
 
@@ -125,7 +125,7 @@ def test_remote_metadata_product_id(metadata):
     "metadata",
     [lazy_fixture("s2_l2a_metadata")],
 )
-def test_metadata_crs(metadata):
+def test_metadata_crs(metadata: S2Metadata):
     # crs
     assert isinstance(metadata.crs, CRS)
 
@@ -140,12 +140,12 @@ def test_metadata_crs(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_crs(metadata):
+def test_remote_metadata_crs(metadata: S2Metadata):
     # crs
     assert isinstance(metadata.crs, CRS)
 
 
-def _test_metadata_bounds(metadata):
+def _test_metadata_bounds(metadata: S2Metadata):
     # bounds
     assert isinstance(metadata.bounds, Bounds)
     assert len(metadata.bounds) == 4
@@ -159,7 +159,7 @@ def _test_metadata_bounds(metadata):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_bounds(metadata):
+def test_metadata_bounds(metadata: S2Metadata):
     _test_metadata_bounds(metadata)
 
 
@@ -173,11 +173,11 @@ def test_metadata_bounds(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_bounds(metadata):
+def test_remote_metadata_bounds(metadata: S2Metadata):
     _test_metadata_bounds(metadata)
 
 
-def _test_metadata_geoinfo(metadata, resolution):
+def _test_metadata_geoinfo(metadata: S2Metadata, resolution):
     # grid
     assert isinstance(metadata.grid(resolution), Grid)
 
@@ -202,7 +202,7 @@ def _test_metadata_geoinfo(metadata, resolution):
     "resolution",
     [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
 )
-def test_metadata_geoinfo(metadata, resolution):
+def test_metadata_geoinfo(metadata: S2Metadata, resolution):
     _test_metadata_geoinfo(metadata, resolution)
 
 
@@ -220,7 +220,7 @@ def test_metadata_geoinfo(metadata, resolution):
     "resolution",
     [Resolution["10m"], Resolution["20m"], Resolution["60m"], Resolution["120m"]],
 )
-def test_remote_metadata_geoinfo(metadata, resolution):
+def test_remote_metadata_geoinfo(metadata: S2Metadata, resolution):
     _test_metadata_geoinfo(metadata, resolution)
 
 
@@ -237,7 +237,7 @@ def _test_metadata_footprint(metadata):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_footprint(metadata):
+def test_metadata_footprint(metadata: S2Metadata):
     _test_metadata_footprint(metadata)
 
 
@@ -251,11 +251,11 @@ def test_metadata_footprint(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_footprint(metadata):
+def test_remote_metadata_footprint(metadata: S2Metadata):
     _test_metadata_footprint(metadata)
 
 
-def _test_metadata_l1c_cloud_mask(metadata):
+def _test_metadata_l1c_cloud_mask(metadata: S2Metadata):
     combined = metadata.l1c_cloud_mask()
     assert isinstance(combined, ReferencedRaster)
     assert combined.data.dtype == bool
@@ -278,7 +278,7 @@ def _test_metadata_l1c_cloud_mask(metadata):
         lazy_fixture("s2_l2a_safe_metadata"),
     ],
 )
-def test_metadata_l1c_cloud_mask(metadata):
+def test_metadata_l1c_cloud_mask(metadata: S2Metadata):
     _test_metadata_l1c_cloud_mask(metadata)
 
 
@@ -292,11 +292,11 @@ def test_metadata_l1c_cloud_mask(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_l1c_cloud_mask(metadata):
+def test_remote_metadata_l1c_cloud_mask(metadata: S2Metadata):
     _test_metadata_l1c_cloud_mask(metadata)
 
 
-def _test_metadata_snow_ice_mask(metadata):
+def _test_metadata_snow_ice_mask(metadata: S2Metadata):
     snow_ice = metadata.snow_ice_mask()
     assert isinstance(snow_ice, ReferencedRaster)
     assert snow_ice.data.dtype == bool
@@ -309,7 +309,7 @@ def _test_metadata_snow_ice_mask(metadata):
         lazy_fixture("s2_l2a_safe_metadata"),
     ],
 )
-def test_metadata_snow_ice_mask(metadata):
+def test_metadata_snow_ice_mask(metadata: S2Metadata):
     _test_metadata_snow_ice_mask(metadata)
 
 
@@ -323,11 +323,11 @@ def test_metadata_snow_ice_mask(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_snow_ice_mask(metadata):
+def test_remote_metadata_snow_ice_mask(metadata: S2Metadata):
     _test_metadata_snow_ice_mask(metadata)
 
 
-def _test_metadata_band_masks(metadata):
+def _test_metadata_band_masks(metadata: S2Metadata):
     bands = [L2ABand.B01, L2ABand.B04]
     # band_masks
     for band in bands:
@@ -348,7 +348,7 @@ def _test_metadata_band_masks(metadata):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_band_masks(metadata):
+def test_metadata_band_masks(metadata: S2Metadata):
     _test_metadata_band_masks(metadata)
 
 
@@ -360,17 +360,17 @@ def test_metadata_band_masks(metadata):
         lazy_fixture("s2_l2a_roda_metadata_remote"),
     ],
 )
-def test_remote_metadata_band_masks(metadata):
+def test_remote_metadata_band_masks(metadata: S2Metadata):
     _test_metadata_band_masks(metadata)
 
 
-def _test_metadata_sun_angles(metadata):
+def _test_metadata_sun_angles(metadata: S2Metadata):
     # sun_angles
-    for angle, properties in metadata.sun_angles.items():
-        assert angle in SunAngle
+    for angle in SunAngle:
+        sun_angle = metadata.sun_angles.get_angle(angle)
 
         # array
-        raster = properties["raster"]
+        raster = sun_angle.raster
         assert isinstance(raster, ReferencedRaster)
         assert isinstance(raster.data, ma.MaskedArray)
         assert raster.data.ndim == 2
@@ -382,7 +382,7 @@ def _test_metadata_sun_angles(metadata):
         assert raster.transform[0] == 5000.0
 
         # mean
-        assert isinstance(properties["mean"], float)
+        assert isinstance(sun_angle.mean, float)
 
 
 @pytest.mark.parametrize(
@@ -391,7 +391,7 @@ def _test_metadata_sun_angles(metadata):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_sun_angles(metadata):
+def test_metadata_sun_angles(metadata: S2Metadata):
     _test_metadata_sun_angles(metadata)
 
 
@@ -405,33 +405,32 @@ def test_metadata_sun_angles(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_sun_angles(metadata):
+def test_remote_metadata_sun_angles(metadata: S2Metadata):
     _test_metadata_sun_angles(metadata)
 
 
-def _test_metadata_viewing_incidence_angles(metadata):
+def _test_metadata_viewing_incidence_angles(metadata: S2Metadata):
     band = L2ABand.B04
     grids = metadata.viewing_incidence_angles(band)
 
-    for angle, items in grids.items():
-        assert angle in ViewAngle
+    for angle in ViewAngle:
+        view_angle = grids.get_angle(angle)
         # mean
-        assert isinstance(items["mean"], float)
+        assert isinstance(view_angle.mean, float)
         # mean viewing angles
         arr = metadata.mean_viewing_incidence_angles(bands=band, angle=angle)
         assert not arr.mask.all()
 
         # detector footprints
-        footprints = len(items["detector"])
+        footprints = len(view_angle.detectors)
         assert footprints
         assert set(list(range(1, footprints + 1))) == set(
             [x for x in np.unique(metadata.detector_footprints(band).data) if x != 0]
         )
-        for detector_id, properties in items["detector"].items():
+        for detector_id, raster in view_angle.detectors.items():
             assert isinstance(detector_id, int)
 
             # array
-            raster = properties["raster"]
             assert isinstance(raster, ReferencedRaster)
             assert isinstance(raster.data, ma.MaskedArray)
             assert raster.data.ndim == 2
@@ -449,7 +448,7 @@ def _test_metadata_viewing_incidence_angles(metadata):
         lazy_fixture("s2_l2a_metadata"),
     ],
 )
-def test_metadata_viewing_incidence_angles(metadata):
+def test_metadata_viewing_incidence_angles(metadata: S2Metadata):
     _test_metadata_viewing_incidence_angles(metadata)
 
 
@@ -463,7 +462,7 @@ def test_metadata_viewing_incidence_angles(metadata):
         lazy_fixture("s2_l2a_earthsearch_remote"),
     ],
 )
-def test_remote_metadata_viewing_incidence_angles(metadata):
+def test_remote_metadata_viewing_incidence_angles(metadata: S2Metadata):
     _test_metadata_viewing_incidence_angles(metadata)
 
 

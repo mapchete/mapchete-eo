@@ -13,6 +13,7 @@ from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
 import numpy.ma as ma
+from pydantic import BaseModel
 import pystac
 from affine import Affine
 from fiona.transform import transform_geom
@@ -231,11 +232,11 @@ class S2Metadata:
         return CRS.from_string(crs_str)
 
     @cached_property
-    def sun_angles(self) -> Dict:
+    def sun_angles(self) -> SunAnglesData:
         """
         Return sun angle grids.
         """
-        sun_angles: dict = {angle: dict() for angle in SunAngle}
+        sun_angles: dict = {angle.value.lower(): dict() for angle in SunAngle}
         for angle in SunAngle:
             raster = _get_grid_data(
                 group=next(self.xml_root.iter("Sun_Angles_Grid")),
@@ -248,11 +249,11 @@ class S2Metadata:
                 .findall(f"{angle.value.upper()}_ANGLE")[0]
                 .text
             )
-            sun_angles[angle].update(raster=raster, mean=mean)
-        return sun_angles
+            sun_angles[angle.value.lower()] = SunAngleData(raster=raster, mean=mean)
+        return SunAnglesData(**sun_angles)
 
     @property
-    def assets(self) -> dict:
+    def assets(self) -> Dict[str, MPath]:
         """
         Mapping of all available metadata assets such as QI bands
         """
@@ -338,7 +339,7 @@ class S2Metadata:
         self,
         dst_grid: Union[GridProtocol, Resolution, None] = None,
         cached_read: bool = False,
-    ):
+    ) -> ReferencedRaster:
         dst_grid = dst_grid or Resolution["20m"]
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
@@ -458,7 +459,7 @@ class S2Metadata:
         except FileNotFoundError as exc:
             raise AssetMissing(exc)
 
-    def viewing_incidence_angles(self, band: L2ABand) -> Dict:
+    def viewing_incidence_angles(self, band: L2ABand) -> ViewingIncidenceAngles:
         """
         Return viewing incidence angles.
 
@@ -473,13 +474,13 @@ class S2Metadata:
         """
         if self._viewing_incidence_angles_cache.get(band) is None:
             angles: Dict[str, Any] = {
-                ViewAngle.zenith: {"detector": dict(), "mean": None},
-                ViewAngle.azimuth: {"detector": dict(), "mean": None},
+                "zenith": {"detectors": dict(), "mean": None},
+                "azimuth": {"detectors": dict(), "mean": None},
             }
             for grids in self.xml_root.iter("Viewing_Incidence_Angles_Grids"):
                 band_idx = int(grids.get("bandId"))
                 if band_idx == band.value:
-                    detector = int(grids.get("detectorId"))
+                    detector_id = int(grids.get("detectorId"))
                     for angle in ViewAngle:
                         raster = _get_grid_data(
                             group=grids,
@@ -487,27 +488,30 @@ class S2Metadata:
                             bounds=self.bounds,
                             crs=self.crs,
                         )
-                        angles[angle]["detector"][detector] = dict(raster=raster)
+                        angles[angle.value.lower()]["detectors"][detector_id] = raster
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
                 for band_angle in band_angles:
                     band_idx = int(band_angle.get("bandId"))
                     if band_idx == band.value:
                         for angle in ViewAngle:
-                            angles[angle].update(
+                            angles[angle.value.lower()].update(
                                 mean=float(
                                     band_angle.findall(f"{angle.value.upper()}_ANGLE")[
                                         0
                                     ].text
                                 )
                             )
-
-            self._viewing_incidence_angles_cache[band] = angles
+            self._viewing_incidence_angles_cache[band] = ViewingIncidenceAngles(
+                **angles
+            )
         return self._viewing_incidence_angles_cache[band]
 
     def viewing_incidence_angle(
         self, band: L2ABand, detector_id: int, angle: ViewAngle = ViewAngle.zenith
-    ) -> Dict:
-        return self.viewing_incidence_angles(band)[angle]["detector"][detector_id]
+    ) -> ReferencedRaster:
+        return (
+            self.viewing_incidence_angles(band).get_angle(angle).detectors[detector_id]
+        )
 
     def mean_viewing_incidence_angles(
         self,
@@ -517,12 +521,14 @@ class S2Metadata:
         resampling: Resampling = Resampling.nearest,
         smoothing_iterations: int = 10,
         cached_read: bool = False,
-    ) -> np.ndarray:
+    ) -> ma.MaskedArray:
         bands = list(L2ABand) if bands is None else bands
         bands = [bands] if isinstance(bands, L2ABand) else bands
 
-        def _band_angles(band: L2ABand):
-            detector_angles = self.viewing_incidence_angles(band)[angle]["detector"]
+        def _band_angles(band: L2ABand) -> ma.MaskedArray:
+            detector_angles = (
+                self.viewing_incidence_angles(band).get_angle(angle).detectors
+            )
             band_angles = ma.masked_equal(
                 np.zeros(self.shape(resolution), dtype=np.float32), 0
             )
@@ -539,7 +545,7 @@ class S2Metadata:
                         f"no {angle} angles grid found for detector {detector_id}"
                     )
                     continue
-                detector_angles_raster = detector_angles[detector_id]["raster"]
+                detector_angles_raster = detector_angles[detector_id]
                 # interpolate missing nodata edges and return BRDF difference model
                 detector_angles_raster.data = ma.masked_invalid(
                     fillnodata(
@@ -575,7 +581,45 @@ class S2Metadata:
         return mean
 
 
-def _get_grids(root, crs):
+class SunAngleData(BaseModel):
+    model_config = dict(arbitrary_types_allowed=True)
+    raster: ReferencedRaster
+    mean: float
+
+
+class SunAnglesData(BaseModel):
+    azimuth: SunAngleData
+    zenith: SunAngleData
+
+    def get_angle(self, angle: SunAngle) -> SunAngleData:
+        if angle == SunAngle.azimuth:
+            return self.azimuth
+        elif angle == SunAngle.zenith:
+            return self.zenith
+        else:
+            raise KeyError(f"unknown angle: {angle}")
+
+
+class ViewingIncidenceAngle(BaseModel):
+    model_config = dict(arbitrary_types_allowed=True)
+    detectors: Dict[int, ReferencedRaster]
+    mean: float
+
+
+class ViewingIncidenceAngles(BaseModel):
+    azimuth: ViewingIncidenceAngle
+    zenith: ViewingIncidenceAngle
+
+    def get_angle(self, angle: ViewAngle) -> ViewingIncidenceAngle:
+        if angle == ViewAngle.azimuth:
+            return self.azimuth
+        elif angle == ViewAngle.zenith:
+            return self.zenith
+        else:
+            raise KeyError(f"unknown angle: {angle}")
+
+
+def _get_grids(root: Element, crs: CRS) -> Dict[Resolution, Grid]:
     geoinfo = {
         Resolution["10m"]: dict(crs=crs),
         Resolution["20m"]: dict(crs=crs),
@@ -584,6 +628,8 @@ def _get_grids(root, crs):
     for size in root.iter("Size"):
         resolution = Resolution[f"{size.get('resolution')}m"]
         for item in size:
+            if item.text is None:
+                raise TypeError(f"cannot derive height or width from: {item.text}")
             if item.tag == "NROWS":
                 height = int(item.text)
             elif item.tag == "NCOLS":
@@ -593,6 +639,8 @@ def _get_grids(root, crs):
     for geoposition in root.iter("Geoposition"):
         resolution = Resolution[f"{geoposition.get('resolution')}m"]
         for item in geoposition:
+            if item.text is None:
+                raise TypeError(f"cannot derive float values from: {item.text}")
             if item.tag == "ULX":
                 left = float(item.text)
             elif item.tag == "ULY":

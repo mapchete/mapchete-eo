@@ -2,10 +2,11 @@ import logging
 from typing import Tuple
 
 import numpy as np
+from numpy.typing import DTypeLike
 import numpy.ma as ma
 from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.protocols import GridProtocol
-from mapchete.types import Grid
+from mapchete.types import Grid, NodataVal
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
@@ -24,13 +25,17 @@ class DirectionalModels:
         model=BRDFModels.default,
         upscale_factor=10000,
         sun_model_flag=False,
+        dtype: DTypeLike = np.float32,
     ):
         self.angles = angles
         self.f_band_params = f_band_params
         self.sza = sza
         self.model = BRDFModels(model)
+        if self.model == BRDFModels.none:
+            raise ValueError("model cannot be BRDFModels.none")
         self.upscale_factor = upscale_factor
         self.sun_model_flag = sun_model_flag
+        self.dtype = dtype
 
     def get_model(self):
         if self.sun_model_flag is True:
@@ -57,7 +62,7 @@ class DirectionalModels:
         return ma.masked_array(
             data=out_param_arr,
             mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
-        ).astype(np.float32, copy=False)
+        ).astype(self.dtype, copy=False)
 
     def get_corrected_band_reflectance(self, band):
         return get_corrected_band_reflectance(band, self.get_band_param())
@@ -219,7 +224,12 @@ class SunModel(BaseBRDF):
         self.phi = np.zeros(self.theta_sun.shape)
 
 
-def get_corrected_band_reflectance(band, brdf_param, nodata=0):
+def get_corrected_band_reflectance(
+    band: ma.MaskedArray,
+    correction: np.ndarray,
+    correction_weight: float = 1.0,
+    nodata: NodataVal = 0,
+) -> ma.MaskedArray:
     """
     Apply BRDF parameter to band.
 
@@ -244,15 +254,19 @@ def get_corrected_band_reflectance(band, brdf_param, nodata=0):
             if isinstance(band, ma.MaskedArray)
             else np.where(band == nodata, True, False)
         )
-        corrected = (band * brdf_param).astype(band.dtype, copy=False)
+        if correction_weight != 1.0:
+            # a correction_weight value of >1 should increase the correction, whereas a
+            # value <1 should decrease the correction
+            correction = 1 - (1 - correction) * correction_weight
+        corrected = (band * correction).astype(band.dtype, copy=False)
         if nodata == 0:
             return ma.masked_array(
                 data=np.where(mask, 0, np.clip(corrected, 1, np.iinfo(band.dtype).max)),
                 mask=mask,
             )
         else:  # pragma: no cover
-            return ma.masked_array(data=corrected, mask=mask).astype(
-                band.dtype, copy=False
+            return ma.masked_array(
+                data=corrected.astype(band.dtype, copy=False), mask=mask
             )
 
 
@@ -268,12 +282,13 @@ def get_brdf_param(
     f_band_params: Tuple[float, float, float],
     model: BRDFModels = BRDFModels.default,
     smoothing_iterations: int = 10,
+    dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
     """
     Return BRDF parameters.
     """
     # create output array
-    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=np.float32), 0)
+    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=dtype), 0)
 
     resampled_detector_footprints = resample_from_array(
         detector_footprints,
@@ -290,7 +305,11 @@ def get_brdf_param(
     if resampled_detector_footprints.ndim == 3:
         resampled_detector_footprints = resampled_detector_footprints[0]
 
-    detector_ids = [x for x in np.unique(resampled_detector_footprints) if x != 0]
+    detector_ids = [
+        detector_id
+        for detector_id in np.unique(resampled_detector_footprints)
+        if detector_id != 0
+    ]
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
@@ -412,7 +431,7 @@ def apply_brdf_correction(
             raise ValueError(f"{name} must be provided")
     return get_corrected_band_reflectance(
         band=band,
-        brdf_param=get_brdf_param(
+        correction=get_brdf_param(
             grid=Grid(band_transform, band.shape[0], band.shape[1], crs=band_crs),
             product_crs=product_crs,
             sun_azimuth_angle_array=sun_azimuth_angle_array,

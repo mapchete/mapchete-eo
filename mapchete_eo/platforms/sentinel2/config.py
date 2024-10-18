@@ -20,13 +20,6 @@ from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
 
 
-class BRDFConfig(BaseModel):
-    model: BRDFModels = BRDFModels.HLS
-    bands: List[str] = ["blue", "green", "red", "nir"]
-    resolution: Resolution = Resolution["60m"]
-    footprints_cached_read: bool = False
-
-
 class L2ABandFParams(Enum):
     B01 = F_MODIS_PARAMS[1]
     B02 = F_MODIS_PARAMS[2]
@@ -40,6 +33,61 @@ class L2ABandFParams(Enum):
     B09 = F_MODIS_PARAMS[10]
     B11 = F_MODIS_PARAMS[11]
     B12 = F_MODIS_PARAMS[12]
+
+
+class BRDFModelConfig(BaseModel):
+    model: BRDFModels = BRDFModels.HLS
+    bands: List[str] = ["blue", "green", "red", "nir"]
+    resolution: Resolution = Resolution["60m"]
+    footprints_cached_read: bool = False
+    # TODO: let's make this configurable later
+    # f_params: Union[Dict[L2ABand, Tuple[float, float, float]], Type[L2ABandFParams]] = (
+    #     L2ABandFParams
+    # )
+
+    # optionally weighing of correction using the formula:
+    # weighted_correction = 1 - (1 - correction_value) * correction_weight
+    correction_weight: float = 1.0
+
+
+class BRDFSCLClassConfig(BRDFModelConfig):
+    scl_classes: List[SceneClassification]
+
+
+class BRDFConfig(BRDFModelConfig):
+    """
+    Main BRDF configuration with optional sub-configurations for certain SCL classes.
+
+    model: BRDF model
+    bands: list of band names
+    resolution: resolution BRDF is calculated on
+    footprints_cached_read: download and read footprints from cache or not
+    correction_weight: make correction stronger (>1) or weaker (<1)
+    scl_specific_configurations: list of parameters like above plus SCL classes it
+        should be applied to
+
+    e.g.
+    BRDFConfig(
+        model="HLS",
+        bands=["red", "green", "blue"],
+        resolution="60m",
+        footprints_cached_read=True,
+        correction_weight=0.9,
+        scl_specific_configurations=[
+            BRDFSCLClassConfig(
+                scl_classes=["water"],
+                model="HLS",
+                bands=["red", "green", "blue"],
+                resolution="60m",
+                footprints_cached_read=True,
+                correction_weight=1.3,
+            )
+        ]
+    )
+
+    """
+
+    scl_specific_configurations: Optional[List[BRDFSCLClassConfig]] = None
 
 
 class CacheConfig(BaseModel):

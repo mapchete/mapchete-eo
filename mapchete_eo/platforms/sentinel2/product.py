@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -17,6 +17,7 @@ from rasterio.features import rasterize
 from shapely.geometry import shape
 
 from mapchete_eo.array.buffer import buffer_array
+from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
 from mapchete_eo.exceptions import (
     AllMasked,
@@ -31,7 +32,12 @@ from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
+from mapchete_eo.platforms.sentinel2.config import (
+    BRDFConfig,
+    BRDFModelConfig,
+    CacheConfig,
+    MaskConfig,
+)
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
@@ -139,6 +145,7 @@ class Cache:
 class S2Product(EOProduct, EOProductProtocol):
     item_dict: dict
     cache: Optional[Cache] = None
+    _scl_cache: Dict[GridProtocol, np.ndarray]
 
     def __init__(
         self,
@@ -150,6 +157,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.id = item.id
 
         self._metadata = metadata
+        self._scl_cache = dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -253,16 +261,15 @@ class S2Product(EOProduct, EOProductProtocol):
 
         # apply BRDF config if required
         if brdf_config:
-            for band_idx, asset in zip(range(len(arr)), assets):
-                arr[band_idx] = get_corrected_band_reflectance(
-                    arr[band_idx],
-                    self.read_brdf_grid(
-                        asset_name_to_l2a_band(self.item, asset),
-                        resampling=resampling,
-                        grid=grid,
-                        brdf_config=brdf_config,
-                    ),
-                )
+            arr = self._apply_brdf(
+                uncorrected=arr,
+                assets=assets,
+                brdf_config=brdf_config,
+                grid=grid,
+                resampling=resampling,
+                mask_config=mask_config,
+            )
+
         return ma.MaskedArray(arr, fill_value=fill_value)
 
     def cache_assets(self) -> None:
@@ -278,7 +285,7 @@ class S2Product(EOProduct, EOProductProtocol):
         band: L2ABand,
         resampling: Resampling = Resampling.nearest,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
-        brdf_config: BRDFConfig = BRDFConfig(),
+        brdf_config: BRDFModelConfig = BRDFConfig(),
     ) -> np.ndarray:
         grid = (
             self.metadata.grid(grid)
@@ -371,19 +378,22 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return SCL mask."""
-        logger.debug("read SCL mask for %s", str(self))
         grid = (
             self.metadata.grid(grid)
             if isinstance(grid, Resolution)
             else Grid.from_obj(grid)
         )
-        return read_mask_as_raster(
-            asset_mpath(self.item, "scl"),
-            dst_grid=grid,
-            resampling=Resampling.nearest,
-            masked=True,
-            cached_read=cached_read,
-        )
+        grid_hash = hash((grid.transform, grid.shape))
+        if grid_hash not in self._scl_cache:
+            logger.debug("read SCL mask for %s", str(self))
+            self._scl_cache[grid_hash] = read_mask_as_raster(
+                asset_mpath(self.item, "scl"),
+                dst_grid=grid,
+                resampling=Resampling.nearest,
+                masked=True,
+                cached_read=cached_read,
+            )
+        return self._scl_cache[grid_hash]
 
     def footprint_nodata_mask(
         self,
@@ -519,6 +529,78 @@ class S2Product(EOProduct, EOProductProtocol):
         return ReferencedRaster(
             out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
         )
+
+    def _apply_brdf(
+        self,
+        uncorrected: ma.MaskedArray,
+        assets: List[str],
+        brdf_config: BRDFConfig,
+        grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
+        resampling: Resampling = Resampling.nearest,
+        mask_config: MaskConfig = MaskConfig(),
+    ) -> ma.MaskedArray:
+        out_arr: ma.MaskedArray = ma.masked_array(
+            data=np.zeros(uncorrected.shape, uncorrected.dtype),
+            mask=uncorrected.mask.copy(),
+            fill_value=uncorrected.fill_value,
+        )
+
+        # apply default correction defined in root
+        if brdf_config.model == BRDFModels.none:
+            logger.debug("no default BRDF model specified")
+            out_arr[:] = uncorrected
+        else:
+            logger.debug("applying %s to bands", brdf_config.model)
+            for band_idx, asset in enumerate(assets):
+                out_arr[band_idx] = get_corrected_band_reflectance(
+                    uncorrected[band_idx],
+                    self.read_brdf_grid(
+                        asset_name_to_l2a_band(self.item, asset),
+                        resampling=resampling,
+                        grid=grid,
+                        brdf_config=brdf_config,
+                    ),
+                    correction_weight=brdf_config.correction_weight,
+                )
+
+        # if SCL-specific correction is configured, apply and overwrite values in array
+        if brdf_config.scl_specific_configurations:
+            logger.debug("SCL class specific BRDF correction required")
+            scl_arr = self.read_scl(grid, mask_config.scl_cached_read).data
+
+            for scl_config in brdf_config.scl_specific_configurations:
+                scl_mask = np.isin(
+                    scl_arr, [scl_class.value for scl_class in scl_config.scl_classes]
+                )
+
+                for band_idx, asset in enumerate(assets):
+                    if scl_config.model == BRDFModels.none:
+                        # use uncorrected values from original array
+                        out_arr[band_idx][scl_mask] = uncorrected[band_idx][scl_mask]
+
+                    elif scl_mask.any():
+                        logger.debug(
+                            "applying BRDF model %s to SCL classes %s",
+                            scl_config.model.value,
+                            ", ".join(
+                                [scl_class.name for scl_class in scl_config.scl_classes]
+                            ),
+                        )
+                        # apply correction band by band
+                        out_arr[band_idx][scl_mask] = get_corrected_band_reflectance(
+                            uncorrected[band_idx],
+                            self.read_brdf_grid(
+                                asset_name_to_l2a_band(self.item, asset),
+                                resampling=resampling,
+                                grid=grid,
+                                brdf_config=scl_config,
+                            ),
+                            correction_weight=scl_config.correction_weight,
+                        )[scl_mask]
+
+                    # leave it be for all other cases
+
+        return out_arr
 
 
 def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:

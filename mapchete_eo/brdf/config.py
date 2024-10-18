@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class BRDFModels(str, Enum):
+    none = "none"
     HLS = "HLS"
     HLS_alt = "HLS_alt"
     sen2agri = "sen2agri"

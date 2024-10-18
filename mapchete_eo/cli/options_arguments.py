@@ -153,6 +153,13 @@ opt_brdf_model = click.option(
     show_default=True,
     help="BRDF model.",
 )
+opt_brdf_weight = click.option(
+    "--brdf-weight",
+    type=click.FLOAT,
+    default=1.0,
+    show_default=True,
+    help="BRDF model weight.",
+)
 opt_mgrs_tile = click.option("--mgrs-tile", type=click.STRING)
 opt_start_time = click.option(
     "--start-time", type=click.STRING, callback=_str_to_datetime, help="Start time"

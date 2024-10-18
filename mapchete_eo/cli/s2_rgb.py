@@ -30,6 +30,7 @@ from mapchete_eo.platforms.sentinel2.types import Resolution
 @options_arguments.opt_mask_snow_probability_threshold
 @options_arguments.opt_mask_scl_classes
 @options_arguments.opt_brdf_model
+@options_arguments.opt_brdf_weight
 @opt_debug
 def s2_rgb(
     stac_item: MPath,
@@ -43,6 +44,7 @@ def s2_rgb(
     mask_snow_probability_threshold=100,
     mask_scl_classes=None,
     brdf_model=None,
+    brdf_weight: float = 1.0,
     **_,
 ):
     """Generate 8bit RGB image from Sentinel-2 product."""
@@ -70,7 +72,11 @@ def s2_rgb(
         assets=assets,
         grid=grid,
         mask_config=mask_config,
-        brdf_config=BRDFConfig(bands=assets, model=brdf_model) if brdf_model else None,
+        brdf_config=BRDFConfig(
+            bands=assets, model=brdf_model, correction_weight=brdf_weight
+        )
+        if brdf_model
+        else None,
     )
     with rasterio_open(
         dst_path,

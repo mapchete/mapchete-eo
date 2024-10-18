@@ -17,7 +17,13 @@ from mapchete_eo.exceptions import (
 )
 from mapchete_eo.io import read_levelled_cube_to_np_array, read_levelled_cube_to_xarray
 from mapchete_eo.io.items import item_fix_footprint
-from mapchete_eo.platforms.sentinel2.config import BRDFConfig, CacheConfig, MaskConfig
+from mapchete_eo.platforms.sentinel2.config import (
+    BRDFConfig,
+    BRDFModels,
+    BRDFSCLClassConfig,
+    CacheConfig,
+    MaskConfig,
+)
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
@@ -351,6 +357,77 @@ def test_read_brdf_correction_weight(s2_stac_item_half_footprint, correction_wei
             assert weighted_corrected[asset].data.mean() > corrected[asset].data.mean()
         else:
             assert weighted_corrected[asset].data.mean() < corrected[asset].data.mean()
+
+
+def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
+    """Default will be corrected, SCL classes won't."""
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    scl = product.read_np_array(assets=["scl"], grid=tile)[0]
+    available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
+    # for each available class, activate/deactivate BRDF correction and compare with rest of image
+    uncorrected = product.read_np_array(assets=assets, grid=tile)
+    for scl_class in available_scl_classes:
+        corrected = product.read_np_array(
+            assets=assets,
+            grid=tile,
+            brdf_config=BRDFConfig(
+                bands=assets,
+                scl_specific_configurations=[
+                    BRDFSCLClassConfig(model=BRDFModels.none, scl_classes=[scl_class])
+                ],
+            ),
+        )
+        scl_class_mask = np.where(scl == scl_class.value, True, False)
+        for corrected_band, uncorrected_band in zip(corrected, uncorrected):
+            # there should be some pixels not affected by correction
+            assert np.where(corrected_band == uncorrected_band, True, False).any()
+            # make sure pixel were not corrected for SCL class
+            assert (
+                uncorrected_band[scl_class_mask] == corrected_band[scl_class_mask]
+            ).all()
+            # make sure all other pixels were corrected
+            assert (
+                uncorrected_band[~scl_class_mask] != corrected_band[~scl_class_mask]
+            ).all()
+
+
+def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
+    """Default won't be corrected, SCL classes will."""
+    assets = ["red"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    scl = product.read_np_array(assets=["scl"], grid=tile)[0]
+    available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
+    # for each available class, activate/deactivate BRDF correction and compare with rest of image
+    uncorrected = product.read_np_array(assets=assets, grid=tile)
+    for scl_class in available_scl_classes:
+        corrected = product.read_np_array(
+            assets=assets,
+            grid=tile,
+            brdf_config=BRDFConfig(
+                bands=assets,
+                scl_specific_configurations=[
+                    BRDFSCLClassConfig(model=BRDFModels.HLS, scl_classes=[scl_class])
+                ],
+                model=BRDFModels.none,
+            ),
+        )
+        scl_class_mask = np.where(scl == scl_class.value, True, False)
+        for corrected_band, uncorrected_band in zip(corrected, uncorrected):
+            # there should be some pixels not affected by correction
+            assert np.where(corrected_band == uncorrected_band, True, False).any()
+            # make sure pixel were corrected for SCL class
+            assert (
+                uncorrected_band[scl_class_mask] != corrected_band[scl_class_mask]
+            ).all()
+            # make sure all other pixels were not corrected
+            assert (
+                uncorrected_band[~scl_class_mask] == corrected_band[~scl_class_mask]
+            ).all()
 
 
 @pytest.mark.remote

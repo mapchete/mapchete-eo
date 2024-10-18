@@ -126,6 +126,7 @@ class S2Metadata:
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
+    _array_cache: Dict[str, np.ndarray]
 
     def __init__(
         self,
@@ -150,6 +151,8 @@ class S2Metadata:
         self._grids = _get_grids(self.xml_root, self.crs)
         self.bounds = self._grids[Resolution["10m"]].bounds
         self.footprint = shape(self.bounds)
+
+        self._array_cache = dict()
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
@@ -411,22 +414,29 @@ class S2Metadata:
         if isinstance(dst_grid, Resolution):
             dst_grid = self.grid(dst_grid)
 
-        try:
-            footprints = read_mask_as_raster(
-                self.path_mapper.band_qi_mask(
+        cache_item_id = f"{band}-{str(dst_grid)}"
+        if cache_item_id not in self._array_cache:
+            try:
+                path = self.path_mapper.band_qi_mask(
                     qi_mask=BandQI.detector_footprints, band=band
-                ),
-                dst_grid=dst_grid,
-                rasterize_value_func=_get_detector_id,
-                cached_read=cached_read,
-                dtype=np.uint8,
-            )
-        except FileNotFoundError as exc:
-            raise AssetMissing(exc)
+                )
+                logger.debug("reading footprints from %s ...", path)
+                footprints = read_mask_as_raster(
+                    path,
+                    dst_grid=dst_grid,
+                    rasterize_value_func=_get_detector_id,
+                    cached_read=cached_read,
+                    dtype=np.uint8,
+                )
+            except FileNotFoundError as exc:
+                raise AssetMissing(exc)
 
-        if not footprints.data.any():
-            raise AssetEmpty(f"No detector footprints found for band {band} in {self}")
-        return footprints
+            if not footprints.data.any():
+                raise AssetEmpty(
+                    f"No detector footprints found for band {band} in {self}"
+                )
+            self._array_cache[cache_item_id] = footprints
+        return self._array_cache[cache_item_id]
 
     def technical_quality_mask(
         self,

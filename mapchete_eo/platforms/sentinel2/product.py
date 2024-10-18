@@ -378,21 +378,22 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return SCL mask."""
-        if grid not in self._scl_cache:
+        grid = (
+            self.metadata.grid(grid)
+            if isinstance(grid, Resolution)
+            else Grid.from_obj(grid)
+        )
+        grid_hash = hash((grid.transform, grid.shape))
+        if grid_hash not in self._scl_cache:
             logger.debug("read SCL mask for %s", str(self))
-            grid = (
-                self.metadata.grid(grid)
-                if isinstance(grid, Resolution)
-                else Grid.from_obj(grid)
-            )
-            self._scl_cache[grid] = read_mask_as_raster(
+            self._scl_cache[grid_hash] = read_mask_as_raster(
                 asset_mpath(self.item, "scl"),
                 dst_grid=grid,
                 resampling=Resampling.nearest,
                 masked=True,
                 cached_read=cached_read,
             )
-        return self._scl_cache[grid]
+        return self._scl_cache[grid_hash]
 
     def footprint_nodata_mask(
         self,

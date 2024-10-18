@@ -365,7 +365,7 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
     product = S2Product(s2_stac_item_half_footprint)
     tile = _get_product_tile(product, metatiling=2)
 
-    scl = product.read_np_array(assets=["scl"], grid=tile)[0]
+    scl = product.read_scl(grid=tile).data
     available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
     # for each available class, activate/deactivate BRDF correction and compare with rest of image
     uncorrected = product.read_np_array(assets=assets, grid=tile)
@@ -400,7 +400,7 @@ def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
     product = S2Product(s2_stac_item_half_footprint)
     tile = _get_product_tile(product, metatiling=2)
 
-    scl = product.read_np_array(assets=["scl"], grid=tile)[0]
+    scl = product.read_scl(grid=tile).data
     available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
     # for each available class, activate/deactivate BRDF correction and compare with rest of image
     uncorrected = product.read_np_array(assets=assets, grid=tile)

@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2024.10.0 - 2024-10-18
+----------------------
+
+* core
+
+  * add `brdf_weight` and `scl_classes` options to Sentinel-2 BRDF correction
+  * `S2Metadata`: return pydantic models instead of dicts on some angle properties
+
+
 2024.9.3 - 2024-09-27
 ---------------------
 

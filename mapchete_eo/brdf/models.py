@@ -31,6 +31,8 @@ class DirectionalModels:
         self.f_band_params = f_band_params
         self.sza = sza
         self.model = BRDFModels(model)
+        if self.model == BRDFModels.none:
+            raise ValueError("model cannot be BRDFModels.none")
         self.upscale_factor = upscale_factor
         self.sun_model_flag = sun_model_flag
         self.dtype = dtype

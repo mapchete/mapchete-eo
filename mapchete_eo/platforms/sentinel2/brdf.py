@@ -14,8 +14,6 @@ from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     L2ABand,
     Resolution,
-    SunAngle,
-    ViewAngle,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +29,7 @@ def get_sun_zenith_angle(s2_metadata: S2Metadata):
     return get_sun_angle_array(
         min_lat=bottom,
         max_lat=top,
-        shape=s2_metadata.sun_angles[SunAngle.zenith]["raster"].data.shape,
+        shape=s2_metadata.sun_angles.zenith.raster.data.shape,
     )
 
 
@@ -48,17 +46,17 @@ def correction_grid(
             f_band_params=L2ABandFParams[band.name].value,
             grid=s2_metadata.grid(resolution),
             product_crs=s2_metadata.crs,
-            sun_azimuth_angle_array=s2_metadata.sun_angles[SunAngle.azimuth],
-            sun_zenith_angle_array=s2_metadata.sun_angles[SunAngle.zenith],
+            sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
+            sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
             detector_footprints=s2_metadata.detector_footprints(
                 band, cached_read=footprints_cached_read
             ),
-            viewing_azimuth=s2_metadata.viewing_incidence_angles(band)[
-                ViewAngle.azimuth
-            ]["detector"],
-            viewing_zenith=s2_metadata.viewing_incidence_angles(band)[ViewAngle.zenith][
-                "detector"
-            ],
+            viewing_azimuth_per_detector=s2_metadata.viewing_incidence_angles(
+                band
+            ).azimuth.detectors,
+            viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
+                band
+            ).zenith.detectors,
             sun_zenith_angle=get_sun_zenith_angle(s2_metadata)
             if sun_zenith_angle is None
             else sun_zenith_angle,

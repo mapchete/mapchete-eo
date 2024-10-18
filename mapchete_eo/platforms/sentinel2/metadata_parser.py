@@ -468,9 +468,6 @@ class S2Metadata:
         band_idx : int
             L2ABand index.
 
-        Returns
-        -------
-        Dictionary of 'zenith' and 'azimuth' angles.
         """
         if self._viewing_incidence_angles_cache.get(band) is None:
             angles: Dict[str, Any] = {

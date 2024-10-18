@@ -13,8 +13,6 @@ from mapchete_eo.platforms.sentinel2.brdf import L2ABandFParams
 from mapchete_eo.platforms.sentinel2.types import (
     L2ABand,
     Resolution,
-    SunAngle,
-    ViewAngle,
 )
 
 
@@ -45,15 +43,11 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
         band_crs=metadata.crs,
         band_transform=metadata.transform(Resolution["60m"]),
         product_crs=metadata.crs,
-        sun_azimuth_angle_array=metadata.sun_angles[SunAngle.azimuth],
-        sun_zenith_angle_array=metadata.sun_angles[SunAngle.zenith],
+        sun_azimuth_angle_array=metadata.sun_angles.azimuth.raster,
+        sun_zenith_angle_array=metadata.sun_angles.zenith.raster,
         detector_footprints=metadata.detector_footprints(band),
-        viewing_azimuth=metadata.viewing_incidence_angles(band)[ViewAngle.azimuth][
-            "detector"
-        ],
-        viewing_zenith=metadata.viewing_incidence_angles(band)[ViewAngle.zenith][
-            "detector"
-        ],
+        viewing_azimuth=metadata.viewing_incidence_angles(band).azimuth.detectors,
+        viewing_zenith=metadata.viewing_incidence_angles(band).zenith.detectors,
         sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )
@@ -75,15 +69,15 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
         f_band_params=L2ABandFParams[band.name].value,
         grid=metadata.grid(Resolution["60m"]),
         product_crs=metadata.crs,
-        sun_azimuth_angle_array=metadata.sun_angles[SunAngle.azimuth],
-        sun_zenith_angle_array=metadata.sun_angles[SunAngle.zenith],
+        sun_azimuth_angle_array=metadata.sun_angles.azimuth.raster,
+        sun_zenith_angle_array=metadata.sun_angles.zenith.raster,
         detector_footprints=metadata.detector_footprints(band),
-        viewing_azimuth_per_detector=metadata.viewing_incidence_angles(band)[
-            ViewAngle.azimuth
-        ]["detector"],
-        viewing_zenith_per_detector=metadata.viewing_incidence_angles(band)[
-            ViewAngle.zenith
-        ]["detector"],
+        viewing_azimuth_per_detector=metadata.viewing_incidence_angles(
+            band
+        ).azimuth.detectors,
+        viewing_zenith_per_detector=metadata.viewing_incidence_angles(
+            band
+        ).zenith.detectors,
         sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )

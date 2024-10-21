@@ -246,9 +246,18 @@ def get_corrected_band_reflectance(
             if isinstance(band, ma.MaskedArray)
             else np.where(band == nodata, True, False)
         )
-        corrected = ((band.astype(np.float32)) * correction).astype(
-            np.float32, copy=False
-        )
+
+        # # Apply BRDF correction to arcsinh scaled Sentinel-2 data
+        # Arcsinh:
+        # The arcsinh function also compresses large values, but it grows more uniformly across the range of inputs.
+        # It is less sensitive to changes in small values compared to log10.
+        # For small values (close to zero), arcsinh behaves like the input, making it less extreme than log10.
+        corrected = (
+            np.arcsinh(band.astype(np.float32, copy=False)) * correction
+        ).astype(np.float32, copy=False)
+        # Revert the log to linear
+        corrected = np.sinh(corrected).astype(np.float32, copy=False)
+
         if nodata == 0:
             return ma.masked_array(
                 data=np.where(mask, 0, np.clip(corrected, 1, np.iinfo(band.dtype).max)),

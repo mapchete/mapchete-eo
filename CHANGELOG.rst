@@ -5,17 +5,27 @@ Changelog
 2024.10.2 - 2024-10-21
 ----------------------
 
+* cli
+  
+  * Add `out_dtype` option to `s2-rgb` CLI operation for debuging purposes
+
 * core
 
   * cleanup and update the `brdf` function chain, add some typing
   * the `brdf` now uses only single model based on following sources:
-    * 
+
+    * https://sci-hub.st/https://ieeexplore.ieee.org/document/8899868
+    * https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
+    * https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/#
+    
+  * `brdf` original band scaling is now converting the bands to `arcsinh` and applying the `brdf` correction on top of the `arcsinh` converted data
   
 
 2024.10.1 - 2024-10-21
 ----------------------
 
 * core
+
   * Sentinel-2: make sure pydantic can parse scene classification names from configuration
 
 

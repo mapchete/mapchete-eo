@@ -191,11 +191,18 @@ class BaseBRDF:
     def get_model(self) -> np.ndarray:
         if self.model == "HLS" or self.model == "default":
             # Standard (HLS) BRDF model
-            model_value = (
-                self.f_band_params[0]
-                + self.f_band_params[2] * (self.fv() * self.brdf_weight)
-                + self.f_band_params[1] * (self.fr() * self.brdf_weight)
-            )
+            if self.brdf_weight != 1.0:
+                model_value = (
+                    self.f_band_params[0]
+                    + self.f_band_params[2] * (1 / (1 - self.fv()) * self.brdf_weight)
+                    + self.f_band_params[1] * (1 / (1 - self.fr()) * self.brdf_weight)
+                )
+            else:
+                model_value = (
+                    self.f_band_params[0]
+                    + self.f_band_params[2] * self.fv()
+                    + self.f_band_params[1] * self.fr()
+                )
         return model_value
 
 

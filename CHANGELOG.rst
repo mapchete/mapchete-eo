@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.10.1 - 2024-10-21
+----------------------
+
+* core
+  * Sentinel-2: make sure pydantic can parse scene classification names from configuration
+
+
 2024.10.0 - 2024-10-18
 ----------------------
 

@@ -470,10 +470,6 @@ class S2Metadata:
 
         """
         if self._viewing_incidence_angles_cache.get(band) is None:
-            # angles: Dict[str, Any] = {
-            #     ViewAngle.zenith: {"detector": dict(), "mean": None},
-            #     ViewAngle.azimuth: {"detector": dict(), "mean": None},
-            # }
             angles: Dict[str, Any] = {
                 "zenith": {"detectors": dict(), "mean": None},
                 "azimuth": {"detectors": dict(), "mean": None},
@@ -674,7 +670,10 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
         return ma.masked_invalid(
             np.array(
                 [
-                    [0.0 if cell == "NaN" else float(cell) for cell in row.text.split()]
+                    [
+                        np.nan if cell == "NaN" else float(cell)
+                        for cell in row.text.split()
+                    ]
                     for row in values_list
                 ],
                 dtype=np.float32,

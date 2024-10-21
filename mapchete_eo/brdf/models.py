@@ -152,8 +152,7 @@ class BaseBRDF:
             / (sec(self.theta_sun) + sec(self.theta_view))
         )
 
-        cos_t = np.where(cos_t > 1, 1, cos_t)
-        cos_t = np.where(cos_t < -1, -1, cos_t)
+        cos_t = np.clip(cos_t, -1, 1)
         return cos_t
 
     def t(self) -> np.ndarray:
@@ -253,10 +252,10 @@ def get_corrected_band_reflectance(
         # It is less sensitive to changes in small values compared to log10.
         # For small values (close to zero), arcsinh behaves like the input, making it less extreme than log10.
         corrected = (
-            np.arcsinh(band.astype(np.float32, copy=False)) * correction
+            np.arcsinh(band.astype(np.float32, copy=False) / 10000) * correction
         ).astype(np.float32, copy=False)
         # Revert the log to linear
-        corrected = np.sinh(corrected).astype(np.float32, copy=False)
+        corrected = (np.sinh(corrected) * 10000).astype(np.float32, copy=False)
 
         if nodata == 0:
             return ma.masked_array(
@@ -309,29 +308,6 @@ def get_brdf_param(
         for detector_id in np.unique(resampled_detector_footprints)
         if detector_id != 0
     ]
-    # iterate through detector footprints and calculate BRDF for each one
-    for detector_id in detector_ids:
-        logger.debug("run on detector %s", detector_id)
-
-        # handle rare cases where detector geometries are available but no respective
-        # angle arrays:
-        if detector_id not in viewing_zenith_per_detector:  # pragma: no cover
-            logger.debug("no zenith angles grid found for detector %s", detector_id)
-            continue
-        if detector_id not in viewing_azimuth_per_detector:  # pragma: no cover
-            logger.debug("no azimuth angles grid found for detector %s", detector_id)
-            continue
-
-        # select pixels which are covered by detector
-        detector_mask = np.where(
-            resampled_detector_footprints == detector_id, True, False
-        )
-
-        # skip if detector footprint does not intersect with output window
-        if not detector_mask.any():  # pragma: no cover
-            logger.debug("detector %s does not intersect with band window", detector_id)
-            continue
-
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
         logger.debug("run on detector %s", detector_id)

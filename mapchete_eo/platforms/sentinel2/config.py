@@ -4,7 +4,11 @@ from enum import Enum
 from typing import List, Optional, Union
 
 from mapchete.path import MPathLike
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    ValidationError,
+    field_validator,
+)
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
@@ -52,6 +56,19 @@ class BRDFModelConfig(BaseModel):
 
 class BRDFSCLClassConfig(BRDFModelConfig):
     scl_classes: List[SceneClassification]
+
+    @field_validator("scl_classes", mode="before")
+    @classmethod
+    def to_scl_classes(cls, values: List[str]) -> List[SceneClassification]:
+        out = []
+        for value in values:
+            if isinstance(value, SceneClassification):
+                out.append(value)
+            elif isinstance(value, str):
+                out.append(SceneClassification[value])
+            else:
+                raise ValidationError("value must be mappable to SceneClassification")
+        return out
 
 
 class BRDFConfig(BRDFModelConfig):
@@ -150,6 +167,21 @@ class MaskConfig(BaseModel):
     snow_probability_cached_read: bool = False
     scl_cached_read: bool = False
 
+    @field_validator("scl_classes", mode="before")
+    @classmethod
+    def to_scl_classes(cls, values: List[str]) -> List[SceneClassification]:
+        if values is None:
+            return
+        out = []
+        for value in values:
+            if isinstance(value, SceneClassification):
+                out.append(value)
+            elif isinstance(value, str):
+                out.append(SceneClassification[value])
+            else:
+                raise ValidationError("value must be mappable to SceneClassification")
+        return out
+
     @staticmethod
     def parse(config: Union[dict, MaskConfig]) -> MaskConfig:
         """
@@ -159,18 +191,6 @@ class MaskConfig(BaseModel):
             return config
 
         elif isinstance(config, dict):
-            # convert SCL classes to correct SceneClassification item
-            scl_classes = config.get("scl_classes")
-            if scl_classes:
-                config["scl_classes"] = [
-                    (
-                        scene_cls
-                        if isinstance(scene_cls, SceneClassification)
-                        else SceneClassification[scene_cls]
-                    )
-                    for scene_cls in scl_classes
-                ]
-
             return MaskConfig(**config)
 
         else:

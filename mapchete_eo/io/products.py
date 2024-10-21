@@ -151,6 +151,10 @@ class Slice:
             except ValueError:
                 self.properties[key] = None
 
+    def _cache_reset(self):
+        for product in self.products:
+            product._clear_cache()
+
     def get_property(self, property: str) -> Any:
         """
         Return merged property over all products.
@@ -328,6 +332,8 @@ def generate_slices(
                 band_names=variables,
                 attrs=slice_.properties,
             )
+            # make sure memory is released in case data was cached
+            slice_._cache_reset()
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
         except (EmptySliceException, CorruptedSlice):

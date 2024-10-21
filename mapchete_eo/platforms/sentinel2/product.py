@@ -101,6 +101,7 @@ class Cache:
         if self.config.brdf:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
+            brdf_weight = self.config.brdf.brdf_weight
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -114,6 +115,7 @@ class Cache:
                             metadata,
                             band,
                             model=model,
+                            brdf_weight=brdf_weight,
                             resolution=resolution,
                         )
                     except BRDFError as exc:
@@ -302,6 +304,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     self.metadata,
                     band,
                     model=brdf_config.model,
+                    brdf_weight=brdf_config.correction_weight,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
                 ),
@@ -556,7 +559,6 @@ class S2Product(EOProduct, EOProductProtocol):
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
-                    correction_weight=brdf_config.correction_weight,
                 )
 
         # if SCL-specific correction is configured, apply and overwrite values in array
@@ -591,7 +593,6 @@ class S2Product(EOProduct, EOProductProtocol):
                                 grid=grid,
                                 brdf_config=scl_config,
                             ),
-                            correction_weight=scl_config.correction_weight,
                         )[scl_mask]
 
                     # leave it be for all other cases

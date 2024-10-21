@@ -22,6 +22,7 @@ class DirectionalModels:
         angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
         f_band_params: Tuple[float, float, float],
         model=BRDFModels.default,
+        brdf_weight: float = 1.0,
         dtype: DTypeLike = np.float32,
     ):
         self.angles = angles
@@ -29,6 +30,7 @@ class DirectionalModels:
         self.model = BRDFModels(model)
         if self.model == BRDFModels.none:
             raise ValueError("model cannot be BRDFModels.none")
+        self.brdf_weight = brdf_weight
         self.dtype = dtype
 
     def get_sensor_model(self):
@@ -46,7 +48,7 @@ class DirectionalModels:
             self.angles, self.f_band_params, model=self.model
         ).get_model()
 
-        out_param_arr = sun_model / sensor_model
+        out_param_arr = sun_model / (sensor_model * (1 / self.brdf_weight))
 
         return ma.masked_array(
             data=out_param_arr,
@@ -88,7 +90,7 @@ class BaseBRDF:
         self.f_band_params = f_band_params
 
     # Get delta
-    def delta(self):
+    def delta(self) -> np.ndarray:
         delta = np.sqrt(
             np.power(np.tan(self.theta_sun), 2)
             + np.power(np.tan(self.theta_view), 2)
@@ -97,28 +99,28 @@ class BaseBRDF:
         return delta
 
     # Air Mass
-    def masse(self):
+    def masse(self) -> np.ndarray:
         masse = 1 / np.cos(self.theta_sun) + 1 / np.cos(self.theta_view)
         return masse
 
     # Get xsi
-    def cos_xsi(self):
+    def cos_xsi(self) -> np.ndarray:
         cos_xsi = np.cos(self.theta_sun) * np.cos(self.theta_view) + np.sin(
             self.theta_sun
         ) * np.sin(self.theta_view) * np.cos(self.phi)
         return cos_xsi
 
-    def sin_xsi(self):
+    def sin_xsi(self) -> np.ndarray:
         x = self.cos_xsi()
         sin_xsi = np.sqrt(1 - np.power(x, 2))
         return sin_xsi
 
-    def xsi(self):
+    def xsi(self) -> np.ndarray:
         xsi = np.arccos(self.cos_xsi())
         return xsi
 
     # Function t
-    def cos_t(self):
+    def cos_t(self) -> np.ndarray:
         def sec(x):
             return 1 / np.cos(x)
 
@@ -143,12 +145,12 @@ class BaseBRDF:
         cos_t = np.where(cos_t < -1, -1, cos_t)
         return cos_t
 
-    def t(self):
+    def t(self) -> np.ndarray:
         t = np.arccos(self.cos_t())
         return t
 
     # Function FV Ross_Thick, V is for volume scattering (Kernel)
-    def fv(self):
+    def fv(self) -> np.ndarray:
         fv = (
             ((np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi())
             / (np.cos(self.theta_sun) + np.cos(self.theta_view))
@@ -157,7 +159,7 @@ class BaseBRDF:
         return fv
 
     #  Function FR Li-Sparse, R is for roughness (surface roughness)
-    def fr(self):
+    def fr(self) -> np.ndarray:
         def sec(x):
             return 1 / np.cos(x)
 
@@ -175,9 +177,7 @@ class BaseBRDF:
 
         return fr
 
-    def get_model(self):
-        model_value = None
-
+    def get_model(self) -> np.ndarray:
         if self.model == "HLS" or self.model == "default":
             # Standard (HLS) BRDF model
             model_value = (
@@ -185,7 +185,6 @@ class BaseBRDF:
                 + self.f_band_params[2] * self.fv()
                 + self.f_band_params[1] * self.fr()
             )
-
         return model_value
 
 
@@ -203,7 +202,6 @@ class SunModel(BaseBRDF):
 def get_corrected_band_reflectance(
     band: ma.MaskedArray,
     correction: np.ndarray,
-    correction_weight: float = 1.0,
     nodata: NodataVal = 0,
 ) -> ma.MaskedArray:
     """
@@ -230,11 +228,6 @@ def get_corrected_band_reflectance(
             if isinstance(band, ma.MaskedArray)
             else np.where(band == nodata, True, False)
         )
-        if correction_weight != 1.0:
-            # a correction_weight value of >1 should increase the correction, whereas a
-            # value <1 should decrease the correction
-            correction = 1 - (1 - correction) * correction_weight
-            # correction = correction * correction_weight
         corrected = ((band.astype(np.float32)) * correction).astype(
             np.float32, copy=False
         )
@@ -259,6 +252,7 @@ def get_brdf_param(
     viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
     f_band_params: Tuple[float, float, float],
     model: BRDFModels = BRDFModels.default,
+    brdf_weight: float = 1.0,
     smoothing_iterations: int = 10,
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
@@ -344,6 +338,7 @@ def get_brdf_param(
             ),
             f_band_params=f_band_params,
             model=model,
+            brdf_weight=brdf_weight,
         ).get_band_param()
 
         # interpolate missing nodata edges and return BRDF difference model

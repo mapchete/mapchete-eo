@@ -127,7 +127,7 @@ class S2Metadata:
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
-    _array_cache: Dict[str, np.ndarray]
+    _cache: dict
 
     def __init__(
         self,
@@ -143,17 +143,13 @@ class S2Metadata:
         self.processing_baseline = path_mapper.processing_baseline
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._band_masks_cache: Dict[str, dict] = {mask: dict() for mask in BandQI}
-        self._l1c_cloud_masks_cache: Optional[List] = None
-        self._viewing_incidence_angles_cache: Dict = {}
+        self._cache_reset()
 
         # get geoinformation per resolution and bounds
         self.crs = self._crs
         self._grids = _get_grids(self.xml_root, self.crs)
         self.bounds = self._grids[Resolution["10m"]].bounds
         self.footprint = shape(self.bounds)
-
-        self._array_cache = dict()
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
@@ -416,7 +412,7 @@ class S2Metadata:
             dst_grid = self.grid(dst_grid)
 
         cache_item_id = f"{band}-{str(dst_grid)}"
-        if cache_item_id not in self._array_cache:
+        if cache_item_id not in self._cache["detector_footprints"]:
             try:
                 path = self.path_mapper.band_qi_mask(
                     qi_mask=BandQI.detector_footprints, band=band
@@ -436,8 +432,8 @@ class S2Metadata:
                 raise AssetEmpty(
                     f"No detector footprints found for band {band} in {self}"
                 )
-            self._array_cache[cache_item_id] = footprints
-        return self._array_cache[cache_item_id]
+            self._cache["detector_footprints"][cache_item_id] = footprints
+        return self._cache["detector_footprints"][cache_item_id]
 
     def technical_quality_mask(
         self,
@@ -469,7 +465,7 @@ class S2Metadata:
             L2ABand index.
 
         """
-        if self._viewing_incidence_angles_cache.get(band) is None:
+        if self._cache["viewing_incidence_angles"].get(band) is None:
             angles: Dict[str, Any] = {
                 "zenith": {"detectors": dict(), "mean": None},
                 "azimuth": {"detectors": dict(), "mean": None},
@@ -498,10 +494,10 @@ class S2Metadata:
                                     ].text
                                 )
                             )
-            self._viewing_incidence_angles_cache[band] = ViewingIncidenceAngles(
+            self._cache["viewing_incidence_angles"][band] = ViewingIncidenceAngles(
                 **angles
             )
-        return self._viewing_incidence_angles_cache[band]
+        return self._cache["viewing_incidence_angles"][band]
 
     def viewing_incidence_angle(
         self, band: L2ABand, detector_id: int, angle: ViewAngle = ViewAngle.zenith
@@ -576,6 +572,9 @@ class S2Metadata:
             "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
         return mean
+
+    def _cache_reset(self):
+        self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
 
 
 class SunAngleData(BaseModel):

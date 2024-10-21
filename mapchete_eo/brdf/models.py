@@ -34,21 +34,30 @@ class DirectionalModels:
         self.dtype = dtype
 
     def get_sensor_model(self):
-        return SensorModel(self.angles, self.f_band_params, self.model).get_model()
+        return SensorModel(
+            self.angles, self.f_band_params, self.model, self.brdf_weight
+        ).get_model()
 
     def get_sun_model(self):
-        return SunModel(self.angles, self.f_band_params, self.model).get_model()
+        # Keep the SunModel values as is without weighting
+        return SunModel(
+            self.angles, self.f_band_params, self.model, brdf_weight=1.0
+        ).get_model()
 
     def get_band_param(self):
         sensor_model = SensorModel(
-            self.angles, self.f_band_params, model=self.model
+            self.angles, self.f_band_params, self.model, self.brdf_weight
         ).get_model()
 
+        # Keep the SunModel values as is without weighting
         sun_model = SunModel(
-            self.angles, self.f_band_params, model=self.model
+            self.angles, self.f_band_params, self.model, brdf_weight=1.0
         ).get_model()
 
-        out_param_arr = sun_model / (sensor_model * (1 / self.brdf_weight))
+        # if self.brdf_weight != 1.0:
+        #     out_param_arr = sun_model / (sensor_model * (self.brdf_weight * self.f_band_params[0]))
+        # else:
+        out_param_arr = sun_model / sensor_model
 
         return ma.masked_array(
             data=out_param_arr,
@@ -71,6 +80,7 @@ class BaseBRDF:
         angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
         f_band_params: Tuple[float, float, float],
         model: str = "HLS",
+        brdf_weight: float = 1.0,
     ):
         self.model = model
         # angles should have a form of tuple where:
@@ -88,6 +98,7 @@ class BaseBRDF:
 
         # (Modis based) Parameters for the linear model
         self.f_band_params = f_band_params
+        self.brdf_weight = brdf_weight
 
     # Get delta
     def delta(self) -> np.ndarray:
@@ -182,20 +193,20 @@ class BaseBRDF:
             # Standard (HLS) BRDF model
             model_value = (
                 self.f_band_params[0]
-                + self.f_band_params[2] * self.fv()
-                + self.f_band_params[1] * self.fr()
+                + self.f_band_params[2] * (self.fv() * self.brdf_weight)
+                + self.f_band_params[1] * (self.fr() * self.brdf_weight)
             )
         return model_value
 
 
 class SensorModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="sen2agri"):
-        super().__init__(angles, f_band_params, model)
+    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
+        super().__init__(angles, f_band_params, model, brdf_weight)
 
 
 class SunModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="sen2agri"):
-        super().__init__(angles, f_band_params, model)
+    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
+        super().__init__(angles, f_band_params, model, brdf_weight)
         self.theta_view = np.zeros(self.theta_sun.shape)
 
 

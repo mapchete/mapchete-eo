@@ -101,7 +101,7 @@ class Cache:
         if self.config.brdf:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
-            brdf_weight = self.config.brdf.brdf_weight
+            brdf_weight = self.config.brdf.correction_weight
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"

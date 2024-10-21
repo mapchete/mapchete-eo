@@ -53,7 +53,6 @@ def s2_brdf(
             "w",
             **COGDeflateProfile(grid.to_dict(), count=1, dtype=np.float32),
         ) as dst:
-            print(brdf_weight)
             dst.write(
                 product.read_brdf_grid(
                     band,

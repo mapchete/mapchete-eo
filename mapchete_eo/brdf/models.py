@@ -21,7 +21,6 @@ class DirectionalModels:
         self,
         angles,
         f_band_params,
-        sza,
         model=BRDFModels.default,
         upscale_factor=10000,
         sun_model_flag=False,
@@ -29,7 +28,6 @@ class DirectionalModels:
     ):
         self.angles = angles
         self.f_band_params = f_band_params
-        self.sza = sza
         self.model = BRDFModels(model)
         if self.model == BRDFModels.none:
             raise ValueError("model cannot be BRDFModels.none")
@@ -39,22 +37,18 @@ class DirectionalModels:
 
     def get_model(self):
         if self.sun_model_flag is True:
-            return SunModel(
-                self.angles, self.f_band_params, self.sza, self.model
-            ).get_model()
+            return SunModel(self.angles, self.f_band_params, self.model).get_model()
 
         else:
-            return SensorModel(
-                self.angles, self.f_band_params, self.sza, self.model
-            ).get_model()
+            return SensorModel(self.angles, self.f_band_params, self.model).get_model()
 
     def get_band_param(self):
         sensor_model = SensorModel(
-            self.angles, self.f_band_params, self.sza, self.model
+            self.angles, self.f_band_params, model=self.model
         ).get_model()
 
         sun_model = SunModel(
-            self.angles, self.f_band_params, self.sza, model=self.model
+            self.angles, self.f_band_params, model=self.model
         ).get_model()
 
         out_param_arr = sun_model / sensor_model
@@ -69,10 +63,13 @@ class DirectionalModels:
 
 
 class BaseBRDF:
-    # Class with adapted sen2agri model computation
-    # https://userpages.umbc.edu/~martins/PHYS650/maignan%20brdf.pdf
-    # http://www.esa-sen2agri.org/wp-content/uploads/resources/technical-documents/Sen2Agri_DDF_v1.2_ATBDComposite.pdf
-    def __init__(self, angles, f_band_params, sza, model="sen2agri"):
+    # Class with adapted Sentinel-2 Sentinel-Hub Normalization (Also used elsewhere)
+    # Sources:
+    # https://sci-hub.st/https://ieeexplore.ieee.org/document/8899868
+    # https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
+    # https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/
+    # Alt GitHub: https://github.com/maximlamare/s2-normalisation
+    def __init__(self, angles, f_band_params, model="HLS"):
         self.model = model
         # angles should have a form of tuple where:
         # sun_zenith, sun azimuth, view_zenith, view_azimuth
@@ -80,23 +77,15 @@ class BaseBRDF:
         # Convert Degrees to Radians
         # theta is zenith angles
         # phi is azimuth angles
-        self.theta_sun = theta_sun * np.pi / 180
-        self.theta_view = theta_view * np.pi / 180
-        self.phi = (phi_sun - phi_view) * np.pi / 180
-        self.phi = np.where(self.phi < 0, self.phi + 2 * np.pi, self.phi)
+        self.theta_sun = np.deg2rad(theta_sun)
+        self.theta_view = np.deg2rad(theta_view)
+
+        self.phi_sun = np.deg2rad(phi_sun)
+        self.phi_view = np.deg2rad(phi_view)
+        self.phi = np.deg2rad(np.abs(self.phi_sun - self.phi_view))
 
         # (Modis based) Parameters for the linear model
         self.f_band_params = f_band_params
-
-        # Constant sun angle
-        if isinstance(sza, (float, int)):
-            self.sza = np.full(self.theta_sun.shape, sza)
-        elif isinstance(sza, np.ndarray):
-            self.sza = sza
-        else:
-            raise TypeError("sza must either be a number or a numpy array")
-
-        self.xsi_0 = np.full(self.theta_sun.shape, 1.5 * np.pi / 180)
 
     # Get delta
     def delta(self):
@@ -130,19 +119,29 @@ class BaseBRDF:
 
     # Function t
     def cos_t(self):
-        trig = np.tan(self.theta_sun) * np.tan(self.theta_view) * np.sin(self.phi)
-        d = self.delta()
-        # Coeficient for "t" any natural number is good, 1 or 2 are used
-        coef = 1
-        cos_t = coef / self.masse() * np.sqrt(np.power(d, 2) + np.power(trig, 2))
+        def sec(x):
+            return 1 / np.cos(x)
+
+        # Coeficient for "t" any natural number is good, 2 is used
+        cos_t = (
+            2
+            * np.sqrt(
+                np.power(self.delta(), 2)
+                + np.power(
+                    (
+                        np.tan(self.theta_sun)
+                        * np.tan(self.theta_view)
+                        * np.sin(self.phi)
+                    ),
+                    2,
+                )
+            )
+            / (sec(self.theta_sun) + sec(self.theta_view))
+        )
+
         cos_t = np.where(cos_t > 1, 1, cos_t)
         cos_t = np.where(cos_t < -1, -1, cos_t)
         return cos_t
-
-    def sin_t(self):
-        x = self.cos_t()
-        sin_t = np.sqrt(1 - np.power(x, 2))
-        return sin_t
 
     def t(self):
         t = np.arccos(self.cos_t())
@@ -150,78 +149,68 @@ class BaseBRDF:
 
     # Function FV Ross_Thick, V is for volume scattering (Kernel)
     def fv(self):
-        fv = (self.masse() / np.pi) * (
-            (self.t() - self.sin_t() * self.cos_t() - np.pi)
-            + (
-                (1 + self.cos_xsi())
-                / (2 * np.cos(self.theta_sun) * np.cos(self.theta_view))
-            )
-        )
+        fv = (
+            ((np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi())
+            / (np.cos(self.theta_sun) + np.cos(self.theta_view))
+        ) - (np.pi / 4)
+
         return fv
 
     #  Function FR Li-Sparse, R is for roughness (surface roughness)
     def fr(self):
-        fr = None
-        a = 1 / (np.cos(self.theta_sun) + np.cos(self.theta_view))
-        if self.model == "sen2agri" or self.model == "combined":
-            # sen2agri formula
-            fr = 4 / (3 * np.pi) * a * (
-                (np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi()
-            ) * (1 + 1 / (1 / self.xsi() / self.xsi_0)) - (1 / 3)
-        if "HLS".lower() in self.model.lower():
-            # HLS formula
-            # https://userpages.umbc.edu/~martins/PHYS650/maignan%20brdf.pdf
-            fr = 4 / (3 * np.pi) * a * (
-                (np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi()
-            ) - (1 / 3)
+        def sec(x):
+            return 1 / np.cos(x)
+
+        capital_o = (1 / np.pi) * (
+            (self.t() - np.sin(self.t()) * np.cos(self.t()))
+            * (sec(self.theta_sun) + sec(self.theta_view))
+        )
+
+        fr = (
+            capital_o
+            - sec(self.theta_sun)
+            - sec(self.theta_view)
+            + (0.5 * (1 + self.cos_xsi()) * sec(self.theta_sun) * sec(self.theta_view))
+        )
 
         return fr
 
     def get_model(self):
         model_value = None
 
-        if self.model == "HLS" or self.model == "combined":
-            # Standard HLS model
+        if self.model == "HLS" or self.model == "default":
+            # Standard (HLS) BRDF model
             model_value = (
                 self.f_band_params[0]
                 + self.f_band_params[2] * self.fv()
                 + self.f_band_params[1] * self.fr()
             )
 
-        if self.model == "sen2agri":
-            # Sen2agri nomalization
-            # http://www.esa-sen2agri.org/wp-content/uploads/resources/technical-documents/Sen2Agri_DDF_v1.2_ATBDComposite.pdf
-            model_value = (
-                1
-                + self.f_band_params[2] * self.fv()
-                + self.f_band_params[1] * self.fr()
-            )
-
-        if self.model == "HLS_alt":
-            # Alt normalization as in 2.2.2 of:
-            # It is a formula that aims to decompose the HLS harmonization
-            # We just use it as an alt formula for BRDF as it is similar to
-            # the sen2agri approach in some ways
-            # https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjijoqF6abrAhXJfMAKHanQC28QFjAAegQIAxAB&url=https%3A%2F%2Fwww.mdpi.com%2F2072-4292%2F11%2F6%2F632%2Fpdf&usg=AOvVaw0gCUSpFzULY3ZVICIXvnBa
-            model_value = self.f_band_params[0] * (
-                1
-                + self.f_band_params[2] / self.f_band_params[0] * self.fv()
-                + self.f_band_params[1] / self.f_band_params[0] * self.fr()
-            )
         return model_value
 
 
 class SensorModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, sza, model="sen2agri"):
-        super().__init__(angles, f_band_params, sza, model)
+    def __init__(self, angles, f_band_params, model="sen2agri"):
+        super().__init__(angles, f_band_params, model)
+        # print(f"View Theta zenith for SensorModel min: {np.nanmin(self.theta_view)}")
+        # print(f"View Theta zenith for SensorModel max: {np.nanmax(self.theta_view)}")
+        # print(f"View Theta zenith for SensorModel nanmean: {np.nanmean(self.theta_view)}")
+        # print(f"Sun Theta zenith for SensorModel min: {np.nanmin(self.theta_sun)}")
+        # print(f"Sun Theta zenith for SensorModel max: {np.nanmax(self.theta_sun)}")
+        # print(f"Sun Theta zenith for SensorModel nanmean: {np.nanmean(self.theta_sun)}")
+        # print(f"Phi zenith for SensorModel nanmean: {np.nanmean(self.phi)}")
 
 
 class SunModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, sza, model="sen2agri"):
-        super().__init__(angles, f_band_params, sza, model)
+    def __init__(self, angles, f_band_params, model="sen2agri"):
+        super().__init__(angles, f_band_params, model)
         self.theta_view = np.zeros(self.theta_sun.shape)
-        self.theta_sun = self.sza
-        self.phi = np.zeros(self.theta_sun.shape)
+
+        # print(f"View Theta zenith for SunModel should be 0: {np.nanmean(self.theta_view)}")
+        # print(f"Sun Theta zenith for SunModel min: {np.nanmin(self.theta_sun)}")
+        # print(f"Sun Theta zenith for SunModel max: {np.nanmax(self.theta_sun)}")
+        # print(f"Sun Theta zenith for SunModel nanmean: {np.nanmean(self.theta_sun)}")
+        # print(f"Phi zenith for SunModel nanmean: {np.nanmean(self.phi)}")
 
 
 def get_corrected_band_reflectance(
@@ -258,7 +247,14 @@ def get_corrected_band_reflectance(
             # a correction_weight value of >1 should increase the correction, whereas a
             # value <1 should decrease the correction
             correction = 1 - (1 - correction) * correction_weight
-        corrected = (band * correction).astype(band.dtype, copy=False)
+            # correction = correction * correction_weight
+        corrected = ((band.astype(np.float32)) * correction).astype(
+            np.float32, copy=False
+        )
+        corrected[0] = 0.9761 * corrected[0] + 0.001
+        corrected[1] = 1.0075 * corrected[1] - 0.0008
+        corrected[2] = 0.9778 * corrected[2] - 0.004
+        # corrected = corrected * 10000
         if nodata == 0:
             return ma.masked_array(
                 data=np.where(mask, 0, np.clip(corrected, 1, np.iinfo(band.dtype).max)),
@@ -278,7 +274,6 @@ def get_brdf_param(
     detector_footprints: ReferencedRaster,
     viewing_zenith_per_detector: Dict[int, ReferencedRaster],
     viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
-    sun_zenith_angle: float,
     f_band_params: Tuple[float, float, float],
     model: BRDFModels = BRDFModels.default,
     smoothing_iterations: int = 10,
@@ -310,6 +305,28 @@ def get_brdf_param(
         for detector_id in np.unique(resampled_detector_footprints)
         if detector_id != 0
     ]
+    # iterate through detector footprints and calculate BRDF for each one
+    for detector_id in detector_ids:
+        logger.debug("run on detector %s", detector_id)
+
+        # handle rare cases where detector geometries are available but no respective
+        # angle arrays:
+        if detector_id not in viewing_zenith_per_detector:  # pragma: no cover
+            logger.debug("no zenith angles grid found for detector %s", detector_id)
+            continue
+        if detector_id not in viewing_azimuth_per_detector:  # pragma: no cover
+            logger.debug("no azimuth angles grid found for detector %s", detector_id)
+            continue
+
+        # select pixels which are covered by detector
+        detector_mask = np.where(
+            resampled_detector_footprints == detector_id, True, False
+        )
+
+        # skip if detector footprint does not intersect with output window
+        if not detector_mask.any():  # pragma: no cover
+            logger.debug("detector %s does not intersect with band window", detector_id)
+            continue
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
@@ -343,7 +360,6 @@ def get_brdf_param(
                 viewing_azimuth_per_detector[detector_id].data,
             ),
             f_band_params=f_band_params,
-            sza=sun_zenith_angle,
             model=model,
         ).get_band_param()
 
@@ -379,7 +395,6 @@ def apply_brdf_correction(
     detector_footprints=None,
     viewing_zenith=None,
     viewing_azimuth=None,
-    sun_zenith_angle=None,
     f_band_params=None,
     model=BRDFModels.default,
     smoothing_iterations=10,
@@ -424,7 +439,6 @@ def apply_brdf_correction(
         (detector_footprints, "detector_footprints"),
         (viewing_zenith, "viewing_zenith"),
         (viewing_azimuth, "viewing_azimuth"),
-        (sun_zenith_angle, "sun_zenith_angle"),
         (f_band_params, "f_band_params"),
     ]:
         if param is None:  # pragma: no cover
@@ -439,7 +453,6 @@ def apply_brdf_correction(
             detector_footprints=detector_footprints,
             viewing_zenith_per_detector=viewing_zenith,
             viewing_azimuth_per_detector=viewing_azimuth,
-            sun_zenith_angle=sun_zenith_angle,
             f_band_params=f_band_params,
             model=model,
             smoothing_iterations=smoothing_iterations,

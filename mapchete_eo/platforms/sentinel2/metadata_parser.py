@@ -470,6 +470,10 @@ class S2Metadata:
 
         """
         if self._viewing_incidence_angles_cache.get(band) is None:
+            # angles: Dict[str, Any] = {
+            #     ViewAngle.zenith: {"detector": dict(), "mean": None},
+            #     ViewAngle.azimuth: {"detector": dict(), "mean": None},
+            # }
             angles: Dict[str, Any] = {
                 "zenith": {"detectors": dict(), "mean": None},
                 "azimuth": {"detectors": dict(), "mean": None},
@@ -484,6 +488,7 @@ class S2Metadata:
                             tag=angle.value,
                             bounds=self.bounds,
                             crs=self.crs,
+                            # previous_grid=angles[angle]["raster"]
                         )
                         angles[angle.value.lower()]["detectors"][detector_id] = raster
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
@@ -669,10 +674,7 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
         return ma.masked_invalid(
             np.array(
                 [
-                    [
-                        np.nan if cell == "NaN" else float(cell)
-                        for cell in row.text.split()
-                    ]
+                    [0.0 if cell == "NaN" else float(cell) for cell in row.text.split()]
                     for row in values_list
                 ],
                 dtype=np.float32,
@@ -699,4 +701,5 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
     affine = _get_affine(
         bounds=bounds, row_step=row_step, col_step=col_step, shape=grid.shape
     )
+
     return ReferencedRaster(data=grid, transform=affine, bounds=bounds, crs=crs)

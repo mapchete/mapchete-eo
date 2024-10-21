@@ -1,12 +1,10 @@
 import logging
-from typing import Iterator, List, Optional
+from typing import Iterator, List
 
-import numpy as np
-from fiona.transform import transform
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster
 
-from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array
+from mapchete_eo.brdf import get_brdf_param
 from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.exceptions import BRDFError
 from mapchete_eo.platforms.sentinel2.config import L2ABandFParams
@@ -19,24 +17,9 @@ from mapchete_eo.platforms.sentinel2.types import (
 logger = logging.getLogger(__name__)
 
 
-def get_sun_zenith_angle(s2_metadata: S2Metadata):
-    _, (bottom, top) = transform(
-        s2_metadata.crs,
-        "EPSG:4326",
-        [s2_metadata.bounds[0], s2_metadata.bounds[2]],
-        [s2_metadata.bounds[1], s2_metadata.bounds[3]],
-    )
-    return get_sun_angle_array(
-        min_lat=bottom,
-        max_lat=top,
-        shape=s2_metadata.sun_angles.zenith.raster.data.shape,
-    )
-
-
 def correction_grid(
     s2_metadata: S2Metadata,
     band: L2ABand,
-    sun_zenith_angle: Optional[np.ndarray] = None,
     model: BRDFModels = BRDFModels.default,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
@@ -57,9 +40,6 @@ def correction_grid(
             viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
                 band
             ).zenith.detectors,
-            sun_zenith_angle=get_sun_zenith_angle(s2_metadata)
-            if sun_zenith_angle is None
-            else sun_zenith_angle,
             model=model,
         )
     if not brdf_params.any():  # pragma: no cover
@@ -89,7 +69,6 @@ def correction_grids(
         yield correction_grid(
             s2_metadata,
             band,
-            get_sun_zenith_angle(s2_metadata),
             model=model,
             resolution=resolution,
         )

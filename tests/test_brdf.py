@@ -6,7 +6,6 @@ from fiona.transform import transform
 from mapchete_eo.brdf import (
     apply_brdf_correction,
     get_brdf_param,
-    get_constant_sun_angle,
 )
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.brdf import L2ABandFParams
@@ -48,7 +47,6 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
         detector_footprints=metadata.detector_footprints(band),
         viewing_azimuth=metadata.viewing_incidence_angles(band).azimuth.detectors,
         viewing_zenith=metadata.viewing_incidence_angles(band).zenith.detectors,
-        sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )
     assert isinstance(corrected, ma.MaskedArray)
@@ -78,7 +76,6 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
         viewing_zenith_per_detector=metadata.viewing_incidence_angles(
             band
         ).zenith.detectors,
-        sun_zenith_angle=get_constant_sun_angle(min_lat=bottom, max_lat=top),
         model="HLS",
     )
     assert isinstance(corrected, ma.MaskedArray)

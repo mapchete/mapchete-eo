@@ -31,7 +31,7 @@ from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
-from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
+from mapchete_eo.platforms.sentinel2.brdf import correction_grid
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModelConfig,
@@ -105,18 +105,14 @@ class Cache:
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
             )
-            sun_zenith_angle = None
             for band in self._brdf_bands:
                 out_path = self.path / f"brdf_{model}_{band.name}_{resolution}.tif"
                 # TODO: do check with _existing_files again to reduce S3 requests
                 if not out_path.exists():
-                    if sun_zenith_angle is None:
-                        sun_zenith_angle = get_sun_zenith_angle(metadata)
                     try:
                         grid = correction_grid(
                             metadata,
                             band,
-                            sun_zenith_angle,
                             model=model,
                             resolution=resolution,
                         )

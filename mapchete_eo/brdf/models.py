@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 class DirectionalModels:
     def __init__(
         self,
-        angles: tuple,
-        f_band_params: tuple,
+        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        f_band_params: Tuple[float, float, float],
         model=BRDFModels.default,
         dtype: DTypeLike = np.float32,
     ):
@@ -31,12 +31,11 @@ class DirectionalModels:
             raise ValueError("model cannot be BRDFModels.none")
         self.dtype = dtype
 
-    def get_model(self):
-        if self.sun_model_flag is True:
-            return SunModel(self.angles, self.f_band_params, self.model).get_model()
+    def get_sensor_model(self):
+        return SensorModel(self.angles, self.f_band_params, self.model).get_model()
 
-        else:
-            return SensorModel(self.angles, self.f_band_params, self.model).get_model()
+    def get_sun_model(self):
+        return SunModel(self.angles, self.f_band_params, self.model).get_model()
 
     def get_band_param(self):
         sensor_model = SensorModel(
@@ -65,7 +64,12 @@ class BaseBRDF:
     # https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
     # https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/
     # Alt GitHub: https://github.com/maximlamare/s2-normalisation
-    def __init__(self, angles: tuple, f_band_params: tuple, model: str = "HLS"):
+    def __init__(
+        self,
+        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        f_band_params: Tuple[float, float, float],
+        model: str = "HLS",
+    ):
         self.model = model
         # angles should have a form of tuple where:
         # sun_zenith, sun azimuth, view_zenith, view_azimuth
@@ -188,25 +192,12 @@ class BaseBRDF:
 class SensorModel(BaseBRDF):
     def __init__(self, angles, f_band_params, model="sen2agri"):
         super().__init__(angles, f_band_params, model)
-        # print(f"View Theta zenith for SensorModel min: {np.nanmin(self.theta_view)}")
-        # print(f"View Theta zenith for SensorModel max: {np.nanmax(self.theta_view)}")
-        # print(f"View Theta zenith for SensorModel nanmean: {np.nanmean(self.theta_view)}")
-        # print(f"Sun Theta zenith for SensorModel min: {np.nanmin(self.theta_sun)}")
-        # print(f"Sun Theta zenith for SensorModel max: {np.nanmax(self.theta_sun)}")
-        # print(f"Sun Theta zenith for SensorModel nanmean: {np.nanmean(self.theta_sun)}")
-        # print(f"Phi zenith for SensorModel nanmean: {np.nanmean(self.phi)}")
 
 
 class SunModel(BaseBRDF):
     def __init__(self, angles, f_band_params, model="sen2agri"):
         super().__init__(angles, f_band_params, model)
         self.theta_view = np.zeros(self.theta_sun.shape)
-
-        # print(f"View Theta zenith for SunModel should be 0: {np.nanmean(self.theta_view)}")
-        # print(f"Sun Theta zenith for SunModel min: {np.nanmin(self.theta_sun)}")
-        # print(f"Sun Theta zenith for SunModel max: {np.nanmax(self.theta_sun)}")
-        # print(f"Sun Theta zenith for SunModel nanmean: {np.nanmean(self.theta_sun)}")
-        # print(f"Phi zenith for SunModel nanmean: {np.nanmean(self.phi)}")
 
 
 def get_corrected_band_reflectance(
@@ -247,7 +238,6 @@ def get_corrected_band_reflectance(
         corrected = ((band.astype(np.float32)) * correction).astype(
             np.float32, copy=False
         )
-        # corrected = corrected * 10000
         if nodata == 0:
             return ma.masked_array(
                 data=np.where(mask, 0, np.clip(corrected, 1, np.iinfo(band.dtype).max)),

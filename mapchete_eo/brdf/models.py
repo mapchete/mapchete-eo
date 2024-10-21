@@ -194,8 +194,8 @@ class BaseBRDF:
             if self.brdf_weight != 1.0:
                 model_value = (
                     self.f_band_params[0]
-                    + self.f_band_params[2] * (self.fv() * (1 / self.brdf_weight))
-                    + self.f_band_params[1] * (self.fr() * (1 / self.brdf_weight))
+                    + self.f_band_params[2] * (self.fv() * self.brdf_weight)
+                    + self.f_band_params[1] * (self.fr() * self.brdf_weight)
                 )
             else:
                 model_value = (

@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2024.10.1 - 2024-10-21
+----------------------
+
+* core
+
+  * cleanup and update the `brdf` function chain, add some typing
+  * the `brdf` now uses only single model based on following sources:
+    * 
+  
 
 2024.10.0 - 2024-10-18
 ----------------------

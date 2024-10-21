@@ -158,6 +158,19 @@ def test_read_brdf(sentinel2_stac_mapchete):
         assert (uncorrected[datastrip] != corrected[datastrip]).any()
 
 
+@pytest.mark.parametrize(
+    "classes", [["not_vegetated"], [SceneClassification.not_vegetated]]
+)
+def test_parse_brdfconfig(classes):
+    """Verify that SCL class names can be provided."""
+    config_dict = dict(
+        model="HLS",
+        footprints_cached_read=True,
+        scl_specific_configurations=[{"scl_classes": classes, "model": "none"}],
+    )
+    assert BRDFConfig(**config_dict)
+
+
 def test_read_empty_raise_nosourceproducts(sentinel2_stac_mapchete):
     # tile does not intersect with any products
     with sentinel2_stac_mapchete.process_mp((13, 0, 0)).open("inp") as src:

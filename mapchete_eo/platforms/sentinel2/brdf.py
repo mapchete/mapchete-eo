@@ -1,5 +1,4 @@
 import logging
-from typing import Iterator, List
 
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster
@@ -54,21 +53,3 @@ def correction_grid(
         bounds=s2_metadata.bounds,
         driver="COG",
     )
-
-
-def correction_grids(
-    s2_metadata: S2Metadata,
-    bands: List[L2ABand],
-    model: BRDFModels = BRDFModels.default,
-    resolution: Resolution = Resolution["60m"],  # TODO use 120m?
-) -> Iterator[ReferencedRaster]:
-    for band in bands:
-        logger.debug(
-            "run BRDF for product %s band %s", s2_metadata.product_id, band.value
-        )
-        yield correction_grid(
-            s2_metadata,
-            band,
-            model=model,
-            resolution=resolution,
-        )

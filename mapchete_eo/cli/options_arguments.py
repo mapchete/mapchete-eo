@@ -225,3 +225,7 @@ opt_dump_detector_footprints = click.option(
     is_flag=True,
     help="Also dump products detector footprints.",
 )
+
+opt_out_dtype = click.option(
+    "--out-dtype", default="uint8", help="Out dType string; default: uint8"
+)

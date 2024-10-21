@@ -4,7 +4,6 @@ import pytest
 from fiona.transform import transform
 
 from mapchete_eo.brdf import (
-    apply_brdf_correction,
     get_brdf_param,
 )
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -36,22 +35,27 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml):
         ),
         0,
     )
-    corrected = apply_brdf_correction(
-        band=band_array,
+    brdf_params = get_brdf_param(
         f_band_params=L2ABandFParams[band.name].value,
-        band_crs=metadata.crs,
-        band_transform=metadata.transform(Resolution["60m"]),
+        grid=metadata.grid(Resolution["60m"]),
         product_crs=metadata.crs,
         sun_azimuth_angle_array=metadata.sun_angles.azimuth.raster,
         sun_zenith_angle_array=metadata.sun_angles.zenith.raster,
         detector_footprints=metadata.detector_footprints(band),
-        viewing_azimuth=metadata.viewing_incidence_angles(band).azimuth.detectors,
-        viewing_zenith=metadata.viewing_incidence_angles(band).zenith.detectors,
+        viewing_azimuth_per_detector=metadata.viewing_incidence_angles(
+            band
+        ).azimuth.detectors,
+        viewing_zenith_per_detector=metadata.viewing_incidence_angles(
+            band
+        ).zenith.detectors,
         model="HLS",
     )
-    assert isinstance(corrected, ma.MaskedArray)
-    assert not ma.allclose(band_array, corrected)
-    assert np.allclose(band_array.mask, corrected.mask)
+
+    corrected_band = band_array * brdf_params
+
+    assert isinstance(corrected_band, ma.MaskedArray)
+    assert not ma.allclose(band_array, corrected_band)
+    assert np.allclose(band_array.mask, corrected_band.mask)
 
 
 @pytest.mark.parametrize("band", [band for band in L2ABand if band != L2ABand.B10])

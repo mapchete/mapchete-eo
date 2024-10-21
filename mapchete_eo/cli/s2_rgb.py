@@ -31,6 +31,7 @@ from mapchete_eo.platforms.sentinel2.types import Resolution
 @options_arguments.opt_mask_scl_classes
 @options_arguments.opt_brdf_model
 @options_arguments.opt_brdf_weight
+@options_arguments.opt_out_dtype
 @opt_debug
 def s2_rgb(
     stac_item: MPath,
@@ -45,8 +46,11 @@ def s2_rgb(
     mask_scl_classes=None,
     brdf_model=None,
     brdf_weight: float = 1.0,
+    out_dtype: str = "uint8",
     **_,
 ):
+    out_dtype = np.dtype(out_dtype)
+
     """Generate 8bit RGB image from Sentinel-2 product."""
     if not dst_path.suffix:
         dst_path = dst_path / stac_item.without_suffix().name + ".tif"
@@ -85,9 +89,12 @@ def s2_rgb(
         transform=grid.transform,
         width=grid.width,
         height=grid.height,
-        dtype=np.uint8,
+        dtype=out_dtype,
         count=len(assets),
         nodata=0,
         **rio_profile,
     ) as dst:
-        dst.write(linear_normalization(rgb))
+        if out_dtype == np.uint8:
+            dst.write(linear_normalization(rgb, out_min=1))
+        else:
+            dst.write(rgb)

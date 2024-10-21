@@ -6,7 +6,7 @@ from numpy.typing import DTypeLike
 import numpy.ma as ma
 from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.protocols import GridProtocol
-from mapchete.types import Grid, NodataVal
+from mapchete.types import NodataVal
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
@@ -19,11 +19,9 @@ logger = logging.getLogger(__name__)
 class DirectionalModels:
     def __init__(
         self,
-        angles,
-        f_band_params,
+        angles: tuple,
+        f_band_params: tuple,
         model=BRDFModels.default,
-        upscale_factor=10000,
-        sun_model_flag=False,
         dtype: DTypeLike = np.float32,
     ):
         self.angles = angles
@@ -31,8 +29,6 @@ class DirectionalModels:
         self.model = BRDFModels(model)
         if self.model == BRDFModels.none:
             raise ValueError("model cannot be BRDFModels.none")
-        self.upscale_factor = upscale_factor
-        self.sun_model_flag = sun_model_flag
         self.dtype = dtype
 
     def get_model(self):
@@ -69,7 +65,7 @@ class BaseBRDF:
     # https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
     # https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/
     # Alt GitHub: https://github.com/maximlamare/s2-normalisation
-    def __init__(self, angles, f_band_params, model="HLS"):
+    def __init__(self, angles: tuple, f_band_params: tuple, model: str = "HLS"):
         self.model = model
         # angles should have a form of tuple where:
         # sun_zenith, sun azimuth, view_zenith, view_azimuth
@@ -251,9 +247,6 @@ def get_corrected_band_reflectance(
         corrected = ((band.astype(np.float32)) * correction).astype(
             np.float32, copy=False
         )
-        corrected[0] = 0.9761 * corrected[0] + 0.001
-        corrected[1] = 1.0075 * corrected[1] - 0.0008
-        corrected[2] = 0.9778 * corrected[2] - 0.004
         # corrected = corrected * 10000
         if nodata == 0:
             return ma.masked_array(
@@ -383,78 +376,3 @@ def get_brdf_param(
         model_params.mask[detector_mask] = detector_brdf.mask[detector_mask]
 
     return model_params
-
-
-def apply_brdf_correction(
-    band=None,
-    band_crs=None,
-    band_transform=None,
-    product_crs=None,
-    sun_azimuth_angle_array=None,
-    sun_zenith_angle_array=None,
-    detector_footprints=None,
-    viewing_zenith=None,
-    viewing_azimuth=None,
-    f_band_params=None,
-    model=BRDFModels.default,
-    smoothing_iterations=10,
-):
-    """
-    Return BRDF corrected band reflectance.
-
-    Parameters
-    ----------
-    band : np.ndarray
-        Band reflectance.
-    band_crs : str
-        CRS of band.
-    band_transform : Affine
-        Band Affine object.
-    product_crs : str
-        CRS of product.
-    sun_azimuth_angle_array : dict
-        Dictionary of Azimuth angle grids.
-    sun_zenith_angle_array : dict
-        Dictionary of Zenith angle grids.
-    detector_footprints : dict
-        Detector footprints by detector ID.
-    viewing_zenith : dict
-        Dictionary of Zenith incidence angles by detector ID.
-    viewing_azimuth : dict
-        Dictionary of Zenith incidence angles by detector ID.
-    sun_zenith_angle : float
-        Constant sun angle for product.
-    model : str
-        BRDF model to run.
-    smoothing_iterations : int
-        Smoothness of interpolated angle grids
-    """
-    if not isinstance(band, ma.MaskedArray):  # pragma: no cover
-        raise TypeError("input band must be a masked array")
-    for param, name in [
-        (band_transform, "band_transform"),
-        (product_crs, "product_crs"),
-        (sun_azimuth_angle_array, "sun_azimuth_angle"),
-        (sun_zenith_angle_array, "sun_zenith_angle"),
-        (detector_footprints, "detector_footprints"),
-        (viewing_zenith, "viewing_zenith"),
-        (viewing_azimuth, "viewing_azimuth"),
-        (f_band_params, "f_band_params"),
-    ]:
-        if param is None:  # pragma: no cover
-            raise ValueError(f"{name} must be provided")
-    return get_corrected_band_reflectance(
-        band=band,
-        correction=get_brdf_param(
-            grid=Grid(band_transform, band.shape[0], band.shape[1], crs=band_crs),
-            product_crs=product_crs,
-            sun_azimuth_angle_array=sun_azimuth_angle_array,
-            sun_zenith_angle_array=sun_zenith_angle_array,
-            detector_footprints=detector_footprints,
-            viewing_zenith_per_detector=viewing_zenith,
-            viewing_azimuth_per_detector=viewing_azimuth,
-            f_band_params=f_band_params,
-            model=model,
-            smoothing_iterations=smoothing_iterations,
-        ),
-    )

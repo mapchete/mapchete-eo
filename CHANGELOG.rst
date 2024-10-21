@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.10.2 - 2024-10-21
+----------------------
+
+* core
+  * Sentinel-2: clear product & metadata caches in between each slice read
+
+
 2024.10.1 - 2024-10-21
 ----------------------
 

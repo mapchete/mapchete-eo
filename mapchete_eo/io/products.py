@@ -153,7 +153,7 @@ class Slice:
 
     def _cache_reset(self):
         for product in self.products:
-            product._clear_cache()
+            product._cache_reset()
 
     def get_property(self, property: str) -> Any:
         """

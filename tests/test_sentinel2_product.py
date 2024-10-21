@@ -354,9 +354,9 @@ def test_read_brdf_correction_weight(s2_stac_item_half_footprint, correction_wei
         assert weighted_corrected[asset].any()
         assert (corrected[asset] != weighted_corrected[asset]).any()
         if correction_weight < 1:
-            assert weighted_corrected[asset].data.mean() < corrected[asset].data.mean()
-        else:
             assert weighted_corrected[asset].data.mean() > corrected[asset].data.mean()
+        else:
+            assert weighted_corrected[asset].data.mean() < corrected[asset].data.mean()
 
 
 def test_read_brdf_scl_classes(s2_stac_item_half_footprint):

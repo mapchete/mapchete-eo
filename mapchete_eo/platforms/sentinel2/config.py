@@ -4,7 +4,11 @@ from enum import Enum
 from typing import List, Optional, Union
 
 from mapchete.path import MPathLike
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    ValidationError,
+    field_validator,
+)
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
@@ -52,6 +56,19 @@ class BRDFModelConfig(BaseModel):
 
 class BRDFSCLClassConfig(BRDFModelConfig):
     scl_classes: List[SceneClassification]
+
+    @field_validator("scl_classes", mode="before")
+    @classmethod
+    def to_scl_classes(cls, values: List[str]) -> List[SceneClassification]:
+        out = []
+        for value in values:
+            if isinstance(value, SceneClassification):
+                out.append(value)
+            elif isinstance(value, str):
+                out.append(SceneClassification[value])
+            else:
+                raise ValidationError("value must be mappable to SceneClassification")
+        return out
 
 
 class BRDFConfig(BRDFModelConfig):

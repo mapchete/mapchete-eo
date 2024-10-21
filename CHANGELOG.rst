@@ -17,8 +17,8 @@ Changelog
     * https://sci-hub.st/https://ieeexplore.ieee.org/document/8899868
     * https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
     * https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/#
-    
-  * `brdf` original band scaling is now converting the bands to `arcsinh` and applying the `brdf` correction on top of the `arcsinh` converted data
+
+  * `brdf` original band scaling is now converting the bands to `log10` and applying the `brdf` correction on top of the `log10` converted data
   
 
 2024.10.1 - 2024-10-21

@@ -484,7 +484,6 @@ class S2Metadata:
                             tag=angle.value,
                             bounds=self.bounds,
                             crs=self.crs,
-                            # previous_grid=angles[angle]["raster"]
                         )
                         angles[angle.value.lower()]["detectors"][detector_id] = raster
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
@@ -700,5 +699,4 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
     affine = _get_affine(
         bounds=bounds, row_step=row_step, col_step=col_step, shape=grid.shape
     )
-
     return ReferencedRaster(data=grid, transform=affine, bounds=bounds, crs=crs)

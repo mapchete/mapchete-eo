@@ -54,9 +54,6 @@ class DirectionalModels:
             self.angles, self.f_band_params, self.model, brdf_weight=1.0
         ).get_model()
 
-        # if self.brdf_weight != 1.0:
-        #     out_param_arr = sun_model / (sensor_model * (self.brdf_weight * self.f_band_params[0]))
-        # else:
         out_param_arr = sun_model / sensor_model
 
         return ma.masked_array(
@@ -94,7 +91,8 @@ class BaseBRDF:
 
         self.phi_sun = np.deg2rad(phi_sun)
         self.phi_view = np.deg2rad(phi_view)
-        self.phi = np.deg2rad(np.abs(self.phi_sun - self.phi_view))
+        self.phi = np.abs(np.deg2rad(self.phi_sun) - np.deg2rad(self.phi_view))
+        self.phi = np.where(self.phi > np.pi, 2 * np.pi - self.phi, self.phi)
 
         # (Modis based) Parameters for the linear model
         self.f_band_params = f_band_params
@@ -156,7 +154,7 @@ class BaseBRDF:
         return cos_t
 
     def t(self) -> np.ndarray:
-        t = np.arccos(self.cos_t())
+        t = np.clip(np.arccos(self.cos_t()), -1, 1)
         return t
 
     # Function FV Ross_Thick, V is for volume scattering (Kernel)
@@ -246,16 +244,12 @@ def get_corrected_band_reflectance(
             else np.where(band == nodata, True, False)
         )
 
-        # # Apply BRDF correction to arcsinh scaled Sentinel-2 data
-        # Arcsinh:
-        # The arcsinh function also compresses large values, but it grows more uniformly across the range of inputs.
-        # It is less sensitive to changes in small values compared to log10.
-        # For small values (close to zero), arcsinh behaves like the input, making it less extreme than log10.
+        # # Apply BRDF correction to log10 scaled Sentinel-2 data
         corrected = (
-            np.arcsinh(band.astype(np.float32, copy=False) / 10000) * correction
+            np.log10(band.astype(np.float32, copy=False), where=band > 0) * correction
         ).astype(np.float32, copy=False)
         # Revert the log to linear
-        corrected = (np.sinh(corrected) * 10000).astype(np.float32, copy=False)
+        corrected = (np.power(10, corrected)).astype(np.float32, copy=False)
 
         if nodata == 0:
             return ma.masked_array(

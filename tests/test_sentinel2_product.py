@@ -430,6 +430,26 @@ def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
             ).all()
 
 
+def test_s2_bandpass_adjustment(s2_stac_item_half_footprint):
+    assets = ["red", "green"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    # switch bandpass on and off
+    with_bandpass = product.read_np_array(
+        assets=assets, grid=tile, apply_sentinel2_bandpass_adjustment=True
+    )
+    without_bandpass = product.read_np_array(
+        assets=assets, grid=tile, apply_sentinel2_bandpass_adjustment=False
+    )
+
+    # see if the output is different
+    assert (with_bandpass != without_bandpass).any()
+
+    # validate different mean
+    assert np.nanmean(with_bandpass) != np.nanmean(without_bandpass)
+
+
 @pytest.mark.remote
 def test_read_broken_product(stac_item_missing_detector_footprints):
     assets = ["blue"]

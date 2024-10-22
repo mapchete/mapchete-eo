@@ -7,7 +7,8 @@ Changelog
 
 * cli
   
-  * Add `out_dtype` option to `s2-rgb` CLI operation for debuging purposes
+  * Add `--out_dtype` option to `s2-rgb` CLI operation for debuging
+  * Add `--brdf-log10` flag to `s2-rgb` CLI operation for debugging
 
 * core
   

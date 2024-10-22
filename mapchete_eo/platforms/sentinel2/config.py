@@ -21,6 +21,7 @@ from mapchete_eo.platforms.sentinel2.types import (
     SceneClassification,
 )
 from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
+    S2A_BAND_ADJUSTMENT_PARAMS,
     S2B_BAND_ADJUSTMENT_PARAMS,
 )
 from mapchete_eo.search.config import StacSearchConfig
@@ -42,7 +43,22 @@ class L2ABandFParams(Enum):
     B12 = F_MODIS_PARAMS[12]
 
 
-class L2ABandpassAdjustmentParams(Enum):
+class L2AS2ABandpassAdjustmentParams(Enum):
+    B01 = S2A_BAND_ADJUSTMENT_PARAMS[1]
+    B02 = S2A_BAND_ADJUSTMENT_PARAMS[2]
+    B03 = S2A_BAND_ADJUSTMENT_PARAMS[3]
+    B04 = S2A_BAND_ADJUSTMENT_PARAMS[4]
+    B05 = S2A_BAND_ADJUSTMENT_PARAMS[5]
+    B06 = S2A_BAND_ADJUSTMENT_PARAMS[6]
+    B07 = S2A_BAND_ADJUSTMENT_PARAMS[7]
+    B08 = S2A_BAND_ADJUSTMENT_PARAMS[8]
+    B8A = S2A_BAND_ADJUSTMENT_PARAMS[9]
+    B09 = S2A_BAND_ADJUSTMENT_PARAMS[10]
+    B11 = S2A_BAND_ADJUSTMENT_PARAMS[11]
+    B12 = S2A_BAND_ADJUSTMENT_PARAMS[12]
+
+
+class L2AS2BBandpassAdjustmentParams(Enum):
     B01 = S2B_BAND_ADJUSTMENT_PARAMS[1]
     B02 = S2B_BAND_ADJUSTMENT_PARAMS[2]
     B03 = S2B_BAND_ADJUSTMENT_PARAMS[3]

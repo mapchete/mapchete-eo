@@ -21,6 +21,7 @@ def correction_grid(
     band: L2ABand,
     model: BRDFModels = BRDFModels.default,
     brdf_weight: float = 1.0,
+    log10_bands_scale_flag: bool = True,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
 ) -> ReferencedRaster:
@@ -42,6 +43,7 @@ def correction_grid(
             ).zenith.detectors,
             model=model,
             brdf_weight=brdf_weight,
+            log10_bands_scale_flag=log10_bands_scale_flag,
         )
     if not brdf_params.any():  # pragma: no cover
         raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")

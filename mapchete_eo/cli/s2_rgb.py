@@ -6,6 +6,7 @@ import pystac
 from mapchete.cli.options import opt_debug
 from mapchete.io import rasterio_open
 from mapchete.path import MPath
+from mapchete import Timer
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.image_operations import linear_normalization
@@ -31,6 +32,7 @@ from mapchete_eo.platforms.sentinel2.types import Resolution
 @options_arguments.opt_mask_scl_classes
 @options_arguments.opt_brdf_model
 @options_arguments.opt_brdf_weight
+@options_arguments.opt_brdf_log10_flag
 @options_arguments.opt_out_dtype
 @opt_debug
 def s2_rgb(
@@ -46,6 +48,7 @@ def s2_rgb(
     mask_scl_classes=None,
     brdf_model=None,
     brdf_weight: float = 1.0,
+    brdf_log10_flag: bool = False,
     out_dtype: str = "uint8",
     **_,
 ):
@@ -61,40 +64,48 @@ def s2_rgb(
     click.echo(
         f"writing {stac_item} assets {', '.join(assets)} to {dst_path} in {resolution.name} resolution"
     )
-    mask_config = MaskConfig(
-        footprint=mask_footprint,
-        snow_ice=mask_snow_ice,
-        cloud_probability_threshold=mask_cloud_probability_threshold,
-        snow_probability_threshold=mask_snow_probability_threshold,
-        scl_classes=(
-            [SceneClassification[scene_class] for scene_class in mask_scl_classes]
-            if bool(mask_scl_classes)
-            else None
-        ),
-    )
-    rgb = product.read_np_array(
-        assets=assets,
-        grid=grid,
-        mask_config=mask_config,
-        brdf_config=BRDFConfig(
-            bands=assets, model=brdf_model, correction_weight=brdf_weight
+    with Timer() as t:
+        mask_config = MaskConfig(
+            footprint=mask_footprint,
+            snow_ice=mask_snow_ice,
+            cloud_probability_threshold=mask_cloud_probability_threshold,
+            snow_probability_threshold=mask_snow_probability_threshold,
+            scl_classes=(
+                [SceneClassification[scene_class] for scene_class in mask_scl_classes]
+                if bool(mask_scl_classes)
+                else None
+            ),
         )
-        if brdf_model
-        else None,
+        rgb = product.read_np_array(
+            assets=assets,
+            grid=grid,
+            mask_config=mask_config,
+            brdf_config=BRDFConfig(
+                bands=assets,
+                model=brdf_model,
+                correction_weight=brdf_weight,
+                log10_bands_scale_flag=brdf_log10_flag,
+            )
+            if brdf_model
+            else None,
+        )
+        with rasterio_open(
+            dst_path,
+            mode="w",
+            crs=grid.crs,
+            transform=grid.transform,
+            width=grid.width,
+            height=grid.height,
+            dtype=out_dtype,
+            count=len(assets),
+            nodata=0,
+            apply_sentinel2b_bandpass_adjustment=False,
+            **rio_profile,
+        ) as dst:
+            if out_dtype == np.uint8:
+                dst.write(linear_normalization(rgb, out_min=1))
+            else:
+                dst.write(rgb)
+    click.echo(
+        f"{stac_item} assets {', '.join(assets)} to {dst_path} in {resolution.name} written in {t}"
     )
-    with rasterio_open(
-        dst_path,
-        mode="w",
-        crs=grid.crs,
-        transform=grid.transform,
-        width=grid.width,
-        height=grid.height,
-        dtype=out_dtype,
-        count=len(assets),
-        nodata=0,
-        **rio_profile,
-    ) as dst:
-        if out_dtype == np.uint8:
-            dst.write(linear_normalization(rgb, out_min=1))
-        else:
-            dst.write(rgb)

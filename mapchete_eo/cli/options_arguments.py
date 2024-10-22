@@ -229,3 +229,10 @@ opt_dump_detector_footprints = click.option(
 opt_out_dtype = click.option(
     "--out-dtype", default="uint8", help="Out dType string; default: uint8"
 )
+
+opt_brdf_log10_flag = click.option(
+    "--brdf-log10",
+    default=False,
+    is_flag=True,
+    help="Flag to switch BRDF input band convertion to log10 default: False",
+)

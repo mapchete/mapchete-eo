@@ -33,14 +33,15 @@ from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
-    sentinel2b_bandpass_adjustment_band,
+    sentinel2_bandpass_adjustment_band,
 )
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModelConfig,
     CacheConfig,
-    L2ABandpassAdjustmentParams,
+    L2AS2ABandpassAdjustmentParams,
+    L2AS2BBandpassAdjustmentParams,
     MaskConfig,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -107,6 +108,7 @@ class Cache:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
             brdf_weight = self.config.brdf.correction_weight
+            log10_bands_scale_flag = self.config.brdf.log10_bands_scale_flag
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -121,6 +123,7 @@ class Cache:
                             band,
                             model=model,
                             brdf_weight=brdf_weight,
+                            log10_bands_scale_flag=log10_bands_scale_flag,
                             resolution=resolution,
                         )
                     except BRDFError as exc:
@@ -263,6 +266,12 @@ class S2Product(EOProduct, EOProductProtocol):
             else:
                 return self.empty_array(count, grid=grid, fill_value=fill_value)
 
+        # apply Sentinel-2 bandpass adjustment
+        if apply_sentinel2b_bandpass_adjustment:
+            arr = self._apply_sentinel2_bandpass_adjustment(
+                uncorrected=arr, assets=assets
+            )
+
         # apply BRDF config if required
         if brdf_config:
             arr = self._apply_brdf(
@@ -273,15 +282,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 resampling=resampling,
                 mask_config=mask_config,
             )
-        # Only for Sentinel-2B!!!
-        if (
-            apply_sentinel2b_bandpass_adjustment
-            and self.item.properties["platform"].lower() == "sentinel-2b".lower()
-        ):
-            arr = self._apply_sentinel2b_bandpass_adjustment(
-                uncorrected=arr,
-                assets=assets,
-            )
+
         return ma.MaskedArray(arr, fill_value=fill_value)
 
     def cache_assets(self) -> None:
@@ -319,6 +320,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     band,
                     model=brdf_config.model,
                     brdf_weight=brdf_config.correction_weight,
+                    log10_bands_scale_flag=brdf_config.log10_bands_scale_flag,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
                 ),
@@ -543,25 +545,29 @@ class S2Product(EOProduct, EOProductProtocol):
             out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
         )
 
-    def _apply_sentinel2b_bandpass_adjustment(
-        self, uncorrected: ma.MaskedArray, assets: List[str]
+    def _apply_sentinel2_bandpass_adjustment(
+        self, uncorrected: ma.MaskedArray, assets: List[str], computing_dtype=np.float32
     ) -> ma.MaskedArray:
-        if self.item.properties["platform"].lower() != "sentinel-2b".lower():
-            raise ValueError(
-                f"Bandpass Adjustment in this version should only be performed for S2B; id: {self.id}"
-            )
-
         out_arr: ma.MaskedArray = ma.masked_array(
             data=np.zeros(uncorrected.shape, uncorrected.dtype),
             mask=uncorrected.mask.copy(),
             fill_value=uncorrected.fill_value,
         )
+
         for band_idx, asset in enumerate(assets):
-            out_arr[band_idx] = sentinel2b_bandpass_adjustment_band(
-                uncorrected[band_idx],
-                bandpass_params=L2ABandpassAdjustmentParams[
+            if self.item.properties["platform"].lower() == "sentinel-2a":
+                l2a_bandpass_adjustment_params = L2AS2ABandpassAdjustmentParams[
                     asset_name_to_l2a_band(self.item, asset).name
-                ].value,
+                ].value
+            elif self.item.properties["platform"].lower() == "sentinel-2b":
+                l2a_bandpass_adjustment_params = L2AS2BBandpassAdjustmentParams[
+                    asset_name_to_l2a_band(self.item, asset).name
+                ].value
+            out_arr[band_idx] = sentinel2_bandpass_adjustment_band(
+                uncorrected[band_idx],
+                bandpass_params=l2a_bandpass_adjustment_params,
+                computing_dtype=computing_dtype,
+                out_dtype=uncorrected.dtype,
             )
         return out_arr
 
@@ -595,6 +601,7 @@ class S2Product(EOProduct, EOProductProtocol):
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
+                    brdf_config.log10_bands_scale_flag,
                 )
 
         # if SCL-specific correction is configured, apply and overwrite values in array
@@ -629,6 +636,7 @@ class S2Product(EOProduct, EOProductProtocol):
                                 grid=grid,
                                 brdf_config=scl_config,
                             ),
+                            log10_bands_scale_flag=scl_config.log10_bands_scale_flag,
                         )[scl_mask]
 
                     # leave it be for all other cases

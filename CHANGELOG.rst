@@ -2,7 +2,7 @@
 Changelog
 #########
 
-2024.10.2 - 2024-10-21
+2024.10.3 - 2024-10-22
 ----------------------
 
 * cli
@@ -11,7 +11,7 @@ Changelog
 
 * core
   
-  * Added `_apply_sentinel2b_bandpass_adjustment` to `read_np_array` in `platforms.sentinel2.product.S2Product` class, toggle with: `apply_sentinel2b_bandpass_adjustment` bool flag
+  * Added `_apply_sentinel2_bandpass_adjustment` to `read_np_array` in `platforms.sentinel2.product.S2Product` class, toggle with: `apply_sentinel2_bandpass_adjustment` bool flag
   * cleanup and update the `brdf` function chain, add some typing
   * the `brdf` now uses only single model based on following sources:
 

@@ -289,6 +289,7 @@ def get_brdf_param(
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
     """
+    TODO: This function should be under Sentinel-2 platform as it uses its metadata (detectors and angles)
     Return BRDF parameters.
     """
     # create output array
@@ -348,7 +349,6 @@ def get_brdf_param(
             f_band_params=f_band_params,
             model=model,
             brdf_weight=brdf_weight,
-            log10_bands_scale_flag=log10_bands_scale_flag,
         ).get_band_param()
 
         # interpolate missing nodata edges and return BRDF difference model

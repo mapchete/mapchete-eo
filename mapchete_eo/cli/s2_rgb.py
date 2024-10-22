@@ -88,6 +88,7 @@ def s2_rgb(
             )
             if brdf_model
             else None,
+            apply_sentinel2b_bandpass_adjustment=False,
         )
         with rasterio_open(
             dst_path,
@@ -99,7 +100,6 @@ def s2_rgb(
             dtype=out_dtype,
             count=len(assets),
             nodata=0,
-            apply_sentinel2b_bandpass_adjustment=False,
             **rio_profile,
         ) as dst:
             if out_dtype == np.uint8:

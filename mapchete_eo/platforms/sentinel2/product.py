@@ -208,7 +208,7 @@ class S2Product(EOProduct, EOProductProtocol):
         raise_empty: bool = True,
         apply_offset: bool = True,
         apply_scale: bool = False,
-        apply_sentinel2b_bandpass_adjustment: bool = True,
+        apply_sentinel2_bandpass_adjustment: bool = False,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
@@ -267,7 +267,7 @@ class S2Product(EOProduct, EOProductProtocol):
                 return self.empty_array(count, grid=grid, fill_value=fill_value)
 
         # apply Sentinel-2 bandpass adjustment
-        if apply_sentinel2b_bandpass_adjustment:
+        if apply_sentinel2_bandpass_adjustment:
             arr = self._apply_sentinel2_bandpass_adjustment(
                 uncorrected=arr, assets=assets
             )

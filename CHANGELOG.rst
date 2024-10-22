@@ -23,6 +23,13 @@ Changelog
   * added with flag into BRDFModelConfig as `log10_bands_scale_flag` for: `brdf` original band scaling is now converting the bands to `log10` and applying the `brdf` correction on top of the `log10` converted data
   
 
+2024.10.2 - 2024-10-21
+----------------------
+
+* core
+  * Sentinel-2: clear product & metadata caches in between each slice read
+
+
 2024.10.1 - 2024-10-21
 ----------------------
 

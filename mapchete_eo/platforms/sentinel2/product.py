@@ -163,7 +163,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.id = item.id
 
         self._metadata = metadata
-        self._scl_cache = dict()
+        self._cache_reset()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -197,6 +197,10 @@ class S2Product(EOProduct, EOProductProtocol):
 
     def __repr__(self):
         return f"<S2Product product_id={self.id}>"
+
+    def _cache_reset(self):
+        self.metadata._cache_reset()
+        self._scl_cache = dict()
 
     def read_np_array(
         self,

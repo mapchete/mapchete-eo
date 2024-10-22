@@ -334,7 +334,7 @@ def test_read_brdf(s2_stac_item_half_footprint):
         assert (uncorrected[asset] != corrected[asset]).any()
 
 
-@pytest.mark.parametrize("correction_weight", (0.9, 1.1))
+@pytest.mark.parametrize("correction_weight", (0.9, 1.2))
 def test_read_brdf_correction_weight(s2_stac_item_half_footprint, correction_weight):
     assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
@@ -428,6 +428,26 @@ def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
             assert (
                 uncorrected_band[~scl_class_mask] == corrected_band[~scl_class_mask]
             ).all()
+
+
+def test_s2_bandpass_adjustment(s2_stac_item_half_footprint):
+    assets = ["red", "green"]
+    product = S2Product(s2_stac_item_half_footprint)
+    tile = _get_product_tile(product, metatiling=2)
+
+    # switch bandpass on and off
+    with_bandpass = product.read_np_array(
+        assets=assets, grid=tile, apply_sentinel2_bandpass_adjustment=True
+    )
+    without_bandpass = product.read_np_array(
+        assets=assets, grid=tile, apply_sentinel2_bandpass_adjustment=False
+    )
+
+    # see if the output is different
+    assert (with_bandpass != without_bandpass).any()
+
+    # validate different mean
+    assert np.nanmean(with_bandpass) != np.nanmean(without_bandpass)
 
 
 @pytest.mark.remote

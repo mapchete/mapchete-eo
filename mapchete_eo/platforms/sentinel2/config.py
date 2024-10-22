@@ -20,6 +20,10 @@ from mapchete_eo.platforms.sentinel2.types import (
     Resolution,
     SceneClassification,
 )
+from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
+    S2A_BAND_ADJUSTMENT_PARAMS,
+    S2B_BAND_ADJUSTMENT_PARAMS,
+)
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
 
@@ -39,18 +43,48 @@ class L2ABandFParams(Enum):
     B12 = F_MODIS_PARAMS[12]
 
 
+class L2AS2ABandpassAdjustmentParams(Enum):
+    B01 = S2A_BAND_ADJUSTMENT_PARAMS[1]
+    B02 = S2A_BAND_ADJUSTMENT_PARAMS[2]
+    B03 = S2A_BAND_ADJUSTMENT_PARAMS[3]
+    B04 = S2A_BAND_ADJUSTMENT_PARAMS[4]
+    B05 = S2A_BAND_ADJUSTMENT_PARAMS[5]
+    B06 = S2A_BAND_ADJUSTMENT_PARAMS[6]
+    B07 = S2A_BAND_ADJUSTMENT_PARAMS[7]
+    B08 = S2A_BAND_ADJUSTMENT_PARAMS[8]
+    B8A = S2A_BAND_ADJUSTMENT_PARAMS[9]
+    B09 = S2A_BAND_ADJUSTMENT_PARAMS[10]
+    B11 = S2A_BAND_ADJUSTMENT_PARAMS[11]
+    B12 = S2A_BAND_ADJUSTMENT_PARAMS[12]
+
+
+class L2AS2BBandpassAdjustmentParams(Enum):
+    B01 = S2B_BAND_ADJUSTMENT_PARAMS[1]
+    B02 = S2B_BAND_ADJUSTMENT_PARAMS[2]
+    B03 = S2B_BAND_ADJUSTMENT_PARAMS[3]
+    B04 = S2B_BAND_ADJUSTMENT_PARAMS[4]
+    B05 = S2B_BAND_ADJUSTMENT_PARAMS[5]
+    B06 = S2B_BAND_ADJUSTMENT_PARAMS[6]
+    B07 = S2B_BAND_ADJUSTMENT_PARAMS[7]
+    B08 = S2B_BAND_ADJUSTMENT_PARAMS[8]
+    B8A = S2B_BAND_ADJUSTMENT_PARAMS[9]
+    B09 = S2B_BAND_ADJUSTMENT_PARAMS[10]
+    B11 = S2B_BAND_ADJUSTMENT_PARAMS[11]
+    B12 = S2B_BAND_ADJUSTMENT_PARAMS[12]
+
+
 class BRDFModelConfig(BaseModel):
     model: BRDFModels = BRDFModels.HLS
     bands: List[str] = ["blue", "green", "red", "nir"]
     resolution: Resolution = Resolution["60m"]
     footprints_cached_read: bool = False
+    log10_bands_scale_flag: bool = True
     # TODO: let's make this configurable later
     # f_params: Union[Dict[L2ABand, Tuple[float, float, float]], Type[L2ABandFParams]] = (
     #     L2ABandFParams
     # )
 
-    # optionally weighing of correction using the formula:
-    # weighted_correction = 1 - (1 - correction_value) * correction_weight
+    # This correction value is applied to `fv` (kvol) and `fr` (kgeo) in the final steps of the BRDF param
     correction_weight: float = 1.0
 
 
@@ -90,6 +124,7 @@ class BRDFConfig(BRDFModelConfig):
         resolution="60m",
         footprints_cached_read=True,
         correction_weight=0.9,
+        log10_bands_scale_flag=True,
         scl_specific_configurations=[
             BRDFSCLClassConfig(
                 scl_classes=["water"],

@@ -18,6 +18,7 @@ from mapchete_eo.platforms.sentinel2.metadata_parser import Resolution
 @options_arguments.opt_resolution
 @options_arguments.opt_brdf_model
 @options_arguments.opt_dump_detector_footprints
+@options_arguments.opt_brdf_weight
 @opt_debug
 def s2_brdf(
     stac_item,
@@ -26,6 +27,7 @@ def s2_brdf(
     resolution=None,
     brdf_model=None,
     dump_detector_footprints=False,
+    brdf_weight: float = 1.0,
     **_,
 ):
     """Generate 8bit RGB image from Sentinel-2 product."""
@@ -55,7 +57,11 @@ def s2_brdf(
                 product.read_brdf_grid(
                     band,
                     grid=grid,
-                    brdf_config=BRDFConfig(model=brdf_model, resolution=resolution),
+                    brdf_config=BRDFConfig(
+                        model=brdf_model,
+                        resolution=resolution,
+                        correction_weight=brdf_weight,
+                    ),
                 ),
                 1,
             )

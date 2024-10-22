@@ -16,6 +16,7 @@ from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
+
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
@@ -31,11 +32,16 @@ from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
-from mapchete_eo.platforms.sentinel2.brdf import correction_grid, get_sun_zenith_angle
+from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
+    sentinel2_bandpass_adjustment_band,
+)
+from mapchete_eo.platforms.sentinel2.brdf import correction_grid
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModelConfig,
     CacheConfig,
+    L2AS2ABandpassAdjustmentParams,
+    L2AS2BBandpassAdjustmentParams,
     MaskConfig,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -101,23 +107,23 @@ class Cache:
         if self.config.brdf:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
+            brdf_weight = self.config.brdf.correction_weight
+            log10_bands_scale_flag = self.config.brdf.log10_bands_scale_flag
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
             )
-            sun_zenith_angle = None
             for band in self._brdf_bands:
                 out_path = self.path / f"brdf_{model}_{band.name}_{resolution}.tif"
                 # TODO: do check with _existing_files again to reduce S3 requests
                 if not out_path.exists():
-                    if sun_zenith_angle is None:
-                        sun_zenith_angle = get_sun_zenith_angle(metadata)
                     try:
                         grid = correction_grid(
                             metadata,
                             band,
-                            sun_zenith_angle,
                             model=model,
+                            brdf_weight=brdf_weight,
+                            log10_bands_scale_flag=log10_bands_scale_flag,
                             resolution=resolution,
                         )
                     except BRDFError as exc:
@@ -206,6 +212,7 @@ class S2Product(EOProduct, EOProductProtocol):
         raise_empty: bool = True,
         apply_offset: bool = True,
         apply_scale: bool = False,
+        apply_sentinel2_bandpass_adjustment: bool = False,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
@@ -263,6 +270,12 @@ class S2Product(EOProduct, EOProductProtocol):
             else:
                 return self.empty_array(count, grid=grid, fill_value=fill_value)
 
+        # apply Sentinel-2 bandpass adjustment
+        if apply_sentinel2_bandpass_adjustment:
+            arr = self._apply_sentinel2_bandpass_adjustment(
+                uncorrected=arr, assets=assets
+            )
+
         # apply BRDF config if required
         if brdf_config:
             arr = self._apply_brdf(
@@ -310,6 +323,8 @@ class S2Product(EOProduct, EOProductProtocol):
                     self.metadata,
                     band,
                     model=brdf_config.model,
+                    brdf_weight=brdf_config.correction_weight,
+                    log10_bands_scale_flag=brdf_config.log10_bands_scale_flag,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
                 ),
@@ -534,6 +549,32 @@ class S2Product(EOProduct, EOProductProtocol):
             out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
         )
 
+    def _apply_sentinel2_bandpass_adjustment(
+        self, uncorrected: ma.MaskedArray, assets: List[str], computing_dtype=np.float32
+    ) -> ma.MaskedArray:
+        out_arr: ma.MaskedArray = ma.masked_array(
+            data=np.zeros(uncorrected.shape, uncorrected.dtype),
+            mask=uncorrected.mask.copy(),
+            fill_value=uncorrected.fill_value,
+        )
+
+        for band_idx, asset in enumerate(assets):
+            if self.item.properties["platform"].lower() == "sentinel-2a":
+                l2a_bandpass_adjustment_params = L2AS2ABandpassAdjustmentParams[
+                    asset_name_to_l2a_band(self.item, asset).name
+                ].value
+            elif self.item.properties["platform"].lower() == "sentinel-2b":
+                l2a_bandpass_adjustment_params = L2AS2BBandpassAdjustmentParams[
+                    asset_name_to_l2a_band(self.item, asset).name
+                ].value
+            out_arr[band_idx] = sentinel2_bandpass_adjustment_band(
+                uncorrected[band_idx],
+                bandpass_params=l2a_bandpass_adjustment_params,
+                computing_dtype=computing_dtype,
+                out_dtype=uncorrected.dtype,
+            )
+        return out_arr
+
     def _apply_brdf(
         self,
         uncorrected: ma.MaskedArray,
@@ -564,7 +605,7 @@ class S2Product(EOProduct, EOProductProtocol):
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
-                    correction_weight=brdf_config.correction_weight,
+                    brdf_config.log10_bands_scale_flag,
                 )
 
         # if SCL-specific correction is configured, apply and overwrite values in array
@@ -599,7 +640,7 @@ class S2Product(EOProduct, EOProductProtocol):
                                 grid=grid,
                                 brdf_config=scl_config,
                             ),
-                            correction_weight=scl_config.correction_weight,
+                            log10_bands_scale_flag=scl_config.log10_bands_scale_flag,
                         )[scl_mask]
 
                     # leave it be for all other cases

@@ -1,12 +1,9 @@
 import logging
-from typing import Iterator, List, Optional
 
-import numpy as np
-from fiona.transform import transform
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster
 
-from mapchete_eo.brdf import get_brdf_param, get_sun_angle_array
+from mapchete_eo.brdf import get_brdf_param
 from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.exceptions import BRDFError
 from mapchete_eo.platforms.sentinel2.config import L2ABandFParams
@@ -19,25 +16,12 @@ from mapchete_eo.platforms.sentinel2.types import (
 logger = logging.getLogger(__name__)
 
 
-def get_sun_zenith_angle(s2_metadata: S2Metadata):
-    _, (bottom, top) = transform(
-        s2_metadata.crs,
-        "EPSG:4326",
-        [s2_metadata.bounds[0], s2_metadata.bounds[2]],
-        [s2_metadata.bounds[1], s2_metadata.bounds[3]],
-    )
-    return get_sun_angle_array(
-        min_lat=bottom,
-        max_lat=top,
-        shape=s2_metadata.sun_angles.zenith.raster.data.shape,
-    )
-
-
 def correction_grid(
     s2_metadata: S2Metadata,
     band: L2ABand,
-    sun_zenith_angle: Optional[np.ndarray] = None,
     model: BRDFModels = BRDFModels.default,
+    brdf_weight: float = 1.0,
+    log10_bands_scale_flag: bool = True,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
 ) -> ReferencedRaster:
@@ -57,10 +41,9 @@ def correction_grid(
             viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
                 band
             ).zenith.detectors,
-            sun_zenith_angle=get_sun_zenith_angle(s2_metadata)
-            if sun_zenith_angle is None
-            else sun_zenith_angle,
             model=model,
+            brdf_weight=brdf_weight,
+            log10_bands_scale_flag=log10_bands_scale_flag,
         )
     if not brdf_params.any():  # pragma: no cover
         raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")
@@ -74,22 +57,3 @@ def correction_grid(
         bounds=s2_metadata.bounds,
         driver="COG",
     )
-
-
-def correction_grids(
-    s2_metadata: S2Metadata,
-    bands: List[L2ABand],
-    model: BRDFModels = BRDFModels.default,
-    resolution: Resolution = Resolution["60m"],  # TODO use 120m?
-) -> Iterator[ReferencedRaster]:
-    for band in bands:
-        logger.debug(
-            "run BRDF for product %s band %s", s2_metadata.product_id, band.value
-        )
-        yield correction_grid(
-            s2_metadata,
-            band,
-            get_sun_zenith_angle(s2_metadata),
-            model=model,
-            resolution=resolution,
-        )

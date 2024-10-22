@@ -10,7 +10,8 @@ Changelog
   * Add `out_dtype` option to `s2-rgb` CLI operation for debuging purposes
 
 * core
-
+  
+  * Added `_apply_sentinel2b_bandpass_adjustment` to `read_np_array` in `platforms.sentinel2.product.S2Product` class, toggle with: `apply_sentinel2b_bandpass_adjustment` bool flag
   * cleanup and update the `brdf` function chain, add some typing
   * the `brdf` now uses only single model based on following sources:
 
@@ -18,7 +19,7 @@ Changelog
     * https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
     * https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/#
 
-  * `brdf` original band scaling is now converting the bands to `log10` and applying the `brdf` correction on top of the `log10` converted data
+  * added with flag into BRDFModelConfig as `log10_bands_scale_flag` for: `brdf` original band scaling is now converting the bands to `log10` and applying the `brdf` correction on top of the `log10` converted data
   
 
 2024.10.1 - 2024-10-21

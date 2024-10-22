@@ -16,6 +16,7 @@ from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
+
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.brdf.config import BRDFModels
 from mapchete_eo.brdf.models import get_corrected_band_reflectance
@@ -31,11 +32,15 @@ from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
+from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
+    sentinel2b_bandpass_adjustment_band,
+)
 from mapchete_eo.platforms.sentinel2.brdf import correction_grid
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModelConfig,
     CacheConfig,
+    L2ABandpassAdjustmentParams,
     MaskConfig,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -200,6 +205,7 @@ class S2Product(EOProduct, EOProductProtocol):
         raise_empty: bool = True,
         apply_offset: bool = True,
         apply_scale: bool = False,
+        apply_sentinel2b_bandpass_adjustment: bool = True,
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
@@ -267,7 +273,15 @@ class S2Product(EOProduct, EOProductProtocol):
                 resampling=resampling,
                 mask_config=mask_config,
             )
-
+        # Only for Sentinel-2B!!!
+        if (
+            apply_sentinel2b_bandpass_adjustment
+            and self.item.properties["platform"].lower() == "sentinel-2b".lower()
+        ):
+            arr = self._apply_sentinel2b_bandpass_adjustment(
+                uncorrected=arr,
+                assets=assets,
+            )
         return ma.MaskedArray(arr, fill_value=fill_value)
 
     def cache_assets(self) -> None:
@@ -528,6 +542,28 @@ class S2Product(EOProduct, EOProductProtocol):
         return ReferencedRaster(
             out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
         )
+
+    def _apply_sentinel2b_bandpass_adjustment(
+        self, uncorrected: ma.MaskedArray, assets: List[str]
+    ) -> ma.MaskedArray:
+        if self.item.properties["platform"].lower() != "sentinel-2b".lower():
+            raise ValueError(
+                f"Bandpass Adjustment in this version should only be performed for S2B; id: {self.id}"
+            )
+
+        out_arr: ma.MaskedArray = ma.masked_array(
+            data=np.zeros(uncorrected.shape, uncorrected.dtype),
+            mask=uncorrected.mask.copy(),
+            fill_value=uncorrected.fill_value,
+        )
+        for band_idx, asset in enumerate(assets):
+            out_arr[band_idx] = sentinel2b_bandpass_adjustment_band(
+                uncorrected[band_idx],
+                bandpass_params=L2ABandpassAdjustmentParams[
+                    asset_name_to_l2a_band(self.item, asset).name
+                ].value,
+            )
+        return out_arr
 
     def _apply_brdf(
         self,

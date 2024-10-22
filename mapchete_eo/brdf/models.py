@@ -23,6 +23,7 @@ class DirectionalModels:
         f_band_params: Tuple[float, float, float],
         model=BRDFModels.default,
         brdf_weight: float = 1.0,
+        log10_bands_scale_flag: bool = True,
         dtype: DTypeLike = np.float32,
     ):
         self.angles = angles
@@ -31,6 +32,7 @@ class DirectionalModels:
         if self.model == BRDFModels.none:
             raise ValueError("model cannot be BRDFModels.none")
         self.brdf_weight = brdf_weight
+        self.log10_bands_scale_flag = log10_bands_scale_flag
         self.dtype = dtype
 
     def get_sensor_model(self):
@@ -62,7 +64,9 @@ class DirectionalModels:
         ).astype(self.dtype, copy=False)
 
     def get_corrected_band_reflectance(self, band):
-        return get_corrected_band_reflectance(band, self.get_band_param())
+        return get_corrected_band_reflectance(
+            band, self.get_band_param(), self.log10_bands_scale_flag
+        )
 
 
 class BaseBRDF:
@@ -217,6 +221,7 @@ class SunModel(BaseBRDF):
 def get_corrected_band_reflectance(
     band: ma.MaskedArray,
     correction: np.ndarray,
+    log10_bands_scale_flag: bool = True,
     nodata: NodataVal = 0,
 ) -> ma.MaskedArray:
     """
@@ -244,12 +249,18 @@ def get_corrected_band_reflectance(
             else np.where(band == nodata, True, False)
         )
 
-        # # Apply BRDF correction to log10 scaled Sentinel-2 data
-        corrected = (
-            np.log10(band.astype(np.float32, copy=False), where=band > 0) * correction
-        ).astype(np.float32, copy=False)
-        # Revert the log to linear
-        corrected = (np.power(10, corrected)).astype(np.float32, copy=False)
+        if log10_bands_scale_flag:
+            # # Apply BRDF correction to log10 scaled Sentinel-2 data
+            corrected = (
+                np.log10(band.astype(np.float32, copy=False), where=band > 0)
+                * correction
+            ).astype(np.float32, copy=False)
+            # Revert the log to linear
+            corrected = (np.power(10, corrected)).astype(np.float32, copy=False)
+        else:
+            corrected = (band.astype(np.float32, copy=False) * correction).astype(
+                np.float32, copy=False
+            )
 
         if nodata == 0:
             return ma.masked_array(
@@ -273,6 +284,7 @@ def get_brdf_param(
     f_band_params: Tuple[float, float, float],
     model: BRDFModels = BRDFModels.default,
     brdf_weight: float = 1.0,
+    log10_bands_scale_flag: bool = True,
     smoothing_iterations: int = 10,
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
@@ -336,6 +348,7 @@ def get_brdf_param(
             f_band_params=f_band_params,
             model=model,
             brdf_weight=brdf_weight,
+            log10_bands_scale_flag=log10_bands_scale_flag,
         ).get_band_param()
 
         # interpolate missing nodata edges and return BRDF difference model

@@ -88,7 +88,6 @@ def s2_rgb(
             )
             if brdf_model
             else None,
-            apply_sentinel2b_bandpass_adjustment=False,
         )
         with rasterio_open(
             dst_path,

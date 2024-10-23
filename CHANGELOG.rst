@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2024.10.4 - 2024-10-23
+----------------------
+
+* core
+
+  * Sentinel-2: only call `_cache_reset()` if metadata object was initialized
+
+
 2024.10.3 - 2024-10-22
 ----------------------
 
@@ -27,6 +35,7 @@ Changelog
 ----------------------
 
 * core
+
   * Sentinel-2: clear product & metadata caches in between each slice read
 
 

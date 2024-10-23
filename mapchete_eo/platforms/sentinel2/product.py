@@ -193,7 +193,8 @@ class S2Product(EOProduct, EOProductProtocol):
         return f"<S2Product product_id={self.id}>"
 
     def _cache_reset(self):
-        self.metadata._cache_reset()
+        if self._metadata:
+            self._metadata._cache_reset()
         self._scl_cache = dict()
 
     def read_np_array(

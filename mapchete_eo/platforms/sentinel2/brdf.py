@@ -58,10 +58,10 @@ def correction_grid(
                 detector_footprints=None,
                 viewing_azimuth_angle_array=s2_metadata.viewing_incidence_angles(
                     band
-                ).azimuth.raster,
+                ).azimuth.merge_detectors(),
                 viewing_zenith_angle_array=s2_metadata.viewing_incidence_angles(
                     band
-                ).zenith.raster,
+                ).zenith.merge_detectors(),
                 model=model,
                 brdf_weight=brdf_weight,
             )

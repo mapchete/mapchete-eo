@@ -482,21 +482,6 @@ class S2Metadata:
                             crs=self.crs,
                         )
                         angles[angle.value.lower()]["detectors"][detector_id] = raster
-                        # Merge Viewing Angles into single grid
-                        if angles[angle.value.lower()]["raster"] is None:
-                            angles[angle.value.lower()]["raster"] = raster
-                        else:
-                            angles[angle.value.lower()]["raster"] = ReferencedRaster(
-                                data=np.where(
-                                    angles[angle.value.lower()]["raster"].data,
-                                    angles[angle.value.lower()]["raster"].data,
-                                    raster.data,
-                                ),
-                                transform=angles[angle.value.lower()][
-                                    "raster"
-                                ].transform,
-                                crs=angles[angle.value.lower()]["raster"].crs,
-                            )
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
                 for band_angle in band_angles:
                     band_idx = int(band_angle.get("bandId"))
@@ -613,9 +598,25 @@ class SunAnglesData(BaseModel):
 
 class ViewingIncidenceAngle(BaseModel):
     model_config = dict(arbitrary_types_allowed=True)
-    raster: ReferencedRaster
     detectors: Dict[int, ReferencedRaster]
     mean: float
+
+    def merge_detectors(
+        self, fill_edges: bool = True, smoothing_iterations: int = 3
+    ) -> ReferencedRaster:
+        sample = next(iter(self.detectors.values()))
+        merged = np.nanmean(
+            np.stack([raster.data for raster in self.detectors.values()]), axis=0
+        )
+        if fill_edges:
+            merged = fillnodata(
+                ma.masked_invalid(merged), smoothing_iterations=smoothing_iterations
+            )
+        return ReferencedRaster.from_array_like(
+            array_like=ma.masked_invalid(merged),
+            transform=sample.transform,
+            crs=sample.crs,
+        )
 
 
 class ViewingIncidenceAngles(BaseModel):
@@ -685,8 +686,7 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
             np.array(
                 [
                     [
-                        # if the 0.0 is np.nan the array of next iteration cant be filled
-                        0.0 if cell == "NaN" else float(cell)
+                        np.nan if cell == "NaN" else float(cell)
                         for cell in row.text.split()
                     ]
                     for row in values_list

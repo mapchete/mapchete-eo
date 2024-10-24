@@ -303,8 +303,8 @@ def get_brdf_param(
     ):
         model_brdf_params = DirectionalModels(
             angles=(
-                sun_zenith_angle_array.data,
-                sun_azimuth_angle_array.data,
+                sun_zenith_angle_array,
+                sun_azimuth_angle_array,
                 viewing_zenith_angle_array.data,
                 viewing_azimuth_angle_array.data,
             ),
@@ -407,5 +407,9 @@ def get_brdf_param(
             # merge detector stripes
             model_params[detector_mask] = detector_brdf[detector_mask]
             model_params.mask[detector_mask] = detector_brdf.mask[detector_mask]
+    else:
+        raise ValueError(
+            "either angle arrays or angle arrays per detector footprints have to be provided"
+        )
 
     return model_params

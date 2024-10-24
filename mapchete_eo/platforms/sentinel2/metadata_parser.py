@@ -488,10 +488,9 @@ class S2Metadata:
                         else:
                             angles[angle.value.lower()]["raster"] = ReferencedRaster(
                                 data=np.where(
-                                    raster.data
-                                    > angles[angle.value.lower()]["raster"].data,
-                                    raster.data,
                                     angles[angle.value.lower()]["raster"].data,
+                                    angles[angle.value.lower()]["raster"].data,
+                                    raster.data,
                                 ),
                                 transform=angles[angle.value.lower()][
                                     "raster"
@@ -685,7 +684,10 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
         return ma.masked_invalid(
             np.array(
                 [
-                    [0.0 if cell == "NaN" else float(cell) for cell in row.text.split()]
+                    [
+                        np.nan if cell == "NaN" else float(cell)
+                        for cell in row.text.split()
+                    ]
                     for row in values_list
                 ],
                 dtype=np.float32,

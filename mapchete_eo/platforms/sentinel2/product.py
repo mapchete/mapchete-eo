@@ -301,7 +301,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def read_brdf_grid(
         self,
         band: L2ABand,
-        resampling: Resampling = Resampling.nearest,
+        resampling: Resampling = Resampling.bilinear,
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         brdf_config: BRDFModelConfig = BRDFConfig(),
     ) -> np.ndarray:

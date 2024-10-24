@@ -32,8 +32,8 @@ from mapchete_eo.platforms.sentinel2.types import Resolution
 @options_arguments.opt_mask_scl_classes
 @options_arguments.opt_brdf_model
 @options_arguments.opt_brdf_weight
-@options_arguments.opt_brdf_log10_flag
-@options_arguments.opt_brdf_detector_iter_flag
+@options_arguments.opt_brdf_log10
+@options_arguments.opt_brdf_detector_iter
 @options_arguments.opt_out_dtype
 @opt_debug
 def s2_rgb(
@@ -49,8 +49,8 @@ def s2_rgb(
     mask_scl_classes=None,
     brdf_model=None,
     brdf_weight: float = 1.0,
-    brdf_log10_flag: bool = False,
-    brdf_detector_iter_flag: bool = False,
+    brdf_log10: bool = False,
+    brdf_detector_iter: bool = False,
     out_dtype: str = "uint8",
     **_,
 ):
@@ -86,8 +86,8 @@ def s2_rgb(
                 bands=assets,
                 model=brdf_model,
                 correction_weight=brdf_weight,
-                log10_bands_scale_flag=brdf_log10_flag,
-                brdf_as_detector_iter_flag=brdf_detector_iter_flag,
+                log10_bands_scale_flag=brdf_log10,
+                brdf_as_detector_iter_flag=brdf_detector_iter,
             )
             if brdf_model
             else None,

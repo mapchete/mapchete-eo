@@ -278,9 +278,9 @@ def get_brdf_param(
     grid: GridProtocol,
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
-    viewing_azimuth_angle_array: ReferencedRaster,
-    viewing_zenith_angle_array: ReferencedRaster,
     f_band_params: Tuple[float, float, float],
+    viewing_azimuth_angle_array: Optional[ReferencedRaster] = None,
+    viewing_zenith_angle_array: Optional[ReferencedRaster] = None,
     detector_footprints: Optional[ReferencedRaster] = None,
     viewing_azimuth_per_detector: Optional[ReferencedRaster] = None,
     viewing_zenith_per_detector: Optional[ReferencedRaster] = None,
@@ -296,7 +296,11 @@ def get_brdf_param(
     # create output array
     model_params = ma.masked_equal(np.zeros(grid.shape, dtype=dtype), 0)
 
-    if detector_footprints is None:
+    if (
+        detector_footprints is None
+        and viewing_azimuth_angle_array
+        and viewing_zenith_angle_array
+    ):
         model_brdf_params = DirectionalModels(
             angles=(
                 sun_zenith_angle_array.data,

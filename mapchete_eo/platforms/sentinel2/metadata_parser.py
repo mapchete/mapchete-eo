@@ -685,7 +685,8 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
             np.array(
                 [
                     [
-                        np.nan if cell == "NaN" else float(cell)
+                        # if the 0.0 is np.nan the array of next iteration cant be filled
+                        0.0 if cell == "NaN" else float(cell)
                         for cell in row.text.split()
                     ]
                     for row in values_list

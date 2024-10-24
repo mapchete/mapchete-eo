@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -278,13 +278,14 @@ def get_brdf_param(
     grid: GridProtocol,
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
-    detector_footprints: ReferencedRaster,
-    viewing_zenith_per_detector: Dict[int, ReferencedRaster],
-    viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
+    viewing_azimuth_angle_array: ReferencedRaster,
+    viewing_zenith_angle_array: ReferencedRaster,
     f_band_params: Tuple[float, float, float],
+    detector_footprints: Optional[ReferencedRaster] = None,
+    viewing_azimuth_per_detector: Optional[ReferencedRaster] = None,
+    viewing_zenith_per_detector: Optional[ReferencedRaster] = None,
     model: BRDFModels = BRDFModels.default,
     brdf_weight: float = 1.0,
-    log10_bands_scale_flag: bool = True,
     smoothing_iterations: int = 10,
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
@@ -295,79 +296,112 @@ def get_brdf_param(
     # create output array
     model_params = ma.masked_equal(np.zeros(grid.shape, dtype=dtype), 0)
 
-    resampled_detector_footprints = resample_from_array(
-        detector_footprints,
-        out_grid=grid,
-        nodata=0,
-        resampling=Resampling.nearest,
-        keep_2d=True,
-    )
-    # make sure detector footprints are 2D
-    if resampled_detector_footprints.ndim not in [2, 3]:
-        raise ValueError(
-            f"detector_footprints has to be a 2- or 3-dimensional array but has shape {detector_footprints.shape}"
-        )
-    if resampled_detector_footprints.ndim == 3:
-        resampled_detector_footprints = resampled_detector_footprints[0]
-
-    detector_ids = [
-        detector_id
-        for detector_id in np.unique(resampled_detector_footprints)
-        if detector_id != 0
-    ]
-    # iterate through detector footprints and calculate BRDF for each one
-    for detector_id in detector_ids:
-        logger.debug("run on detector %s", detector_id)
-
-        # handle rare cases where detector geometries are available but no respective
-        # angle arrays:
-        if detector_id not in viewing_zenith_per_detector:  # pragma: no cover
-            logger.debug("no zenith angles grid found for detector %s", detector_id)
-            continue
-        if detector_id not in viewing_azimuth_per_detector:  # pragma: no cover
-            logger.debug("no azimuth angles grid found for detector %s", detector_id)
-            continue
-
-        # select pixels which are covered by detector
-        detector_mask = np.where(
-            resampled_detector_footprints == detector_id, True, False
-        )
-
-        # skip if detector footprint does not intersect with output window
-        if not detector_mask.any():  # pragma: no cover
-            logger.debug("detector %s does not intersect with band window", detector_id)
-            continue
-
-        # run low resolution model
-        detector_model = DirectionalModels(
+    if detector_footprints is None:
+        model_brdf_params = DirectionalModels(
             angles=(
                 sun_zenith_angle_array.data,
                 sun_azimuth_angle_array.data,
-                viewing_zenith_per_detector[detector_id].data,
-                viewing_azimuth_per_detector[detector_id].data,
+                viewing_zenith_angle_array.data,
+                viewing_azimuth_angle_array.data,
             ),
             f_band_params=f_band_params,
             model=model,
             brdf_weight=brdf_weight,
         ).get_band_param()
-
-        # interpolate missing nodata edges and return BRDF difference model
-        detector_brdf_param = ma.masked_invalid(
-            fillnodata(detector_model, smoothing_iterations=smoothing_iterations)
-        )
-
-        # resample model to output resolution
-        detector_brdf = resample_from_array(
-            detector_brdf_param,
+        model_params = resample_from_array(
+            model_brdf_params,
             out_grid=grid,
-            array_transform=viewing_zenith_per_detector[detector_id].transform,
+            array_transform=viewing_zenith_angle_array.transform,
             in_crs=product_crs,
             nodata=0,
             resampling=Resampling.bilinear,
             keep_2d=True,
         )
-        # merge detector stripes
-        model_params[detector_mask] = detector_brdf[detector_mask]
-        model_params.mask[detector_mask] = detector_brdf.mask[detector_mask]
+
+        model_params = ma.masked_where(model_params == 0, model_params)
+    elif (
+        detector_footprints
+        and viewing_azimuth_per_detector
+        and viewing_zenith_per_detector
+    ):
+        resampled_detector_footprints = resample_from_array(
+            detector_footprints,
+            out_grid=grid,
+            nodata=0,
+            resampling=Resampling.nearest,
+            keep_2d=True,
+        )
+        # make sure detector footprints are 2D
+        if resampled_detector_footprints.ndim not in [2, 3]:
+            raise ValueError(
+                f"detector_footprints has to be a 2- or 3-dimensional array but has shape {detector_footprints.shape}"
+            )
+        if resampled_detector_footprints.ndim == 3:
+            resampled_detector_footprints = resampled_detector_footprints[0]
+
+        detector_ids = [
+            detector_id
+            for detector_id in np.unique(resampled_detector_footprints)
+            if detector_id != 0
+        ]
+
+        # iterate through detector footprints and calculate BRDF for each one
+        for detector_id in detector_ids:
+            logger.debug("run on detector %s", detector_id)
+
+            # handle rare cases where detector geometries are available but no respective
+            # angle arrays:
+            if detector_id not in viewing_zenith_per_detector:  # pragma: no cover
+                logger.debug("no zenith angles grid found for detector %s", detector_id)
+                continue
+            if detector_id not in viewing_azimuth_per_detector:  # pragma: no cover
+                logger.debug(
+                    "no azimuth angles grid found for detector %s", detector_id
+                )
+                continue
+
+            # select pixels which are covered by detector
+            detector_mask = np.where(
+                resampled_detector_footprints == detector_id, True, False
+            )
+
+            # skip if detector footprint does not intersect with output window
+            if not detector_mask.any():  # pragma: no cover
+                logger.debug(
+                    "detector %s does not intersect with band window", detector_id
+                )
+                continue
+
+            # run low resolution model
+            detector_model = DirectionalModels(
+                angles=(
+                    sun_zenith_angle_array.data,
+                    sun_azimuth_angle_array.data,
+                    viewing_zenith_per_detector[detector_id].data,
+                    viewing_azimuth_per_detector[detector_id].data,
+                ),
+                f_band_params=f_band_params,
+                model=model,
+                brdf_weight=brdf_weight,
+            ).get_band_param()
+
+            # interpolate missing nodata edges and return BRDF difference model
+            detector_brdf_param = ma.masked_invalid(
+                fillnodata(detector_model, smoothing_iterations=smoothing_iterations)
+            )
+
+            # resample model to output resolution
+            detector_brdf = resample_from_array(
+                detector_brdf_param,
+                out_grid=grid,
+                array_transform=viewing_zenith_per_detector[detector_id].transform,
+                in_crs=product_crs,
+                nodata=0,
+                resampling=Resampling.bilinear,
+                keep_2d=True,
+            )
+            # merge detector stripes
+            model_params[detector_mask] = detector_brdf[detector_mask]
+            model_params.mask[detector_mask] = detector_brdf.mask[detector_mask]
 
     return model_params

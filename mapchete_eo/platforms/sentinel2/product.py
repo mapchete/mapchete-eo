@@ -108,7 +108,6 @@ class Cache:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
             brdf_weight = self.config.brdf.correction_weight
-            log10_bands_scale_flag = self.config.brdf.log10_bands_scale_flag
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -123,7 +122,6 @@ class Cache:
                             band,
                             model=model,
                             brdf_weight=brdf_weight,
-                            log10_bands_scale_flag=log10_bands_scale_flag,
                             resolution=resolution,
                         )
                     except BRDFError as exc:
@@ -325,7 +323,6 @@ class S2Product(EOProduct, EOProductProtocol):
                     band,
                     model=brdf_config.model,
                     brdf_weight=brdf_config.correction_weight,
-                    log10_bands_scale_flag=brdf_config.log10_bands_scale_flag,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
                 ),

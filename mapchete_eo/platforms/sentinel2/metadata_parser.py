@@ -467,8 +467,8 @@ class S2Metadata:
         """
         if self._cache["viewing_incidence_angles"].get(band) is None:
             angles: Dict[str, Any] = {
-                "zenith": {"detectors": dict(), "mean": None},
-                "azimuth": {"detectors": dict(), "mean": None},
+                "zenith": {"raster": None, "detectors": dict(), "mean": None},
+                "azimuth": {"raster": None, "detectors": dict(), "mean": None},
             }
             for grids in self.xml_root.iter("Viewing_Incidence_Angles_Grids"):
                 band_idx = int(grids.get("bandId"))
@@ -482,6 +482,22 @@ class S2Metadata:
                             crs=self.crs,
                         )
                         angles[angle.value.lower()]["detectors"][detector_id] = raster
+                        # Merge Viewing Angles into single grid
+                        if angles[angle.value.lower()]["raster"] is None:
+                            angles[angle.value.lower()]["raster"] = raster
+                        else:
+                            angles[angle.value.lower()]["raster"] = ReferencedRaster(
+                                data=np.where(
+                                    raster.data
+                                    > angles[angle.value.lower()]["raster"].data,
+                                    raster.data,
+                                    angles[angle.value.lower()]["raster"].data,
+                                ),
+                                transform=angles[angle.value.lower()][
+                                    "raster"
+                                ].transform,
+                                crs=angles[angle.value.lower()]["raster"].crs,
+                            )
             for band_angles in self.xml_root.iter("Mean_Viewing_Incidence_Angle_List"):
                 for band_angle in band_angles:
                     band_idx = int(band_angle.get("bandId"))
@@ -598,6 +614,7 @@ class SunAnglesData(BaseModel):
 
 class ViewingIncidenceAngle(BaseModel):
     model_config = dict(arbitrary_types_allowed=True)
+    raster: ReferencedRaster
     detectors: Dict[int, ReferencedRaster]
     mean: float
 
@@ -668,10 +685,7 @@ def _get_grid_data(group, tag, bounds, crs) -> ReferencedRaster:
         return ma.masked_invalid(
             np.array(
                 [
-                    [
-                        np.nan if cell == "NaN" else float(cell)
-                        for cell in row.text.split()
-                    ]
+                    [0.0 if cell == "NaN" else float(cell) for cell in row.text.split()]
                     for row in values_list
                 ],
                 dtype=np.float32,

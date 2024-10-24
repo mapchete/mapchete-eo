@@ -23,44 +23,48 @@ def correction_grid(
     brdf_weight: float = 1.0,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
+    brdf_as_detector_iter_flag: bool = True,
 ) -> ReferencedRaster:
     with Timer() as t:
-        brdf_params = get_brdf_param(
-            f_band_params=L2ABandFParams[band.name].value,
-            grid=s2_metadata.grid(resolution),
-            product_crs=s2_metadata.crs,
-            sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
-            sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
-            detector_footprints=None,
-            viewing_azimuth_angle_array=s2_metadata.viewing_incidence_angles(
-                band
-            ).azimuth.raster,
-            viewing_zenith_angle_array=s2_metadata.viewing_incidence_angles(
-                band
-            ).zenith.raster,
-            model=model,
-            brdf_weight=brdf_weight,
-        )
-
-        # Per Detector strategy:
-        # brdf_params = get_brdf_param(
-        #     f_band_params=L2ABandFParams[band.name].value,
-        #     grid=s2_metadata.grid(resolution),
-        #     product_crs=s2_metadata.crs,
-        #     sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
-        #     sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
-        #     detector_footprints=s2_metadata.detector_footprints(
-        #         band, cached_read=footprints_cached_read
-        #     ),
-        #     viewing_azimuth_per_detector=s2_metadata.viewing_incidence_angles(
-        #         band
-        #     ).azimuth.detectors,
-        #     viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
-        #         band
-        #     ).zenith.detectors,
-        #     model=model,
-        #     brdf_weight=brdf_weight,
-        # )
+        if brdf_as_detector_iter_flag:
+            # Per Detector strategy:
+            brdf_params = get_brdf_param(
+                f_band_params=L2ABandFParams[band.name].value,
+                grid=s2_metadata.grid(resolution),
+                product_crs=s2_metadata.crs,
+                sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
+                sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
+                viewing_azimuth_angle_array=None,
+                viewing_zenith_angle_array=None,
+                detector_footprints=s2_metadata.detector_footprints(
+                    band, cached_read=footprints_cached_read
+                ),
+                viewing_azimuth_per_detector=s2_metadata.viewing_incidence_angles(
+                    band
+                ).azimuth.detectors,
+                viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
+                    band
+                ).zenith.detectors,
+                model=model,
+                brdf_weight=brdf_weight,
+            )
+        else:
+            brdf_params = get_brdf_param(
+                f_band_params=L2ABandFParams[band.name].value,
+                grid=s2_metadata.grid(resolution),
+                product_crs=s2_metadata.crs,
+                sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
+                sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
+                detector_footprints=None,
+                viewing_azimuth_angle_array=s2_metadata.viewing_incidence_angles(
+                    band
+                ).azimuth.raster,
+                viewing_zenith_angle_array=s2_metadata.viewing_incidence_angles(
+                    band
+                ).zenith.raster,
+                model=model,
+                brdf_weight=brdf_weight,
+            )
 
     if not brdf_params.any():  # pragma: no cover
         raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")

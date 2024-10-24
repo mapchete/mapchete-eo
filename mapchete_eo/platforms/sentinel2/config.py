@@ -79,6 +79,7 @@ class BRDFModelConfig(BaseModel):
     resolution: Resolution = Resolution["60m"]
     footprints_cached_read: bool = False
     log10_bands_scale_flag: bool = True
+    brdf_as_detector_iter_flag: bool = True
     # TODO: let's make this configurable later
     # f_params: Union[Dict[L2ABand, Tuple[float, float, float]], Type[L2ABandFParams]] = (
     #     L2ABandFParams

@@ -108,6 +108,7 @@ class Cache:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
             brdf_weight = self.config.brdf.correction_weight
+            brdf_as_detector_iter_flag = self.config.brdf.brdf_as_detector_iter_flag
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -123,6 +124,7 @@ class Cache:
                             model=model,
                             brdf_weight=brdf_weight,
                             resolution=resolution,
+                            brdf_as_detector_iter_flag=brdf_as_detector_iter_flag,
                         )
                     except BRDFError as exc:
                         error_msg = (
@@ -325,6 +327,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     brdf_weight=brdf_config.correction_weight,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
+                    brdf_as_detector_iter_flag=brdf_config.brdf_as_detector_iter_flag,
                 ),
                 out_grid=grid,
                 resampling=resampling,

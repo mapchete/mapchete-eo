@@ -2,6 +2,17 @@
 Changelog
 #########
 
+2024.10.5 - 2024-10-TBD
+----------------------
+
+* core
+
+  *  added flag into BRDFModelConfig `brdf_as_detector_iter_flag` to iterate over detector footprints or not for the brdf coeficients Grid
+
+    * This get the higher value of corresponding `ViewAngle`
+
+
+
 2024.10.4 - 2024-10-23
 ----------------------
 

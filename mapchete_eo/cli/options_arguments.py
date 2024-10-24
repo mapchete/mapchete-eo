@@ -234,5 +234,12 @@ opt_brdf_log10_flag = click.option(
     "--brdf-log10",
     default=False,
     is_flag=True,
-    help="Flag to switch BRDF input band convertion to log10 default: False",
+    help="Flag to switch BRDF input band convertion to log10. Default: False",
+)
+
+opt_brdf_detector_iter_flag = click.option(
+    "--brdf-detector-iter",
+    default=False,
+    is_flag=True,
+    help="Flag to switch if the brdf correction should be iterated over the detector footprints or merge them prefering higher angle value. Default: True",
 )

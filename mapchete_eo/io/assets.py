@@ -361,7 +361,7 @@ def should_be_converted(
                     if value == "COG":
                         # TODO check if file is really a valid cog
                         value = "GTiff"
-                    elif key in src.meta and src.meta[key] != value:
+                    if key in src.meta and src.meta[key] != value:
                         logger.debug(
                             "different value for %s required: %s should become %s",
                             key,

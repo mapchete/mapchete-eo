@@ -167,7 +167,7 @@ def test_get_metadata_assets_convert(s2_stac_item, tmp_mpath):
         (dict(), False),
         (dict(resolution=10), True),
         (dict(profile=COGDeflateProfile()), True),
-        (dict(profile=JP2LossyProfile()), True),
+        (dict(profile=JP2LossyProfile()), False),
         (dict(resolution=10, profile=COGDeflateProfile()), True),
     ],
 )

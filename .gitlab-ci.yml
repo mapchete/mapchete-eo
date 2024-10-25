@@ -10,8 +10,8 @@ default:
 precommit:
   stage: codecheck
   tags:
-    - podman
-  image: registry.gitlab.eox.at/public-images/debian/python:3.12-bookworm
+    - privileged
+  image: registry.gitlab.eox.at/public-images/debian/python
   before_script:
     - apt update && apt install -y --no-install-recommends git
     - pip install pre-commit

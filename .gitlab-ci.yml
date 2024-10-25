@@ -11,7 +11,7 @@ precommit:
   stage: codecheck
   tags:
     - privileged
-  image: registry.gitlab.eox.at/maps/docker-base/python:3.11-slim-buster
+  image: registry.gitlab.eox.at/public-images/debian/python
   before_script:
     - apt update && apt install -y --no-install-recommends git
     - pip install pre-commit

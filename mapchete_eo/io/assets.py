@@ -354,9 +354,22 @@ def should_be_converted(
             if src_resolution != resolution:
                 return True
 
-        # when profile is given, convert anyways
+        # when profile is given, check if profile differs from remote file
         elif profile is not None:
-            return True
+            with rasterio_open(path) as src:
+                for key, value in profile.items():
+                    if value == "COG":
+                        # TODO check if file is really a valid cog
+                        value = "GTiff"
+                    elif key in src.meta and src.meta[key] != value:
+                        logger.debug(
+                            "different value for %s required: %s should become %s",
+                            key,
+                            src.meta[key],
+                            value,
+                        )
+                        return True
+                return False
 
     return False
 

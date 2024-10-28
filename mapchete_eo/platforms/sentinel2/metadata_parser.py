@@ -6,6 +6,7 @@ sun angles, quality masks, etc.
 from __future__ import annotations
 
 import logging
+import warnings
 import xml.etree.ElementTree as etree
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -605,9 +606,11 @@ class ViewingIncidenceAngle(BaseModel):
         self, fill_edges: bool = True, smoothing_iterations: int = 3
     ) -> ReferencedRaster:
         sample = next(iter(self.detectors.values()))
-        merged = np.nanmean(
-            np.stack([raster.data for raster in self.detectors.values()]), axis=0
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            merged = np.nanmean(
+                np.stack([raster.data for raster in self.detectors.values()]), axis=0
+            )
         if fill_edges:
             merged = fillnodata(
                 ma.masked_invalid(merged), smoothing_iterations=smoothing_iterations

@@ -28,7 +28,11 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml, per_detector):
         0,
     )
     brdf_params = correction_values(
-        s2_metadata=metadata, band=band, model=BRDFModels.HLS, per_detector=per_detector
+        s2_metadata=metadata,
+        band=band,
+        model=BRDFModels.HLS,
+        per_detector=per_detector,
+        resolution=Resolution["60m"],
     ).array
 
     corrected_band = band_array * brdf_params

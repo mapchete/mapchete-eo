@@ -106,7 +106,7 @@ class Cache:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
             brdf_weight = self.config.brdf.correction_weight
-            brdf_as_detector_iter_flag = self.config.brdf.brdf_as_detector_iter_flag
+            brdf_as_detector_iter_flag = self.config.brdf.per_detector_correction
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -325,7 +325,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     brdf_weight=brdf_config.correction_weight,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
-                    per_detector=brdf_config.brdf_as_detector_iter_flag,
+                    per_detector=brdf_config.per_detector_correction,
                 ),
                 out_grid=grid,
                 resampling=resampling,
@@ -589,14 +589,14 @@ class S2Product(EOProduct, EOProductProtocol):
             logger.debug("applying %s to bands", brdf_config.model)
             for band_idx, asset in enumerate(assets):
                 out_arr[band_idx] = apply_correction(
-                    uncorrected[band_idx],
-                    self.read_brdf_grid(
+                    band=uncorrected[band_idx],
+                    correction=self.read_brdf_grid(
                         asset_name_to_l2a_band(self.item, asset),
                         resampling=resampling,
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
-                    brdf_config.log10_bands_scale_flag,
+                    log10_bands_scale=brdf_config.log10_bands_scale,
                 )
 
         # if SCL-specific correction is configured, apply and overwrite values in array
@@ -631,7 +631,7 @@ class S2Product(EOProduct, EOProductProtocol):
                                 grid=grid,
                                 brdf_config=scl_config,
                             ),
-                            log10_bands_scale_flag=scl_config.log10_bands_scale_flag,
+                            log10_bands_scale=scl_config.log10_bands_scale,
                         )[scl_mask]
 
                     # leave it be for all other cases

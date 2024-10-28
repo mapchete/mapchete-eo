@@ -229,7 +229,7 @@ def correction_values(
 def apply_correction(
     band: ma.MaskedArray,
     correction: np.ndarray,
-    log10_bands_scale_flag: bool = True,
+    log10_bands_scale: bool = True,
     nodata: NodataVal = 0,
 ) -> ma.MaskedArray:
     """
@@ -257,7 +257,7 @@ def apply_correction(
             else np.where(band == nodata, True, False)
         )
 
-        if log10_bands_scale_flag:
+        if log10_bands_scale:
             # # Apply BRDF correction to log10 scaled Sentinel-2 data
             corrected = (
                 np.log10(band.astype(np.float32, copy=False), where=band > 0)

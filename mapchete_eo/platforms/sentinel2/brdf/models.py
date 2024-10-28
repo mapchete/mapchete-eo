@@ -17,7 +17,6 @@ class DirectionalModels:
         f_band_params: Tuple[float, float, float],
         model=BRDFModels.default,
         brdf_weight: float = 1.0,
-        # log10_bands_scale_flag: bool = True,
         dtype: DTypeLike = np.float32,
     ):
         self.angles = angles
@@ -26,7 +25,6 @@ class DirectionalModels:
         if self.model == BRDFModels.none:
             raise ValueError("model cannot be BRDFModels.none")
         self.brdf_weight = brdf_weight
-        # self.log10_bands_scale_flag = log10_bands_scale_flag
         self.dtype = dtype
 
     def get_sensor_model(self):
@@ -56,11 +54,6 @@ class DirectionalModels:
             data=out_param_arr,
             mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
         ).astype(self.dtype, copy=False)
-
-    # def get_corrected_band_reflectance(self, band):
-    #     return get_corrected_band_reflectance(
-    #         band, self.get_band_param(), self.log10_bands_scale_flag
-    #     )
 
 
 class BaseBRDF:

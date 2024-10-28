@@ -87,8 +87,8 @@ def s2_rgb(
                 bands=assets,
                 model=brdf_model,
                 correction_weight=brdf_weight,
-                log10_bands_scale_flag=brdf_log10,
-                brdf_as_detector_iter_flag=brdf_detector_iter,
+                log10_bands_scale=brdf_log10,
+                per_detector_correction=brdf_detector_iter,
             )
             if brdf_model
             else None,

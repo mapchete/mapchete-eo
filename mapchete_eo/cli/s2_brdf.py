@@ -63,7 +63,7 @@ def s2_brdf(
                         model=brdf_model,
                         resolution=resolution,
                         correction_weight=brdf_weight,
-                        brdf_as_detector_iter_flag=brdf_detector_iter,
+                        per_detector_correction=brdf_detector_iter,
                     ),
                 ),
                 1,

@@ -94,7 +94,7 @@ def test_product_brdf_cache(s2_stac_item, tmpdir):
         s2_stac_item,
         cache_config=CacheConfig(
             path=MPath.from_inp(tmpdir),
-            brdf=BRDFConfig(bands=["blue"], brdf_as_detector_iter_flag=False),
+            brdf=BRDFConfig(bands=["blue"], per_detector_correction=False),
         ),
     )
     assert product.cache
@@ -380,7 +380,7 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
                     BRDFSCLClassConfig(
                         model=BRDFModels.none,
                         scl_classes=[scl_class],
-                        brdf_as_detector_iter_flag=False,
+                        per_detector_correction=False,
                     )
                 ],
             ),
@@ -419,7 +419,7 @@ def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
                     BRDFSCLClassConfig(
                         model=BRDFModels.HLS,
                         scl_classes=[scl_class],
-                        brdf_as_detector_iter_flag=False,
+                        per_detector_correction=False,
                     )
                 ],
                 model=BRDFModels.none,
@@ -545,7 +545,7 @@ def test_read_np_brdf(item):
     rgb_corrected = product.read_np_array(
         assets=assets,
         grid=tile,
-        brdf_config=BRDFConfig(bands=assets, brdf_as_detector_iter_flag=False),
+        brdf_config=BRDFConfig(bands=assets, per_detector_correction=False),
     )
     assert (rgb_uncorrected != rgb_corrected).any()
 

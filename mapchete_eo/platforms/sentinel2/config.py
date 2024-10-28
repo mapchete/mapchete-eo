@@ -28,8 +28,8 @@ class BRDFModelConfig(BaseModel):
     bands: List[str] = ["blue", "green", "red", "nir"]
     resolution: Resolution = Resolution["60m"]
     footprints_cached_read: bool = False
-    log10_bands_scale_flag: bool = True
-    brdf_as_detector_iter_flag: bool = True
+    log10_bands_scale: bool = True
+    per_detector_correction: bool = True
 
     # This correction value is applied to `fv` (kvol) and `fr` (kgeo) in the final steps of the BRDF param
     correction_weight: float = 1.0

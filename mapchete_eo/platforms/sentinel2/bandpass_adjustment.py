@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 from enum import Enum
+from typing import NamedTuple
 import numpy as np
 import numpy.ma as ma
 from numpy.typing import DTypeLike
@@ -9,8 +9,7 @@ from pystac import Item
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
-@dataclass
-class BandpassAdjustment:
+class BandpassAdjustment(NamedTuple):
     slope: float
     intercept: float
 

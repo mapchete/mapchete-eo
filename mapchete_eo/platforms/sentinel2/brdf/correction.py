@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster, resample_from_array
@@ -13,7 +13,7 @@ from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 
 from mapchete_eo.exceptions import BRDFError
-from mapchete_eo.platforms.sentinel2.brdf.config import L2ABandFParams
+from mapchete_eo.platforms.sentinel2.brdf.config import L2ABandFParams, ModelParameters
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels, DirectionalModels
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
@@ -29,7 +29,7 @@ def _correction_combine_detectors(
     grid: GridProtocol,
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
-    f_band_params: Tuple[float, float, float],
+    f_band_params: ModelParameters,
     viewing_azimuth_angle_array: ReferencedRaster,
     viewing_zenith_angle_array: ReferencedRaster,
     model: BRDFModels = BRDFModels.default,
@@ -59,7 +59,7 @@ def _correction_combine_detectors(
         resampling=Resampling.bilinear,
         keep_2d=True,
     )
-    return ma.masked_where(model_params == 0, model_params)
+    return ma.masked_where(model_params == 0.0, model_params)
 
 
 def _correction_per_detector(
@@ -67,7 +67,7 @@ def _correction_per_detector(
     grid: GridProtocol,
     sun_azimuth_angle_array: np.ndarray,
     sun_zenith_angle_array: np.ndarray,
-    f_band_params: Tuple[float, float, float],
+    f_band_params: ModelParameters,
     detector_footprints: ReferencedRaster,
     viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
     viewing_zenith_per_detector: Dict[int, ReferencedRaster],

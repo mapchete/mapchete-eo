@@ -2,15 +2,19 @@
 Changelog
 #########
 
-2024.10.5 - 2024-10-TBD
+2024.10.5 - 2024-10-28
 ----------------------
 
 * core
 
-  *  added flag into BRDFModelConfig `brdf_as_detector_iter_flag` to iterate over detector footprints or not for the brdf coeficients Grid
+  * Sentinel-2:
 
-    * This get the higher value of corresponding `ViewAngle`
+    * move `brdf` module to `platforms.sentinel2` and do a whole restructuring
+    * add BRDF correction variant which uses a combined angle grid instead of a per-detector grid approach
+    * optionally scale reflectance values using log10 before correcting them
+    * add bandpass adjustment option
 
+  * `io.assets`: better check output profile before attempting to convert an asset
 
 
 2024.10.4 - 2024-10-23

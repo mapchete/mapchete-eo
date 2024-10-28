@@ -2,6 +2,7 @@ from typing import List
 
 import click
 import numpy as np
+from numpy.typing import DTypeLike
 import pystac
 from mapchete.cli.options import opt_debug
 from mapchete.io import rasterio_open
@@ -51,7 +52,7 @@ def s2_rgb(
     brdf_weight: float = 1.0,
     brdf_log10: bool = False,
     brdf_detector_iter: bool = False,
-    out_dtype: str = "uint8",
+    out_dtype: DTypeLike = "uint8",
     **_,
 ):
     out_dtype = np.dtype(out_dtype)

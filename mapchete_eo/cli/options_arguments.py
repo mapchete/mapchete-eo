@@ -4,7 +4,7 @@ import click
 import tqdm
 from mapchete.path import MPath
 
-from mapchete_eo.brdf.models import BRDFModels
+from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.config import SceneClassification

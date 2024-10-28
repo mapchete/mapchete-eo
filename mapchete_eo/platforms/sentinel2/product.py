@@ -18,8 +18,8 @@ from shapely.geometry import shape
 
 
 from mapchete_eo.array.buffer import buffer_array
-from mapchete_eo.brdf.config import BRDFModels
-from mapchete_eo.brdf.models import get_corrected_band_reflectance
+from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
+from mapchete_eo.platforms.sentinel2.brdf.correction import apply_correction
 from mapchete_eo.exceptions import (
     AllMasked,
     AssetError,
@@ -32,16 +32,14 @@ from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
+from mapchete_eo.platforms.sentinel2.brdf import correction_values
 from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
-    sentinel2_bandpass_adjustment_band,
+    apply_bandpass_adjustment,
 )
-from mapchete_eo.platforms.sentinel2.brdf import correction_grid
 from mapchete_eo.platforms.sentinel2.config import (
     BRDFConfig,
     BRDFModelConfig,
     CacheConfig,
-    L2AS2ABandpassAdjustmentParams,
-    L2AS2BBandpassAdjustmentParams,
     MaskConfig,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -118,13 +116,13 @@ class Cache:
                 # TODO: do check with _existing_files again to reduce S3 requests
                 if not out_path.exists():
                     try:
-                        grid = correction_grid(
+                        grid = correction_values(
                             metadata,
                             band,
                             model=model,
                             brdf_weight=brdf_weight,
                             resolution=resolution,
-                            brdf_as_detector_iter_flag=brdf_as_detector_iter_flag,
+                            per_detector=brdf_as_detector_iter_flag,
                         )
                     except BRDFError as exc:
                         error_msg = (
@@ -320,14 +318,14 @@ class S2Product(EOProduct, EOProductProtocol):
                 )
             # calculate on the fly
             return resample_from_array(
-                correction_grid(
+                correction_values(
                     self.metadata,
                     band,
                     model=brdf_config.model,
                     brdf_weight=brdf_config.correction_weight,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
-                    brdf_as_detector_iter_flag=brdf_config.brdf_as_detector_iter_flag,
+                    per_detector=brdf_config.brdf_as_detector_iter_flag,
                 ),
                 out_grid=grid,
                 resampling=resampling,
@@ -558,19 +556,11 @@ class S2Product(EOProduct, EOProductProtocol):
             mask=uncorrected.mask.copy(),
             fill_value=uncorrected.fill_value,
         )
-
         for band_idx, asset in enumerate(assets):
-            if self.item.properties["platform"].lower() == "sentinel-2a":
-                l2a_bandpass_adjustment_params = L2AS2ABandpassAdjustmentParams[
-                    asset_name_to_l2a_band(self.item, asset).name
-                ].value
-            elif self.item.properties["platform"].lower() == "sentinel-2b":
-                l2a_bandpass_adjustment_params = L2AS2BBandpassAdjustmentParams[
-                    asset_name_to_l2a_band(self.item, asset).name
-                ].value
-            out_arr[band_idx] = sentinel2_bandpass_adjustment_band(
+            out_arr[band_idx] = apply_bandpass_adjustment(
                 uncorrected[band_idx],
-                bandpass_params=l2a_bandpass_adjustment_params,
+                item=self.item,
+                l2a_band=asset_name_to_l2a_band(self.item, asset),
                 computing_dtype=computing_dtype,
                 out_dtype=uncorrected.dtype,
             )
@@ -598,7 +588,7 @@ class S2Product(EOProduct, EOProductProtocol):
         else:
             logger.debug("applying %s to bands", brdf_config.model)
             for band_idx, asset in enumerate(assets):
-                out_arr[band_idx] = get_corrected_band_reflectance(
+                out_arr[band_idx] = apply_correction(
                     uncorrected[band_idx],
                     self.read_brdf_grid(
                         asset_name_to_l2a_band(self.item, asset),
@@ -633,7 +623,7 @@ class S2Product(EOProduct, EOProductProtocol):
                             ),
                         )
                         # apply correction band by band
-                        out_arr[band_idx][scl_mask] = get_corrected_band_reflectance(
+                        out_arr[band_idx][scl_mask] = apply_correction(
                             uncorrected[band_idx],
                             self.read_brdf_grid(
                                 asset_name_to_l2a_band(self.item, asset),

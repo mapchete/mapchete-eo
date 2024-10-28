@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
 from typing import List, Optional, Union
 
 from mapchete.path import MPathLike
@@ -11,66 +10,17 @@ from pydantic import (
 )
 
 from mapchete_eo.base import BaseDriverConfig
-from mapchete_eo.brdf.config import F_MODIS_PARAMS, BRDFModels
 from mapchete_eo.io.path import ProductPathGenerationMethod
 from mapchete_eo.platforms.sentinel2.archives import ArchiveClsFromString, AWSL2ACOGv1
+from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProductQIMaskResolution,
     Resolution,
     SceneClassification,
 )
-from mapchete_eo.platforms.sentinel2.bandpass_adjustment import (
-    S2A_BAND_ADJUSTMENT_PARAMS,
-    S2B_BAND_ADJUSTMENT_PARAMS,
-)
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
-
-
-class L2ABandFParams(Enum):
-    B01 = F_MODIS_PARAMS[1]
-    B02 = F_MODIS_PARAMS[2]
-    B03 = F_MODIS_PARAMS[3]
-    B04 = F_MODIS_PARAMS[4]
-    B05 = F_MODIS_PARAMS[5]
-    B06 = F_MODIS_PARAMS[6]
-    B07 = F_MODIS_PARAMS[7]
-    B08 = F_MODIS_PARAMS[8]
-    B8A = F_MODIS_PARAMS[9]
-    B09 = F_MODIS_PARAMS[10]
-    B11 = F_MODIS_PARAMS[11]
-    B12 = F_MODIS_PARAMS[12]
-
-
-class L2AS2ABandpassAdjustmentParams(Enum):
-    B01 = S2A_BAND_ADJUSTMENT_PARAMS[1]
-    B02 = S2A_BAND_ADJUSTMENT_PARAMS[2]
-    B03 = S2A_BAND_ADJUSTMENT_PARAMS[3]
-    B04 = S2A_BAND_ADJUSTMENT_PARAMS[4]
-    B05 = S2A_BAND_ADJUSTMENT_PARAMS[5]
-    B06 = S2A_BAND_ADJUSTMENT_PARAMS[6]
-    B07 = S2A_BAND_ADJUSTMENT_PARAMS[7]
-    B08 = S2A_BAND_ADJUSTMENT_PARAMS[8]
-    B8A = S2A_BAND_ADJUSTMENT_PARAMS[9]
-    B09 = S2A_BAND_ADJUSTMENT_PARAMS[10]
-    B11 = S2A_BAND_ADJUSTMENT_PARAMS[11]
-    B12 = S2A_BAND_ADJUSTMENT_PARAMS[12]
-
-
-class L2AS2BBandpassAdjustmentParams(Enum):
-    B01 = S2B_BAND_ADJUSTMENT_PARAMS[1]
-    B02 = S2B_BAND_ADJUSTMENT_PARAMS[2]
-    B03 = S2B_BAND_ADJUSTMENT_PARAMS[3]
-    B04 = S2B_BAND_ADJUSTMENT_PARAMS[4]
-    B05 = S2B_BAND_ADJUSTMENT_PARAMS[5]
-    B06 = S2B_BAND_ADJUSTMENT_PARAMS[6]
-    B07 = S2B_BAND_ADJUSTMENT_PARAMS[7]
-    B08 = S2B_BAND_ADJUSTMENT_PARAMS[8]
-    B8A = S2B_BAND_ADJUSTMENT_PARAMS[9]
-    B09 = S2B_BAND_ADJUSTMENT_PARAMS[10]
-    B11 = S2B_BAND_ADJUSTMENT_PARAMS[11]
-    B12 = S2B_BAND_ADJUSTMENT_PARAMS[12]
 
 
 class BRDFModelConfig(BaseModel):
@@ -78,11 +28,8 @@ class BRDFModelConfig(BaseModel):
     bands: List[str] = ["blue", "green", "red", "nir"]
     resolution: Resolution = Resolution["60m"]
     footprints_cached_read: bool = False
-    log10_bands_scale_flag: bool = True
-    # TODO: let's make this configurable later
-    # f_params: Union[Dict[L2ABand, Tuple[float, float, float]], Type[L2ABandFParams]] = (
-    #     L2ABandFParams
-    # )
+    log10_bands_scale: bool = True
+    per_detector_correction: bool = True
 
     # This correction value is applied to `fv` (kvol) and `fr` (kgeo) in the final steps of the BRDF param
     correction_weight: float = 1.0

@@ -2,6 +2,7 @@ from typing import List
 
 import click
 import numpy as np
+from numpy.typing import DTypeLike
 import pystac
 from mapchete.cli.options import opt_debug
 from mapchete.io import rasterio_open
@@ -32,7 +33,8 @@ from mapchete_eo.platforms.sentinel2.types import Resolution
 @options_arguments.opt_mask_scl_classes
 @options_arguments.opt_brdf_model
 @options_arguments.opt_brdf_weight
-@options_arguments.opt_brdf_log10_flag
+@options_arguments.opt_brdf_log10
+@options_arguments.opt_brdf_detector_iter
 @options_arguments.opt_out_dtype
 @opt_debug
 def s2_rgb(
@@ -48,8 +50,9 @@ def s2_rgb(
     mask_scl_classes=None,
     brdf_model=None,
     brdf_weight: float = 1.0,
-    brdf_log10_flag: bool = False,
-    out_dtype: str = "uint8",
+    brdf_log10: bool = False,
+    brdf_detector_iter: bool = False,
+    out_dtype: DTypeLike = "uint8",
     **_,
 ):
     out_dtype = np.dtype(out_dtype)
@@ -84,7 +87,8 @@ def s2_rgb(
                 bands=assets,
                 model=brdf_model,
                 correction_weight=brdf_weight,
-                log10_bands_scale_flag=brdf_log10_flag,
+                log10_bands_scale=brdf_log10,
+                per_detector_correction=brdf_detector_iter,
             )
             if brdf_model
             else None,

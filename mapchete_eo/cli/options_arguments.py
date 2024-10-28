@@ -4,7 +4,7 @@ import click
 import tqdm
 from mapchete.path import MPath
 
-from mapchete_eo.brdf.models import BRDFModels
+from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
@@ -230,9 +230,14 @@ opt_out_dtype = click.option(
     "--out-dtype", default="uint8", help="Out dType string; default: uint8"
 )
 
-opt_brdf_log10_flag = click.option(
+opt_brdf_log10 = click.option(
     "--brdf-log10",
-    default=False,
     is_flag=True,
-    help="Flag to switch BRDF input band convertion to log10 default: False",
+    help="Flag to switch BRDF input band convertion to log10. Default: False",
+)
+
+opt_brdf_detector_iter = click.option(
+    "--brdf-detector-iter",
+    is_flag=True,
+    help="Switch to switch if the brdf correction should be iterated over the detector footprints or merge them prefering higher angle value. Default: False",
 )

@@ -6,6 +6,7 @@ sun angles, quality masks, etc.
 from __future__ import annotations
 
 import logging
+import warnings
 import xml.etree.ElementTree as etree
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -467,8 +468,8 @@ class S2Metadata:
         """
         if self._cache["viewing_incidence_angles"].get(band) is None:
             angles: Dict[str, Any] = {
-                "zenith": {"detectors": dict(), "mean": None},
-                "azimuth": {"detectors": dict(), "mean": None},
+                "zenith": {"raster": None, "detectors": dict(), "mean": None},
+                "azimuth": {"raster": None, "detectors": dict(), "mean": None},
             }
             for grids in self.xml_root.iter("Viewing_Incidence_Angles_Grids"):
                 band_idx = int(grids.get("bandId"))
@@ -600,6 +601,25 @@ class ViewingIncidenceAngle(BaseModel):
     model_config = dict(arbitrary_types_allowed=True)
     detectors: Dict[int, ReferencedRaster]
     mean: float
+
+    def merge_detectors(
+        self, fill_edges: bool = True, smoothing_iterations: int = 3
+    ) -> ReferencedRaster:
+        sample = next(iter(self.detectors.values()))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            merged = np.nanmean(
+                np.stack([raster.data for raster in self.detectors.values()]), axis=0
+            )
+        if fill_edges:
+            merged = fillnodata(
+                ma.masked_invalid(merged), smoothing_iterations=smoothing_iterations
+            )
+        return ReferencedRaster.from_array_like(
+            array_like=ma.masked_invalid(merged),
+            transform=sample.transform,
+            crs=sample.crs,
+        )
 
 
 class ViewingIncidenceAngles(BaseModel):

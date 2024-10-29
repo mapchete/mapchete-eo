@@ -229,7 +229,7 @@ def correction_values(
 def apply_correction(
     band: ma.MaskedArray,
     correction: np.ndarray,
-    log10_bands_scale: bool = True,
+    log10_bands_scale: bool = False,
     nodata: NodataVal = 0,
 ) -> ma.MaskedArray:
     """
@@ -272,7 +272,13 @@ def apply_correction(
 
         if nodata == 0:
             return ma.masked_array(
-                data=np.where(mask, 0, np.clip(corrected, 1, np.iinfo(band.dtype).max)),
+                data=np.where(
+                    mask,
+                    0,
+                    np.clip(corrected, 1, np.iinfo(band.dtype).max).astype(
+                        band.dtype, copy=False
+                    ),
+                ),
                 mask=mask,
             )
         else:  # pragma: no cover

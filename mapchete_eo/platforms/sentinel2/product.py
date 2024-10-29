@@ -106,7 +106,6 @@ class Cache:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
             brdf_weight = self.config.brdf.correction_weight
-            brdf_as_detector_iter_flag = self.config.brdf.per_detector_correction
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -122,7 +121,7 @@ class Cache:
                             model=model,
                             brdf_weight=brdf_weight,
                             resolution=resolution,
-                            per_detector=brdf_as_detector_iter_flag,
+                            per_detector=self.config.brdf.per_detector_correction,
                         )
                     except BRDFError as exc:
                         error_msg = (
@@ -215,7 +214,7 @@ class S2Product(EOProduct, EOProductProtocol):
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
-        only_mask: bool = False,
+        target_mask: Optional[np.ndarray] = None,
         **kwargs,
     ) -> ma.MaskedArray:
         assets = assets or []
@@ -230,7 +229,7 @@ class S2Product(EOProduct, EOProductProtocol):
             grid = self.metadata.grid(Resolution["10m"])
         elif isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
-        mask = self.get_mask(grid, mask_config).data
+        mask = self.get_mask(grid, mask_config, target_nodata_mask=target_mask).data
         if nodatavals is None:
             nodatavals = fill_value
         elif fill_value is None and nodatavals is not None:
@@ -243,8 +242,6 @@ class S2Product(EOProduct, EOProductProtocol):
             else:
                 return self.empty_array(count, grid=grid, fill_value=fill_value)
 
-        if only_mask:
-            return ma.MaskedArray(ma.expand_dims(mask, axis=0), fill_value=nodatavals)
         arr = super().read_np_array(
             assets=assets,
             eo_bands=eo_bands,
@@ -451,6 +448,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["10m"],
         mask_config: MaskConfig = MaskConfig(),
+        target_nodata_mask: Optional[np.ndarray] = None,
     ) -> ReferencedRaster:
         """Merge masks into one 2D array."""
         grid = (
@@ -463,7 +461,14 @@ class S2Product(EOProduct, EOProductProtocol):
             if arr.all():
                 raise AllMasked()
 
-        out = np.zeros(shape=grid.shape, dtype=bool)
+        if target_nodata_mask is None:
+            out = np.zeros(shape=grid.shape, dtype=bool)
+        else:
+            if target_nodata_mask.shape != grid.shape:
+                raise ValueError("a target mask must have the same shape as the grid")
+            # by inverting this, it will mask out pixels of target grid which already have data
+            out = ~target_nodata_mask
+
         logger.debug("generate mask for product %s ...", str(self))
         try:
             _check_full(out)

@@ -2,11 +2,15 @@ import numpy as np
 import numpy.ma as ma
 import pytest
 import xarray as xr
+from mapchete.geometry import reproject_geometry
 from mapchete.io.raster import ReferencedRaster
-from mapchete.io.vector import reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
-from mapchete.types import Bounds
+
+try:
+    from mapchete import Bounds
+except ImportError:
+    from mapchete.types import Bounds
 from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS
 

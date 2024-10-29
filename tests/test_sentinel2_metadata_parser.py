@@ -5,7 +5,11 @@ import numpy.ma as ma
 import pytest
 from affine import Affine
 from mapchete.io.raster import ReferencedRaster
-from mapchete.types import Bounds, Grid
+
+try:
+    from mapchete import Bounds, Grid
+except ImportError:
+    from mapchete.types import Bounds, Grid
 from pystac import Item
 from pytest_lazyfixture import lazy_fixture
 from rasterio.crs import CRS

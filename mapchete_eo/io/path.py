@@ -1,11 +1,10 @@
 import hashlib
 import logging
-import xml.etree.ElementTree as etree
 from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
 from typing import Generator
-from xml.etree.ElementTree import Element
+from xml.etree.cElementTree import Element, fromstring
 
 import fsspec
 import pystac
@@ -25,7 +24,7 @@ COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 def open_xml(path: MPath) -> Element:
     """Parse an XML file path into an etree root element."""
     logger.debug("open %s", path)
-    return etree.fromstring(path.read_text())
+    return fromstring(path.read_text())
 
 
 class ProductPathGenerationMethod(str, Enum):

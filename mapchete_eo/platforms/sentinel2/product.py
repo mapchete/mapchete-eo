@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from functools import cached_property
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -186,11 +185,13 @@ class S2Product(EOProduct, EOProductProtocol):
 
         return s2product
 
-    @cached_property
+    @property
     def metadata(self) -> S2Metadata:
-        if self._metadata:
-            return self._metadata
-        return S2Metadata.from_stac_item(pystac.Item.from_dict(self.item_dict))
+        if not self._metadata:
+            self._metadata = S2Metadata.from_stac_item(
+                pystac.Item.from_dict(self.item_dict)
+            )
+        return self._metadata
 
     def __repr__(self):
         return f"<S2Product product_id={self.id}>"
@@ -198,6 +199,7 @@ class S2Product(EOProduct, EOProductProtocol):
     def _cache_reset(self):
         if self._metadata:
             self._metadata._cache_reset()
+            self._metadata = None
         self._scl_cache = dict()
 
     def read_np_array(

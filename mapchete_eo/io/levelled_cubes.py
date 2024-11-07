@@ -105,6 +105,8 @@ def read_levelled_cube_to_np_array(
             logger.debug("skipped slice %s: %s", slice_, str(exc))
             slices_skip_count += 1
             continue
+        finally:
+            slice_._cache_reset()
 
         # if slice was not empty, fill pixels into cube
         logger.debug("add slice %s array to cube", slice_)

@@ -1,3 +1,4 @@
+from mapchete.io.raster import ReferencedRaster
 import numpy.ma as ma
 
 from mapchete_eo.platforms.sentinel2.config import MaskConfig
@@ -17,15 +18,13 @@ def test_read_single_product_mask(s2_stac_item, test_tile):
             )
         )
     )
-    arr = product.read_np_array(
+    raster = product.get_mask(
         grid=test_tile,
-        nodatavals=[0, 0, 0],
         mask_config=product_read_kwargs["mask_config"],
-        only_mask=True,
     )
-    assert isinstance(arr, ma.MaskedArray)
-    assert arr.any()
-    assert not arr.mask.all()
+    assert isinstance(raster, ReferencedRaster)
+    assert raster.array.any()
+    assert not raster.array.all()
 
 
 def test_read_masks(s2_stac_item, test_tile):

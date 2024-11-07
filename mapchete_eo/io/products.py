@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -45,7 +47,7 @@ def products_to_np_array(
     return ma.stack(
         [
             to_masked_array(s)
-            for s in generate_slices(
+            for s in generate_slice_dataarrays(
                 products=products,
                 assets=assets,
                 eo_bands=eo_bands,
@@ -82,7 +84,7 @@ def products_to_xarray(
     """Read grid window of EOProducts and merge into a 4D xarray."""
     data_vars = [
         s
-        for s in generate_slices(
+        for s in generate_slice_dataarrays(
             products=products,
             assets=assets,
             eo_bands=eo_bands,
@@ -151,6 +153,9 @@ class Slice:
             except ValueError:
                 self.properties[key] = None
 
+    def __repr__(self) -> str:
+        return f"<Slice {self.name} ({len(self.products)} products)>"
+
     def _cache_reset(self):
         for product in self.products:
             product._cache_reset()
@@ -172,6 +177,19 @@ class Slice:
 
         raise ValueError(
             f"cannot get unique property {property} from products {self.products}"
+        )
+
+    def read(
+        self,
+        merge_method: MergeMethod = MergeMethod.first,
+        product_read_kwargs: dict = {},
+        raise_empty: bool = True,
+    ) -> ma.MaskedArray:
+        return merge_products(
+            products=self.products,
+            merge_method=merge_method,
+            product_read_kwargs=product_read_kwargs,
+            raise_empty=raise_empty,
         )
 
 
@@ -268,7 +286,7 @@ def merge_products(
     return out
 
 
-def generate_slices(
+def generate_slice_dataarrays(
     products: List[EOProductProtocol],
     assets: Optional[List[str]] = None,
     eo_bands: Optional[List[str]] = None,

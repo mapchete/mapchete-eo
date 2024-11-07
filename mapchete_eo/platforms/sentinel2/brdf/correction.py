@@ -215,7 +215,7 @@ def correction_values(
     if not brdf_params.any():  # pragma: no cover
         raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")
     logger.debug(
-        f"BRDF for product {s2_metadata.product_id} band {band.value} calculated in {str(t)}"
+        f"BRDF for product {s2_metadata.product_id} band {band.name} calculated in {str(t)}"
     )
     return ReferencedRaster(
         data=brdf_params,

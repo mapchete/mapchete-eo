@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2024.11.0 - 2024-11-07
+----------------------
+
+* core
+
+  * `io.read_levelled_cube_to_np_array()`: refactor, skip slices if they won't provide new pixels; make `grid` mandatory; add `out_dtype` and `out_fill_value` kwargs
+  * `platforms.sentinel2.product.Product` `get_mask()` and `read_np_array()`: add `target_mask` kwarg
+
+
 2024.10.5 - 2024-10-28
 ----------------------
 

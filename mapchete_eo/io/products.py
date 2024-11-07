@@ -153,6 +153,9 @@ class Slice:
             except ValueError:
                 self.properties[key] = None
 
+    def __repr__(self) -> str:
+        return f"<Slice {self.name} ({len(self.products)} products)>"
+
     def _cache_reset(self):
         for product in self.products:
             product._cache_reset()

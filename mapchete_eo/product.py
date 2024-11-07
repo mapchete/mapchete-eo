@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Any, List, Optional, Set, Union
+from typing import Any, List, Optional, Set
 
 import numpy as np
 import numpy.ma as ma
@@ -106,7 +106,7 @@ class EOProduct(EOProductProtocol):
         self,
         assets: Optional[List[str]] = None,
         eo_bands: Optional[List[str]] = None,
-        grid: Union[GridProtocol, Any] = None,
+        grid: Optional[GridProtocol] = None,
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,

@@ -204,7 +204,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         assets: Optional[List[str]] = None,
         eo_bands: Optional[List[str]] = None,
-        grid: Union[GridProtocol, Resolution, None] = Resolution["10m"],
+        grid: Union[GridProtocol, Resolution] = Resolution["10m"],
         resampling: Resampling = Resampling.nearest,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
@@ -225,11 +225,9 @@ class S2Product(EOProduct, EOProductProtocol):
             raise NotImplementedError("please use asset names for now")
         else:
             count = len(assets)
-        if grid is None:
-            grid = self.metadata.grid(Resolution["10m"])
-        elif isinstance(grid, Resolution):
+        if isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
-        mask = self.get_mask(grid, mask_config, target_nodata_mask=target_mask).data
+        mask = self.get_mask(grid, mask_config, target_mask=target_mask).data
         if nodatavals is None:
             nodatavals = fill_value
         elif fill_value is None and nodatavals is not None:
@@ -448,7 +446,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self,
         grid: Union[GridProtocol, Resolution] = Resolution["10m"],
         mask_config: MaskConfig = MaskConfig(),
-        target_nodata_mask: Optional[np.ndarray] = None,
+        target_mask: Optional[np.ndarray] = None,
     ) -> ReferencedRaster:
         """Merge masks into one 2D array."""
         grid = (
@@ -457,18 +455,19 @@ class S2Product(EOProduct, EOProductProtocol):
             else Grid.from_obj(grid)
         )
 
+        if target_mask is None:
+            target_mask = np.zeros(shape=grid.shape, dtype=bool)
+        else:
+            if target_mask.shape != grid.shape:
+                raise ValueError("a target mask must have the same shape as the grid")
+            logger.debug("got custom target mask to start with: %s", target_mask)
+
         def _check_full(arr):
-            if arr.all():
+            # ATTENTION: target_mask and out have to be combined *after* mask was buffered!
+            if (arr + target_mask).all():
                 raise AllMasked()
 
-        if target_nodata_mask is None:
-            out = np.zeros(shape=grid.shape, dtype=bool)
-        else:
-            if target_nodata_mask.shape != grid.shape:
-                raise ValueError("a target mask must have the same shape as the grid")
-            # by inverting this, it will mask out pixels of target grid which already have data
-            out = ~target_nodata_mask
-
+        out = np.zeros(shape=grid.shape, dtype=bool)
         logger.debug("generate mask for product %s ...", str(self))
         try:
             _check_full(out)
@@ -549,8 +548,13 @@ class S2Product(EOProduct, EOProductProtocol):
             logger.debug(
                 "mask for product %s already full, skip reading other masks", self.id
             )
+
+        # ATTENTION: target_mask and out have to be combined *after* mask was buffered!
         return ReferencedRaster(
-            out, transform=grid.transform, crs=grid.crs, bounds=grid.bounds
+            out + target_mask,
+            transform=grid.transform,
+            crs=grid.crs,
+            bounds=grid.bounds,
         )
 
     def _apply_sentinel2_bandpass_adjustment(

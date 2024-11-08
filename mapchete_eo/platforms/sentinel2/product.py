@@ -196,10 +196,10 @@ class S2Product(EOProduct, EOProductProtocol):
     def __repr__(self):
         return f"<S2Product product_id={self.id}>"
 
-    def _cache_reset(self):
+    def clear_cached_data(self):
         logger.debug("clear S2Product caches")
         if self._metadata:
-            self._metadata._cache_reset()
+            self._metadata.clear_cached_data()
             self._metadata = None
         self._scl_cache = dict()
 

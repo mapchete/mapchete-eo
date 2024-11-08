@@ -69,6 +69,7 @@ def read_levelled_cube_to_np_array(
     )
 
     slices_read_count, slices_skip_count = 0, 0
+
     # pick slices one by one
     for slice_count, slice in enumerate(slices, 1):
         # all filled up? let's get outta here!

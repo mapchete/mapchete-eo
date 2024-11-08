@@ -4,7 +4,7 @@ on a given archive or a local SAFE file.
 """
 
 import logging
-from xml.etree.cElementTree import Element
+from xml.etree.ElementTree import Element
 from functools import cached_property
 from typing import Optional
 
@@ -31,15 +31,16 @@ class XMLMapper(S2PathMapper):
         self._cached_xml_root = xml_root
         self._metadata_dir = metadata_xml.parent
 
-    def _cache_reset(self):
+    def clear_cached_data(self):
         if self._cached_xml_root:
             logger.debug("clear XMLMapper xml cache")
-            self._cached_xml_root.clear()
+            # commented out because this will break the tests:
+            # self._cached_xml_root.clear()
             self._cached_xml_root = None
 
     @property
     def xml_root(self) -> Element:
-        if self._cached_xml_root is None:  # pragma: no cover
+        if self._cached_xml_root is None:
             self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 

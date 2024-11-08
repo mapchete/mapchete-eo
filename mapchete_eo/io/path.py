@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
 from typing import Generator
-from xml.etree.cElementTree import Element, fromstring
+from xml.etree.ElementTree import Element, fromstring
 
 import fsspec
 import pystac

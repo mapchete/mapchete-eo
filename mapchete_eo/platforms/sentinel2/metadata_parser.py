@@ -9,7 +9,7 @@ import logging
 import warnings
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
-from xml.etree.cElementTree import Element, ParseError
+from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
 import numpy.ma as ma
@@ -143,7 +143,7 @@ class S2Metadata:
         self.processing_baseline = path_mapper.processing_baseline
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._cache_reset()
+        self.clear_cached_data()
 
         # get geoinformation per resolution and bounds
         self.crs = self._crs
@@ -154,13 +154,14 @@ class S2Metadata:
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
 
-    def _cache_reset(self):
+    def clear_cached_data(self):
         logger.debug("clear S2Metadata internal caches")
         self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
         if self._cached_xml_root:
-            self._cached_xml_root.clear()
+            # commented out because this will break the tests:
+            # self._cached_xml_root.clear()
             self._cached_xml_root = None
-        self.path_mapper._cache_reset()
+        self.path_mapper.clear_cached_data()
 
     @property
     def __geo_interface__(self) -> dict:

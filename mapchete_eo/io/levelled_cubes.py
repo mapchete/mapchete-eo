@@ -59,6 +59,7 @@ def read_levelled_cube_to_np_array(
         pretty_bytes(out.size * out.itemsize),
     )
 
+    logger.debug("sort products into slices ...")
     slices = products_to_slices(
         products=products, group_by_property=merge_products_by, sort=sort
     )
@@ -110,6 +111,7 @@ def read_levelled_cube_to_np_array(
 
         # if slice was not empty, fill pixels into cube
         logger.debug("add slice %s array to cube", slice)
+
         # iterate through layers of cube
         for layer_index in range(target_height):
             # go to next layer if layer is full

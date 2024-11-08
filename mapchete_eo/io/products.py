@@ -198,6 +198,7 @@ class Slice:
         product_read_kwargs: dict = {},
         raise_empty: bool = True,
     ) -> ma.MaskedArray:
+        logger.debug("Slice: read from %s products", len(self.products))
         return merge_products(
             products=self.products,
             merge_method=merge_method,

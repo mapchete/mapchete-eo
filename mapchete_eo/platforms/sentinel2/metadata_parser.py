@@ -139,11 +139,11 @@ class S2Metadata:
     ):
         self.metadata_xml = metadata_xml
         self._cached_xml_root = xml_root
+        self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
         self.path_mapper = path_mapper
         self.processing_baseline = path_mapper.processing_baseline
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self.clear_cached_data()
 
         # get geoinformation per resolution and bounds
         self.crs = self._crs

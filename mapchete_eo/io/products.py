@@ -164,14 +164,14 @@ class Slice:
         """Clear caches and run garbage collector when context manager is closed."""
         yield self
         with Timer() as tt:
-            self._cache_reset()
+            self.clear_cached_data()
             gc.collect()
         logger.debug("Slice cache cleared and garbage collected in %s", tt)
 
-    def _cache_reset(self):
+    def clear_cached_data(self):
         logger.debug("clear caches of all products in slice")
         for product in self.products:
-            product._cache_reset()
+            product.clear_cached_data()
 
     def get_property(self, property: str) -> Any:
         """

@@ -1,3 +1,4 @@
+import gc
 import logging
 from typing import List, Optional
 
@@ -107,6 +108,7 @@ def read_levelled_cube_to_np_array(
             continue
         finally:
             slice_._cache_reset()
+            gc.collect()
 
         # if slice was not empty, fill pixels into cube
         logger.debug("add slice %s array to cube", slice_)

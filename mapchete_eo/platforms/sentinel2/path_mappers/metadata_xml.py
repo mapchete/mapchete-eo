@@ -33,8 +33,9 @@ class XMLMapper(S2PathMapper):
 
     def _cache_reset(self):
         if self._cached_xml_root:
+            logger.debug("clear XMLMapper xml cache")
             self._cached_xml_root.clear()
-            del self._cached_xml_root
+            self._cached_xml_root = None
 
     @property
     def xml_root(self) -> Element:

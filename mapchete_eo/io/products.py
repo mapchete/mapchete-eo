@@ -157,6 +157,7 @@ class Slice:
         return f"<Slice {self.name} ({len(self.products)} products)>"
 
     def _cache_reset(self):
+        logger.debug("clear caches of all products in slice")
         for product in self.products:
             product._cache_reset()
 

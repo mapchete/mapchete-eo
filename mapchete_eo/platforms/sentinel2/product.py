@@ -159,7 +159,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self.id = item.id
 
         self._metadata = metadata
-        self._cache_reset()
+        self._scl_cache = dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -197,6 +197,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return f"<S2Product product_id={self.id}>"
 
     def _cache_reset(self):
+        logger.debug("clear S2Product caches")
         if self._metadata:
             self._metadata._cache_reset()
             self._metadata = None

@@ -155,10 +155,11 @@ class S2Metadata:
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
 
     def _cache_reset(self):
+        logger.debug("clear S2Metadata internal caches")
         self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
         if self._cached_xml_root:
             self._cached_xml_root.clear()
-            del self._cached_xml_root
+            self._cached_xml_root = None
         self.path_mapper._cache_reset()
 
     @property

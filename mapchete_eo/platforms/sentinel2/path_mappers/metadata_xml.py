@@ -32,10 +32,9 @@ class XMLMapper(S2PathMapper):
         self._metadata_dir = metadata_xml.parent
 
     def clear_cached_data(self):
-        if self._cached_xml_root:
+        if self._cached_xml_root is not None:
             logger.debug("clear XMLMapper xml cache")
-            # commented out because this will break the tests:
-            # self._cached_xml_root.clear()
+            self._cached_xml_root.clear()
             self._cached_xml_root = None
 
     @property

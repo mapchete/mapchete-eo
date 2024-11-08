@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 import warnings
-import xml.etree.ElementTree as etree
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
 from xml.etree.ElementTree import Element, ParseError
@@ -123,7 +122,7 @@ def s2metadata_from_stac_item(
 
 
 class S2Metadata:
-    _cached_xml_root: Optional[etree.Element] = None
+    _cached_xml_root: Optional[Element] = None
     path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
@@ -134,17 +133,17 @@ class S2Metadata:
         self,
         metadata_xml: MPath,
         path_mapper: S2PathMapper,
-        xml_root: Optional[etree.Element] = None,
+        xml_root: Optional[Element] = None,
         boa_offset_applied: bool = False,
         **kwargs,
     ):
         self.metadata_xml = metadata_xml
         self._cached_xml_root = xml_root
+        self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
         self.path_mapper = path_mapper
         self.processing_baseline = path_mapper.processing_baseline
         self.boa_offset_applied = boa_offset_applied
         self._metadata_dir = metadata_xml.parent
-        self._cache_reset()
 
         # get geoinformation per resolution and bounds
         self.crs = self._crs
@@ -154,6 +153,15 @@ class S2Metadata:
 
     def __repr__(self):
         return f"<S2Metadata id={self.product_id}, processing_baseline={self.processing_baseline}>"
+
+    def clear_cached_data(self):
+        logger.debug("clear S2Metadata internal caches")
+        self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
+        if self._cached_xml_root is not None:
+            logger.debug("clear S2Metadata xml cache")
+            self._cached_xml_root.clear()
+            self._cached_xml_root = None
+        self.path_mapper.clear_cached_data()
 
     @property
     def __geo_interface__(self) -> dict:
@@ -209,7 +217,7 @@ class S2Metadata:
     def from_stac_item(cls, item: pystac.Item, **kwargs) -> S2Metadata:
         return cls.from_stac_item_constructor(item, **kwargs)
 
-    @cached_property
+    @property
     def xml_root(self):
         if self._cached_xml_root is None:  # pragma: no cover
             self._cached_xml_root = open_granule_metadata_xml(self.metadata_xml)
@@ -228,7 +236,7 @@ class S2Metadata:
         crs_str = next(self.xml_root.iter("HORIZONTAL_CS_CODE")).text
         return CRS.from_string(crs_str)
 
-    @cached_property
+    @property
     def sun_angles(self) -> SunAnglesData:
         """
         Return sun angle grids.
@@ -573,9 +581,6 @@ class S2Metadata:
             "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
         return mean
-
-    def _cache_reset(self):
-        self._cache = dict(viewing_incidence_angles=dict(), detector_footprints=dict())
 
 
 class SunAngleData(BaseModel):

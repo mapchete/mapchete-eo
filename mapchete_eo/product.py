@@ -39,7 +39,7 @@ class EOProduct(EOProductProtocol):
     def __repr__(self):
         return f"<EOProduct product_id={self.item.id}>"
 
-    def _cache_reset(self):
+    def clear_cached_data(self):
         pass
 
     @property

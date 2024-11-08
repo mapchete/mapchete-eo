@@ -4,7 +4,7 @@ on a given archive or a local SAFE file.
 """
 
 import logging
-import xml.etree.ElementTree as etree
+from xml.etree.ElementTree import Element
 from functools import cached_property
 from typing import Optional
 
@@ -25,15 +25,21 @@ logger = logging.getLogger(__name__)
 
 class XMLMapper(S2PathMapper):
     def __init__(
-        self, metadata_xml: MPath, xml_root: Optional[etree.Element] = None, **kwargs
+        self, metadata_xml: MPath, xml_root: Optional[Element] = None, **kwargs
     ):
         self.metadata_xml = metadata_xml
         self._cached_xml_root = xml_root
         self._metadata_dir = metadata_xml.parent
 
-    @cached_property
-    def xml_root(self):
-        if self._cached_xml_root is None:  # pragma: no cover
+    def clear_cached_data(self):
+        if self._cached_xml_root is not None:
+            logger.debug("clear XMLMapper xml cache")
+            self._cached_xml_root.clear()
+            self._cached_xml_root = None
+
+    @property
+    def xml_root(self) -> Element:
+        if self._cached_xml_root is None:
             self._cached_xml_root = open_xml(self.metadata_xml)
         return self._cached_xml_root
 
@@ -105,11 +111,14 @@ class XMLMapper(S2PathMapper):
                         qi_mask
                     ]
                     mask_type = mask_path.get("type")
-                    mask_types.add(mask_type)
-                    if mask_type == qi_mask_type and mask_path.get("bandId"):
-                        band_idx = int(mask_path.get("bandId"))
-                        if band_idx == band.value:
-                            return self._metadata_dir / mask_path.text
+                    if mask_type:
+                        mask_types.add(mask_type)
+                        if mask_type == qi_mask_type:
+                            band_id = mask_path.get("bandId")
+                            if band_id is not None:
+                                band_idx = int(band_id)
+                                if band_idx == band.value:
+                                    return self._metadata_dir / mask_path.text
                 else:  # pragma: no cover
                     raise KeyError(
                         f"no {qi_mask_type} for band {band.name} not found in metadata: {', '.join(mask_types)}"

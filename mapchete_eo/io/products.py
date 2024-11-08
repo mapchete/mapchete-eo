@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import logging
 from collections import defaultdict
 from datetime import datetime
+import gc
 from typing import Any, Generator, Iterator, List, Optional
 
+from mapchete import Timer
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -155,6 +158,15 @@ class Slice:
 
     def __repr__(self) -> str:
         return f"<Slice {self.name} ({len(self.products)} products)>"
+
+    @contextmanager
+    def cached(self) -> Generator[Slice, None, None]:
+        """Clear caches and run garbage collector when context manager is closed."""
+        yield self
+        with Timer() as tt:
+            self._cache_reset()
+            gc.collect()
+        logger.debug("Slice cache cleared and garbage collected in %s", tt)
 
     def _cache_reset(self):
         logger.debug("clear caches of all products in slice")
@@ -327,32 +339,31 @@ def generate_slice_dataarrays(
         nodataval = nodatavals
     else:
         nodataval = nodatavals
-    for slice_ in slices:
+    for slice in slices:
         try:
             # if merge_products_by is none, each slice contains just one product
             # so nothing will have to be merged anyways
-            yield to_dataarray(
-                merge_products(
-                    products=slice_.products,
-                    merge_method=merge_method,
-                    product_read_kwargs=dict(
-                        product_read_kwargs,
-                        assets=assets,
-                        eo_bands=eo_bands,
-                        grid=grid,
-                        resampling=resampling,
-                        nodatavals=nodatavals,
+            with slice.cached():
+                yield to_dataarray(
+                    merge_products(
+                        products=slice.products,
+                        merge_method=merge_method,
+                        product_read_kwargs=dict(
+                            product_read_kwargs,
+                            assets=assets,
+                            eo_bands=eo_bands,
+                            grid=grid,
+                            resampling=resampling,
+                            nodatavals=nodatavals,
+                            raise_empty=raise_empty,
+                        ),
                         raise_empty=raise_empty,
                     ),
-                    raise_empty=raise_empty,
-                ),
-                nodataval=nodataval,
-                name=slice_.name,
-                band_names=variables,
-                attrs=slice_.properties,
-            )
-            # make sure memory is released in case data was cached
-            slice_._cache_reset()
+                    nodataval=nodataval,
+                    name=slice.name,
+                    band_names=variables,
+                    attrs=slice.properties,
+                )
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
         except (EmptySliceException, CorruptedSlice):

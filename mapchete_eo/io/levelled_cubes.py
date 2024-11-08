@@ -1,4 +1,3 @@
-import gc
 import logging
 from typing import List, Optional
 
@@ -71,7 +70,7 @@ def read_levelled_cube_to_np_array(
 
     slices_read_count, slices_skip_count = 0, 0
     # pick slices one by one
-    for slice_count, slice_ in enumerate(slices, 1):
+    for slice_count, slice in enumerate(slices, 1):
         # all filled up? let's get outta here!
         if not out.mask.any():
             logger.debug("cube is full, quitting!")
@@ -85,33 +84,31 @@ def read_levelled_cube_to_np_array(
             logger.debug(
                 "see if slice %s %s has some of the %s unmasked pixels for cube",
                 slice_count,
-                slice_,
+                slice,
                 cube_nodata_mask.sum(),
             )
-            slice_array = slice_.read(
-                merge_method=merge_method,
-                product_read_kwargs=dict(
-                    product_read_kwargs,
-                    assets=assets,
-                    eo_bands=eo_bands,
-                    grid=grid,
-                    resampling=resampling,
-                    nodatavals=nodatavals,
-                    raise_empty=raise_empty,
-                    target_mask=~cube_nodata_mask.copy(),
-                ),
-            )
+            with slice.cached():
+                slice_array = slice.read(
+                    merge_method=merge_method,
+                    product_read_kwargs=dict(
+                        product_read_kwargs,
+                        assets=assets,
+                        eo_bands=eo_bands,
+                        grid=grid,
+                        resampling=resampling,
+                        nodatavals=nodatavals,
+                        raise_empty=raise_empty,
+                        target_mask=~cube_nodata_mask.copy(),
+                    ),
+                )
             slices_read_count += 1
         except (EmptySliceException, CorruptedSlice) as exc:
-            logger.debug("skipped slice %s: %s", slice_, str(exc))
+            logger.debug("skipped slice %s: %s", slice, str(exc))
             slices_skip_count += 1
             continue
-        finally:
-            slice_._cache_reset()
-            gc.collect()
 
         # if slice was not empty, fill pixels into cube
-        logger.debug("add slice %s array to cube", slice_)
+        logger.debug("add slice %s array to cube", slice)
         # iterate through layers of cube
         for layer_index in range(target_height):
             # go to next layer if layer is full

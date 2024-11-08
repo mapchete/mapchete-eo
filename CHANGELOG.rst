@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2024.11.1 - 2024-11-08
+----------------------
+
+* core
+
+  * `io.read_levelled_cube_to_np_array()`: try to stuff memory leaks; run `gc.collect()` after each slice iteration
+
+
 2024.11.0 - 2024-11-07
 ----------------------
 

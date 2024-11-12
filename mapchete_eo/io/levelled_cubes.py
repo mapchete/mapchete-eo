@@ -121,11 +121,21 @@ def read_levelled_cube_to_np_array(
 
             # determine empty patches of current layer
             empty_patches = out[layer_index].mask.copy()
-            pixels_for_layer = ~slice_array[empty_patches].mask
+            pixels_for_layer = ~slice_array[empty_patches].mask.sum()
+
+            # when slice has nothing to offer for this layer, skip
+            if pixels_for_layer == 0:
+                logger.debug(
+                    "layer %s: slice has no pixels for this layer, jump to next",
+                    layer_index,
+                    pixels_for_layer,
+                )
+                continue
+
             logger.debug(
-                "layer %s: slice has %s unmasked pixels",
+                "layer %s: slice has %s pixels for this layer",
                 layer_index,
-                pixels_for_layer.sum(),
+                pixels_for_layer,
             )
 
             logger.debug(
@@ -137,12 +147,12 @@ def read_levelled_cube_to_np_array(
             logger.debug(
                 "layer %s: fill with %s pixels ...",
                 layer_index,
-                pixels_for_layer.sum(),
+                pixels_for_layer,
             )
             # insert slice data into empty patches of layer
             out[layer_index][empty_patches] = slice_array[empty_patches]
             logger.debug(
-                "layer %s: %s masked pixels waiting to be filled now",
+                "layer %s: %s masked pixels remaining",
                 layer_index,
                 out[layer_index].mask.sum(),
             )
@@ -155,9 +165,11 @@ def read_levelled_cube_to_np_array(
             logger.debug("layer %s: %s%% filled", layer_index, percent_full)
             # remove slice values which were just inserted for next layer
             slice_array[empty_patches] = ma.masked
+
             if slice_array.mask.all():
                 logger.debug("slice fully inserted into cube, skipping")
                 break
+
         masked_pixels = out.mask.sum()
         total_pixels = out.size
         percent_full = round(100 * ((total_pixels - masked_pixels) / total_pixels), 2)

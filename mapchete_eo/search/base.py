@@ -28,7 +28,8 @@ class FSSpecStacIO(StacApiIO):
 
     def write_text(self, dest: MPathLike, txt: str, *args, **kwargs) -> None:
         path = MPath.from_inp(dest)
-        path.parent.makedirs(exist_ok=True)
+        if not path.parent.exists():
+            path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
             return dst.write(txt)
 
@@ -36,7 +37,8 @@ class FSSpecStacIO(StacApiIO):
     @staticmethod
     def save_json(dest: MPathLike, json_dict: dict, *args, **kwargs) -> None:
         path = MPath.from_inp(dest)
-        path.parent.makedirs(exist_ok=True)
+        if not path.parent.exists():
+            path.parent.makedirs(exist_ok=True)
         with path.open("w") as dst:
             return dst.write(json.dumps(json_dict, indent=2))
 
@@ -89,9 +91,15 @@ class StaticCatalogWriterMixin(ABC):
         """Dump static version of current items."""
         output_path = MPath.from_inp(output_path)
         assets = assets or []
-
         # initialize catalog
         catalog_json = output_path / "catalog.json"
+        if catalog_json.exists():
+            logger.debug("open existing catalog %s", str(catalog_json))
+            client = Client.from_file(catalog_json)
+            # catalog = pystac.Catalog.from_file(catalog_json)
+            existing_collections = list(client.get_collections())
+        else:
+            existing_collections = []
         catalog = pystac.Catalog(
             name or f"{self.id}",
             description or f"Static subset of {self.description}",
@@ -102,6 +110,7 @@ class StaticCatalogWriterMixin(ABC):
         for collection in self.get_collections():
             # collect all items and download assets if required
             items: List[pystac.Item] = []
+            item_ids = set()
             for n, item in enumerate(self.items, 1):
                 logger.debug("found item %s", item)
                 item = item.clone()
@@ -130,12 +139,35 @@ class StaticCatalogWriterMixin(ABC):
                 item.set_self_href(None)
 
                 items.append(item)
+                item_ids.add(item.id)
 
                 if progress_callback:
                     progress_callback(n=n, total=len(self.items))
 
+            for existing_collection in existing_collections:
+                if existing_collection.id == collection.id:
+                    logger.debug("try to find unregistered items in collection")
+                    collection_root_path = MPath.from_inp(
+                        existing_collection.get_self_href()
+                    ).parent
+                    for subpath in collection_root_path.ls():
+                        if subpath.is_directory():
+                            try:
+                                item = pystac.Item.from_file(
+                                    subpath / subpath.with_suffix(".json").name
+                                )
+                                if item.id not in item_ids:
+                                    logger.debug(
+                                        "add existing item with id %s", item.id
+                                    )
+                                    items.append(item)
+                                    item_ids.add(item.id)
+                            except FileNotFoundError:
+                                pass
+                    break
             # create collection and copy metadata
-            new_collection = Collection(
+            logger.debug("create new collection")
+            out_collection = Collection(
                 id=collection.id,
                 extent=pystac.Extent.from_items(items),
                 description=collection.description,
@@ -151,9 +183,11 @@ class StaticCatalogWriterMixin(ABC):
 
             # finally, add all items to collection
             for item in items:
-                new_collection.add_item(item)
+                out_collection.add_item(item)
 
-            catalog.add_child(new_collection)
+            out_collection.update_extent_from_items()
+
+            catalog.add_child(out_collection)
 
         logger.debug("write catalog to %s", output_path)
         catalog.normalize_hrefs(str(output_path))

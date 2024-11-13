@@ -52,3 +52,17 @@ def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
     assert not corrected.mask.all()
     # This Value should be below 1 for all bands in this particular product
     assert np.nanmean(corrected) < 1.0
+
+
+def test_brdf_correction_values(stac_item_brdf):
+    metadata = S2Metadata.from_stac_item(stac_item_brdf)
+    corrected = correction_values(
+        s2_metadata=metadata,
+        band=L2ABand.B04,
+        resolution=Resolution["120m"],
+        per_detector=False,
+    ).array
+    assert isinstance(corrected, ma.MaskedArray)
+    assert not corrected.mask.all()
+    # This Value should be above 1 in this particular product
+    assert np.nanmean(corrected) > 1.0

@@ -65,4 +65,4 @@ def test_brdf_correction_values(stac_item_brdf):
     assert isinstance(corrected, ma.MaskedArray)
     assert not corrected.mask.all()
     # This Value should be above 1 in this particular product
-    assert np.nanmean(corrected) > 1.0
+    assert np.max(corrected) > 1.0

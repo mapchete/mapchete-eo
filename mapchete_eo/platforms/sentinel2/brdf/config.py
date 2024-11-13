@@ -10,8 +10,8 @@ class BRDFModels(str, Enum):
 
 class ModelParameters(NamedTuple):
     f_iso: float
-    f_vol: float
     f_geo: float
+    f_vol: float
 
 
 # Source for bands outside of RGBNIR range:

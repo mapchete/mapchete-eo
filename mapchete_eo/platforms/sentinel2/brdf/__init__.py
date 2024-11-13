@@ -5,14 +5,14 @@ from mapchete_eo.platforms.sentinel2.brdf.correction import (
 
 from mapchete_eo.platforms.sentinel2.brdf.models import (
     DirectionalModels,
-    SensorModel,
-    SunModel,
+    HLSSensorModel,
+    HLSSunModel,
 )
 
 __all__ = [
     "correction_values",
     "apply_correction",
-    "SensorModel",
-    "SunModel",
+    "HLSSensorModel",
+    "HLSSunModel",
     "DirectionalModels",
 ]

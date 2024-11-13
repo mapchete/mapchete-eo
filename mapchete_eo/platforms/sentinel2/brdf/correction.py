@@ -14,7 +14,7 @@ from rasterio.fill import fillnodata
 
 from mapchete_eo.exceptions import BRDFError
 from mapchete_eo.platforms.sentinel2.brdf.config import L2ABandFParams, ModelParameters
-from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels, DirectionalModels
+from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels, get_model
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     L2ABand,
@@ -40,17 +40,14 @@ def _correction_combine_detectors(
     Run correction using combined angle masks of all
     """
     model_params = resample_from_array(
-        DirectionalModels(
-            angles=(
-                sun_zenith_angle_array,
-                sun_azimuth_angle_array,
-                viewing_zenith_angle_array.data,
-                viewing_azimuth_angle_array.data,
-            ),
+        get_model(
+            sun_zenith=sun_zenith_angle_array,
+            sun_azimuth=sun_azimuth_angle_array,
+            view_zenith=viewing_zenith_angle_array.data,
+            view_azimuth=viewing_azimuth_angle_array.data,
             f_band_params=f_band_params,
             model=model,
-            brdf_weight=brdf_weight,
-            dtype=dtype,
+            processing_dtype=dtype,
         ).get_band_param(),
         out_grid=grid,
         array_transform=viewing_zenith_angle_array.transform,
@@ -127,17 +124,14 @@ def _correction_per_detector(
             continue
 
         # run low resolution model
-        detector_model = DirectionalModels(
-            angles=(
-                sun_zenith_angle_array,
-                sun_azimuth_angle_array,
-                viewing_zenith_per_detector[detector_id].data,
-                viewing_azimuth_per_detector[detector_id].data,
-            ),
+        detector_model = get_model(
+            sun_zenith=sun_zenith_angle_array,
+            sun_azimuth=sun_azimuth_angle_array,
+            view_zenith=viewing_zenith_per_detector[detector_id].data,
+            view_azimuth=viewing_azimuth_per_detector[detector_id].data,
             f_band_params=f_band_params,
             model=model,
-            brdf_weight=brdf_weight,
-            dtype=dtype,
+            processing_dtype=dtype,
         ).get_band_param()
 
         # interpolate missing nodata edges and return BRDF difference model

@@ -1,134 +1,95 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import logging
-from typing import Tuple
+from typing import Type
 
 import numpy as np
 from numpy.typing import DTypeLike
 import numpy.ma as ma
 
-from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
+from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels, ModelParameters
 
 logger = logging.getLogger(__name__)
 
 
-class DirectionalModels:
-    def __init__(
-        self,
-        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        f_band_params: Tuple[float, float, float],
-        model=BRDFModels.default,
-        brdf_weight: float = 1.0,
-        dtype: DTypeLike = np.float32,
-    ):
-        self.angles = angles
-        self.f_band_params = f_band_params
-        self.model = BRDFModels(model)
-        if self.model == BRDFModels.none:
-            raise ValueError("model cannot be BRDFModels.none")
-        self.brdf_weight = brdf_weight
-        self.dtype = dtype
-
-    def get_sensor_model(self):
-        return SensorModel(
-            self.angles, self.f_band_params, self.model, self.brdf_weight
-        ).get_model()
-
-    def get_sun_model(self):
-        # Keep the SunModel values as is without weighting
-        return SunModel(
-            self.angles, self.f_band_params, self.model, brdf_weight=1.0
-        ).get_model()
-
-    def get_band_param(self):
-        sensor_model = SensorModel(
-            self.angles, self.f_band_params, self.model, self.brdf_weight
-        ).get_model()
-
-        # Keep the SunModel values as is without weighting
-        sun_model = SunModel(
-            self.angles, self.f_band_params, self.model, brdf_weight=1.0
-        ).get_model()
-
-        out_param_arr = sun_model / sensor_model
-
-        return ma.masked_array(
-            data=out_param_arr,
-            mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
-        ).astype(self.dtype, copy=False)
-
-
-class BaseBRDF:
+class HLSBaseBRDF:
     # Class with adapted Sentinel-2 Sentinel-Hub Normalization (Also used elsewhere)
     # Sources:
     # https://sci-hub.st/https://ieeexplore.ieee.org/document/8899868
     # https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
     # https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/
     # Alt GitHub: https://github.com/maximlamare/s2-normalisation
+    sun_zenith: np.ndarray
+    sun_azimuth: np.ndarray
+    view_zenith: np.ndarray
+    view_azimuth: np.ndarray
+    f_band_params: ModelParameters
+    processing_dtype: DTypeLike = np.float32
+
+    theta_sun: np.ndarray
+    theta_view: np.ndarray
+    phi_sun: np.ndarray
+    phi_view: np.ndarray
+    phi: np.ndarray
+    _is_sun_model: bool = False
+
     def __init__(
         self,
-        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        f_band_params: Tuple[float, float, float],
-        model: str = "HLS",
-        brdf_weight: float = 1.0,
+        sun_zenith: np.ndarray,
+        sun_azimuth: np.ndarray,
+        view_zenith: np.ndarray,
+        view_azimuth: np.ndarray,
+        f_band_params: ModelParameters,
+        processing_dtype: DTypeLike = np.float32,
     ):
-        self.model = model
-        # angles should have a form of tuple where:
-        # sun_zenith, sun azimuth, view_zenith, view_azimuth
-        theta_sun, phi_sun, theta_view, phi_view = angles
+        self.sun_zenith = sun_zenith
+        self.sun_azimuth = sun_azimuth
+        self.view_zenith = view_zenith
+        self.view_azimuth = view_azimuth
+        self.f_band_params = f_band_params
+        self.processing_dtype = processing_dtype
+
+        # precalulate other values
+
         # Convert Degrees to Radians
         # theta is zenith angles
+        self.theta_sun = np.deg2rad(self.sun_zenith)
+        self.theta_view = (
+            np.zeros(self.theta_sun.shape)
+            if self._is_sun_model
+            else np.deg2rad(self.view_zenith)
+        )
         # phi is azimuth angles
-        self.theta_sun = np.deg2rad(theta_sun)
-        self.theta_view = np.deg2rad(theta_view)
+        self.phi_sun = np.deg2rad(self.sun_azimuth)
+        self.phi_view = np.deg2rad(self.view_azimuth)
 
-        self.phi_sun = np.deg2rad(phi_sun)
-        self.phi_view = np.deg2rad(phi_view)
-        self.phi = np.abs(np.deg2rad(self.phi_sun) - np.deg2rad(self.phi_view))
-        self.phi = np.where(self.phi > np.pi, 2 * np.pi - self.phi, self.phi)
+        # relative azimuth angle (in rad)
+        _phi = np.abs(np.deg2rad(self.phi_sun) - np.deg2rad(self.phi_view))
+        self.phi = np.where(_phi > np.pi, 2 * np.pi - _phi, _phi)
 
-        # (Modis based) Parameters for the linear model
-        self.f_band_params = f_band_params
-        self.brdf_weight = brdf_weight
-
-    # Get delta
-    def delta(self) -> np.ndarray:
-        delta = np.sqrt(
+        # delta
+        self.delta = np.sqrt(
             np.power(np.tan(self.theta_sun), 2)
             + np.power(np.tan(self.theta_view), 2)
             - 2 * np.tan(self.theta_sun) * np.tan(self.theta_view) * np.cos(self.phi)
         )
-        return delta
 
-    # Air Mass
-    def masse(self) -> np.ndarray:
-        masse = 1 / np.cos(self.theta_sun) + 1 / np.cos(self.theta_view)
-        return masse
+        # Air Mass
+        self.masse = 1 / np.cos(self.theta_sun) + 1 / np.cos(self.theta_view)
 
-    # Get xsi
-    def cos_xsi(self) -> np.ndarray:
-        cos_xsi = np.cos(self.theta_sun) * np.cos(self.theta_view) + np.sin(
+        # xsi
+        self.cos_xsi = np.cos(self.theta_sun) * np.cos(self.theta_view) + np.sin(
             self.theta_sun
         ) * np.sin(self.theta_view) * np.cos(self.phi)
-        return cos_xsi
-
-    def sin_xsi(self) -> np.ndarray:
-        x = self.cos_xsi()
-        sin_xsi = np.sqrt(1 - np.power(x, 2))
-        return sin_xsi
-
-    def xsi(self) -> np.ndarray:
-        xsi = np.arccos(self.cos_xsi())
-        return xsi
-
-    # Function t
-    def cos_t(self) -> np.ndarray:
-        def sec(x):
-            return 1 / np.cos(x)
+        self.sin_xsi = np.sqrt(1 - np.power(self.cos_xsi, 2))
+        self.xsi = np.arccos(self.cos_xsi)
 
         # Coeficient for "t" any natural number is good, 2 is used
-        cos_t = (
+        self.cos_t = np.clip(
             2
             * np.sqrt(
-                np.power(self.delta(), 2)
+                np.power(self.delta, 2)
                 + np.power(
                     (
                         np.tan(self.theta_sun)
@@ -138,68 +99,123 @@ class BaseBRDF:
                     2,
                 )
             )
-            / (sec(self.theta_sun) + sec(self.theta_view))
+            / (self.sec(self.theta_sun) + self.sec(self.theta_view)),
+            -1,
+            1,
         )
 
-        cos_t = np.clip(cos_t, -1, 1)
-        return cos_t
+        # t
+        self.t = np.clip(np.arccos(self.cos_t), -1, 1)
 
-    def t(self) -> np.ndarray:
-        t = np.clip(np.arccos(self.cos_t()), -1, 1)
-        return t
-
-    # Function FV Ross_Thick, V is for volume scattering (Kernel)
-    def fv(self) -> np.ndarray:
-        fv = (
-            ((np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi())
+    def f_vol(self) -> np.ndarray:
+        """Function FV Ross_Thick, V is for volume scattering (Kernel)."""
+        return (
+            ((np.pi / 2 - self.xsi) * self.cos_xsi + self.sin_xsi)
             / (np.cos(self.theta_sun) + np.cos(self.theta_view))
         ) - (np.pi / 4)
 
-        return fv
+    def sec(self, x: np.ndarray) -> np.ndarray:
+        return 1 / np.cos(x)
 
     #  Function FR Li-Sparse, R is for roughness (surface roughness)
-    def fr(self) -> np.ndarray:
-        def sec(x):
-            return 1 / np.cos(x)
-
+    def f_roughness(self) -> np.ndarray:
         capital_o = (1 / np.pi) * (
-            (self.t() - np.sin(self.t()) * np.cos(self.t()))
-            * (sec(self.theta_sun) + sec(self.theta_view))
+            (self.t - np.sin(self.t) * np.cos(self.t))
+            * (self.sec(self.theta_sun) + self.sec(self.theta_view))
         )
 
-        fr = (
+        return (
             capital_o
-            - sec(self.theta_sun)
-            - sec(self.theta_view)
-            + (0.5 * (1 + self.cos_xsi()) * sec(self.theta_sun) * sec(self.theta_view))
+            - self.sec(self.theta_sun)
+            - self.sec(self.theta_view)
+            + (
+                0.5
+                * (1 + self.cos_xsi)
+                * self.sec(self.theta_sun)
+                * self.sec(self.theta_view)
+            )
         )
-
-        return fr
 
     def get_model(self) -> np.ndarray:
-        if self.model == "HLS" or self.model == "default":
-            # Standard (HLS) BRDF model
-            if self.brdf_weight != 1.0:
-                model_value = (
-                    self.f_band_params[0]
-                    + self.f_band_params[2] * self.fv() / self.brdf_weight
-                    + self.f_band_params[1] * self.fr() / self.brdf_weight
-                )
-            else:
-                model_value = (
-                    self.f_band_params[0]
-                    + self.f_band_params[2] * self.fv()
-                    + self.f_band_params[1] * self.fr()
-                )
-        return model_value
+        return (
+            self.f_band_params.f_iso
+            + self.f_band_params.f_geo * self.f_roughness()
+            + self.f_band_params.f_vol * self.f_vol()
+        )
 
 
-class SensorModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
-        super().__init__(angles, f_band_params, model, brdf_weight)
+class HLSSensorModel(HLSBaseBRDF):
+    pass
 
 
-class SunModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
-        super().__init__(angles, f_band_params, model, brdf_weight)
-        self.theta_view = np.zeros(self.theta_sun.shape)
+class HLSSunModel(HLSBaseBRDF):
+    # this simply triggers setting self.theta_view to all zeros
+    _is_sun_model = True
+
+
+def get_model(
+    model: BRDFModels,
+    sun_zenith: np.ndarray,
+    sun_azimuth: np.ndarray,
+    view_zenith: np.ndarray,
+    view_azimuth: np.ndarray,
+    f_band_params: ModelParameters,
+    processing_dtype: DTypeLike = np.float32,
+) -> DirectionalModels:
+    if model in [BRDFModels.default, BRDFModels.HLS]:
+        return HLSModel(
+            sun_zenith=sun_zenith,
+            sun_azimuth=sun_azimuth,
+            view_zenith=view_zenith,
+            view_azimuth=view_azimuth,
+            f_band_params=f_band_params,
+            processing_dtype=processing_dtype,
+        )
+    raise KeyError(f"unkown or not implemented model: {model}")
+
+
+@dataclass
+class DirectionalModels:
+    sun_zenith: np.ndarray
+    sun_azimuth: np.ndarray
+    view_zenith: np.ndarray
+    view_azimuth: np.ndarray
+    f_band_params: ModelParameters
+    processing_dtype: DTypeLike = np.float32
+    sensor_model_cls: Type[HLSBaseBRDF] = HLSSensorModel
+    sun_model_cls: Type[HLSBaseBRDF] = HLSSunModel
+
+    def get_sensor_model(self):
+        return HLSSensorModel(
+            sun_zenith=self.sun_zenith,
+            sun_azimuth=self.sun_azimuth,
+            view_zenith=self.view_zenith,
+            view_azimuth=self.view_azimuth,
+            f_band_params=self.f_band_params,
+            processing_dtype=self.processing_dtype,
+        ).get_model()
+
+    def get_sun_model(self):
+        # Keep the SunModel values as is without weighting
+        return HLSSunModel(
+            sun_zenith=self.sun_zenith,
+            sun_azimuth=self.sun_azimuth,
+            view_zenith=self.view_zenith,
+            view_azimuth=self.view_azimuth,
+            f_band_params=self.f_band_params,
+            processing_dtype=self.processing_dtype,
+        ).get_model()
+
+    def get_band_param(self) -> ma.MaskedArray:
+        out_param_arr = self.get_sun_model() / self.get_sensor_model()
+        return ma.masked_array(
+            data=out_param_arr.astype(self.processing_dtype, copy=False),
+            mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
+        )
+
+
+class HLSModel(DirectionalModels):
+    """Directional model."""
+
+    sensor_model_cls: Type[HLSBaseBRDF] = HLSSensorModel
+    sun_model_cls: Type[HLSBaseBRDF] = HLSSunModel

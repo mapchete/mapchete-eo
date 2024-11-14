@@ -60,6 +60,7 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
             "--dump-detector-footprints",
             "--l2a-bands",
             "B02",
+            "--dst-path",
             str(out_path),
         ],
     )

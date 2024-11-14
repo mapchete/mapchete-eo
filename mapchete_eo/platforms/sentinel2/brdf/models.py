@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Type
+from typing import Optional, Type
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -32,7 +32,6 @@ class HLSBaseBRDF:
     phi_sun: np.ndarray
     phi_view: np.ndarray
     phi: np.ndarray
-    _is_sun_model: bool = False
 
     def __init__(
         self,
@@ -41,6 +40,9 @@ class HLSBaseBRDF:
         view_zenith: np.ndarray,
         view_azimuth: np.ndarray,
         f_band_params: ModelParameters,
+        theta_sun: Optional[np.ndarray] = None,
+        theta_view: Optional[np.ndarray] = None,
+        phi: Optional[np.ndarray] = None,
         processing_dtype: DTypeLike = np.float32,
     ):
         self.sun_zenith = sun_zenith
@@ -54,11 +56,9 @@ class HLSBaseBRDF:
 
         # Convert Degrees to Radians
         # theta is zenith angles
-        self.theta_sun = np.deg2rad(self.sun_zenith)
+        self.theta_sun = np.deg2rad(self.sun_zenith) if theta_sun is None else theta_sun
         self.theta_view = (
-            np.zeros(self.theta_sun.shape)
-            if self._is_sun_model
-            else np.deg2rad(self.view_zenith)
+            np.deg2rad(self.view_zenith) if theta_view is None else theta_view
         )
         # phi is azimuth angles
         self.phi_sun = np.deg2rad(self.sun_azimuth)
@@ -66,7 +66,9 @@ class HLSBaseBRDF:
 
         # relative azimuth angle (in rad)
         _phi = np.abs(np.deg2rad(self.phi_sun) - np.deg2rad(self.phi_view))
-        self.phi = np.where(_phi > np.pi, 2 * np.pi - _phi, _phi)
+        self.phi = (
+            np.where(_phi > np.pi, 2 * np.pi - _phi, _phi) if phi is None else phi
+        )
 
         # delta
         self.delta = np.sqrt(
@@ -149,8 +151,11 @@ class HLSSensorModel(HLSBaseBRDF):
 
 
 class HLSSunModel(HLSBaseBRDF):
-    # this simply triggers setting self.theta_view to all zeros
-    _is_sun_model = True
+    # like sensor model, but:
+    # self.theta_sun = self.sza
+    # self.theta_view = np.zeros(self.theta_sun.shape)
+    # self.phi = np.zeros(self.theta_sun.shape)
+    pass
 
 
 def get_model(
@@ -160,6 +165,7 @@ def get_model(
     view_zenith: np.ndarray,
     view_azimuth: np.ndarray,
     f_band_params: ModelParameters,
+    sun_zenith_angles: np.ndarray,
     processing_dtype: DTypeLike = np.float32,
 ) -> DirectionalModels:
     if model in [BRDFModels.default, BRDFModels.HLS]:
@@ -169,6 +175,7 @@ def get_model(
             view_zenith=view_zenith,
             view_azimuth=view_azimuth,
             f_band_params=f_band_params,
+            sun_zenith_angles=sun_zenith_angles,
             processing_dtype=processing_dtype,
         )
     raise KeyError(f"unkown or not implemented model: {model}")
@@ -181,6 +188,7 @@ class DirectionalModels:
     view_zenith: np.ndarray
     view_azimuth: np.ndarray
     f_band_params: ModelParameters
+    sun_zenith_angles: np.ndarray
     processing_dtype: DTypeLike = np.float32
     sensor_model_cls: Type[HLSBaseBRDF] = HLSSensorModel
     sun_model_cls: Type[HLSBaseBRDF] = HLSSunModel
@@ -202,6 +210,9 @@ class DirectionalModels:
             sun_azimuth=self.sun_azimuth,
             view_zenith=self.view_zenith,
             view_azimuth=self.view_azimuth,
+            theta_sun=self.sun_zenith_angles,
+            theta_view=np.zeros(self.sun_zenith_angles.shape),
+            phi=np.zeros(self.sun_zenith_angles.shape),
             f_band_params=self.f_band_params,
             processing_dtype=self.processing_dtype,
         ).get_model()

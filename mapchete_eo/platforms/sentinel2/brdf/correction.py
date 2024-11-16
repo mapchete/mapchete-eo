@@ -1,7 +1,6 @@
 import logging
-from typing import Dict, List, Tuple
+from typing import List
 
-from fiona.transform import transform
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster, resample_from_array
 from mapchete.protocols import GridProtocol
@@ -9,12 +8,10 @@ from mapchete.types import NodataVal
 import numpy as np
 import numpy.ma as ma
 from numpy.typing import DTypeLike
-from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 
 from mapchete_eo.exceptions import BRDFError
-from mapchete_eo.platforms.sentinel2.brdf.config import L2ABandFParams, ModelParameters
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels, get_model
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
@@ -26,16 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def _correction_combine_detectors(
-    product_crs: CRS,
-    grid: GridProtocol,
-    sun_azimuth_angle_array: np.ndarray,
-    sun_zenith_angle_array: np.ndarray,
-    f_band_params: ModelParameters,
-    viewing_azimuth_angle_array: ReferencedRaster,
-    viewing_zenith_angle_array: ReferencedRaster,
-    sun_zenith_angles: np.ndarray,
+    s2_metadata: S2Metadata,
+    band: L2ABand,
+    out_grid: GridProtocol,
     model: BRDFModels = BRDFModels.default,
-    brdf_weight: float = 1.0,
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
     """
@@ -43,18 +34,11 @@ def _correction_combine_detectors(
     """
     model_params = resample_from_array(
         get_model(
-            sun_zenith=sun_zenith_angle_array,
-            sun_azimuth=sun_azimuth_angle_array,
-            view_zenith=viewing_zenith_angle_array.data,
-            view_azimuth=viewing_azimuth_angle_array.data,
-            f_band_params=f_band_params,
-            sun_zenith_angles=sun_zenith_angles,
-            model=model,
-            processing_dtype=dtype,
-        ).get_band_param(),
-        out_grid=grid,
-        array_transform=viewing_zenith_angle_array.transform,
-        in_crs=product_crs,
+            model=model, s2_metadata=s2_metadata, band=band, processing_dtype=dtype
+        ).calculate(),
+        out_grid=out_grid,
+        array_transform=out_grid.transform,
+        in_crs=s2_metadata.crs,
         nodata=0,
         resampling=Resampling.bilinear,
         keep_2d=True,
@@ -63,34 +47,31 @@ def _correction_combine_detectors(
 
 
 def _correction_per_detector(
-    product_crs: CRS,
-    grid: GridProtocol,
-    sun_azimuth_angle_array: np.ndarray,
-    sun_zenith_angle_array: np.ndarray,
-    f_band_params: ModelParameters,
-    detector_footprints: ReferencedRaster,
-    viewing_azimuth_per_detector: Dict[int, ReferencedRaster],
-    viewing_zenith_per_detector: Dict[int, ReferencedRaster],
-    sun_zenith_angles: np.ndarray,
+    s2_metadata: S2Metadata,
+    band: L2ABand,
+    out_grid: GridProtocol,
     model: BRDFModels = BRDFModels.default,
-    brdf_weight: float = 1.0,
     smoothing_iterations: int = 10,
     dtype: DTypeLike = np.float32,
+    footprints_cached_read: bool = True,
 ) -> ma.MaskedArray:
     """
     Run correction separately for each detector footprint.
     """
     # create output array
-    model_params = ma.masked_equal(np.zeros(grid.shape, dtype=dtype), 0)
+    model_params = ma.masked_equal(np.zeros(out_grid.shape, dtype=dtype), 0)
 
+    # get detector footprints
+    detector_footprints = s2_metadata.detector_footprints(
+        band, cached_read=footprints_cached_read
+    )
     resampled_detector_footprints = resample_from_array(
         detector_footprints,
-        out_grid=grid,
+        out_grid=out_grid,
         nodata=0,
         resampling=Resampling.nearest,
         keep_2d=True,
     )
-    # make sure detector footprints are 2D
     if resampled_detector_footprints.ndim not in [2, 3]:
         raise ValueError(
             f"detector_footprints has to be a 2- or 3-dimensional array but has shape {detector_footprints.shape}"
@@ -98,11 +79,20 @@ def _correction_per_detector(
     if resampled_detector_footprints.ndim == 3:
         resampled_detector_footprints = resampled_detector_footprints[0]
 
+    # determine available detector IDs
     detector_ids: List[int] = [
         detector_id
         for detector_id in np.unique(resampled_detector_footprints)
         if detector_id != 0
     ]
+
+    # get viewing angle arrays per detector
+    viewing_azimuth_per_detector = s2_metadata.viewing_incidence_angles(
+        band
+    ).azimuth.detectors
+    viewing_zenith_per_detector = s2_metadata.viewing_incidence_angles(
+        band
+    ).zenith.detectors
 
     # iterate through detector footprints and calculate BRDF for each one
     for detector_id in detector_ids:
@@ -129,15 +119,12 @@ def _correction_per_detector(
 
         # run low resolution model
         detector_model = get_model(
-            sun_zenith=sun_zenith_angle_array,
-            sun_azimuth=sun_azimuth_angle_array,
-            view_zenith=viewing_zenith_per_detector[detector_id].data,
-            view_azimuth=viewing_azimuth_per_detector[detector_id].data,
-            f_band_params=f_band_params,
-            sun_zenith_angles=sun_zenith_angles,
             model=model,
+            s2_metadata=s2_metadata,
+            band=band,
+            detector_id=detector_id,
             processing_dtype=dtype,
-        ).get_band_param()
+        ).calculate()
 
         # interpolate missing nodata edges and return BRDF difference model
         detector_brdf_param = ma.masked_invalid(
@@ -147,9 +134,9 @@ def _correction_per_detector(
         # resample model to output resolution
         detector_brdf = resample_from_array(
             detector_brdf_param,
-            out_grid=grid,
+            out_grid=out_grid,
             array_transform=viewing_zenith_per_detector[detector_id].transform,
-            in_crs=product_crs,
+            in_crs=s2_metadata.crs,
             nodata=0,
             resampling=Resampling.bilinear,
             keep_2d=True,
@@ -171,45 +158,28 @@ def correction_values(
     per_detector: bool = True,
     dtype: DTypeLike = np.float32,
 ) -> ReferencedRaster:
+    """Calculate BRDF correction values.
+
+    Calculation is always done on original product CRS, but the resolution
+    can be defined.
+    """
     with Timer() as t:
         if per_detector:
             # Per Detector strategy:
             brdf_params = _correction_per_detector(
-                f_band_params=L2ABandFParams[band.name].value,
-                grid=s2_metadata.grid(resolution),
-                product_crs=s2_metadata.crs,
-                sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
-                sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
-                detector_footprints=s2_metadata.detector_footprints(
-                    band, cached_read=footprints_cached_read
-                ),
-                viewing_azimuth_per_detector=s2_metadata.viewing_incidence_angles(
-                    band
-                ).azimuth.detectors,
-                viewing_zenith_per_detector=s2_metadata.viewing_incidence_angles(
-                    band
-                ).zenith.detectors,
-                sun_zenith_angles=get_sun_zenith_angles(s2_metadata),
+                s2_metadata=s2_metadata,
+                band=band,
+                out_grid=s2_metadata.grid(resolution),
                 model=model,
-                brdf_weight=brdf_weight,
                 dtype=dtype,
+                footprints_cached_read=footprints_cached_read,
             )
         else:
             brdf_params = _correction_combine_detectors(
-                f_band_params=L2ABandFParams[band.name].value,
-                grid=s2_metadata.grid(resolution),
-                product_crs=s2_metadata.crs,
-                sun_azimuth_angle_array=s2_metadata.sun_angles.azimuth.raster.data,
-                sun_zenith_angle_array=s2_metadata.sun_angles.zenith.raster.data,
-                viewing_azimuth_angle_array=s2_metadata.viewing_incidence_angles(
-                    band
-                ).azimuth.merge_detectors(),
-                viewing_zenith_angle_array=s2_metadata.viewing_incidence_angles(
-                    band
-                ).zenith.merge_detectors(),
-                sun_zenith_angles=get_sun_zenith_angles(s2_metadata),
+                s2_metadata=s2_metadata,
+                band=band,
+                out_grid=s2_metadata.grid(resolution),
                 model=model,
-                brdf_weight=brdf_weight,
                 dtype=dtype,
             )
 
@@ -286,73 +256,3 @@ def apply_correction(
             return ma.masked_array(
                 data=corrected.astype(band.dtype, copy=False), mask=mask
             )
-
-
-def get_sun_zenith_angles(s2_metadata: S2Metadata) -> np.ndarray:
-    _, (bottom, top) = transform(
-        s2_metadata.crs,
-        "EPSG:4326",
-        [s2_metadata.bounds[0], s2_metadata.bounds[2]],
-        [s2_metadata.bounds[1], s2_metadata.bounds[3]],
-    )
-    return get_sun_angle_array(
-        min_lat=bottom,
-        max_lat=top,
-        shape=s2_metadata.sun_angles.zenith.raster.data.shape,
-    )
-
-
-def get_sun_angle_array(
-    min_lat: float, max_lat: float, shape: Tuple[int, int]
-) -> np.ndarray:
-    """
-    Calculate array of sun angles between latitudes.
-
-    Returns
-    =======
-    sun angle array in radians : np.ndarray
-    """
-
-    def _sun_angle(lat):
-        """
-        Calculate the constant sun zenith angle via 6th polynomial function see HLS.
-
-        See page 13 of:
-        https://hls.gsfc.nasa.gov/wp-content/uploads/2019/01/HLS.v1.4.UserGuide_draft_ver3.1.pdf
-        """
-        # constants used for sun angle calculation
-        # See page 13 of:
-        # https://hls.gsfc.nasa.gov/wp-content/uploads/2019/01/HLS.v1.4.UserGuide_draft_ver3.1.pdf
-        k0 = 31
-        k1 = -0.127
-        k2 = 0.0119
-        k3 = 2.4e-05
-        k4 = -9.48e-07
-        k5 = -1.95e-09
-        k6 = 6.15e-11
-
-        # Constant sun zenith angle 6th polynomial function
-        return (
-            k0
-            + k1 * lat
-            + k2 * (lat**2)
-            + k4 * (lat**4)
-            + k3 * (lat**3)
-            + k5 * (lat**5)
-            + k6 * (lat**6)
-        )
-
-    # return get_constant_sun_angle(min_lat, max_lat)
-    height, width = shape
-    cell_size = (max_lat - min_lat) / (height + 1)
-
-    # move by half a pixel so pixel centers are represented
-    top = max_lat - cell_size / 2
-
-    # generate one column of angles
-    angles = [_sun_angle(top - i * cell_size) for i in range(width)]
-
-    # expand column to output shape width
-    return np.radians(
-        np.array([[i for _ in range(width)] for i in angles], dtype=np.float32)
-    )

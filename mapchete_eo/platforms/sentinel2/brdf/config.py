@@ -5,6 +5,7 @@ from typing import NamedTuple
 class BRDFModels(str, Enum):
     none = "none"
     HLS = "HLS"
+    HLS2 = "HLS2"
     default = "HLS"
 
 

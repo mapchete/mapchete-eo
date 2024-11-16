@@ -66,3 +66,4 @@ def test_brdf_correction_values(stac_item_brdf):
     assert not corrected.mask.all()
     # This Value should be above 1 in this particular product
     assert np.max(corrected) > 1.0
+    assert np.mean(corrected) > 1.0

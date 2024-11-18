@@ -41,12 +41,38 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml, per_detector):
     assert not ma.allclose(band_array, corrected_band)
     assert np.allclose(band_array.mask, corrected_band.mask)
 
+    brdf_params = correction_values(
+        s2_metadata=metadata,
+        band=band,
+        model=BRDFModels.RossThick,
+        per_detector=per_detector,
+        resolution=Resolution["60m"],
+    ).array
+
+    corrected_band = band_array * brdf_params
+
+    assert isinstance(corrected_band, ma.MaskedArray)
+    assert not ma.allclose(band_array, corrected_band)
+    assert np.allclose(band_array.mask, corrected_band.mask)
+
 
 @pytest.mark.parametrize("band", [band for band in L2ABand if band != L2ABand.B10])
 def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):
     metadata = S2Metadata.from_metadata_xml(s2_l2a_metadata_xml)
     corrected = correction_values(
         s2_metadata=metadata, band=band, resolution=Resolution["120m"]
+    ).array
+    assert isinstance(corrected, ma.MaskedArray)
+    assert not corrected.mask.all()
+    # This Value should be below 1 for all bands in this particular product
+    assert np.nanmean(corrected) < 1.0
+
+    metadata = S2Metadata.from_metadata_xml(s2_l2a_metadata_xml)
+    corrected = correction_values(
+        s2_metadata=metadata,
+        band=band,
+        resolution=Resolution["120m"],
+        model=BRDFModels.RossThick,
     ).array
     assert isinstance(corrected, ma.MaskedArray)
     assert not corrected.mask.all()
@@ -64,6 +90,19 @@ def test_brdf_correction_values(stac_item_brdf):
     ).array
     assert isinstance(corrected, ma.MaskedArray)
     assert not corrected.mask.all()
-    # This Value should be above 1 in this particular product
+    # This Value should be above 1 in this particular product/model scenario
     assert np.max(corrected) > 1.0
     assert np.mean(corrected) > 1.0
+
+    corrected = correction_values(
+        s2_metadata=metadata,
+        band=L2ABand.B04,
+        model=BRDFModels.RossThick,
+        resolution=Resolution["120m"],
+        per_detector=False,
+    ).array
+    assert isinstance(corrected, ma.MaskedArray)
+    assert not corrected.mask.all()
+    # This Value should be below 1 in this particular product/model scenario
+    assert np.max(corrected) < 1.0
+    assert np.mean(corrected) < 1.0

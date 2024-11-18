@@ -6,6 +6,7 @@ class BRDFModels(str, Enum):
     none = "none"
     HLS = "HLS"
     HLS2 = "HLS2"
+    RossThick = "RossThick"
     default = "HLS"
 
 

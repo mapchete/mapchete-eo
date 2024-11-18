@@ -78,6 +78,19 @@ def test_brdf_correction_values(stac_item_brdf):
     ).array
     assert isinstance(corrected, ma.MaskedArray)
     assert not corrected.mask.all()
-    # This Value should be above 1 in this particular product
+    # This Value should be above 1 in this particular product/model scenario
     assert np.max(corrected) > 1.0
     assert np.mean(corrected) > 1.0
+
+    corrected = correction_values(
+        s2_metadata=metadata,
+        band=L2ABand.B04,
+        model=BRDFModels.RossThick,
+        resolution=Resolution["120m"],
+        per_detector=False,
+    ).array
+    assert isinstance(corrected, ma.MaskedArray)
+    assert not corrected.mask.all()
+    # This Value should be below 1 in this particular product/model scenario
+    assert np.max(corrected) < 1.0
+    assert np.mean(corrected) < 1.0

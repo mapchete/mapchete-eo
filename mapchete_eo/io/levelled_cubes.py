@@ -121,47 +121,50 @@ def read_levelled_cube_to_np_array(
 
             # determine empty patches of current layer
             empty_patches = out[layer_index].mask.copy()
-            pixels_for_layer = ~slice_array[empty_patches].mask
-            logger.debug(
-                "layer %s: slice has %s unmasked pixels",
-                layer_index,
-                pixels_for_layer.sum(),
-            )
+            pixels_for_layer = (~slice_array[empty_patches].mask).sum()
 
-            logger.debug(
-                "layer %s: %s masked pixels waiting to be filled",
-                layer_index,
-                out[layer_index].mask.sum(),
-            )
+            # when slice has nothing to offer for this layer, skip
+            if pixels_for_layer == 0:
+                logger.debug(
+                    "layer %s: slice has no pixels for this layer, jump to next",
+                    layer_index,
+                )
+                continue
 
             logger.debug(
                 "layer %s: fill with %s pixels ...",
                 layer_index,
-                pixels_for_layer.sum(),
+                pixels_for_layer,
             )
             # insert slice data into empty patches of layer
             out[layer_index][empty_patches] = slice_array[empty_patches]
-            logger.debug(
-                "layer %s: %s masked pixels waiting to be filled now",
-                layer_index,
-                out[layer_index].mask.sum(),
-            )
-
             masked_pixels = out[layer_index].mask.sum()
             total_pixels = out[layer_index].size
             percent_full = round(
                 100 * ((total_pixels - masked_pixels) / total_pixels), 2
             )
-            logger.debug("layer %s: %s%% filled", layer_index, percent_full)
+            logger.debug(
+                "layer %s: %s%% filled (%s empty pixels remaining)",
+                layer_index,
+                percent_full,
+                out[layer_index].mask.sum(),
+            )
+
             # remove slice values which were just inserted for next layer
             slice_array[empty_patches] = ma.masked
+
             if slice_array.mask.all():
                 logger.debug("slice fully inserted into cube, skipping")
                 break
+
         masked_pixels = out.mask.sum()
         total_pixels = out.size
         percent_full = round(100 * ((total_pixels - masked_pixels) / total_pixels), 2)
-        logger.debug("cube is %s%% filled", percent_full)
+        logger.debug(
+            "cube is %s%% filled (%s empty pixels remaining)",
+            percent_full,
+            masked_pixels,
+        )
 
     logger.debug(
         "%s slices read, %s slices skipped", slices_read_count, slices_skip_count

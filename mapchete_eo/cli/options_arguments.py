@@ -147,7 +147,7 @@ opt_mask_scl_classes = click.option(
 )
 opt_brdf_model = click.option(
     "--brdf-model",
-    type=click.Choice((["none", *[model.name for model in BRDFModels]])),
+    type=click.Choice([model.name for model in BRDFModels]),
     default=BRDFModels.HLS,
     callback=_brdf_model_str_to_brdf,
     show_default=True,

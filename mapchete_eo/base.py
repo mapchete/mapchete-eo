@@ -516,3 +516,7 @@ class InputData(base.InputData):
             input_key=self.input_key,
             area=self.area.intersection(tile.bbox),
         )
+
+    def cleanup(self):
+        for product in self.products:
+            product.clear_cached_data()

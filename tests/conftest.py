@@ -472,6 +472,18 @@ def tileinfo_jp2_schema():
 
 
 @pytest.fixture(scope="session")
+def stac_item_brdf(s2_testdata_dir):
+    return pystac.Item.from_file(
+        str(
+            s2_testdata_dir
+            / "stac_items"
+            / "S2A_12RWT_20240106_0_L2A"
+            / "S2A_12RWT_20240106_0_L2A.json"
+        )
+    )
+
+
+@pytest.fixture(scope="session")
 def stac_item_pb0509(s2_testdata_dir):
     """https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32TMS_20221207_0_L2A"""
     return pystac.Item.from_file(

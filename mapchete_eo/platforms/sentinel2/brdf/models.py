@@ -1,205 +1,44 @@
+from __future__ import annotations
+
 import logging
-from typing import Tuple
+from typing import Optional
 
 import numpy as np
 from numpy.typing import DTypeLike
-import numpy.ma as ma
 
+from mapchete_eo.platforms.sentinel2.brdf.protocols import BRDFModelProtocol
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
+from mapchete_eo.platforms.sentinel2.brdf.hls import HLS
+from mapchete_eo.platforms.sentinel2.brdf.ross_thick import RossThick
+
+# from mapchete_eo.platforms.sentinel2.brdf.hls2 import HLS2
+from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 logger = logging.getLogger(__name__)
 
 
-class DirectionalModels:
-    def __init__(
-        self,
-        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        f_band_params: Tuple[float, float, float],
-        model=BRDFModels.default,
-        brdf_weight: float = 1.0,
-        dtype: DTypeLike = np.float32,
-    ):
-        self.angles = angles
-        self.f_band_params = f_band_params
-        self.model = BRDFModels(model)
-        if self.model == BRDFModels.none:
-            raise ValueError("model cannot be BRDFModels.none")
-        self.brdf_weight = brdf_weight
-        self.dtype = dtype
-
-    def get_sensor_model(self):
-        return SensorModel(
-            self.angles, self.f_band_params, self.model, self.brdf_weight
-        ).get_model()
-
-    def get_sun_model(self):
-        # Keep the SunModel values as is without weighting
-        return SunModel(
-            self.angles, self.f_band_params, self.model, brdf_weight=1.0
-        ).get_model()
-
-    def get_band_param(self):
-        sensor_model = SensorModel(
-            self.angles, self.f_band_params, self.model, self.brdf_weight
-        ).get_model()
-
-        # Keep the SunModel values as is without weighting
-        sun_model = SunModel(
-            self.angles, self.f_band_params, self.model, brdf_weight=1.0
-        ).get_model()
-
-        out_param_arr = sun_model / sensor_model
-
-        return ma.masked_array(
-            data=out_param_arr,
-            mask=np.where(out_param_arr == 0, True, False).astype(bool, copy=False),
-        ).astype(self.dtype, copy=False)
-
-
-class BaseBRDF:
-    # Class with adapted Sentinel-2 Sentinel-Hub Normalization (Also used elsewhere)
-    # Sources:
-    # https://sci-hub.st/https://ieeexplore.ieee.org/document/8899868
-    # https://sci-hub.st/https://ieeexplore.ieee.org/document/841980
-    # https://custom-scripts.sentinel-hub.com/sentinel-2/brdf/
-    # Alt GitHub: https://github.com/maximlamare/s2-normalisation
-    def __init__(
-        self,
-        angles: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        f_band_params: Tuple[float, float, float],
-        model: str = "HLS",
-        brdf_weight: float = 1.0,
-    ):
-        self.model = model
-        # angles should have a form of tuple where:
-        # sun_zenith, sun azimuth, view_zenith, view_azimuth
-        theta_sun, phi_sun, theta_view, phi_view = angles
-        # Convert Degrees to Radians
-        # theta is zenith angles
-        # phi is azimuth angles
-        self.theta_sun = np.deg2rad(theta_sun)
-        self.theta_view = np.deg2rad(theta_view)
-
-        self.phi_sun = np.deg2rad(phi_sun)
-        self.phi_view = np.deg2rad(phi_view)
-        self.phi = np.abs(np.deg2rad(self.phi_sun) - np.deg2rad(self.phi_view))
-        self.phi = np.where(self.phi > np.pi, 2 * np.pi - self.phi, self.phi)
-
-        # (Modis based) Parameters for the linear model
-        self.f_band_params = f_band_params
-        self.brdf_weight = brdf_weight
-
-    # Get delta
-    def delta(self) -> np.ndarray:
-        delta = np.sqrt(
-            np.power(np.tan(self.theta_sun), 2)
-            + np.power(np.tan(self.theta_view), 2)
-            - 2 * np.tan(self.theta_sun) * np.tan(self.theta_view) * np.cos(self.phi)
-        )
-        return delta
-
-    # Air Mass
-    def masse(self) -> np.ndarray:
-        masse = 1 / np.cos(self.theta_sun) + 1 / np.cos(self.theta_view)
-        return masse
-
-    # Get xsi
-    def cos_xsi(self) -> np.ndarray:
-        cos_xsi = np.cos(self.theta_sun) * np.cos(self.theta_view) + np.sin(
-            self.theta_sun
-        ) * np.sin(self.theta_view) * np.cos(self.phi)
-        return cos_xsi
-
-    def sin_xsi(self) -> np.ndarray:
-        x = self.cos_xsi()
-        sin_xsi = np.sqrt(1 - np.power(x, 2))
-        return sin_xsi
-
-    def xsi(self) -> np.ndarray:
-        xsi = np.arccos(self.cos_xsi())
-        return xsi
-
-    # Function t
-    def cos_t(self) -> np.ndarray:
-        def sec(x):
-            return 1 / np.cos(x)
-
-        # Coeficient for "t" any natural number is good, 2 is used
-        cos_t = (
-            2
-            * np.sqrt(
-                np.power(self.delta(), 2)
-                + np.power(
-                    (
-                        np.tan(self.theta_sun)
-                        * np.tan(self.theta_view)
-                        * np.sin(self.phi)
-                    ),
-                    2,
-                )
+def get_model(
+    model: BRDFModels,
+    s2_metadata: S2Metadata,
+    band: L2ABand,
+    detector_id: Optional[int] = None,
+    processing_dtype: DTypeLike = np.float32,
+) -> BRDFModelProtocol:
+    match model:
+        case BRDFModels.HLS:
+            return HLS.from_s2metadata(
+                s2_metadata=s2_metadata,
+                band=band,
+                detector_id=detector_id,
+                processing_dtype=processing_dtype,
             )
-            / (sec(self.theta_sun) + sec(self.theta_view))
-        )
-
-        cos_t = np.clip(cos_t, -1, 1)
-        return cos_t
-
-    def t(self) -> np.ndarray:
-        t = np.clip(np.arccos(self.cos_t()), -1, 1)
-        return t
-
-    # Function FV Ross_Thick, V is for volume scattering (Kernel)
-    def fv(self) -> np.ndarray:
-        fv = (
-            ((np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi())
-            / (np.cos(self.theta_sun) + np.cos(self.theta_view))
-        ) - (np.pi / 4)
-
-        return fv
-
-    #  Function FR Li-Sparse, R is for roughness (surface roughness)
-    def fr(self) -> np.ndarray:
-        def sec(x):
-            return 1 / np.cos(x)
-
-        capital_o = (1 / np.pi) * (
-            (self.t() - np.sin(self.t()) * np.cos(self.t()))
-            * (sec(self.theta_sun) + sec(self.theta_view))
-        )
-
-        fr = (
-            capital_o
-            - sec(self.theta_sun)
-            - sec(self.theta_view)
-            + (0.5 * (1 + self.cos_xsi()) * sec(self.theta_sun) * sec(self.theta_view))
-        )
-
-        return fr
-
-    def get_model(self) -> np.ndarray:
-        if self.model == "HLS" or self.model == "default":
-            # Standard (HLS) BRDF model
-            if self.brdf_weight != 1.0:
-                model_value = (
-                    self.f_band_params[0]
-                    + self.f_band_params[2] * self.fv() / self.brdf_weight
-                    + self.f_band_params[1] * self.fr() / self.brdf_weight
-                )
-            else:
-                model_value = (
-                    self.f_band_params[0]
-                    + self.f_band_params[2] * self.fv()
-                    + self.f_band_params[1] * self.fr()
-                )
-        return model_value
-
-
-class SensorModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
-        super().__init__(angles, f_band_params, model, brdf_weight)
-
-
-class SunModel(BaseBRDF):
-    def __init__(self, angles, f_band_params, model="HLS", brdf_weight=1.0):
-        super().__init__(angles, f_band_params, model, brdf_weight)
-        self.theta_view = np.zeros(self.theta_sun.shape)
+        case BRDFModels.RossThick:
+            return RossThick.from_s2metadata(
+                s2_metadata=s2_metadata,
+                band=band,
+                detector_id=detector_id,
+                processing_dtype=processing_dtype,
+            )
+        case _:
+            raise KeyError(f"unkown or not implemented model: {model}")

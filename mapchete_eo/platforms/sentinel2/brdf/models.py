@@ -26,13 +26,6 @@ def get_model(
     processing_dtype: DTypeLike = np.float32,
 ) -> BRDFModelProtocol:
     match model:
-        case BRDFModels.default:
-            return HLS.from_s2metadata(
-                s2_metadata=s2_metadata,
-                band=band,
-                detector_id=detector_id,
-                processing_dtype=processing_dtype,
-            )
         case BRDFModels.HLS:
             return HLS.from_s2metadata(
                 s2_metadata=s2_metadata,

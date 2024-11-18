@@ -26,7 +26,7 @@ def _correction_combine_detectors(
     s2_metadata: S2Metadata,
     band: L2ABand,
     out_grid: GridProtocol,
-    model: BRDFModels = BRDFModels.default,
+    model: BRDFModels = BRDFModels.HLS,
     dtype: DTypeLike = np.float32,
 ) -> ma.MaskedArray:
     """
@@ -47,7 +47,7 @@ def _correction_per_detector(
     s2_metadata: S2Metadata,
     band: L2ABand,
     out_grid: GridProtocol,
-    model: BRDFModels = BRDFModels.default,
+    model: BRDFModels = BRDFModels.HLS,
     smoothing_iterations: int = 10,
     dtype: DTypeLike = np.float32,
     footprints_cached_read: bool = True,
@@ -148,7 +148,7 @@ def _correction_per_detector(
 def correction_values(
     s2_metadata: S2Metadata,
     band: L2ABand,
-    model: BRDFModels = BRDFModels.default,
+    model: BRDFModels = BRDFModels.HLS,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
     per_detector: bool = True,

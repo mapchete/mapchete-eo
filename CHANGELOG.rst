@@ -2,6 +2,27 @@
 Changelog
 #########
 
+
+2024.11.2 - 2024-11-18
+----------------------
+
+* core
+
+  * `platforms.sentinel2.brdf`:
+
+    * whole refacturing of module
+    * brought back legacy `HLS`
+    * added `RossThick` model
+
+  * BRDF configuration: set `per_detector_correction` to `False` on default
+
+  * `io.assets.read_levelled_cube()`: improved log messages
+
+* CLI
+
+  * `mapchete eo static-catalog`: now updates existing catalog instead of replacing it
+
+
 2024.11.1 - 2024-11-08
 ----------------------
 

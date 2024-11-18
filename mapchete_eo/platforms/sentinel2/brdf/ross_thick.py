@@ -15,30 +15,41 @@ from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 
-class RossThickBaseModel:
-    """Base class for sensor and sun models."""
+class RossThick(BRDFModelProtocol):
+    """Directional model."""
 
-    sun_zenith_radian: np.ndarray
-    view_zenith_radian: np.ndarray
+    sun_zenith: np.ndarray
+    sun_azimuth: np.ndarray
+    view_zenith: np.ndarray
+    view_azimuth: np.ndarray
     f_band_params: ModelParameters
-    relative_azimuth_angle_radian: np.ndarray
     processing_dtype: DTypeLike = np.float32
 
     def __init__(
         self,
-        sun_zenith_radian: np.ndarray,
-        view_zenith_radian: np.ndarray,
-        f_band_params: ModelParameters,
-        relative_azimuth_angle_radian: np.ndarray,
+        s2_metadata: S2Metadata,
+        band: L2ABand,
+        detector_id: Optional[int] = None,
         processing_dtype: DTypeLike = np.float32,
     ):
-        self.sun_zenith_radian = sun_zenith_radian
-        self.view_zenith_radian = view_zenith_radian
-        self.f_band_params = f_band_params
-        self.relative_azimuth_angle_radian = relative_azimuth_angle_radian
+        self.sun_zenith = s2_metadata.sun_angles.zenith.raster.data
+        self.sun_azimuth = s2_metadata.sun_angles.azimuth.raster.data
+        self.view_zenith, self.view_azimuth = _get_viewing_angles(
+            s2_metadata=s2_metadata, band=band, detector_id=detector_id
+        )
+        self.f_band_params = L2ABandFParams[band.name].value
         self.processing_dtype = processing_dtype
 
-    def calculate(self) -> np.ndarray:
+        self.sun_zenith_radian = np.deg2rad(self.sun_zenith)
+        self.sun_azimuth_radian = np.deg2rad(self.sun_azimuth)
+        self.view_zenith_radian = np.deg2rad(self.view_zenith)
+        self.view_azimuth_radian = np.deg2rad(self.view_azimuth)
+
+        self.relative_azimuth_angle_radian = np.abs(
+            self.view_azimuth_radian - self.sun_azimuth_radian
+        )
+
+    def calculate(self) -> ma.MaskedArray:
         """
         Ross-Thick BRDF model function that computes the C factor.
 
@@ -95,45 +106,8 @@ class RossThickBaseModel:
         R_nadir = f_iso + f_vol * K_vol_nadir + f_geo * K_geo_nadir
 
         # Normalize reflectance
-        return R_nadir / R_actual
+        out_param_arr = R_nadir / R_actual
 
-
-class RossThick(BRDFModelProtocol):
-    """Directional model."""
-
-    sun_zenith: np.ndarray
-    sun_azimuth: np.ndarray
-    view_zenith: np.ndarray
-    view_azimuth: np.ndarray
-    f_band_params: ModelParameters
-    processing_dtype: DTypeLike = np.float32
-
-    def __init__(
-        self,
-        s2_metadata: S2Metadata,
-        band: L2ABand,
-        detector_id: Optional[int] = None,
-        processing_dtype: DTypeLike = np.float32,
-    ):
-        self.sun_zenith = s2_metadata.sun_angles.zenith.raster.data
-        self.sun_azimuth = s2_metadata.sun_angles.azimuth.raster.data
-        self.view_zenith, self.view_azimuth = _get_viewing_angles(
-            s2_metadata=s2_metadata, band=band, detector_id=detector_id
-        )
-        self.f_band_params = L2ABandFParams[band.name].value
-        self.processing_dtype = processing_dtype
-
-        self.sun_zenith_radian = np.deg2rad(self.sun_zenith)
-        self.sun_azimuth_radian = np.deg2rad(self.sun_azimuth)
-        self.view_zenith_radian = np.deg2rad(self.view_zenith)
-        self.view_azimuth_radian = np.deg2rad(self.view_azimuth)
-
-        self.relative_azimuth_angle_radian = np.abs(
-            self.view_azimuth_radian - self.sun_azimuth_radian
-        )
-
-    def calculate(self) -> ma.MaskedArray:
-        out_param_arr = self.calculate()
         return ma.masked_array(
             data=out_param_arr.astype(self.processing_dtype, copy=False),
             mask=np.where(out_param_arr == 0, True, False),

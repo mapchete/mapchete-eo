@@ -138,7 +138,7 @@ class HLSBaseModel:
             (np.pi / 2 - self.xsi()) * self.cos_xsi() + self.sin_xsi()
         ) - (1 / 3)
 
-    def calculate(self) -> np.ndarray:
+    def calculate_array(self) -> np.ndarray:
         return (
             self.f_band_params.f_iso
             + self.f_band_params.f_geo * self.f_roughness()
@@ -203,15 +203,13 @@ class HLS(BRDFModelProtocol):
 
     def calculate(self) -> ReferencedRaster:
         return ReferencedRaster.from_array_like(
-            array_like=(self.sun_model().calculate() / self.sensor_model().calculate()),
+            array_like=(
+                self.sun_model().calculate_array()
+                / self.sensor_model().calculate_array()
+            ),
             transform=self.transform,
             crs=self.crs,
         )
-        # out_param_arr = self.sun_model().calculate() / self.sensor_model().calculate()
-        # return ma.masked_array(
-        #     data=out_param_arr.astype(self.processing_dtype, copy=False),
-        #     mask=np.where(out_param_arr == 0, True, False),
-        # )
 
     @staticmethod
     def from_s2metadata(

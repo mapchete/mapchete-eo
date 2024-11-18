@@ -41,6 +41,20 @@ def test_run_sentinel2_brdf(s2_l2a_metadata_xml, per_detector):
     assert not ma.allclose(band_array, corrected_band)
     assert np.allclose(band_array.mask, corrected_band.mask)
 
+    brdf_params = correction_values(
+        s2_metadata=metadata,
+        band=band,
+        model=BRDFModels.RossThick,
+        per_detector=per_detector,
+        resolution=Resolution["60m"],
+    ).array
+
+    corrected_band = band_array * brdf_params
+
+    assert isinstance(corrected_band, ma.MaskedArray)
+    assert not ma.allclose(band_array, corrected_band)
+    assert np.allclose(band_array.mask, corrected_band.mask)
+
 
 @pytest.mark.parametrize("band", [band for band in L2ABand if band != L2ABand.B10])
 def test_get_all_12_bands_brdf_param(s2_l2a_metadata_xml, band):

@@ -9,6 +9,7 @@ from numpy.typing import DTypeLike
 from mapchete_eo.platforms.sentinel2.brdf.protocols import BRDFModelProtocol
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.brdf.hls import HLS
+from mapchete_eo.platforms.sentinel2.brdf.ross_thick import RossThick
 
 # from mapchete_eo.platforms.sentinel2.brdf.hls2 import HLS2
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -34,6 +35,13 @@ def get_model(
             )
         case BRDFModels.HLS:
             return HLS.from_s2metadata(
+                s2_metadata=s2_metadata,
+                band=band,
+                detector_id=detector_id,
+                processing_dtype=processing_dtype,
+            )
+        case BRDFModels.RossThick:
+            return RossThick.from_s2metadata(
                 s2_metadata=s2_metadata,
                 band=band,
                 detector_id=detector_id,

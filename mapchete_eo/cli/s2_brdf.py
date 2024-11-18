@@ -22,7 +22,6 @@ from mapchete_eo.platforms.sentinel2.types import L2ABand
 @options_arguments.opt_resolution
 @options_arguments.opt_brdf_model
 @options_arguments.opt_dump_detector_footprints
-@options_arguments.opt_brdf_weight
 @options_arguments.opt_brdf_detector_iter
 @opt_debug
 def s2_brdf(
@@ -32,7 +31,6 @@ def s2_brdf(
     resolution: Resolution = Resolution["120m"],
     brdf_model: BRDFModels = BRDFModels.HLS,
     dump_detector_footprints=False,
-    brdf_weight: float = 1.0,
     brdf_detector_iter: bool = False,
     **_,
 ):
@@ -72,7 +70,6 @@ def s2_brdf(
                     brdf_config=BRDFConfig(
                         model=brdf_model,
                         resolution=resolution,
-                        correction_weight=brdf_weight,
                         per_detector_correction=brdf_detector_iter,
                     ),
                 ),

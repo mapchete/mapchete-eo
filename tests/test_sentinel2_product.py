@@ -321,20 +321,25 @@ def test_read_masked(s2_stac_item_half_footprint):
         assert (unmasked[asset] != masked[asset]).any()
 
 
-def test_read_brdf(s2_stac_item_half_footprint):
-    assets = ["red", "green", "blue"]
+@pytest.mark.parametrize("per_detector_correction", [True, False])
+@pytest.mark.parametrize("asset", ["red", "green", "blue"])
+def test_read_brdf(s2_stac_item_half_footprint, per_detector_correction, asset):
+    # assets = ["red", "green", "blue"]
     product = S2Product(s2_stac_item_half_footprint)
     tile = _get_product_tile(product, metatiling=2)
 
-    uncorrected = product.read(assets=assets, grid=tile)
+    uncorrected = product.read(assets=[asset], grid=tile)
     corrected = product.read(
-        assets=assets,
+        assets=[asset],
         grid=tile,
-        brdf_config=BRDFConfig(bands=assets),
+        brdf_config=BRDFConfig(
+            bands=[asset], per_detector_correction=per_detector_correction
+        ),
     )
 
     assert isinstance(corrected, xr.Dataset)
-    for asset in assets:
+
+    for asset in [asset]:
         assert corrected[asset].any()
         assert (uncorrected[asset] != corrected[asset]).any()
 
@@ -470,7 +475,11 @@ def test_read_broken_product(stac_item_missing_detector_footprints):
     product = S2Product(stac_item_missing_detector_footprints)
     tile = _get_product_tile(product, metatiling=2)
     with pytest.raises(CorruptedProduct):
-        product.read(assets=assets, grid=tile, brdf_config=BRDFConfig(bands=assets))
+        product.read(
+            assets=assets,
+            grid=tile,
+            brdf_config=BRDFConfig(bands=assets, per_detector_correction=True),
+        )
 
 
 def test_read_empty_raise(s2_stac_item_half_footprint):
@@ -647,7 +656,9 @@ def test_read_levelled_cube_broken_slice(stac_item_missing_detector_footprints):
             assets=assets,
             grid=_get_product_tile(product, metatiling=2),
             merge_products_by="s2:datastrip_id",
-            product_read_kwargs=dict(brdf_config=BRDFConfig(bands=assets)),
+            product_read_kwargs=dict(
+                brdf_config=BRDFConfig(bands=assets, per_detector_correction=True)
+            ),
         )
 
 

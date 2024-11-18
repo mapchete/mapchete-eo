@@ -32,18 +32,15 @@ def _correction_combine_detectors(
     """
     Run correction using combined angle masks of all
     """
-    model_params = resample_from_array(
+    return resample_from_array(
         get_model(
             model=model, s2_metadata=s2_metadata, band=band, processing_dtype=dtype
         ).calculate(),
         out_grid=out_grid,
-        array_transform=out_grid.transform,
-        in_crs=s2_metadata.crs,
         nodata=0,
         resampling=Resampling.bilinear,
         keep_2d=True,
     )
-    return ma.masked_where(model_params == 0.0, model_params)
 
 
 def _correction_per_detector(
@@ -118,7 +115,7 @@ def _correction_per_detector(
             continue
 
         # run low resolution model
-        detector_model = get_model(
+        model_values = get_model(
             model=model,
             s2_metadata=s2_metadata,
             band=band,
@@ -128,15 +125,15 @@ def _correction_per_detector(
 
         # interpolate missing nodata edges and return BRDF difference model
         detector_brdf_param = ma.masked_invalid(
-            fillnodata(detector_model, smoothing_iterations=smoothing_iterations)
+            fillnodata(model_values.data, smoothing_iterations=smoothing_iterations)
         )
 
         # resample model to output resolution
         detector_brdf = resample_from_array(
             detector_brdf_param,
             out_grid=out_grid,
-            array_transform=viewing_zenith_per_detector[detector_id].transform,
-            in_crs=s2_metadata.crs,
+            array_transform=model_values.transform,
+            in_crs=model_values.crs,
             nodata=0,
             resampling=Resampling.bilinear,
             keep_2d=True,
@@ -182,12 +179,11 @@ def correction_values(
                 model=model,
                 dtype=dtype,
             )
-
-    if not brdf_params.any():  # pragma: no cover
-        raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")
     logger.debug(
         f"BRDF for product {s2_metadata.product_id} band {band.name} calculated in {str(t)}"
     )
+    if brdf_params.mask.all():  # pragma: no cover
+        raise BRDFError(f"BRDF grid array for {s2_metadata.product_id} is empty!")
     return ReferencedRaster(
         data=brdf_params,
         transform=s2_metadata.transform(resolution),

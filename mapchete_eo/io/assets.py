@@ -452,6 +452,7 @@ def read_mask_as_raster(
                             features_values,
                             out_shape=dst_grid.shape,
                             transform=dst_grid.transform,
+                            dtype=np.uint8,
                         ).astype(dtype)
                         if features_values
                         else np.zeros(dst_grid.shape, dtype=dtype)

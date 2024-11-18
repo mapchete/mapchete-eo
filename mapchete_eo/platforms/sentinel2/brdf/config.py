@@ -4,10 +4,9 @@ from typing import NamedTuple
 
 class BRDFModels(str, Enum):
     none = "none"
-    HLS = "HLS"
-    HLS2 = "HLS2"
-    RossThick = "RossThick"
     default = "HLS"
+    HLS = "HLS"
+    RossThick = "RossThick"
 
 
 class ModelParameters(NamedTuple):

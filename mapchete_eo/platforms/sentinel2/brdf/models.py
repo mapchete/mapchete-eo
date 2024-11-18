@@ -47,9 +47,5 @@ def get_model(
                 detector_id=detector_id,
                 processing_dtype=processing_dtype,
             )
-        # case BRDFModels.HLS2:
-        #     return HLS2.from_s2metadata(
-        #         s2_metadata=s2_metadata, band=band, detector_id=detector_id, processing_dtype=processing_dtype
-        #     )
         case _:
             raise KeyError(f"unkown or not implemented model: {model}")

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import numpy as np
-import numpy.ma as ma
 from numpy.typing import DTypeLike
 
 from typing import Optional
+
+from affine import Affine
+from mapchete.io.raster import ReferencedRaster
+from mapchete.types import CRSLike
 
 from mapchete_eo.platforms.sentinel2.brdf.protocols import (
     BRDFModelProtocol,
@@ -24,6 +27,9 @@ class RossThick(BRDFModelProtocol):
     view_azimuth: np.ndarray
     f_band_params: ModelParameters
     processing_dtype: DTypeLike = np.float32
+
+    transform: Affine
+    crs: CRSLike
 
     def __init__(
         self,
@@ -49,7 +55,10 @@ class RossThick(BRDFModelProtocol):
             self.view_azimuth_radian - self.sun_azimuth_radian
         )
 
-    def calculate(self) -> ma.MaskedArray:
+        self.transform = s2_metadata.sun_angles.zenith.raster.transform
+        self.crs = s2_metadata.crs
+
+    def calculate(self) -> ReferencedRaster:
         """
         Ross-Thick BRDF model function that computes the C factor.
 
@@ -99,18 +108,17 @@ class RossThick(BRDFModelProtocol):
 
         # Calculate kernels for actual angles
         K_vol, K_geo = compute_kernels(vza, sza, raa)
-        R_actual = f_iso + f_vol * K_vol + f_geo * K_geo
+        C_actual = f_iso + f_vol * K_vol + f_geo * K_geo
 
         # Calculate kernels for nadir (0° view, 0° relative azimuth)
         K_vol_nadir, K_geo_nadir = compute_kernels(0, sza, 0)
-        R_nadir = f_iso + f_vol * K_vol_nadir + f_geo * K_geo_nadir
+        C_nadir = f_iso + f_vol * K_vol_nadir + f_geo * K_geo_nadir
 
-        # Normalize reflectance
-        out_param_arr = R_nadir / R_actual
-
-        return ma.masked_array(
-            data=out_param_arr.astype(self.processing_dtype, copy=False),
-            mask=np.where(out_param_arr == 0, True, False),
+        # Normalize  and return c-factors
+        return ReferencedRaster.from_array_like(
+            array_like=(C_nadir / C_actual),
+            transform=self.transform,
+            crs=self.crs,
         )
 
     @staticmethod

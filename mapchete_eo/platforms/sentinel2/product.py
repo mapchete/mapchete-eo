@@ -104,7 +104,6 @@ class Cache:
         if self.config.brdf:
             resolution = self.config.brdf.resolution
             model = self.config.brdf.model
-            brdf_weight = self.config.brdf.correction_weight
 
             logger.debug(
                 f"prepare BRDF model '{model}' for product bands {self._brdf_bands} in {resolution} resolution"
@@ -118,7 +117,6 @@ class Cache:
                             metadata,
                             band,
                             model=model,
-                            brdf_weight=brdf_weight,
                             resolution=resolution,
                             per_detector=self.config.brdf.per_detector_correction,
                         )
@@ -320,7 +318,6 @@ class S2Product(EOProduct, EOProductProtocol):
                     self.metadata,
                     band,
                     model=brdf_config.model,
-                    brdf_weight=brdf_config.correction_weight,
                     resolution=brdf_config.resolution,
                     footprints_cached_read=brdf_config.footprints_cached_read,
                     per_detector=brdf_config.per_detector_correction,
@@ -608,6 +605,7 @@ class S2Product(EOProduct, EOProductProtocol):
                         grid=grid,
                         brdf_config=brdf_config,
                     ),
+                    correction_weight=brdf_config.correction_weight,
                     log10_bands_scale=brdf_config.log10_bands_scale,
                 )
 
@@ -643,6 +641,7 @@ class S2Product(EOProduct, EOProductProtocol):
                                 grid=grid,
                                 brdf_config=scl_config,
                             ),
+                            correction_weight=scl_config.correction_weight,
                             log10_bands_scale=scl_config.log10_bands_scale,
                         )[scl_mask]
 

@@ -149,7 +149,6 @@ def correction_values(
     s2_metadata: S2Metadata,
     band: L2ABand,
     model: BRDFModels = BRDFModels.default,
-    brdf_weight: float = 1.0,
     resolution: Resolution = Resolution["60m"],
     footprints_cached_read: bool = False,
     per_detector: bool = True,
@@ -197,6 +196,7 @@ def apply_correction(
     band: ma.MaskedArray,
     correction: np.ndarray,
     log10_bands_scale: bool = False,
+    correction_weight: float = 1.0,
     nodata: NodataVal = 0,
 ) -> ma.MaskedArray:
     """
@@ -224,6 +224,12 @@ def apply_correction(
             else np.where(band == nodata, True, False)
         )
 
+        if correction_weight != 1.0:
+            logger.debug("apply weight to correction")
+            # a correction_weight value of >1 should increase the correction, whereas a
+            # value <1 should decrease the correction
+            correction = 1 - (1 - correction) * correction_weight
+
         if log10_bands_scale:
             # # Apply BRDF correction to log10 scaled Sentinel-2 data
             corrected = (
@@ -234,7 +240,7 @@ def apply_correction(
             corrected = (np.power(10, corrected)).astype(np.float32, copy=False)
         else:
             corrected = (band.astype(np.float32, copy=False) * correction).astype(
-                np.float32, copy=False
+                band.dtype, copy=False
             )
 
         if nodata == 0:

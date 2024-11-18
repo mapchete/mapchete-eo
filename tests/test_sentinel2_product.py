@@ -344,7 +344,6 @@ def test_read_brdf(s2_stac_item_half_footprint, per_detector_correction, asset):
         assert (uncorrected[asset] != corrected[asset]).any()
 
 
-@pytest.mark.skip(reason="correction_weight deactivated for now")
 @pytest.mark.parametrize("correction_weight", (0.9, 1.2))
 def test_read_brdf_correction_weight(s2_stac_item_half_footprint, correction_weight):
     assets = ["red", "green", "blue"]

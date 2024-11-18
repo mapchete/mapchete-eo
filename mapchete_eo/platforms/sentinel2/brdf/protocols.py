@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Optional, Protocol
 
+from mapchete.io.raster import ReferencedRaster
+
 import numpy as np
 from numpy.typing import DTypeLike
 
@@ -14,7 +16,7 @@ class BRDFModelProtocol(Protocol):
     Can be sensor models, sun models or directional models!
     """
 
-    def calculate(self) -> np.ndarray: ...
+    def calculate(self) -> ReferencedRaster: ...
 
     @staticmethod
     def from_s2metadata(

@@ -4,8 +4,11 @@ Legacy implementation from before 2024.
 
 from __future__ import annotations
 from typing import Optional, Tuple
+
+from affine import Affine
+from mapchete.io.raster import ReferencedRaster
+from mapchete.types import CRSLike
 import numpy as np
-import numpy.ma as ma
 from numpy.typing import DTypeLike
 
 from mapchete_eo.platforms.sentinel2.brdf.protocols import (
@@ -152,6 +155,8 @@ class HLS(BRDFModelProtocol):
     view_azimuth: np.ndarray
     f_band_params: ModelParameters
     processing_dtype: DTypeLike = np.float32
+    transform: Affine
+    crs: CRSLike
 
     def __init__(
         self,
@@ -168,6 +173,8 @@ class HLS(BRDFModelProtocol):
         self.f_band_params = L2ABandFParams[band.name].value
         self.processing_dtype = processing_dtype
         self.sun_zenith_angles_radian = get_sun_zenith_angles(s2_metadata)
+        self.transform = s2_metadata.sun_angles.zenith.raster.transform
+        self.crs = s2_metadata.crs
 
     def sensor_model(self) -> HLSBaseModel:
         return HLSBaseModel(
@@ -194,12 +201,17 @@ class HLS(BRDFModelProtocol):
             processing_dtype=self.processing_dtype,
         )
 
-    def calculate(self) -> ma.MaskedArray:
-        out_param_arr = self.sun_model().calculate() / self.sensor_model().calculate()
-        return ma.masked_array(
-            data=out_param_arr.astype(self.processing_dtype, copy=False),
-            mask=np.where(out_param_arr == 0, True, False),
+    def calculate(self) -> ReferencedRaster:
+        return ReferencedRaster.from_array_like(
+            array_like=(self.sun_model().calculate() / self.sensor_model().calculate()),
+            transform=self.transform,
+            crs=self.crs,
         )
+        # out_param_arr = self.sun_model().calculate() / self.sensor_model().calculate()
+        # return ma.masked_array(
+        #     data=out_param_arr.astype(self.processing_dtype, copy=False),
+        #     mask=np.where(out_param_arr == 0, True, False),
+        # )
 
     @staticmethod
     def from_s2metadata(

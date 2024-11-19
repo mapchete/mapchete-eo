@@ -221,7 +221,8 @@ def products_to_slices(
     else:
         slices = [Slice(product.item.id, [product]) for product in products]
 
-    if sort:
+    # also check if slices is even a list, otherwise it will raise an error
+    if sort and slices:
         sort_dict = sort.model_dump()
         func = sort_dict.pop("func")
         slices = func(slices, **sort_dict)

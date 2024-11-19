@@ -26,6 +26,9 @@ def sort_objects_by_target_date(
 
     Default for target date is the middle between the objects start date and end date.
     """
+    if len(objects) == 0:
+        return objects
+
     if target_date is None:
         time_list = [to_datetime(object.datetime) for object in objects]
         start_time = min(time_list)

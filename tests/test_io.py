@@ -14,6 +14,7 @@ from mapchete_eo.io.path import (
 )
 from mapchete_eo.io.products import Slice
 from mapchete_eo.product import EOProduct
+from mapchete_eo.sort import TargetDateSort
 
 
 def test_get_item_property_date(s2_stac_item):
@@ -100,6 +101,14 @@ def test_products_to_slices(s2_stac_items):
         [EOProduct.from_stac_item(item) for item in s2_stac_items],
         group_by_property="day",
     )
+    for slice_ in slices:
+        assert len(slice_.products) > 1
+        for product in slice_.products:
+            assert slice_.name == product.item.datetime.day
+
+
+def test_products_to_slices_empty():
+    slices = products_to_slices([], group_by_property="day", sort=TargetDateSort())
     for slice_ in slices:
         assert len(slice_.products) > 1
         for product in slice_.products:

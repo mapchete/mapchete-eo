@@ -15,6 +15,7 @@ from mapchete_eo.exceptions import (
     CorruptedSlice,
     EmptySliceException,
     EmptyStackException,
+    NoSourceProducts,
 )
 from mapchete_eo.io.products import products_to_slices
 from mapchete_eo.protocols import EOProductProtocol
@@ -43,6 +44,9 @@ def read_levelled_cube_to_np_array(
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
     """
+    if len(products) == 0:
+        raise NoSourceProducts("no products to read")
+
     bands = assets or eo_bands
     if bands is None:
         raise ValueError("either assets or eo_bands have to be set")

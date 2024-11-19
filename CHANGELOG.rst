@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.11.3 - 2024-11-19
+----------------------
+
+* core
+
+  * fix bug where process fails when there are no slices over tile
+
+
 2024.11.2 - 2024-11-18
 ----------------------
 

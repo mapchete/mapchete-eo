@@ -112,7 +112,10 @@ def s2_jp2_static_catalog(
     for day in day_range(start_date=start_time, end_date=end_time):
         day_path = basepath / day.strftime("%Y/%m/%d")
         click.echo(f"looking into {day_path} ...")
-        paths = day_path.ls()
+        try:
+            paths = day_path.ls()
+        except FileNotFoundError:
+            continue
         click.echo(f"found {len(paths)} items")
         for json_path in paths:
             tile_id = json_path.without_suffix().name.split("_")[-1]

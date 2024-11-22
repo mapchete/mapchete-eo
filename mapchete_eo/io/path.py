@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 COMMON_RASTER_EXTENSIONS = [".tif", ".jp2"]
 
 
+@retry(logger=logger, **dict(IORetrySettings()))
 def open_xml(path: MPath) -> Element:
     """Parse an XML file path into an etree root element."""
     logger.debug("open %s", path)

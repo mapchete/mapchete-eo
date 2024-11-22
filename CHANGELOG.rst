@@ -3,6 +3,23 @@ Changelog
 #########
 
 
+2024.11.4 - 2024-11-22
+----------------------
+
+* core
+
+  * `platforms.sentinel2.metadata_parser.open_xml()`: add retry decorator to XML opener
+  * `io.products.merge_products()` catch `StopIteration` exception and continue
+
+* CLI
+
+  * `s2-jp2-static-catalog`: account for empty day directory
+
+* packaging
+
+  * use base image `2024.11.0` for testing
+
+
 2024.11.3 - 2024-11-19
 ----------------------
 

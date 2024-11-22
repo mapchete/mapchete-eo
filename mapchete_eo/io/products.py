@@ -280,9 +280,12 @@ def merge_products(
 
     # read all and average
     elif merge_method == MergeMethod.average:
-        remaining_products = list(
-            read_remaining_valid_products(products_iter, product_read_kwargs)
-        )
+        try:
+            remaining_products = list(
+                read_remaining_valid_products(products_iter, product_read_kwargs)
+            )
+        except StopIteration:
+            remaining_products = []
         if remaining_products:
             out = (
                 ma.stack([out, *remaining_products])

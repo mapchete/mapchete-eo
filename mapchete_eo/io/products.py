@@ -244,11 +244,14 @@ def merge_products(
         products_iter: Iterator[EOProductProtocol], product_read_kwargs: dict
     ) -> Generator[ma.MaskedArray, None, None]:
         """Yields and reads remaining products from iterator while discarding corrupt products."""
-        for product in products_iter:
-            try:
-                yield product.read_np_array(**product_read_kwargs)
-            except (AssetKeyError, CorruptedProduct) as exc:
-                logger.debug("skip product %s because of %s", product.item.id, exc)
+        try:
+            for product in products_iter:
+                try:
+                    yield product.read_np_array(**product_read_kwargs)
+                except (AssetKeyError, CorruptedProduct) as exc:
+                    logger.debug("skip product %s because of %s", product.item.id, exc)
+        except StopIteration:
+            return
 
     if len(products) == 0:  # pragma: no cover
         raise NoSourceProducts("no products to merge")
@@ -280,12 +283,9 @@ def merge_products(
 
     # read all and average
     elif merge_method == MergeMethod.average:
-        try:
-            remaining_products = list(
-                read_remaining_valid_products(products_iter, product_read_kwargs)
-            )
-        except StopIteration:
-            remaining_products = []
+        remaining_products = list(
+            read_remaining_valid_products(products_iter, product_read_kwargs)
+        )
         if remaining_products:
             out = (
                 ma.stack([out, *remaining_products])

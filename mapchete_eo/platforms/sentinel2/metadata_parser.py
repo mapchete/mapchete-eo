@@ -610,6 +610,8 @@ class ViewingIncidenceAngle(BaseModel):
     def merge_detectors(
         self, fill_edges: bool = True, smoothing_iterations: int = 3
     ) -> ReferencedRaster:
+        if not self.detectors:
+            raise CorruptedProductMetadata("no viewing incidence angles available")
         sample = next(iter(self.detectors.values()))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)

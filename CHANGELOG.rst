@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2024.11.5 - 2024-11-25
+----------------------
+
+* core
+
+  * `platforms.sentinel2.metadata_parser.ViewingIncidenceAngle.merge_detectors()`: raise `CorruptedProductMetadata` if no detector data is available
+  * `io.products.merge_products()` try to catch `StopIteration` early
+
+
 2024.11.4 - 2024-11-22
 ----------------------
 

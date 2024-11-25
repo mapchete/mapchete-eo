@@ -40,7 +40,7 @@ class CorruptedGTiffError(Exception):
 
 
 class BRDFError(Exception):
-    """Raised when calculated BRDF grid is empty."""
+    """Raised when BRDF grid cannot be calculated."""
 
 
 class AssetError(Exception):

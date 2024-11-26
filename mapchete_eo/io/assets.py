@@ -70,6 +70,9 @@ def asset_to_np_array(
     This is the main read method which is one way or the other being called from everywhere
     whenever a band is being read!
     """
+    # get path early to catch an eventual asset missing error early
+    path = asset_mpath(item, asset)
+
     # find out asset details if raster:bands is available
     stac_raster_bands = STACRasterBandProperties.from_asset(
         item.assets[asset], nodataval=nodataval
@@ -77,7 +80,7 @@ def asset_to_np_array(
 
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
     data = read_raster(
-        inp=asset_mpath(item, asset),
+        inp=path,
         indexes=indexes,
         grid=grid,
         resampling=resampling.name,
@@ -85,9 +88,8 @@ def asset_to_np_array(
     ).data
 
     data_type = stac_raster_bands.data_type or data.dtype
-    apply_offset = apply_offset and stac_raster_bands.offset != 0.0
 
-    if apply_offset:
+    if apply_offset and stac_raster_bands.offset != 0.0:
         # first, scale data:
         data = data * stac_raster_bands.scale
         # apply offset

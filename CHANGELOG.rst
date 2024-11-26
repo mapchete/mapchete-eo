@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.11.6 - 2024-11-26
+----------------------
+
+* core
+
+  * `io.assets.asset_to_np_array()`: get asset path early to catch and raise an `AssetMissing` error
+
+
 2024.11.5 - 2024-11-25
 ----------------------
 

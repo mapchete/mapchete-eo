@@ -407,61 +407,71 @@ def read_mask_as_raster(
     """
     if dst_grid:
         dst_grid = Grid.from_obj(dst_grid)
-    with cached_path(path, active=cached_read) as path:
-        if path.suffix in COMMON_RASTER_EXTENSIONS:
-            if dst_grid:
-                array = read_raster_window(
-                    path, grid=dst_grid, indexes=indexes, resampling=resampling
-                )
-                # sum up bands to 2D mask and keep dtype
-                array = array.sum(axis=0, dtype=array.dtype)
-                mask = ReferencedRaster(
-                    data=array if masked else array.data,
-                    transform=dst_grid.transform,
-                    bounds=dst_grid.bounds,
-                    crs=dst_grid.crs,
-                )
-            else:
-                with rasterio_open(path) as src:
-                    mask = ReferencedRaster(
-                        src.read(indexes, masked=masked).sum(
-                            axis=0, dtype=src.dtypes[0]
-                        ),
-                        transform=src.transform,
-                        bounds=src.bounds,
-                        crs=src.crs,
+    try:
+        with cached_path(path, active=cached_read) as path:
+            if path.suffix in COMMON_RASTER_EXTENSIONS:
+                if dst_grid:
+                    array = read_raster_window(
+                        path, grid=dst_grid, indexes=indexes, resampling=resampling
                     )
+                    # sum up bands to 2D mask and keep dtype
+                    array = array.sum(axis=0, dtype=array.dtype)
+                    mask = ReferencedRaster(
+                        data=array if masked else array.data,
+                        transform=dst_grid.transform,
+                        bounds=dst_grid.bounds,
+                        crs=dst_grid.crs,
+                    )
+                else:
+                    with rasterio_open(path) as src:
+                        mask = ReferencedRaster(
+                            src.read(indexes, masked=masked).sum(
+                                axis=0, dtype=src.dtypes[0]
+                            ),
+                            transform=src.transform,
+                            bounds=src.bounds,
+                            crs=src.crs,
+                        )
 
-            # make sure output has correct dtype
-            if dtype:
-                mask.data = mask.data.astype(dtype)
-            return mask
+                # make sure output has correct dtype
+                if dtype:
+                    mask.data = mask.data.astype(dtype)
+                return mask
 
-        else:
-            if dst_grid:
-                features = [
-                    feature
-                    for feature in _read_vector_mask(path)
-                    if rasterize_feature_filter(feature)
-                ]
-                features_values = [
-                    (feature["geometry"], rasterize_value_func(feature))
-                    for feature in features
-                ]
-                return ReferencedRaster(
-                    data=(
-                        rasterize(
-                            features_values,
-                            out_shape=dst_grid.shape,
-                            transform=dst_grid.transform,
-                            dtype=np.uint8,
-                        ).astype(dtype)
-                        if features_values
-                        else np.zeros(dst_grid.shape, dtype=dtype)
-                    ),
-                    transform=dst_grid.transform,
-                    crs=dst_grid.crs,
-                    bounds=dst_grid.bounds,
-                )
-            else:  # pragma: no cover
-                raise ValueError("out_shape and out_transform have to be provided.")
+            else:
+                if dst_grid:
+                    features = [
+                        feature
+                        for feature in _read_vector_mask(path)
+                        if rasterize_feature_filter(feature)
+                    ]
+                    features_values = [
+                        (feature["geometry"], rasterize_value_func(feature))
+                        for feature in features
+                    ]
+                    return ReferencedRaster(
+                        data=(
+                            rasterize(
+                                features_values,
+                                out_shape=dst_grid.shape,
+                                transform=dst_grid.transform,
+                                dtype=np.uint8,
+                            ).astype(dtype)
+                            if features_values
+                            else np.zeros(dst_grid.shape, dtype=dtype)
+                        ),
+                        transform=dst_grid.transform,
+                        crs=dst_grid.crs,
+                        bounds=dst_grid.bounds,
+                    )
+                else:  # pragma: no cover
+                    raise ValueError("out_shape and out_transform have to be provided.")
+    except Exception as exception:  # pragma: no cover
+        # This is a hack because some tool using aiohttp does not raise a
+        # ClientResponseError directly but masks it as a generic Exception and thus
+        # preventing our retry mechanism to kick in.
+        if repr(exception).startswith('Exception("ClientResponseError'):
+            raise ConnectionError(repr(exception)).with_traceback(
+                exception.__traceback__
+            ) from exception
+        raise

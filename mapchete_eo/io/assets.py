@@ -391,6 +391,7 @@ def _read_vector_mask(mask_path):
                 raise
 
 
+@retry(logger=logger, **dict(IORetrySettings()))
 def read_mask_as_raster(
     path: MPath,
     indexes: Optional[List[int]] = None,

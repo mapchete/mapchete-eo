@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.12.0 - 2024-12-05
+----------------------
+
+* core
+
+  * `io.assets.read_mask_as_raster()`: fix masking of `aiohttp.ClientResponseError` where some tool raises a generic `Exception` instead of the original `ClientResponseError`
+
+
 2024.11.6 - 2024-11-26
 ----------------------
 

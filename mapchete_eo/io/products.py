@@ -283,15 +283,27 @@ def merge_products(
 
     # read all and average
     elif merge_method == MergeMethod.average:
-        remaining_products = list(
-            read_remaining_valid_products(products_iter, product_read_kwargs)
-        )
-        if remaining_products:
-            out = (
-                ma.stack([out, *remaining_products])
-                .mean(axis=0)
-                .astype(out.dtype, copy=False)
-            )
+
+        def _generate_arrays(
+            first_product_array: ma.MaskedArray,
+            remaining_product_arrays: Generator[ma.MaskedArray, None, None],
+        ) -> Generator[ma.MaskedArray, None, None]:
+            """Yield all available product arrays."""
+            yield first_product_array
+            yield from remaining_product_arrays
+
+        # explicitly specify dtype to avoid casting of integer arrays to floats
+        # during mean conversion:
+        # https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean
+        out = ma.stack(
+            list(
+                _generate_arrays(
+                    out,
+                    read_remaining_valid_products(products_iter, product_read_kwargs),
+                )
+            ),
+            dtype=out.dtype,
+        ).mean(axis=0, dtype=out.dtype)
 
     else:  # pragma: no cover
         raise NotImplementedError(f"unknown merge method: {merge_method}")

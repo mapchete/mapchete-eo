@@ -287,10 +287,11 @@ def merge_products(
             read_remaining_valid_products(products_iter, product_read_kwargs)
         )
         if remaining_products:
-            out = (
-                ma.stack([out, *remaining_products])
-                .mean(axis=0)
-                .astype(out.dtype, copy=False)
+            # explicitly specify dtype to avoid casting of integer arrays to floats
+            # during mean conversion:
+            # https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean
+            out = ma.stack([out, *remaining_products], dtype=out.dtype).mean(
+                axis=0, dtype=out.dtype
             )
 
     else:  # pragma: no cover

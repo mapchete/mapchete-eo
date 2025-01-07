@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2025.1.0 - 2025-01-07
+----------------------
+
+* core
+
+  * `io.products.merge_products()`: reduce memory footprint when merging multiple products using `MergeMethod.average`
+
+
 2024.12.0 - 2024-12-05
 ----------------------
 

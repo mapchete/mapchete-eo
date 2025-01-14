@@ -44,8 +44,7 @@ dependencies = [
 test = [
     "pytest<8",
     "pytest-coverage",
-    "pytest-lazy-fixture",
-    "mapchete_xarray",
+    "pytest-lazy-fixture"
 ]
 
 [project.entry-points."mapchete.cli.commands"]

@@ -3,12 +3,9 @@ Changelog
 #########
 
 
-2025.1.1 - 2025-01-09
-----------------------
-
 * CI/CD
 
-  * use base image `2025.1.0` for testing
+  * use base image `2025.1.1` for testing
 
 
 2025.1.0 - 2025-01-07

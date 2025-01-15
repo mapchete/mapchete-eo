@@ -5,7 +5,7 @@ stages:
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:mapchete_2025.1.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.1.1
 
 precommit:
   stage: codecheck

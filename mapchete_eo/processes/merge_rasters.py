@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import numpy as np
 import numpy.ma as ma
-from mapchete import RasterInputGroup, Timer
+from mapchete import RasterInputGroup, VectorInputGroup, Timer
 from mapchete.errors import MapcheteNodataTile
 from mapchete.io.vector import to_shape
 from mapchete.processing.mp import MapcheteProcess
@@ -24,8 +24,9 @@ class MergeMethod(str, Enum):
 
 
 def execute(
-    rasters: RasterInputGroup,
     mp: MapcheteProcess,
+    rasters: RasterInputGroup,
+    vectors: VectorInputGroup,
     gradient_buffer: int = 10,
     merge_method: MergeMethod = MergeMethod.footprint_gradient,
 ) -> ma.MaskedArray:
@@ -36,14 +37,35 @@ def execute(
     region_footprints = []
 
     with Timer() as tt:
-        for region_name, region in rasters:
+        for raster_region, vector_region in zip(rasters, vectors):
+            # Vector Part
+            if vector_region is not None:
+                region_name_vector, region_vector = vector_region
+                region_geoms = region_vector.read()
+                if not region_geoms:
+                    logger.debug("%s vector is empty", region_name_vector)
+                    continue
+                for region_single_geom in region_geoms:
+                    region_footprints.append(region_single_geom)
+
+            # Raster Part
+            region_name, region = raster_region
+
+            if region_name != region_name_vector:
+                raise ValueError(
+                    "Raster and Vector names should be the same to make sure they match itself, before area property of RasterInput works!"
+                )
+
             raster = region.read()
             if raster.mask.all():
                 logger.debug("%s raster is empty", region_name)
                 continue
 
             raster_arrays.append(raster)
-            region_footprints.append(region.area)
+
+            # This below wont work until area property of RasterInputs is working!
+            # if vector_region is None:
+            #     region_footprints.append(region.area)
 
     logger.debug("%s rasters created in %s", len(raster_arrays), tt)
 

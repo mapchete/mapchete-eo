@@ -9,6 +9,7 @@ Changelog
 * core
 
   * update `mapchete_eo.processes.merge_rasters` to work with `rasters` and `vectors` as input that handle the merge process
+  * use more `mapchete.geometry.reproject_geometry` in the package, to align with latest `mapchete` versions better
 
 * CI/CD
 

@@ -10,7 +10,8 @@ import xarray as xr
 from dateutil.tz import tzutc
 from mapchete.config.parse import guess_geometry
 from mapchete.formats import base
-from mapchete.io.vector import IndexedFeatures, reproject_geometry
+from mapchete.geometry import reproject_geometry
+from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from mapchete.types import MPathLike, NodataVal, NodataVals

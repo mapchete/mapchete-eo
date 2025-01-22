@@ -7,7 +7,7 @@ import numpy as np
 import numpy.ma as ma
 import pystac
 from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_from_array
-from mapchete.io.vector import reproject_geometry
+from mapchete.geometry import reproject_geometry
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds, Grid, NodataVals

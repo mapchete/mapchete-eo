@@ -4,16 +4,23 @@ input:
     region1:
       format: raster_file
       path: sentinel2/full_products/sentinel-2-l2a/S2B_33TWM_20230810_0_L2A/B02.tif
-      # upper half of tile 13 2001 8910
-      area: "POLYGON ((15.79833984375 46.021728515625, 15.79833984375 46.03271484375, 15.7763671875 46.03271484375, 15.7763671875 46.021728515625, 15.79833984375 46.021728515625))"
+      # upper half of tile 13 2001 8910, This below wont work until area property of RasterInputs is working!
+      # area: "POLYGON ((15.79833984375 46.021728515625, 15.79833984375 46.03271484375, 15.7763671875 46.03271484375, 15.7763671875 46.021728515625, 15.79833984375 46.021728515625))"
     region2:
       format: raster_file
       path: sentinel2/full_products/sentinel-2-l2a/S2A_33TWM_20230818_0_L2A/B02.tif
-      # lower half of tile 13 2001 8910
-      area: "POLYGON ((15.79833984375 46.0107421875, 15.79833984375 46.021728515625, 15.7763671875 46.021728515625, 15.7763671875 46.0107421875, 15.79833984375 46.0107421875))"
+      # lower half of tile 13 2001 8910, This below wont work until area property of RasterInputs is working!
+      # area: "POLYGON ((15.79833984375 46.0107421875, 15.79833984375 46.021728515625, 15.7763671875 46.021728515625, 15.7763671875 46.0107421875, 15.79833984375 46.0107421875))"
+  vectors:
+    region1:
+      format: vector_file
+      path: region1-aoi.fgb
+    region2:
+      format: vector_file
+      path: region2-aoi.fgb
 output:
   format: GTiff
-  bands: 3
+  bands: 1
   path: eoxcloudless_tmp
   dtype: uint16
 pyramid:

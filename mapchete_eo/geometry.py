@@ -5,7 +5,7 @@ from typing import Callable, Iterable, Tuple
 
 from fiona.crs import CRS
 from fiona.transform import transform as fiona_transform
-from mapchete.io.vector import reproject_geometry
+from mapchete.geometry import reproject_geometry
 from mapchete.types import Bounds, CRSLike
 from shapely.geometry import (
     GeometryCollection,

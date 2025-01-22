@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2025.1.1 - 2025-01-22
+----------------------
+
+* core
+
+  * update `mapchete_eo.processes.merge_rasters` to work with `rasters` and `vectors` as input that handle the merge process
+  * use more `mapchete.geometry.reproject_geometry` in the package, to align with latest `mapchete` versions better
+
 * CI/CD
 
   * use base image `2025.1.1` for testing

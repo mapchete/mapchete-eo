@@ -55,7 +55,6 @@ def execute(
 
                 if len(region_geoms_shapes) > 1:
                     region_geoms_shapes = unary_union(region_geoms_shapes)
-                    print(region_geoms_shapes)
                     region_footprints.append(region_geoms_shapes)
                 else:
                     region_footprints.append(shape(region_geoms[0]["geometry"]))

@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2025.1.2 - 2025-01-24
+----------------------
+
+* core
+
+  * update `mapchete_eo.processes.merge_rasters` to merge multiple geometries for single raster, to have one multigeometry for one raster
 
 2025.1.1 - 2025-01-22
 ----------------------

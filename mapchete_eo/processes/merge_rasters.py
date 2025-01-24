@@ -10,7 +10,8 @@ from mapchete.io.vector import to_shape
 from mapchete.processing.mp import MapcheteProcess
 from mapchete.tile import BufferedTile
 from rasterio.features import geometry_mask
-from shapely.geometry import mapping
+from shapely import unary_union
+from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.image_operations import filters
@@ -45,8 +46,19 @@ def execute(
                 if not region_geoms:
                     logger.debug("%s vector is empty", region_name_vector)
                     continue
-                for region_single_geom in region_geoms:
-                    region_footprints.append(region_single_geom)
+
+                # When there are multiple overlaps of aois/clipping creates multiple geoms,
+                # # make an union of all shapes, so that the rasters, vectors lists have the the same number of elements
+                region_geoms_shapes = []
+                for region_geom in region_geoms:
+                    region_geoms_shapes.append(shape(region_geom["geometry"]))
+
+                if len(region_geoms_shapes) > 1:
+                    region_geoms_shapes = unary_union(region_geoms_shapes)
+                    print(region_geoms_shapes)
+                    region_footprints.append(region_geoms_shapes)
+                else:
+                    region_footprints.append(shape(region_geoms[0]["geometry"]))
 
             # Raster Part
             region_name, region = raster_region

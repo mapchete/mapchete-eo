@@ -1,12 +1,3 @@
-"""
---format GeoJSON
---by-slices
---add-index
---bounds 9.5279062741657423 46.3730154744778602 17.1580023343012869 49.0212209889044956
-${yyyymm}-01 ${yyyymm}-${max_month_days}
-$s2_slices_tmp_path
-"""
-
 from datetime import datetime
 from typing import Any, Literal, Optional
 

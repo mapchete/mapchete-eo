@@ -5,16 +5,19 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 import gc
-from typing import Any, Generator, Iterator, List, Optional
+from typing import Any, Dict, Generator, Iterator, List, Optional
 
 from mapchete import Timer
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
 from mapchete.config import get_hash
+from mapchete.geometry import to_shape
 from mapchete.protocols import GridProtocol
 from mapchete.types import NodataVals
 from rasterio.enums import Resampling
+from shapely.geometry import mapping
+from shapely.ops import unary_union
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import (
@@ -158,6 +161,14 @@ class Slice:
 
     def __repr__(self) -> str:
         return f"<Slice {self.name} ({len(self.products)} products)>"
+
+    @property
+    def __geom_interface__(self) -> Dict:
+        if self.products:
+            return mapping(
+                unary_union([to_shape(product) for product in self.products])
+            )
+        raise EmptySliceException
 
     @contextmanager
     def cached(self) -> Generator[Slice, None, None]:

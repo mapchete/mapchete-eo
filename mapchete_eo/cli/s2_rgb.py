@@ -55,9 +55,9 @@ def s2_rgb(
     out_dtype: DTypeLike = "uint8",
     **_,
 ):
+    """Generate 8bit RGB image from Sentinel-2 product."""
     out_dtype = np.dtype(out_dtype)
 
-    """Generate 8bit RGB image from Sentinel-2 product."""
     if not dst_path.suffix:
         dst_path = dst_path / stac_item.without_suffix().name + ".tif"
     if resolution == Resolution.original:

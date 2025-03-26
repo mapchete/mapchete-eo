@@ -173,7 +173,6 @@ class S2Product(EOProduct, EOProductProtocol):
         **kwargs,
     ) -> S2Product:
         s2product = S2Product(item, cache_config=cache_config)
-
         if cache_all:
             # cache assets if configured
             s2product.cache_assets()

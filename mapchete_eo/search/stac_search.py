@@ -91,6 +91,8 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
 
                 for search in searches:
                     for item in search.items():
+                        print(item.id)
+                        print(item.properties["eo:cloud_cover"])
                         try:
                             item_path = item.get_self_href()
                             if item_path in self.blacklist:  # pragma: no cover

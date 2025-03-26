@@ -505,7 +505,15 @@ class InputData(base.InputData):
         Return InputTile object.
         """
         try:
-            tile_products = self.products.filter(tile.bounds)
+            from shapely.geometry import box
+
+            if self.crs != "EPSG:4326":
+                self.tile_search_area_4326 = reproject_geometry(
+                    box(*tile.bounds), self.crs, "EPSG:4326"
+                )
+            else:
+                self.tile_search_area_4326 = box(*tile.bounds)
+            tile_products = self.products.filter(self.tile_search_area_4326)
         except PreprocessingNotFinished:  # pragma: no cover
             tile_products = None
         return self.input_tile_cls(

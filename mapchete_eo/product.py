@@ -182,7 +182,7 @@ def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[t
             asset_eo_bands = asset.extra_fields.get("eo:bands")
             if asset_eo_bands:
                 for band_idx, band_info in enumerate(asset_eo_bands, 1):
-                    if eo_band == band_info.get("common_name"):
+                    if eo_band == band_info.get("name"):
                         mapping[eo_band].append((asset_name, band_idx))
 
     for eo_band in eo_bands:

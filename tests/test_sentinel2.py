@@ -73,8 +73,8 @@ def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
 
 
 @pytest.mark.remote
-def test_remote_s2_read_xarray(sentinel2_mercator_mapchete):
-    with sentinel2_mercator_mapchete.process_mp().open("inp") as cube:
+def test_remote_s2_read_xarray(sentinel2_mapchete):
+    with sentinel2_mapchete.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
@@ -98,12 +98,12 @@ def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
 
 
 @pytest.mark.remote
-def test_preprocessing(sentinel2_mercator_mapchete):
-    mp = sentinel2_mercator_mapchete.mp()
+def test_preprocessing(sentinel2_mapchete):
+    mp = sentinel2_mapchete.mp()
     input_data = list(mp.config.inputs.values())[0]
     assert input_data.products
 
-    tile_mp = sentinel2_mercator_mapchete.process_mp()
+    tile_mp = sentinel2_mapchete.process_mp()
     assert tile_mp.open("inp").products
 
 

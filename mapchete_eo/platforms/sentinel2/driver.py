@@ -51,14 +51,15 @@ class InputData(base.InputData):
                 )
             )
         elif self.params.archive:
+            catalog_area = reproject_geometry(
+                self.area,
+                src_crs=self.crs,
+                dst_crs=mapchete_eo_settings.default_catalog_crs,
+            )
             self.archive = self.params.archive(
                 time=self.time,
-                bounds=self.area.bounds,
-                area=reproject_geometry(
-                    self.area,
-                    src_crs=self.crs,
-                    dst_crs=mapchete_eo_settings.default_catalog_crs,
-                ),
+                bounds=catalog_area.bounds,
+                area=catalog_area,
                 search_index=(
                     MPath(self.params.search_index).absolute_path(base_dir=base_dir)
                     if self.params.search_index

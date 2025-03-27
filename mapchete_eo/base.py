@@ -504,7 +504,11 @@ class InputData(base.InputData):
         Return InputTile object.
         """
         try:
-            tile_products = self.products.filter(tile.bounds)
+            tile_products = self.products.filter(
+                reproject_geometry(
+                    tile.bbox, src_crs=tile.crs, dst_crs=self.products.crs
+                ).bounds
+            )
         except PreprocessingNotFinished:  # pragma: no cover
             tile_products = None
         return self.input_tile_cls(

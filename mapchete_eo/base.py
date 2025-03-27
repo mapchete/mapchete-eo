@@ -506,7 +506,9 @@ class InputData(base.InputData):
         try:
             tile_products = self.products.filter(
                 reproject_geometry(
-                    tile.bbox, src_crs=tile.crs, dst_crs=self.products.crs
+                    tile.bbox,
+                    src_crs=tile.crs,
+                    dst_crs=mapchete_eo_settings.default_catalog_crs,
                 ).bounds
             )
         except PreprocessingNotFinished:  # pragma: no cover

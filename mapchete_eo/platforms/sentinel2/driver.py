@@ -1,5 +1,6 @@
 from typing import Optional, List, Tuple
 
+from mapchete.geometry import reproject_geometry
 from mapchete.path import MPath
 from mapchete.types import NodataVal
 from rasterio.enums import Resampling
@@ -53,7 +54,11 @@ class InputData(base.InputData):
             self.archive = self.params.archive(
                 time=self.time,
                 bounds=self.area.bounds,
-                area=self.area,
+                area=reproject_geometry(
+                    self.area,
+                    src_crs=self.crs,
+                    dst_crs=mapchete_eo_settings.default_catalog_crs,
+                ),
                 search_index=(
                     MPath(self.params.search_index).absolute_path(base_dir=base_dir)
                     if self.params.search_index

@@ -1,0 +1,18 @@
+process: read_xarray.py
+input:
+  inp:
+    format: Sentinel-2
+    level: L2A
+    time:
+      start: 2022-04-01
+      end: 2022-04-03
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel2
+  dtype: uint16
+pyramid:
+  grid: mercator
+zoom_levels: 14
+# tmx bounds 14 5678 8936
+bounds: [1819812.7694134712, 6146760.06658072, 1822258.7543185968, 6149206.051485846]

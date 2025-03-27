@@ -2,8 +2,10 @@ import numpy.ma as ma
 import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
+from mapchete.geometry import to_shape
 from mapchete.path import MPath
 from pytest_lazyfixture import lazy_fixture
+from shapely.geometry import Point
 
 from mapchete_eo.array.convert import to_masked_array
 from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
@@ -71,8 +73,8 @@ def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
 
 
 @pytest.mark.remote
-def test_remote_s2_read_xarray(sentinel2_mapchete):
-    with sentinel2_mapchete.process_mp().open("inp") as cube:
+def test_remote_s2_read_xarray(sentinel2_mercator_mapchete):
+    with sentinel2_mercator_mapchete.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
@@ -96,12 +98,12 @@ def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
 
 
 @pytest.mark.remote
-def test_preprocessing(sentinel2_mapchete):
-    mp = sentinel2_mapchete.mp()
+def test_preprocessing(sentinel2_mercator_mapchete):
+    mp = sentinel2_mercator_mapchete.mp()
     input_data = list(mp.config.inputs.values())[0]
     assert input_data.products
 
-    tile_mp = sentinel2_mapchete.process_mp()
+    tile_mp = sentinel2_mercator_mapchete.process_mp()
     assert tile_mp.open("inp").products
 
 
@@ -117,6 +119,15 @@ def test_read_area(sentinel2_area_mapchete):
         assert src.is_empty()
         with pytest.raises(NoSourceProducts):
             src.read(assets=["red"])
+
+
+@pytest.mark.remote
+def test_mercator_grids(sentinel2_mercator_mapchete):
+    mp = sentinel2_mercator_mapchete.mp()
+    input_data = list(mp.config.inputs.values())[0]
+    assert input_data.products
+    for product in input_data.products:
+        assert Point(16.35241, 48.24091).within(to_shape(product))
 
 
 # InputData.read() #

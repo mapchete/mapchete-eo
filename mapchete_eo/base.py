@@ -393,7 +393,6 @@ class InputData(base.InputData):
             self.params.cache.path = MPath.from_inp(
                 self.params.cache.dict()
             ).absolute_path(base_dir=input_params.get("conf_dir"))
-
         self.area = self._init_area(input_params)
         self.time = self.params.time
         if self.readonly:  # pragma: no cover

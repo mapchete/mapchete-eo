@@ -2,8 +2,10 @@ import numpy.ma as ma
 import pytest
 import xarray as xr
 from mapchete.formats import available_input_formats
+from mapchete.geometry import to_shape
 from mapchete.path import MPath
 from pytest_lazyfixture import lazy_fixture
+from shapely.geometry import Point
 
 from mapchete_eo.array.convert import to_masked_array
 from mapchete_eo.exceptions import EmptyStackException, NoSourceProducts
@@ -117,6 +119,15 @@ def test_read_area(sentinel2_area_mapchete):
         assert src.is_empty()
         with pytest.raises(NoSourceProducts):
             src.read(assets=["red"])
+
+
+@pytest.mark.remote
+def test_mercator_grids(sentinel2_mercator_mapchete):
+    mp = sentinel2_mercator_mapchete.mp()
+    input_data = list(mp.config.inputs.values())[0]
+    assert input_data.products
+    for product in input_data.products:
+        assert Point(16.35241, 48.24091).within(to_shape(product))
 
 
 # InputData.read() #

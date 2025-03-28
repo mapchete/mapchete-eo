@@ -10,6 +10,7 @@ from mapchete_eo.archives.base import StaticArchive
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import MergeMethod
 
 METADATA: dict = {
@@ -60,10 +61,15 @@ class InputData(base.InputData):
                 )
             )
         elif self.params.archive:
+            catalog_area = reproject_geometry(
+                self.area,
+                src_crs=self.crs,
+                dst_crs=mapchete_eo_settings.default_catalog_crs,
+            )
             self.archive = self.params.archive(
                 time=self.time,
-                bounds=self.area.bounds,
-                area=self.search_area_4326,
+                bounds=catalog_area.bounds,
+                area=catalog_area,
                 search_index=(
                     MPath(self.params.search_index).absolute_path(base_dir=base_dir)
                     if self.params.search_index

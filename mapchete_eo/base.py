@@ -393,7 +393,6 @@ class InputData(base.InputData):
             self.params.cache.path = MPath.from_inp(
                 self.params.cache.dict()
             ).absolute_path(base_dir=input_params.get("conf_dir"))
-
         self.area = self._init_area(input_params)
         self.time = self.params.time
         if self.readonly:  # pragma: no cover
@@ -505,15 +504,13 @@ class InputData(base.InputData):
         Return InputTile object.
         """
         try:
-            from shapely.geometry import box
-
-            if self.crs != "EPSG:4326":
-                self.tile_search_area_4326 = reproject_geometry(
-                    box(*tile.bounds), self.crs, "EPSG:4326"
-                )
-            else:
-                self.tile_search_area_4326 = box(*tile.bounds)
-            tile_products = self.products.filter(self.tile_search_area_4326)
+            tile_products = self.products.filter(
+                reproject_geometry(
+                    tile.bbox,
+                    src_crs=tile.crs,
+                    dst_crs=mapchete_eo_settings.default_catalog_crs,
+                ).bounds
+            )
         except PreprocessingNotFinished:  # pragma: no cover
             tile_products = None
         return self.input_tile_cls(

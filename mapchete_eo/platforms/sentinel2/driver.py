@@ -45,18 +45,13 @@ class InputData(base.InputData):
         if self.params.max_cloud_percent != 100:
             self.params.stac_config.max_cloud_percent = self.params.max_cloud_percent
 
-        if self.crs != "EPSG:4326":
-            self.search_area_4326 = reproject_geometry(self.area, self.crs, "EPSG:4326")
-        else:
-            self.search_area_4326 = self.area
-
         if self.params.cat_baseurl:
             self.archive = StaticArchive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=base_dir
                     ),
-                    area=self.bbox(self.search_area_4326),
+                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
                 )
             )

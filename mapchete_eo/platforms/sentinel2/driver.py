@@ -7,9 +7,11 @@ from rasterio.enums import Resampling
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import StaticArchive
+from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.search.config import StacSearchConfig, UTMSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import MergeMethod
 
@@ -40,10 +42,10 @@ class InputData(base.InputData):
     input_tile_cls = Sentinel2Cube
 
     def set_archive(self, base_dir: MPath):
-        # Align search and Mapchete InputData Config
-        # TODO: do this for all potential kwargs etc. (probably also in base.py in root repo location InputData)
-        if self.params.max_cloud_percent != 100:
-            self.params.stac_config.max_cloud_percent = self.params.max_cloud_percent
+        if self.params.archive is KnownArchives.S2AWS_JP2.value:
+            self.search_config = UTMSearchConfig(max_cloud_percent=self.params.max_cloud_percent)
+        else:
+            self.search_config = StacSearchConfig(max_cloud_percent=self.params.max_cloud_percent)
 
         if self.params.cat_baseurl:
             self.archive = StaticArchive(
@@ -53,6 +55,7 @@ class InputData(base.InputData):
                     ),
                     area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
+                    config=self.search_config
                 )
             )
         elif self.params.archive:
@@ -70,6 +73,7 @@ class InputData(base.InputData):
                     if self.params.search_index
                     else None
                 ),
+                config=self.search_config
             )
         else:
             raise ValueError("either 'archive' or 'cat_baseurl' or both is required.")

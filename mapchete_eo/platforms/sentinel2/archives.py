@@ -35,13 +35,6 @@ class AWSL2ACOGv1(Archive):
     path_mapper_cls = EarthSearchPathMapper
 
 
-class AWSL2ACOGUTMSearch(Archive):
-    catalog_cls = AWSSearchCatalogS2L2A
-    collection_name = "sentinel-s2-l2a"
-    processing_level = ProcessingLevel.level2a
-    path_mapper_cls = EarthSearchPathMapper
-
-
 class AWSL2AJP2(Archive):
     catalog_cls = AWSSearchCatalogS2L2A
     collection_name = "sentinel-s2-l2a"
@@ -51,5 +44,4 @@ class AWSL2AJP2(Archive):
 
 class KnownArchives(Enum):
     S2AWS_COG = AWSL2ACOGv1
-    S2AWS_COG_UTM_SEARCH = AWSL2ACOGUTMSearch
     S2AWS_JP2 = AWSL2AJP2

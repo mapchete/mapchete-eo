@@ -13,6 +13,8 @@ class StacSearchConfig(BaseModel):
 
 
 class UTMSearchConfig(BaseModel):
+    max_cloud_percent: float = 100.0
+
     sinergise_aws_collections: dict = dict(
         S2_L2A=dict(
             id="sentinel-s2-l2a",

@@ -164,9 +164,7 @@ def merge_products_masks(
                     new = np.expand_dims(
                         product.get_mask(**product_read_kwargs).data, axis=0
                     )
-                    yield ma.masked_array(data=new, mask=~new).astype(
-                        np.bool_, copy=False
-                    )
+                    yield ma.masked_array(data=new).astype(bool, copy=False)
                 except (AssetKeyError, CorruptedProduct) as exc:
                     logger.debug("skip product %s because of %s", product.item.id, exc)
         except StopIteration:
@@ -182,8 +180,8 @@ def merge_products_masks(
         try:
             out = np.expand_dims(
                 product.get_mask(**product_read_kwargs).data, axis=0
-            ).astype(np.bool_, copy=False)
-            out = ma.masked_array(data=out, mask=~out)
+            ).astype(bool, copy=False)
+            out = ma.masked_array(data=out)
             break
         except (AssetKeyError, CorruptedProduct) as exc:
             logger.debug("skip product mask %s because of %s", product.item.id, exc)
@@ -196,10 +194,9 @@ def merge_products_masks(
         for new in read_remaining_valid_products_masks(
             products_iter, product_read_kwargs
         ):
-            out[~out.mask] = new[~out.mask].astype(np.bool_, copy=False)
-            out.mask[~out.mask] = new.mask[~out.mask].astype(np.bool_, copy=False)
+            out[~out.mask] = new[~out.mask].astype(bool, copy=False)
             # if whole output array is filled, there is no point in reading more data
-            if out.mask.all():
+            if out.all():
                 return out
 
     # read all and concatate
@@ -225,8 +222,8 @@ def merge_products_masks(
                     ),
                 )
             ),
-            dtype=np.bool_,
-        ).any(axis=0)
+            dtype=bool,
+        ).min(axis=0)
     else:  # pragma: no cover
         raise NotImplementedError(f"unknown merge method: {merge_method}")
 
@@ -241,7 +238,6 @@ def merge_products_masks(
 def generate_slice_masks_dataarrays(
     products: List[S2Product],
     grid: Optional[GridProtocol] = None,
-    nodatavals: NodataVals = None,
     merge_products_by: Optional[str] = None,
     merge_method: MergeMethod = MergeMethod.first,
     sort: Optional[SortMethodConfig] = None,
@@ -269,12 +265,6 @@ def generate_slice_masks_dataarrays(
         len(products),
         len(slices),
     )
-    if isinstance(nodatavals, list):
-        nodataval = nodatavals[0]
-    elif isinstance(nodatavals, float):
-        nodataval = nodatavals
-    else:
-        nodataval = nodatavals
     for slice in slices:
         try:
             # if merge_products_by is none, each slice contains just one product
@@ -290,7 +280,7 @@ def generate_slice_masks_dataarrays(
                         ),
                         raise_empty=raise_empty,
                     ),
-                    nodataval=nodataval,
+                    # nodataval=1.0,
                     name=slice.name,
                     band_names=mask_name,
                     attrs=slice.properties,

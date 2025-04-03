@@ -92,8 +92,9 @@ def asset_to_np_array(
     if apply_offset and stac_raster_bands.offset != 0.0:
         # first, scale data:
         data = data * stac_raster_bands.scale
-        # apply offset
-        data += stac_raster_bands.offset
+        # apply offset (WIP/TEST dont apply offset to see if this will revalidate nodata values better)
+        # data += stac_raster_bands.offset
+
         # unscale data and avoid overflow by clipping values to output datatype range
         data = (
             (data * 1 / stac_raster_bands.scale)

@@ -96,6 +96,8 @@ def s2_cat_results(
 
 
 def get_schema(by_slices: bool, add_index: bool) -> dict:
+    geometry_type = "MultiPolygon"
+
     if by_slices:
         properties = {
             "timestamp": "str",
@@ -110,7 +112,7 @@ def get_schema(by_slices: bool, add_index: bool) -> dict:
         }
     if add_index:
         properties.update(index="int")
-    return {"geometry": "Polygon", "properties": properties}
+    return {"geometry": geometry_type, "properties": properties}
 
 
 def get_value(_slice: Slice, key: str, index: int, slice_property_key: str) -> Any:

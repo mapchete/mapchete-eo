@@ -43,9 +43,13 @@ class InputData(base.InputData):
 
     def set_archive(self, base_dir: MPath):
         if self.params.archive is KnownArchives.S2AWS_JP2.value:
-            self.search_config = UTMSearchConfig(max_cloud_percent=self.params.max_cloud_percent)
+            self.search_config = UTMSearchConfig(
+                max_cloud_percent=self.params.max_cloud_percent
+            )
         else:
-            self.search_config = StacSearchConfig(max_cloud_percent=self.params.max_cloud_percent)
+            self.search_config = StacSearchConfig(
+                max_cloud_percent=self.params.max_cloud_percent
+            )
 
         if self.params.cat_baseurl:
             self.archive = StaticArchive(
@@ -55,7 +59,7 @@ class InputData(base.InputData):
                     ),
                     area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
-                    config=self.search_config
+                    config=self.search_config,
                 )
             )
         elif self.params.archive:
@@ -73,7 +77,7 @@ class InputData(base.InputData):
                     if self.params.search_index
                     else None
                 ),
-                config=self.search_config
+                config=self.search_config,
             )
         else:
             raise ValueError("either 'archive' or 'cat_baseurl' or both is required.")

@@ -1,5 +1,6 @@
+from collections import defaultdict
 import logging
-from typing import Generator, Iterator, List, Optional
+from typing import Generator, Iterator, List, Optional, Sequence, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -7,6 +8,7 @@ import xarray as xr
 from mapchete.protocols import GridProtocol
 from mapchete.types import NodataVals
 
+from mapchete_eo.io.products import Slice
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
 from mapchete_eo.exceptions import NoSourceProducts
 from mapchete_eo.platforms.sentinel2.product import S2Product
@@ -21,6 +23,7 @@ from mapchete_eo.exceptions import (
     EmptyStackException,
 )
 
+from mapchete_eo.protocols import EOProductProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +68,6 @@ def masks_to_xarray(
         for s in generate_slice_masks_dataarrays(
             products=products,
             grid=grid,
-            nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
             sort=sort,
@@ -85,7 +87,6 @@ def masks_to_xarray(
             )
         }
 
-    breakpoint()
     return xr.Dataset(
         data_vars={s.name: s for s in data_vars},
         coords=coords,
@@ -139,7 +140,7 @@ def generate_masks(
 
 
 def merge_products_masks(
-    products: List[S2Product],
+    products: Sequence[Union[S2Product, EOProductProtocol]],
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = False,
@@ -155,7 +156,8 @@ def merge_products_masks(
         )
 
     def read_remaining_valid_products_masks(
-        products_iter: Iterator[S2Product], product_read_kwargs: dict
+        products_iter: Iterator[Union[S2Product, EOProductProtocol]],
+        product_read_kwargs: dict,
     ) -> Generator[ma.MaskedArray, None, None]:
         """Yields and reads remaining products masks from iterator while discarding corrupt products."""
         try:
@@ -253,10 +255,8 @@ def generate_slice_masks_dataarrays(
 
     stack_empty = True
 
-    from mapchete_eo.io.products import products_to_slices
-
     # group products into slices and sort slices if configured
-    slices = products_to_slices(
+    slices = product_masks_to_slices(
         products, group_by_property=merge_products_by, sort=sort
     )
 
@@ -292,3 +292,26 @@ def generate_slice_masks_dataarrays(
 
     if stack_empty:
         raise EmptyStackException("all slices are empty")
+
+
+def product_masks_to_slices(
+    products: List[S2Product],
+    group_by_property: Optional[str] = None,
+    sort: Optional[SortMethodConfig] = None,
+) -> List[Slice]:
+    """Group products per given property into Slice objects and optionally sort slices."""
+    if group_by_property:
+        grouped = defaultdict(list)
+        for product in products:
+            grouped[product.get_property(group_by_property)].append(product)
+        slices = [Slice(key, products) for key, products in grouped.items()]
+    else:
+        slices = [Slice(product.item.id, [product]) for product in products]
+
+    # also check if slices is even a list, otherwise it will raise an error
+    if sort and slices:
+        sort_dict = sort.model_dump()
+        func = sort_dict.pop("func")
+        slices = func(slices, **sort_dict)
+
+    return slices

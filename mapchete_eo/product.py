@@ -9,6 +9,7 @@ import numpy.ma as ma
 import pystac
 import xarray as xr
 from mapchete import Timer
+from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath, MPathLike
 from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds, NodataVals
@@ -49,6 +50,8 @@ class EOProduct(EOProductProtocol):
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:
         return EOProduct(item)
+
+    def get_mask(self) -> ReferencedRaster: ...
 
     def read(
         self,

@@ -62,6 +62,7 @@ def asset_to_np_array(
     grid: Optional[GridProtocol] = None,
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
+    asset_clip_min_value: int = 1,
     apply_offset: bool = True,
 ) -> ma.MaskedArray:
     """
@@ -93,13 +94,15 @@ def asset_to_np_array(
         # first, scale data:
         data = data * stac_raster_bands.scale
         # apply offset (WIP/TEST dont apply offset to see if this will revalidate nodata values better)
-        # data += stac_raster_bands.offset
+        data += stac_raster_bands.offset
 
         # unscale data and avoid overflow by clipping values to output datatype range
         data = (
             (data * 1 / stac_raster_bands.scale)
             .round()
-            .clip(*dtype_ranges[str(data_type)])
+            .clip(
+                asset_clip_min_value, max(*dtype_ranges[str(data_type)])
+            )  # Minimum clip value 1 not 0; nodata will be masked later
             .astype(data_type, copy=False)
         )
 

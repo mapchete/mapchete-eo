@@ -1,4 +1,5 @@
 from typing import Optional, List, Tuple
+import warnings
 
 from mapchete.geometry import reproject_geometry
 from mapchete.path import MPath
@@ -43,6 +44,11 @@ class InputData(base.InputData):
 
     def set_archive(self, base_dir: MPath):
         if self.params.archive is KnownArchives.S2AWS_JP2.value:
+            warnings.warn(
+                FutureWarning(
+                    "S2AWS_JP2 is a bucket crawler and does not support 'max_cloud_percent' yet! So this config setting wont trigger and the search will get all products available!"
+                )
+            )
             self.search_config = UTMSearchConfig(
                 max_cloud_percent=self.params.max_cloud_percent
             )

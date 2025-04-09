@@ -97,7 +97,7 @@ def asset_to_np_array(
 
         asset_clip_min_value, asset_clip_max_value = dtype_ranges[str(data_type)]
 
-        if asset_clip_min_value == 0 and nodataval == 0:
+        if asset_clip_min_value == nodataval:
             asset_clip_min_value = 1
 
         # unscale data and avoid overflow by clipping values to output datatype range

@@ -97,6 +97,7 @@ def asset_to_np_array(
 
         asset_clip_min_value, asset_clip_max_value = dtype_ranges[str(data_type)]
 
+        # Minimum clip value 1 not 0; nodata will be masked later
         if asset_clip_min_value == nodataval:
             asset_clip_min_value = 1
 
@@ -104,9 +105,7 @@ def asset_to_np_array(
         data = (
             (data * 1 / stac_raster_bands.scale)
             .round()
-            .clip(
-                asset_clip_min_value, asset_clip_max_value
-            )  # Minimum clip value 1 not 0; nodata will be masked later
+            .clip(asset_clip_min_value, asset_clip_max_value)
             .astype(data_type, copy=False)
         )
 

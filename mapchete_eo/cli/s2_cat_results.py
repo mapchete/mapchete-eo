@@ -85,7 +85,7 @@ def s2_cat_results(
         with fiona_open(
             dst_path, mode="w", schema=schema, crs="EPSG:4326", format=format
         ) as dst:
-            for index, _slice in enumerate(slices):
+            for index, _slice in enumerate(slices, start=1):
                 # 2025-4 agreed to make outputs multipolygons
                 # Convert the _slice.__geom_interface__ to Multipolygon if not the case
 

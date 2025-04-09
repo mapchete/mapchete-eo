@@ -96,6 +96,9 @@ def asset_to_np_array(
         # apply offset (WIP/TEST dont apply offset to see if this will revalidate nodata values better)
         data += stac_raster_bands.offset
 
+        if not nodataval == 0 or min(*dtype_ranges[str(data_type)]) < 0:
+            asset_clip_min_value = min(*dtype_ranges[str(data_type)])
+
         # unscale data and avoid overflow by clipping values to output datatype range
         data = (
             (data * 1 / stac_raster_bands.scale)

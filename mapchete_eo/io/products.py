@@ -16,7 +16,7 @@ from mapchete.geometry import to_shape
 from mapchete.protocols import GridProtocol
 from mapchete.types import NodataVals
 from rasterio.enums import Resampling
-from shapely.geometry import mapping, MultiPolygon, Polygon
+from shapely.geometry import mapping
 from shapely.ops import unary_union
 
 from mapchete_eo.array.convert import to_dataarray, to_masked_array
@@ -166,17 +166,9 @@ class Slice:
     @property
     def __geom_interface__(self) -> Dict:
         if self.products:
-            merged = unary_union([to_shape(product) for product in self.products])
-
-            # Ensure the result is always a MultiPolygon
-            if isinstance(merged, Polygon):
-                result = MultiPolygon([merged])  # Wrap single Polygon in MultiPolygon
-            elif isinstance(merged, MultiPolygon):
-                result = merged  # Already a MultiPolygon, return as is
-            else:
-                raise ValueError(f"Unexpected geometry type: {type(merged)}")
-
-            return mapping(result)
+            return mapping(
+                unary_union([to_shape(product) for product in self.products])
+            )
 
         raise EmptySliceException
 

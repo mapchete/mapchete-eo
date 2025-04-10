@@ -63,7 +63,6 @@ def asset_to_np_array(
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
     apply_offset: bool = True,
-    computing_dtype: DTypeLike = np.float16,
 ) -> ma.MaskedArray:
     """
     Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
@@ -88,10 +87,11 @@ def asset_to_np_array(
         dst_nodata=stac_raster_bands.nodata,
     ).data
 
-    data_type = stac_raster_bands.data_type or data.dtype
     if apply_offset and stac_raster_bands.offset:
+        data_type = stac_raster_bands.data_type or data.dtype
+
         # first, scale data:
-        data = data.astype(computing_dtype, copy=False) * stac_raster_bands.scale
+        data = data * stac_raster_bands.scale
 
         # apply offset
         data += stac_raster_bands.offset
@@ -105,13 +105,15 @@ def asset_to_np_array(
 
         # unscale data and avoid under- and overflow by clipping values to output datatype range
         data = ma.MaskedArray(
-            data=np.clip(data / stac_raster_bands.scale, clip_min, clip_max).astype(
-                data_type, copy=False
-            ),
+            data=(data / stac_raster_bands.scale)
+            .round()
+            .clip(clip_min, clip_max)
+            .astype(data_type, copy=False),
             mask=data.mask,
             fill_value=data.fill_value,
             dtype=data_type,
         )
+
     return data
 
 

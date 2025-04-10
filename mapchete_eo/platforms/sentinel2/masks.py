@@ -51,7 +51,6 @@ def read_masks(
 def masks_to_xarray(
     products: List[S2Product],
     grid: Optional[GridProtocol] = None,
-    nodatavals: NodataVals = None,
     slice_axis_name: str = "time",
     band_axis_name: str = "bands",
     x_axis_name: str = "x",

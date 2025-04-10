@@ -18,6 +18,7 @@ from mapchete.settings import IORetrySettings
 from mapchete.types import Grid, NodataVal
 from numpy.typing import DTypeLike
 from pydantic import BaseModel
+from rasterio.dtypes import dtype_ranges
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.profiles import Profile
@@ -62,7 +63,7 @@ def asset_to_np_array(
     resampling: Resampling = Resampling.nearest,
     nodataval: NodataVal = None,
     apply_offset: bool = True,
-    computing_dtype: np.dtype = np.float16,
+    computing_dtype: DTypeLike = np.float16,
 ) -> ma.MaskedArray:
     """
     Read grid window of STAC Items and merge into a 2D ma.MaskedArray.
@@ -88,25 +89,29 @@ def asset_to_np_array(
     ).data
 
     data_type = stac_raster_bands.data_type or data.dtype
+    if apply_offset and stac_raster_bands.offset:
+        # first, scale data:
+        data = data.astype(computing_dtype, copy=False) * stac_raster_bands.scale
 
-    # if apply_offset and stac_raster_bands.offset != 0.0:
-    #     # first, scale data:
-    #     data = (
-    #         data.astype(computing_dtype, copy=False) * stac_raster_bands.scale
-    #     )
-    #     # apply offset
-    #     data += stac_raster_bands.offset
+        # apply offset
+        data += stac_raster_bands.offset
 
-    #     asset_clip_min_value, asset_clip_max_value = dtype_ranges[str(data_type)]
+        # determine value range for the target data_type
+        clip_min, clip_max = dtype_ranges[str(data_type)]
 
-    #     # Minimum clip value 1 not 0; nodata will be masked later
-    #     if asset_clip_min_value == nodataval:
-    #         asset_clip_min_value = 1
+        # increase minimum clip value to avoid collission with nodata value
+        if clip_min == stac_raster_bands.nodata:
+            clip_min += 1
 
-    #     # unscale data and avoid overflow by clipping values to output datatype range
-    #     data = (data * 1 / stac_raster_bands.scale)
-    #     # data = np.clip(data, asset_clip_min_value, asset_clip_max_value).astype(data_type, copy=False)
-
+        # unscale data and avoid under- and overflow by clipping values to output datatype range
+        data = ma.MaskedArray(
+            data=np.clip(data / stac_raster_bands.scale, clip_min, clip_max).astype(
+                data_type, copy=False
+            ),
+            mask=data.mask,
+            fill_value=data.fill_value,
+            dtype=data_type,
+        )
     return data
 
 

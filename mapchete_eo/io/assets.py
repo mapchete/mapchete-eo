@@ -104,7 +104,7 @@ def asset_to_np_array(
             clip_min += 1
 
         # unscale data and avoid under- and overflow by clipping values to output datatype range
-        data = ma.MaskedArray(
+        data = ma.masked_array(
             data=(data / stac_raster_bands.scale)
             .round()
             .clip(clip_min, clip_max)
@@ -112,6 +112,7 @@ def asset_to_np_array(
             mask=data.mask,
             fill_value=data.fill_value,
             dtype=data_type,
+            shrink=False,
         )
 
     return data

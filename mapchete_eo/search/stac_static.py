@@ -123,7 +123,7 @@ def _get_first_item(collections):
 def _all_intersecting_items(
     collection: Union[pystac.Catalog, pystac.Collection],
     area: BaseGeometry,
-    timespan=None,
+    timespan: Optional[Tuple[DateTimeLike, DateTimeLike]] = None,
 ):
     # collection items
     logger.debug("checking items...")

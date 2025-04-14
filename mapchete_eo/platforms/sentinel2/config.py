@@ -98,7 +98,7 @@ class CacheConfig(BaseModel):
     assets: List[str] = []
     assets_resolution: Resolution = Resolution.original
     keep: bool = False
-    max_cloud_percent: float = 100.0
+    max_cloud_cover: float = 100.0
     max_disk_usage: float = 90.0
     brdf: Optional[BRDFConfig] = None
     zoom: int = 13
@@ -110,7 +110,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     archive: ArchiveClsFromString = AWSL2ACOGv1
     cat_baseurl: Optional[MPathLike] = None
     search_index: Optional[MPathLike] = None
-    max_cloud_percent: int = 100
+    max_cloud_cover: int = 100
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None

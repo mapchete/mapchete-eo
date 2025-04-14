@@ -69,7 +69,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     def items(self) -> IndexedFeatures:
         def _get_items():
             for time_range in self.time:
-                search = self._search(time_range=time_range)
+                search = self._search(time_range=time_range, **self.config.model_dump())
                 if search.matched() > self.config.catalog_chunk_threshold:
                     spatial_search_chunks = SpatialSearchChunks(
                         bounds=self.bounds,
@@ -127,7 +127,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             "collections": self.collections,
             "bbox": ",".join(map(str, self.bounds)) if self.bounds else None,
             "intersects": self.area if self.area else None,
-            "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
+            "query": [f"eo:cloud_cover<{self.config.max_cloud_cover}"],
         }
 
     def _search(

@@ -286,6 +286,15 @@ def sentinel2_stac_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_stac_cloud_cover_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_stac_cloud_cover.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_stac_footprint_buffer_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_stac_footprint_buffer.mapchete",

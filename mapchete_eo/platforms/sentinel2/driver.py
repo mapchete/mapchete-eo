@@ -12,8 +12,6 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.search.config import (
-    StacSearchConfig,
-    UTMSearchConfig,
     StacStaticConfig,
 )
 from mapchete_eo.settings import mapchete_eo_settings
@@ -47,10 +45,9 @@ class InputData(base.InputData):
 
     def set_archive(self, base_dir: MPath):
         if self.params.cat_baseurl:
-            if self.params.archive is KnownArchives.S2AWS_JP2.value:
-                self.search_config = StacStaticConfig(
-                    max_cloud_cover=self.params.max_cloud_cover
-                )
+            self.search_config = StacStaticConfig(
+                max_cloud_cover=self.params.max_cloud_cover
+            )
             self.archive = StaticArchive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
@@ -62,14 +59,12 @@ class InputData(base.InputData):
                 )
             )
         elif self.params.archive:
-            if self.params.archive is KnownArchives.S2AWS_JP2.value:
-                self.search_config = UTMSearchConfig(
-                    max_cloud_cover=self.params.max_cloud_cover
-                )
-            else:
-                self.search_config = StacSearchConfig(
-                    max_cloud_cover=self.params.max_cloud_cover
-                )
+            for archive in KnownArchives:
+                if self.params.archive is archive.value:
+                    self.search_config = archive.value.default_search_cofig_cls(
+                        max_cloud_cover=self.params.max_cloud_cover
+                    )
+
             catalog_area = reproject_geometry(
                 self.area,
                 src_crs=self.crs,

@@ -17,7 +17,7 @@ class StacStaticConfig(BaseModel):
 
 
 class UTMSearchConfig(BaseModel):
-    max_cloud_percent: float = 100.0
+    max_cloud_cover: float = 100.0
 
     sinergise_aws_collections: dict = dict(
         S2_L2A=dict(

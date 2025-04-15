@@ -132,7 +132,7 @@ def _correction_per_detector(
         detector_brdf = resample_from_array(
             detector_brdf_param,
             out_grid=out_grid,
-            transform=model_values.transform,
+            array_transform=model_values.transform,
             in_crs=model_values.crs,
             nodata=0,
             resampling=Resampling.bilinear,

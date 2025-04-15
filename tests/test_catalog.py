@@ -5,9 +5,11 @@ from mapchete.io.raster import rasterio_open
 from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 
+from mapchete_eo.known_catalogs import EarthSearchV1S2L2A, AWSSearchCatalogS2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACStaticCatalog
+from mapchete_eo.types import TimeRange
 
 
 def test_pf_sr_items(pf_sr_stac_collection):
@@ -131,3 +133,39 @@ def test_write_static_catalog_metadata_assets(static_catalog_small, tmp_path):
         assert f.suffix == ".jp2"
         with rasterio_open(f) as src:
             assert src.meta
+
+
+def test_static_catalog_cloud_percent(s2_stac_collection):
+    all_products = STACStaticCatalog(s2_stac_collection)
+    filtered_products = STACStaticCatalog(s2_stac_collection, max_cloud_cover=20)
+    assert len(all_products.items) > len(filtered_products.items)
+
+
+def test_earthsearch_catalog_cloud_percent():
+    all_products = EarthSearchV1S2L2A(
+        collections=["sentinel-2-l2a"],
+        time=TimeRange(start="2022-04-01", end="2022-04-03"),
+        bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
+    )
+    filtered_products = EarthSearchV1S2L2A(
+        collections=["sentinel-2-l2a"],
+        time=TimeRange(start="2022-04-01", end="2022-04-03"),
+        bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
+        max_cloud_cover=20,
+    )
+    assert len(all_products.items) > len(filtered_products.items)
+
+
+def test_awssearch_catalog_cloud_percent():
+    all_products = AWSSearchCatalogS2L2A(
+        collections=["sentinel-s2-l2a"],
+        time=TimeRange(start="2022-04-01", end="2022-04-03"),
+        bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
+    )
+    filtered_products = AWSSearchCatalogS2L2A(
+        collections=["sentinel-s2-l2a"],
+        time=TimeRange(start="2022-04-01", end="2022-04-03"),
+        bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
+        max_cloud_cover=20,
+    )
+    assert len(all_products.items) > len(filtered_products.items)

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     endpoint: str
+    max_cloud_cover: float = 100.0
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)
         if mapchete_eo_settings.blacklist
@@ -39,6 +40,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
         config: StacSearchConfig = StacSearchConfig(),
+        max_cloud_cover: float = 100.0,
         **kwargs,
     ) -> None:
         if area is not None:
@@ -64,6 +66,8 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
 
         self._collection_items: Dict = {}
         self.eo_bands = self._eo_bands()
+
+        self.max_cloud_cover = max_cloud_cover
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -127,7 +131,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             "collections": self.collections,
             "bbox": ",".join(map(str, self.bounds)) if self.bounds else None,
             "intersects": self.area if self.area else None,
-            "query": [f"eo:cloud_cover<{self.config.max_cloud_percent}"],
+            "query": [f"eo:cloud_cover<{self.max_cloud_cover}"],
         }
 
     def _search(

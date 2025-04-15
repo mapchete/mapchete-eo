@@ -1,7 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Protocol, Union
+from typing import Callable, Generator, List, Optional, Protocol, Union
 
 import pystac
 from mapchete.io.vector import IndexedFeatures
@@ -195,3 +195,13 @@ class StaticCatalogWriterMixin(ABC):
         catalog.save(dest_href=str(output_path), stac_io=stac_io)
 
         return catalog_json
+
+
+def _filter_items(
+    items: Generator[pystac.Item, None, None],
+    cloud_cover_field: str = "eo:cloud_cover",
+    max_cloud_cover: float = 100.0,
+) -> Generator[pystac.Item, None, None]:
+    for item in items:
+        if item.properties.get(cloud_cover_field, 0.0) <= max_cloud_cover:
+            yield item

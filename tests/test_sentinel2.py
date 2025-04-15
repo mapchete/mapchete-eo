@@ -107,6 +107,13 @@ def test_preprocessing(sentinel2_mapchete):
     assert tile_mp.open("inp").products
 
 
+@pytest.mark.remote
+def test_max_cloud_cover(sentinel2_mapchete, sentinel2_cloud_cover_mapchete):
+    full_stack = list(sentinel2_mapchete.mp().config.inputs.values())[0]
+    filtered = list(sentinel2_cloud_cover_mapchete.mp().config.inputs.values())[0]
+    assert len(full_stack.products) > len(filtered.products)
+
+
 def test_read_area_stac(sentinel2_stac_area_mapchete):
     with sentinel2_stac_area_mapchete.process_mp((13, 2003, 8906)).open("inp") as src:
         assert src.is_empty()

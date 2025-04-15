@@ -8,7 +8,7 @@ orgonite
 pillow
 pydantic
 pystac-client>=0.7.5
-pystac[urllib3]>=1.8.3
+pystac[urllib3]>=1.12.2
 retry
 rtree
 scipy

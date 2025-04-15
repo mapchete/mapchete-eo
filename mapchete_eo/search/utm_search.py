@@ -36,7 +36,6 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
     stac_json_endswith: str
     description: str
     stac_extensions: List[str]
-    max_cloud_cover: float = 100.0
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)
         if mapchete_eo_settings.blacklist
@@ -52,7 +51,6 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         area: Optional[BaseGeometry] = None,
         config: UTMSearchConfig = UTMSearchConfig(),
         search_index: Optional[MPath] = None,
-        max_cloud_cover: float = 100.0,
         **kwargs,
     ) -> None:
         if search_index:
@@ -84,7 +82,6 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         self.collections = collections
         self.config = config
         self.eo_bands = self._eo_bands()
-        self.max_cloud_cover = max_cloud_cover
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -152,7 +149,7 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         if (self.area is not None and self.area.is_empty) or self.bounds is None:
             return IndexedFeatures([])
         return IndexedFeatures(
-            _filter_items(_get_items(), max_cloud_cover=self.max_cloud_cover)
+            _filter_items(_get_items(), max_cloud_cover=self.config.max_cloud_cover)
         )
 
     def _eo_bands(self) -> list:

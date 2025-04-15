@@ -18,6 +18,7 @@ from mapchete_eo.search.base import (
     StaticCatalogWriterMixin,
     _filter_items,
 )
+from mapchete_eo.search.config import StacStaticConfig
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import DateTimeLike, TimeRange
 
@@ -28,14 +29,12 @@ StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
-    max_cloud_cover: float = 100.0
-
     def __init__(
         self,
         baseurl: Optional[MPathLike] = None,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         area: Optional[BaseGeometry] = None,
-        max_cloud_cover: float = 100.0,
+        config: StacStaticConfig = StacStaticConfig(),
         **kwargs,
     ) -> None:
         self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
@@ -46,7 +45,7 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         self.area = area
         self.time = time if isinstance(time, list) else [time] if time else []
         self.eo_bands = self._eo_bands()
-        self.max_cloud_cover = max_cloud_cover
+        self.config = config
 
     @cached_property
     def items(self) -> IndexedFeatures:
@@ -72,7 +71,9 @@ class STACStaticCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                         item.make_asset_hrefs_absolute()
                         yield item_fix_footprint(item)
 
-        items = list(_filter_items(_gen_items(), max_cloud_cover=self.max_cloud_cover))
+        items = list(
+            _filter_items(_gen_items(), max_cloud_cover=self.config.max_cloud_cover)
+        )
         logger.debug("%s items found", len(items))
         return IndexedFeatures(items)
 

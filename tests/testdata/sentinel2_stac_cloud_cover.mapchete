@@ -6,8 +6,8 @@ input:
     time:
       start: 2023-08-10
       end: 2023-08-13
+    max_cloud_cover: 20      
     cat_baseurl: sentinel2/full_products/catalog.json
-    max_cloud_cover:: 20
 output:
   format: GTiff
   bands: 3

@@ -26,6 +26,7 @@ from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.fill import fillnodata
 from rasterio.transform import from_bounds
+from shapely import MultiPolygon, Polygon
 from shapely.geometry import mapping, shape
 from shapely.geometry.base import BaseGeometry
 from tilematrix import Shape
@@ -122,11 +123,16 @@ def s2metadata_from_stac_item(
 
 
 class S2Metadata:
+    metadata_xml: MPath
+    path_mapper: S2PathMapper
+    processing_baseline: ProcessingBaseline
+    boa_offset_applied: bool = False
     _cached_xml_root: Optional[Element] = None
     path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
+    footprint: Union[Polygon, MultiPolygon]
     _cache: dict
 
     def __init__(

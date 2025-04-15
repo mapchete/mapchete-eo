@@ -3,6 +3,9 @@ from typing import Any, Literal, Optional
 
 import click
 import click_spinner
+
+from shapely.geometry import mapping, MultiPolygon, Polygon, shape
+
 from mapchete.cli.options import opt_bounds, opt_debug
 from mapchete.io import fiona_open
 from mapchete.path import MPath
@@ -82,9 +85,20 @@ def s2_cat_results(
         with fiona_open(
             dst_path, mode="w", schema=schema, crs="EPSG:4326", format=format
         ) as dst:
-            for index, _slice in enumerate(slices):
+            for index, _slice in enumerate(slices, start=1):
+                # 2025-4 agreed to make outputs multipolygons
+                # Convert the _slice.__geom_interface__ to Multipolygon if not the case
+
+                # Ensure the result is always a MultiPolygon even if only single Polygon is returned
+                # Else split features should come here as MultiPolygons
+                slice_shape = shape(_slice.__geom_interface__)
+                if isinstance(slice_shape, Polygon):
+                    slice_multipolygon = mapping(MultiPolygon([slice_shape]))
+                else:
+                    slice_multipolygon = _slice.__geom_interface__
+
                 out_feature = {
-                    "geometry": _slice.__geom_interface__,
+                    "geometry": slice_multipolygon,
                     "properties": {
                         key: get_value(_slice, key, index, slice_property_key)
                         for key in schema["properties"].keys()
@@ -95,7 +109,9 @@ def s2_cat_results(
         click.echo("No results found.")
 
 
-def get_schema(by_slices: bool, add_index: bool) -> dict:
+def get_schema(
+    by_slices: bool, add_index: bool, geometry_type: str = "MultiPolygon"
+) -> dict:
     if by_slices:
         properties = {
             "timestamp": "str",
@@ -110,7 +126,7 @@ def get_schema(by_slices: bool, add_index: bool) -> dict:
         }
     if add_index:
         properties.update(index="int")
-    return {"geometry": "Polygon", "properties": properties}
+    return {"geometry": geometry_type, "properties": properties}
 
 
 def get_value(_slice: Slice, key: str, index: int, slice_property_key: str) -> Any:

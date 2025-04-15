@@ -125,7 +125,7 @@ def get_item_property(
         return item.stac_extensions
     else:
         raise KeyError(
-            f"item does not have property {property} in its datetime, properties "
+            f"item {item.id} does not have property {property} in its datetime, properties "
             f"({', '.join(item.properties.keys())}) or extra_fields "
             f"({', '.join(item.extra_fields.keys())})"
         )

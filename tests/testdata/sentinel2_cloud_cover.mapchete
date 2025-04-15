@@ -1,0 +1,19 @@
+process: read_xarray.py
+input:
+  inp:
+    format: Sentinel-2
+    level: L2A
+    time:
+      start: 2022-04-01
+      end: 2022-04-03
+    max_cloud_cover: 20
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel2
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+# tmx bounds 13 1879 8938
+bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]

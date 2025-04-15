@@ -9,6 +9,11 @@ from mapchete_eo.known_catalogs import EarthSearchV1S2L2A, AWSSearchCatalogS2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACStaticCatalog
+from mapchete_eo.search.config import (
+    StacSearchConfig,
+    StacStaticConfig,
+    UTMSearchConfig,
+)
 from mapchete_eo.types import TimeRange
 
 
@@ -137,7 +142,9 @@ def test_write_static_catalog_metadata_assets(static_catalog_small, tmp_path):
 
 def test_static_catalog_cloud_percent(s2_stac_collection):
     all_products = STACStaticCatalog(s2_stac_collection)
-    filtered_products = STACStaticCatalog(s2_stac_collection, max_cloud_cover=20)
+    filtered_products = STACStaticCatalog(
+        s2_stac_collection, config=StacStaticConfig(max_cloud_cover=20)
+    )
     assert len(all_products.items) > len(filtered_products.items)
 
 
@@ -151,7 +158,7 @@ def test_earthsearch_catalog_cloud_percent():
         collections=["sentinel-2-l2a"],
         time=TimeRange(start="2022-04-01", end="2022-04-03"),
         bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-        max_cloud_cover=20,
+        config=StacSearchConfig(max_cloud_cover=20),
     )
     assert len(all_products.items) > len(filtered_products.items)
 
@@ -166,6 +173,6 @@ def test_awssearch_catalog_cloud_percent():
         collections=["sentinel-s2-l2a"],
         time=TimeRange(start="2022-04-01", end="2022-04-03"),
         bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-        max_cloud_cover=20,
+        config=UTMSearchConfig(max_cloud_cover=20),
     )
     assert len(all_products.items) > len(filtered_products.items)

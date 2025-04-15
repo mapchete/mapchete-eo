@@ -11,6 +11,7 @@ from rasterio.crs import CRS
 from rasterio.enums import Resampling
 
 from mapchete_eo.types import DateTimeLike
+from mapchete.io.raster import ReferencedRaster
 
 
 class EOProductProtocol(Protocol):
@@ -20,6 +21,8 @@ class EOProductProtocol(Protocol):
 
     @classmethod
     def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProductProtocol: ...
+
+    def get_mask(self) -> ReferencedRaster: ...
 
     def read(
         self,

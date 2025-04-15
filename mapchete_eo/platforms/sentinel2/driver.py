@@ -7,9 +7,13 @@ from rasterio.enums import Resampling
 
 from mapchete_eo import base
 from mapchete_eo.archives.base import StaticArchive
+from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.search.config import (
+    StacStaticConfig,
+)
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import MergeMethod
 
@@ -41,6 +45,9 @@ class InputData(base.InputData):
 
     def set_archive(self, base_dir: MPath):
         if self.params.cat_baseurl:
+            self.search_config = StacStaticConfig(
+                max_cloud_cover=self.params.max_cloud_cover
+            )
             self.archive = StaticArchive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
@@ -48,9 +55,16 @@ class InputData(base.InputData):
                     ),
                     area=self.bbox(mapchete_eo_settings.default_catalog_crs),
                     time=self.time,
+                    config=self.search_config,
                 )
             )
         elif self.params.archive:
+            for archive in KnownArchives:
+                if self.params.archive is archive.value:
+                    self.search_config = archive.value.default_search_cofig_cls(
+                        max_cloud_cover=self.params.max_cloud_cover
+                    )
+
             catalog_area = reproject_geometry(
                 self.area,
                 src_crs=self.crs,
@@ -65,6 +79,7 @@ class InputData(base.InputData):
                     if self.params.search_index
                     else None
                 ),
+                config=self.search_config,
             )
         else:
             raise ValueError("either 'archive' or 'cat_baseurl' or both is required.")

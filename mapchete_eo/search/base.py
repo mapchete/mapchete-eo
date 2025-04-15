@@ -202,6 +202,11 @@ def _filter_items(
     cloud_cover_field: str = "eo:cloud_cover",
     max_cloud_cover: float = 100.0,
 ) -> Generator[pystac.Item, None, None]:
+    """
+    Only for cloudcover now, this can and should be adapted for filter field and value
+    the field and value for the item filter would be defined in search.config.py corresponding configs
+    and passed down to the individual search approaches via said config and this Function.
+    """
     for item in items:
         if item.properties.get(cloud_cover_field, 0.0) <= max_cloud_cover:
             yield item

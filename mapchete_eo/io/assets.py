@@ -87,19 +87,25 @@ def asset_to_np_array(
         dst_nodata=stac_raster_bands.nodata,
     ).data
 
-    data_type = stac_raster_bands.data_type or data.dtype
+    if apply_offset and stac_raster_bands.offset:
+        data_type = stac_raster_bands.data_type or data.dtype
 
-    if apply_offset and stac_raster_bands.offset != 0.0:
-        # first, scale data:
-        data = data * stac_raster_bands.scale
-        # apply offset
-        data += stac_raster_bands.offset
-        # unscale data and avoid overflow by clipping values to output datatype range
-        data = (
-            (data * 1 / stac_raster_bands.scale)
+        # determine value range for the target data_type
+        clip_min, clip_max = dtype_ranges[str(data_type)]
+
+        # increase minimum clip value to avoid collission with nodata value
+        if clip_min == stac_raster_bands.nodata:
+            clip_min += 1
+
+        data[:] = (
+            (
+                ((data * stac_raster_bands.scale) + stac_raster_bands.offset)
+                / stac_raster_bands.scale
+            )
             .round()
-            .clip(*dtype_ranges[str(data_type)])
+            .clip(clip_min, clip_max)
             .astype(data_type, copy=False)
+            .data
         )
 
     return data

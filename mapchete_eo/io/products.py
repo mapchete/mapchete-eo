@@ -5,7 +5,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 import gc
-from typing import Any, Dict, Generator, Iterator, List, Optional
+from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence
 
 from mapchete import Timer
 import numpy as np
@@ -32,6 +32,7 @@ from mapchete_eo.io.items import get_item_property
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig
 from mapchete_eo.types import MergeMethod
+
 
 logger = logging.getLogger(__name__)
 
@@ -126,13 +127,13 @@ class Slice:
 
     name: Any
     properties: dict
-    products: List[EOProductProtocol]
+    products: Sequence[EOProductProtocol]
     datetime: datetime
 
     def __init__(
         self,
         name: Any,
-        products: List[EOProductProtocol],
+        products: Sequence[EOProductProtocol],
     ):
         self.name = name
 
@@ -168,6 +169,7 @@ class Slice:
             return mapping(
                 unary_union([to_shape(product) for product in self.products])
             )
+
         raise EmptySliceException
 
     @contextmanager
@@ -242,7 +244,7 @@ def products_to_slices(
 
 
 def merge_products(
-    products: List[EOProductProtocol],
+    products: Sequence[EOProductProtocol],
     merge_method: MergeMethod = MergeMethod.first,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,

@@ -34,7 +34,7 @@ def test_get_item_property_date(s2_stac_item):
         "platform",
         "constellation",
         "instruments",
-        "proj:epsg",
+        "proj:code",
         "eo:cloud_cover",
         "mgrs:utm_zone",
         "mgrs:latitude_band",

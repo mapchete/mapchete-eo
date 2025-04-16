@@ -15,7 +15,7 @@ Changelog
   * fix `max_cloud_cover` for searches, add more tests to cover usage
   * read masks as slices in `mapchete_eo.platforms.sentinel2.masks` with some tests
   * add `get_mask()` methods to `EOProduct` and its protocol as dummy to inherit properly down to `S2Product`
-  * fix/clip negative values to 1 after scaling for Sentinel-2 value offset, it was creating false nodata and we decided to keep dtype `uint16`
+  * fix/clip negative values to 1 after scaling for Sentinel-2 value offset, while reading assets, it was creating false nodata and we decided to keep dtype `uint16`
 
 * CI/CD
 

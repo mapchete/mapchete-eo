@@ -2,6 +2,26 @@
 Changelog
 #########
 
+2025.4.0 - 2025-04-17
+----------------------
+
+* CLI
+
+  * add `cat-results` for Sentinel-2 Products and Slices (Datastripes), with indexes (start at 1)
+  * Use MultiPolygons in case Slices are broken/split, due to data incoherence or antimeridian
+
+* core
+
+  * fix `max_cloud_cover` for searches, add more tests to cover usage
+  * read masks as slices in `mapchete_eo.platforms.sentinel2.masks` with some tests
+  * add `get_mask()` methods to `EOProduct` and its protocol as dummy to inherit properly down to `S2Product`
+  * fix/clip negative values to 1 after scaling for Sentinel-2 value offset, while reading assets, it was creating false nodata and we decided to keep dtype `uint16`
+
+* CI/CD
+
+  * use `registry.gitlab.eox.at/maps/docker-base/mapchete:2025.4.0` image for testing
+
+
 2025.1.2 - 2025-01-24
 ----------------------
 

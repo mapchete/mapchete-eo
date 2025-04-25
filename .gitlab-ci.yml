@@ -5,13 +5,13 @@ stages:
   - package
 
 default:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.4.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.4.1
 
 precommit:
   stage: codecheck
   tags:
     - privileged
-  image: registry.gitlab.eox.at/maps/docker-base/python:3.11-slim-buster
+  image: registry.gitlab.eox.at/maps/docker-base/python:3.13-slim-bookworm
   before_script:
     - apt update && apt install -y --no-install-recommends git
     - pip install pre-commit

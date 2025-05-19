@@ -430,7 +430,11 @@ class S2Product(EOProduct, EOProductProtocol):
 
         return ReferencedRaster(
             rasterize(
-                [reproject_geometry(footprint, self.crs, grid.crs)],
+                [
+                    reproject_geometry(
+                        footprint, self.crs, grid.crs, clip_to_crs_bounds=False
+                    )
+                ],
                 out_shape=grid.shape,
                 transform=grid.transform,
                 all_touched=True,
@@ -464,7 +468,8 @@ class S2Product(EOProduct, EOProductProtocol):
 
         def _check_full(arr):
             # ATTENTION: target_mask and out have to be combined *after* mask was buffered!
-            if (arr + target_mask).all():
+            # use 'logical or' not '+' !!!
+            if (arr | target_mask).all():
                 raise AllMasked()
 
         out = np.zeros(shape=grid.shape, dtype=bool)
@@ -474,7 +479,7 @@ class S2Product(EOProduct, EOProductProtocol):
             if mask_config.footprint:
                 logger.debug("generate footprint nodata mask ...")
                 try:
-                    out += self.footprint_nodata_mask(
+                    out |= self.footprint_nodata_mask(
                         grid, buffer_m=mask_config.footprint_buffer_m
                     ).data
                     _check_full(out)
@@ -482,7 +487,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     raise AllMasked()
             if mask_config.l1c_cloud_type:
                 logger.debug("generate L1C mask ...")
-                out += self.read_l1c_cloud_mask(
+                out |= self.read_l1c_cloud_mask(
                     grid,
                     mask_config.l1c_cloud_type,
                     cached_read=mask_config.l1c_cloud_mask_cached_read,
@@ -498,7 +503,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     from_resolution=mask_config.cloud_probability_resolution,
                     cached_read=mask_config.cloud_probability_cached_read,
                 ).data
-                out += np.where(
+                out |= np.where(
                     cld_prb >= mask_config.cloud_probability_threshold, True, False
                 )
                 _check_full(out)
@@ -516,11 +521,11 @@ class S2Product(EOProduct, EOProductProtocol):
                     grid, cached_read=mask_config.scl_cached_read
                 ).data
                 # mask out specific pixel values
-                out += np.isin(scl_arr, scl_values)
+                out |= np.isin(scl_arr, scl_values)
                 _check_full(out)
             if mask_config.snow_ice:
                 logger.debug("generate snow & ice mask ...")
-                out += self.read_snow_ice_mask(
+                out |= self.read_snow_ice_mask(
                     grid, cached_read=mask_config.snow_ice_mask_cached_read
                 ).data
                 _check_full(out)
@@ -534,7 +539,7 @@ class S2Product(EOProduct, EOProductProtocol):
                     from_resolution=mask_config.snow_probability_resolution,
                     cached_read=mask_config.snow_probability_cached_read,
                 ).data
-                out += np.where(
+                out |= np.where(
                     snw_prb >= mask_config.snow_probability_threshold, True, False
                 )
                 _check_full(out)
@@ -550,8 +555,9 @@ class S2Product(EOProduct, EOProductProtocol):
             )
 
         # ATTENTION: target_mask and out have to be combined *after* mask was buffered!
+        # use 'logical or' not '+' !!!
         return ReferencedRaster(
-            out + target_mask,
+            out | target_mask,
             transform=grid.transform,
             crs=grid.crs,
             bounds=grid.bounds,

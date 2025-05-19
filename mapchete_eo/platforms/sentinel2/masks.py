@@ -195,7 +195,9 @@ def merge_products_masks(
         for new in read_remaining_valid_products_masks(
             products_iter, product_read_kwargs
         ):
-            out[~out.mask] = new[~out.mask].astype(bool, copy=False)
+            masked = out.mask
+            # Update values at masked locations
+            out[masked] = new[masked].astype(bool, copy=False)
             # if whole output array is filled, there is no point in reading more data
             if out.all():
                 return out
@@ -214,17 +216,23 @@ def merge_products_masks(
         # explicitly specify dtype to avoid casting of integer arrays to floats
         # during mean conversion:
         # https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean
-        out = ma.stack(
-            list(
-                _generate_arrays(
-                    out,
-                    read_remaining_valid_products_masks(
-                        products_iter, product_read_kwargs
-                    ),
-                )
-            ),
-            dtype=bool,
-        ).min(axis=0)
+        arrays = list(
+            _generate_arrays(
+                out,
+                read_remaining_valid_products_masks(products_iter, product_read_kwargs),
+            )
+        )
+
+        # Filter out arrays that are entirely masked
+        valid_arrays = [a for a in arrays if not ma.getmaskarray(a).all()]
+
+        if valid_arrays:
+            stacked = ma.stack(valid_arrays, dtype=out.dtype)
+            out = stacked.min(axis=0)
+        else:
+            # All arrays were fully masked — return fully masked output
+            out = ma.masked_all(out.shape, dtype=out.dtype)
+
     else:  # pragma: no cover
         raise NotImplementedError(f"unknown merge method: {merge_method}")
 

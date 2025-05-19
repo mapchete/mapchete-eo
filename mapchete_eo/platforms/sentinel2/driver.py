@@ -61,7 +61,7 @@ class InputData(base.InputData):
         elif self.params.archive:
             for archive in KnownArchives:
                 if self.params.archive is archive.value:
-                    self.search_config = archive.value.default_search_cofig_cls(
+                    self.search_config = archive.value.default_search_config_cls(
                         max_cloud_cover=self.params.max_cloud_cover
                     )
 

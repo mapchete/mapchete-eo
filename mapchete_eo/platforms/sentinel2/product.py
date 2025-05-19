@@ -432,7 +432,13 @@ class S2Product(EOProduct, EOProductProtocol):
             rasterize(
                 [
                     reproject_geometry(
-                        footprint, self.crs, grid.crs, clip_to_crs_bounds=False
+                        footprint,
+                        self.crs,
+                        grid.crs,
+                        # CRS Bounds are sometimes smaller than (Mapchete) Grid Bounds,
+                        # if clipping allowed it will mask out features at CRS Bounds border,
+                        # therefore clip_to_crs_bounds: False; see mapchete.geometry.reproject reproject_geometry
+                        clip_to_crs_bounds=False,
                     )
                 ],
                 out_shape=grid.shape,

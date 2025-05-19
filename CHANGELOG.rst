@@ -2,6 +2,22 @@
 Changelog
 #########
 
+
+2025.5.0 - 2025-05-19
+----------------------
+
+* core
+
+  * set `clip_to_crs_bounds=False` in `reproject_geometry` of `platforms.sentinel2.product` `footprint_nodata_mask()` as if clipped and at CRS border it will for some reason clip products; this make footprits too large or missprojected
+    * This can also be due to smaller CRS bounds (from `pyproj`) than mapchete Grid Pyramid definition
+  * use `|` in `platforms.sentinel2.product` `get_mask()` fuction to preserve `bool` types while going through masks
+  * fix `first` Slice product reading logic, also make `average` for read_products and `all` for `read_masks` to only use products that are not fully masked
+
+* CI/CD
+
+  * use `registry.gitlab.eox.at/maps/docker-base/mapchete:2025.5.0` image for testing
+
+
 2025.4.0 - 2025-04-17
 ----------------------
 

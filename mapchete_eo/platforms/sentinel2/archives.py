@@ -34,7 +34,7 @@ class AWSL2ACOGv1(Archive):
     collection_name = "sentinel-2-l2a"
     processing_level = ProcessingLevel.level2a
     path_mapper_cls = EarthSearchPathMapper
-    default_search_cofig_cls = StacSearchConfig
+    default_search_config_cls = StacSearchConfig
 
 
 class AWSL2AJP2(Archive):
@@ -42,7 +42,7 @@ class AWSL2AJP2(Archive):
     collection_name = "sentinel-s2-l2a"
     processing_level = ProcessingLevel.level2a
     path_mapper_cls = SinergisePathMapper
-    default_search_cofig_cls = UTMSearchConfig
+    default_search_config_cls = UTMSearchConfig
 
 
 class KnownArchives(Enum):

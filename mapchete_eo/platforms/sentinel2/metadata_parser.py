@@ -71,6 +71,7 @@ def s2metadata_from_stac_item(
         "s2:processing_baseline",
         "sentinel:processing_baseline",
         "sentinel2:processing_baseline",
+        "processing:version",
     ],
     **kwargs,
 ) -> S2Metadata:
@@ -103,7 +104,6 @@ def s2metadata_from_stac_item(
         metadata_xml = metadata_path
     else:
         metadata_xml = MPath(item.self_href).parent / metadata_path
-
     for processing_baseline_field in processing_baseline_fields:
         try:
             processing_baseline = item.properties[processing_baseline_field]

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
-from typing import Any, List, Optional, Set
+from typing import Any, List, Literal, Optional, Set
 
 import numpy as np
 import numpy.ma as ma
@@ -152,8 +151,8 @@ class EOProduct(EOProductProtocol):
     def get_property(self, property: str) -> Any:
         return get_item_property(self.item, property)
 
-    def eo_bands_to_assets_indexes(self, eo_bands: List[str]) -> List[tuple]:
-        return eo_bands_to_assets_indexes(self.item, eo_bands)
+    def eo_bands_to_band_location(self, eo_bands: List[str]) -> List[BandLocation]:
+        return eo_bands_to_band_locations(self.item, eo_bands)
 
     def assets_eo_bands_to_band_locations(
         self,
@@ -165,44 +164,84 @@ class EOProduct(EOProductProtocol):
         if assets and eo_bands:
             raise ValueError("assets and eo_bands cannot be provided at the same time")
         if assets:
-            return [BandLocation(asset, 1) for asset in assets]
+            return [BandLocation(asset_name=asset) for asset in assets]
         elif eo_bands:
-            return [
-                BandLocation(asset, index)
-                for (asset, index) in self.eo_bands_to_assets_indexes(eo_bands)
-            ]
+            return self.eo_bands_to_band_location(eo_bands)
         else:
             raise ValueError("assets or eo_bands have to be provided")
 
 
-def eo_bands_to_assets_indexes(item: pystac.Item, eo_bands: List[str]) -> List[tuple]:
+def eo_bands_to_band_locations(
+    item: pystac.Item,
+    eo_bands: List[str],
+    role: Literal["data", "reflectance", "visual"] = "data",
+) -> List[BandLocation]:
     """
     Find out location (asset and band index) of EO band.
     """
-    mapping = defaultdict(list)
-    for eo_band in eo_bands:
-        for asset_name, asset in item.assets.items():
-            asset_eo_bands = asset.extra_fields.get("eo:bands")
-            if asset_eo_bands:
-                for band_idx, band_info in enumerate(asset_eo_bands, 1):
-                    if eo_band == band_info.get("name"):
-                        mapping[eo_band].append((asset_name, band_idx))
+    return [find_eo_band(item, eo_band, role=role) for eo_band in eo_bands]
 
-    for eo_band in eo_bands:
-        if eo_band not in mapping:
-            raise KeyError(f"EO band {eo_band} not found in item assets")
-        found = mapping[eo_band]
-        if len(found) > 1:
-            for asset_name, band_idx in found:
-                if asset_name == eo_band:
-                    mapping[eo_band] = [(asset_name, band_idx)]
-                    break
-            else:  # pragma: no cover
-                raise ValueError(
-                    f"EO band {eo_band} found in multiple assets: {', '.join([f[0] for f in found])}"
+
+def find_eo_band(
+    item: pystac.Item,
+    eo_band_name: str,
+    role: Literal["data", "reflectance", "visual"] = "data",
+) -> BandLocation:
+    """
+    Tries to find the location of the most appropriate band using the EO band name.
+
+    This function looks into all assets and all eo bands for the given name and role.
+    """
+    results = []
+    for asset_name, asset in item.assets.items():
+        # search in eo:bands and alternatively in bands for eo:common_name
+        for band_index, band_info in enumerate(
+            asset.extra_fields.get("eo:bands", asset.extra_fields.get("bands", [])), 1
+        ):
+            if (
+                # if name matches eo band name
+                (
+                    eo_band_name == band_info.get("name")
+                    or eo_band_name == band_info.get("eo:common_name")
+                )
+                # if role is given, make sure it matches with desired role
+                and (asset.roles is None or role in asset.roles)
+            ):
+                results.append(
+                    BandLocation.from_asset(
+                        name=asset_name,
+                        band_index=band_index,
+                        asset=asset,
+                    )
                 )
 
-    return [mapping[eo_band][0] for eo_band in eo_bands]
+    if len(results) == 0:
+        raise KeyError(f"EO band {eo_band_name} not found in item assets")
+
+    elif len(results) == 1:
+        return results[0]
+
+    # if results are ambiguous, further filter them
+    else:
+        # only use locations which seem to have the original resolution
+        for matches in [_asset_name_equals_eo_name, _is_original_sampling]:
+            filtered_results = [
+                band_location for band_location in results if matches(band_location)
+            ]
+            if len(filtered_results) == 1:
+                return filtered_results[0]
+        else:  # pragma: no cover
+            raise ValueError(
+                f"EO band '{eo_band_name}' found in multiple assets: {', '.join(map(str, results))}"
+            )
+
+
+def _asset_name_equals_eo_name(band_location: BandLocation) -> bool:
+    return band_location.asset_name == band_location.eo_band_name
+
+
+def _is_original_sampling(band_location: BandLocation) -> bool:
+    return band_location.roles == [] or "sampling:original" in band_location.roles
 
 
 def add_to_blacklist(path: MPathLike, blacklist: Optional[MPath] = None) -> None:
@@ -226,15 +265,14 @@ def add_to_blacklist(path: MPathLike, blacklist: Optional[MPath] = None) -> None
                 dst.write(f"{path}\n")
 
 
-def blacklist_products(blacklist: Optional[MPath] = None) -> Set[str]:
+def blacklist_products(blacklist: Optional[MPathLike] = None) -> Set[str]:
     blacklist = blacklist or mapchete_eo_settings.blacklist
     if blacklist is None:
         raise ValueError("no blacklist is defined")
     blacklist = MPath.from_inp(blacklist)
 
     try:
-        with blacklist.open("r") as src:
-            return set(src.read().splitlines())
+        return set(blacklist.read_text().splitlines())
     except FileNotFoundError:
         logger.debug("%s does not exist, returning empty set", str(blacklist))
         return set()

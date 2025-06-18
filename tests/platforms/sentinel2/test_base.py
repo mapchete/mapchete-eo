@@ -15,7 +15,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     SceneClassification,
     Sentinel2DriverConfig,
 )
-from mapchete_eo.product import eo_bands_to_assets_indexes
+from mapchete_eo.product import eo_bands_to_band_locations
 from mapchete_eo.sort import TargetDateSort
 
 
@@ -46,35 +46,41 @@ def test_jp2_config():
     assert conf.model_dump()
 
 
-def test_s2_eo_bands_to_assets_indexes(s2_stac_item):
+def test_s2_eo_bands_to_band_locations(s2_stac_item):
     eo_bands = ["red", "green", "blue"]
-    assets_indexes = eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
+    assets_indexes = eo_bands_to_band_locations(s2_stac_item, eo_bands)
     assert len(eo_bands) == len(assets_indexes)
-    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
-        assert eo_band == asset
-        assert index == 1
+    for eo_band, band_location in zip(eo_bands, assets_indexes):
+        assert band_location.asset_name == eo_band
+        assert band_location.band_index == 1
 
 
 def test_s2_eo_bands_to_assets_indexes_invalid_band(s2_stac_item):
     eo_bands = ["foo"]
     with pytest.raises(KeyError):
-        eo_bands_to_assets_indexes(s2_stac_item, eo_bands)
+        eo_bands_to_band_locations(s2_stac_item, eo_bands)
 
 
 @pytest.mark.remote
 def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
     eo_bands = ["red", "green", "blue", "nir08"]
-    assets_indexes = eo_bands_to_assets_indexes(stac_item_sentinel2_jp2, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for eo_band, (asset, index) in zip(eo_bands, assets_indexes):
-        assert eo_band == asset
-        assert index == 1
-        assert MPath(stac_item_sentinel2_jp2.assets[asset].href).exists()
+    band_locations = eo_bands_to_band_locations(stac_item_sentinel2_jp2, eo_bands)
+    assert len(eo_bands) == len(band_locations)
+    for eo_band, band_location in zip(eo_bands, band_locations):
+        assert band_location.asset_name == eo_band
+        assert band_location.band_index == 1
+        assert MPath(
+            stac_item_sentinel2_jp2.assets[band_location.asset_name].href
+        ).exists()
 
 
 @pytest.mark.remote
-def test_remote_s2_read_xarray(sentinel2_mapchete):
-    with sentinel2_mapchete.process_mp().open("inp") as cube:
+@pytest.mark.parametrize(
+    "mapchete_config",
+    [lazy_fixture("sentinel2_mapchete"), lazy_fixture("sentinel2_csde_mapchete")],
+)
+def test_remote_s2_read_xarray(mapchete_config):
+    with mapchete_config.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
@@ -85,16 +91,15 @@ def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
         some_in_second = True
         for product in cube.products:
             first, second = cube.time
-            within_first = first.start < product.item.datetime.date() < first.end
-            within_second = second.start < product.item.datetime.date() < second.end
-            if within_first:
+            print((product.item.datetime.date(), first, second))
+            if first.start < product.item.datetime.date() < first.end:
                 some_in_first = True
-            elif within_second:
+            elif second.start < product.item.datetime.date() < second.end:
                 some_in_second = True
             else:
                 raise ValueError("product outside of given time ranges")
-        assert some_in_first
-        assert some_in_second
+    assert some_in_first
+    assert some_in_second
 
 
 @pytest.mark.remote

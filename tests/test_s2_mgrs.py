@@ -129,6 +129,6 @@ def test_s2tile_antimeridian_footprint(tile_id, control_geom_type):
 
 
 def test_sentinel2_jp2_static_catalog(sentinel2_jp2_static_catalog_mapchete):
-    mp = sentinel2_jp2_static_catalog_mapchete.mp()
-    assert mp.config.at_zoom(13)["input"]["inp"].archive.catalog.config.search_index
-    assert mp.config.at_zoom(13)["input"]["inp"].products
+    inp = sentinel2_jp2_static_catalog_mapchete.mp().config.at_zoom(13)["input"]["inp"]
+    assert inp.archive.get_catalog_config().search_index
+    assert inp.products

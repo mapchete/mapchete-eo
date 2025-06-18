@@ -12,6 +12,7 @@ from mapchete_eo.cli.s2_verify import verify_item
 from mapchete_eo.cli.static_catalog import get_catalog
 from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.product import add_to_blacklist, blacklist_products
+from mapchete_eo.types import TimeRange
 
 
 @click.command()
@@ -53,15 +54,17 @@ def s2_find_broken_products(
     catalog = get_catalog(
         catalog_json=catalog_json,
         endpoint=endpoint,
-        bounds=bounds,
-        start_time=start_time,
-        end_time=end_time,
         known_archive=archive,
         collection=collection,
-        mgrs_tile=mgrs_tile,
     )
     blacklisted_products = blacklist_products(blacklist)
-    for item in tqdm(catalog.items):
+    for item in tqdm(
+        catalog.search(
+            time=TimeRange(start=start_time, end=end_time),
+            bounds=bounds,
+            search_kwargs=dict(mgrs_tile=mgrs_tile),
+        )
+    ):
         report = verify_item(
             item,
             assets=assets,

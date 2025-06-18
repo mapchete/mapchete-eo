@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import dateutil.parser
 
@@ -40,8 +40,13 @@ def timedelta(date: DateTimeLike, target: DateTimeLike, seconds: bool = True):
 
 
 def day_range(
-    start_date: datetime.datetime, end_date: datetime.datetime
-) -> List[datetime.datetime]:
+    start_date: Union[datetime.datetime, datetime.date],
+    end_date: Union[datetime.datetime, datetime.date],
+) -> List[datetime.date]:
+    start_date = (
+        start_date.date() if isinstance(start_date, datetime.datetime) else start_date
+    )
+    end_date = end_date.date() if isinstance(end_date, datetime.datetime) else end_date
     return [
         start_date + datetime.timedelta(n)
         for n in range(int((end_date - start_date).days) + 1)

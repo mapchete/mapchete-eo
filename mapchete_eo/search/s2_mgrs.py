@@ -243,6 +243,10 @@ class S2Tile:
                 f"global square index could not be determined for {self.utm_zone}{self.latitude_band}{self.grid_square}"
             )
 
+    @cached_property
+    def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
+        return "S" if self.latitude_band < "N" else "N"
+
     @staticmethod
     def from_tile_id(tile_id: str) -> S2Tile:
         tile_id = tile_id.lstrip("T")
@@ -256,9 +260,9 @@ class S2Tile:
 
         return MGRSCell(utm_zone, latitude_band).tile(grid_square)
 
-    @cached_property
-    def hemisphere(self) -> Union[Literal["S"], Literal["N"]]:
-        return "S" if self.latitude_band < "N" else "N"
+    @staticmethod
+    def from_grid_code(grid_code: str) -> S2Tile:
+        return S2Tile.from_tile_id(grid_code.lstrip("MGRS-"))
 
 
 def s2_tiles_from_bounds(

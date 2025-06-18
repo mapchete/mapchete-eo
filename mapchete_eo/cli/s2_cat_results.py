@@ -17,6 +17,7 @@ from mapchete_eo.io.products import Slice, products_to_slices
 from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.sort import TargetDateSort
+from mapchete_eo.types import TimeRange
 
 
 @click.command()
@@ -68,15 +69,18 @@ def s2_cat_results(
         catalog = get_catalog(
             catalog_json=catalog_json,
             endpoint=endpoint,
-            bounds=bounds,
-            start_time=start_time,
-            end_time=end_time,
             known_archive=archive,
             collection=collection,
-            mgrs_tile=mgrs_tile,
         )
         slices = products_to_slices(
-            [S2Product.from_stac_item(item) for item in catalog.items],
+            [
+                S2Product.from_stac_item(item)
+                for item in catalog.search(
+                    time=TimeRange(start=start_time, end=end_time),
+                    bounds=bounds,
+                    search_kwargs=dict(mgrs_tile=mgrs_tile),
+                )
+            ],
             group_by_property=slice_property_key if by_slices else None,
             sort=TargetDateSort(target_date=start_time),
         )

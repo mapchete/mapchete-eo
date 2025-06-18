@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from rasterio.enums import Resampling
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.archives.base import Archive, StaticArchive
+from mapchete_eo.archives.base import Archive
 from mapchete_eo.exceptions import CorruptedProductMetadata, PreprocessingNotFinished
 from mapchete_eo.io import (
     products_to_np_array,
@@ -402,7 +402,7 @@ class InputData(base.InputData):
 
         # don't use preprocessing tasks for Sentinel-2 products:
         if self.params.preprocessing_tasks or self.params.cache is not None:
-            for item in self.archive.catalog.items:
+            for item in self.archive.items():
                 self.add_preprocessing_task(
                     self.default_preprocessing_task,
                     fargs=(item,),
@@ -421,7 +421,7 @@ class InputData(base.InputData):
                     self.default_preprocessing_task(
                         item, cache_config=self.params.cache, cache_all=True
                     )
-                    for item in self.archive.catalog.items
+                    for item in self.archive.items()
                 ]
             )
 
@@ -443,14 +443,14 @@ class InputData(base.InputData):
     def set_archive(self, base_dir: MPath):
         # this only works with some static archive:
         if self.params.cat_baseurl:
-            self.archive = StaticArchive(
+            self.archive = Archive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=base_dir
                     ),
-                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
-                    time=self.time,
-                )
+                ),
+                area=self.bbox(mapchete_eo_settings.default_catalog_crs),
+                time=self.time,
             )
         else:
             raise NotImplementedError()
@@ -484,7 +484,7 @@ class InputData(base.InputData):
             return IndexedFeatures(
                 [
                     self.get_preprocessing_task_result(item.id)
-                    for item in self.archive.catalog.items
+                    for item in self.archive.items()
                     if not isinstance(item, CorruptedProductMetadata)
                 ],
                 crs=self.crs,

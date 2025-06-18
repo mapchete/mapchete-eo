@@ -1,11 +1,10 @@
 import datetime
 import logging
-from functools import cached_property
-from typing import Dict, Generator, List, Optional, Set
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 
-from mapchete.io.vector import IndexedFeatures, fiona_open
+from mapchete.io.vector import fiona_open
 from mapchete.path import MPath, MPathLike
-from mapchete.types import Bounds
+from mapchete.types import Bounds, BoundsLike
 from pystac.collection import Collection
 from pystac.item import Item
 from shapely.errors import GEOSException
@@ -13,12 +12,11 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.exceptions import ItemGeometryError
-from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import (
-    CatalogProtocol,
+    CatalogSearcher,
     StaticCatalogWriterMixin,
-    _filter_items,
+    filter_items,
 )
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
@@ -29,7 +27,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
+class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
     endpoint: str
     id: str
     day_subdir_schema: str
@@ -41,74 +39,82 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         if mapchete_eo_settings.blacklist
         else set()
     )
+    config_cls = UTMSearchConfig
 
     def __init__(
         self,
-        time: TimeRange,
         endpoint: Optional[MPathLike] = None,
         collections: List[str] = [],
-        bounds: Bounds = None,
-        area: Optional[BaseGeometry] = None,
-        config: UTMSearchConfig = UTMSearchConfig(),
-        search_index: Optional[MPath] = None,
-        **kwargs,
-    ) -> None:
-        if search_index:
-            config.search_index = search_index
-        if area is not None:
-            self.area = area
-            self.bounds = Bounds.from_inp(self.area)
-        elif bounds is not None:
-            self.bounds = Bounds.from_inp(bounds)
-            self.area = shape(self.bounds)
-        else:  # pragma: no cover
-            raise ValueError("either bounds or area have to be given")
-
-        self._collection_items: Dict = {}
-        self.time = time if isinstance(time, list) else [time]
-        self.start_time = (
-            time.start
-            if isinstance(time.start, datetime.date)
-            else datetime.datetime.strptime(time.start, "%Y-%m-%d")
-        )
-        self.end_time = (
-            time.end
-            if isinstance(time.end, datetime.date)
-            else datetime.datetime.strptime(time.end, "%Y-%m-%d")
-        )
+        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
+    ):
         self.endpoint = endpoint or self.endpoint
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
         self.collections = collections
-        self.config = config
         self.eo_bands = self._eo_bands()
+        self.stac_item_modifiers = stac_item_modifiers
 
-    @cached_property
-    def items(self) -> IndexedFeatures:
-        """
-        Collect STAC items from https://sentinel-s2-l2a-stac.s3.amazonaws.com/
-        by time and granules.
-        Get mgrs granules from bounds, list the date from the source endpoint/bucket and filter out the matching
-        products and return them as STAC items, like with the element 84 endpoint, just without the search client.
-        s3://sentinel-s2-l2a-stac/2023/06/04/S2B_OPER_MSI_L2A_TL_2BPS_20230604T235444_A032617_T01WCN.json
-        """
+    def search(
+        self,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        bounds: Optional[BoundsLike] = None,
+        area: Optional[BaseGeometry] = None,
+        search_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Generator[Item, None, None]:
+        config = self.config_cls(**search_kwargs or {})
+        if bounds:
+            bounds = Bounds.from_inp(bounds)
 
-        def _get_items():
+        for item in filter_items(
+            self._raw_search(time=time, bounds=bounds, area=area),
+            max_cloud_cover=config.max_cloud_cover,
+        ):
+            yield item
+
+    def _raw_search(
+        self,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        bounds: Optional[Bounds] = None,
+        area: Optional[BaseGeometry] = None,
+        config: UTMSearchConfig = UTMSearchConfig(),
+    ) -> Generator[Item, None, None]:
+        if time is None:
+            raise ValueError("time must be given")
+        if area is not None and area.is_empty:
+            return
+        if area is not None:
+            area = area
+            bounds = Bounds.from_inp(area)
+        elif bounds is not None:
+            bounds = Bounds.from_inp(bounds)
+            area = shape(bounds)
+        for time_range in time if isinstance(time, list) else [time]:
+            start_time = (
+                time_range.start
+                if isinstance(time_range.start, datetime.date)
+                else datetime.datetime.strptime(time_range.start, "%Y-%m-%d")
+            )
+            end_time = (
+                time_range.end
+                if isinstance(time_range.end, datetime.date)
+                else datetime.datetime.strptime(time_range.end, "%Y-%m-%d")
+            )
+
             logger.debug(
                 "determine items from %s to %s over %s...",
-                self.start_time,
-                self.end_time,
-                self.bounds,
+                start_time,
+                end_time,
+                bounds,
             )
-            if self.config.search_index:
+            if config.search_index:
                 logger.debug(
-                    "use existing search index at %s", str(self.config.search_index)
+                    "use existing search index at %s", str(config.search_index)
                 )
                 for item in items_from_static_index(
-                    bounds=self.bounds,
-                    start_time=self.start_time,
-                    end_time=self.end_time,
-                    index_path=self.config.search_index,
+                    bounds=bounds,
+                    start_time=start_time,
+                    end_time=end_time,
+                    index_path=config.search_index,
                 ):
                     try:
                         item_path = item.get_self_href()
@@ -116,8 +122,8 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                             logger.debug(
                                 "item %s found in blacklist and skipping", item_path
                             )
-                        elif self.area.intersects(shape(item.geometry)):
-                            yield self.standardize_item(item_fix_footprint(item))
+                        elif area.intersects(shape(item.geometry)):
+                            yield item
                     except GEOSException as exc:
                         raise ItemGeometryError(
                             f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
@@ -126,35 +132,26 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             else:
                 logger.debug("using dumb ls directory search at %s", str(self.endpoint))
                 for item in items_from_directories(
-                    bounds=self.bounds,
-                    start_time=self.start_time,
-                    end_time=self.end_time,
+                    bounds=bounds,
+                    start_time=start_time,
+                    end_time=end_time,
                     endpoint=self.endpoint,
                     day_subdir_schema=self.day_subdir_schema,
                     stac_json_endswith=self.stac_json_endswith,
                 ):
-                    try:
-                        item_path = item.get_self_href()
-                        if item_path in self.blacklist:  # pragma: no cover
-                            logger.debug(
-                                "item %s found in blacklist and skipping", item_path
-                            )
-                        elif self.area.intersects(shape(item.geometry)):
-                            yield self.standardize_item(item_fix_footprint(item))
-                    except GEOSException as exc:
-                        raise ItemGeometryError(
-                            f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
+                    item_path = item.get_self_href()
+                    if item_path in self.blacklist:  # pragma: no cover
+                        logger.debug(
+                            "item %s found in blacklist and skipping", item_path
                         )
-
-        if (self.area is not None and self.area.is_empty) or self.bounds is None:
-            return IndexedFeatures([])
-        return IndexedFeatures(
-            _filter_items(_get_items(), max_cloud_cover=self.config.max_cloud_cover)
-        )
+                    elif area.intersects(shape(item.geometry)):
+                        yield item
 
     def _eo_bands(self) -> list:
         for collection_name in self.collections:
-            for collection_properties in self.config.sinergise_aws_collections.values():
+            for (
+                collection_properties
+            ) in UTMSearchConfig().sinergise_aws_collections.values():
                 if collection_properties["id"] == collection_name:
                     collection = Collection.from_dict(
                         collection_properties["path"].read_json()
@@ -166,9 +163,11 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                     else:
                         raise ValueError(f"cannot find collection {collection}")
         else:
-            raise ValueError(
-                f"cannot find eo:bands definition from collections {self.collections}"
+            logger.debug(
+                "cannot find eo:bands definition from collections %s",
+                self.collections,
             )
+            return []
 
     def get_collections(self):
         """
@@ -186,8 +185,8 @@ class UTMSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
 
 def items_from_static_index(
     bounds: Bounds,
-    start_time: datetime.datetime,
-    end_time: datetime.datetime,
+    start_time: Union[datetime.datetime, datetime.date],
+    end_time: Union[datetime.datetime, datetime.date],
     index_path: MPathLike,
 ) -> Generator[Item, None, None]:
     index_path = MPath.from_inp(index_path)
@@ -217,8 +216,8 @@ def items_from_static_index(
 
 def items_from_directories(
     bounds: Bounds,
-    start_time: datetime.datetime,
-    end_time: datetime.datetime,
+    start_time: Union[datetime.datetime, datetime.date],
+    end_time: Union[datetime.datetime, datetime.date],
     endpoint: MPathLike,
     day_subdir_schema: str = "{year}/{month:02d}/{day:02d}",
     stac_json_endswith: str = "T{tile_id}.json",

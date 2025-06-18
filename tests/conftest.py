@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from pystac_client import Client
 from rasterio import Affine
 from shapely import wkt
-from shapely.geometry import base, box
+from shapely.geometry import base
 
 from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
@@ -61,7 +61,7 @@ def pf_sr_stac_collection(testdata_dir):
 @pytest.fixture
 def pf_sr_stac_item(pf_sr_stac_collection):
     catalog = STACStaticCatalog(pf_sr_stac_collection)
-    return next(iter(catalog.items.values()))
+    return next(iter(catalog.search()))
 
 
 @pytest.fixture
@@ -232,6 +232,15 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_csde_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_csde.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def sentinel2_cloud_cover_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_cloud_cover.mapchete",
@@ -355,11 +364,6 @@ def stac_search_catalog():
 @pytest.fixture(scope="session")
 def e84_cog_catalog():
     return EarthSearchV1S2L2A(
-        time=TimeRange(
-            start="2022-06-01",
-            end="2022-06-06",
-        ),
-        bounds=[16, 46, 17, 47],
         collections=["sentinel-2-l2a"],
     )
 
@@ -368,11 +372,6 @@ def e84_cog_catalog():
 @pytest.fixture
 def utm_search_catalog():
     return AWSSearchCatalogS2L2A(
-        time=TimeRange(
-            start="2022-06-05",
-            end="2022-06-05",
-        ),
-        bounds=[-180, 65, -179, 65.3],
         collections=["sentinel-s2-l2a"],
     )
 
@@ -393,8 +392,6 @@ def e84_cog_catalog_short():
 def static_catalog_small(s2_stac_collection):
     return STACStaticCatalog(
         s2_stac_collection,
-        TimeRange(start="2023-08-10", end="2023-08-11"),
-        area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
 
 

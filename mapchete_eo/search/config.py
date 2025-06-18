@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mapchete.path import MPath
+from mapchete.path import MPath, MPathLike
 from pydantic import BaseModel
 
 
@@ -8,7 +8,7 @@ class StacSearchConfig(BaseModel):
     max_cloud_cover: float = 100.0
     catalog_chunk_threshold: int = 10_000
     catalog_chunk_zoom: int = 5
-    catalog_pagesize: int = 500
+    catalog_pagesize: int = 100
     footprint_buffer: float = 0
 
 
@@ -39,4 +39,4 @@ class UTMSearchConfig(BaseModel):
             ),
         ),
     )
-    search_index: Optional[str] = None
+    search_index: Optional[MPathLike] = None

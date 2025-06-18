@@ -1,7 +1,7 @@
 import xarray as xr
 from mapchete.formats import available_input_formats
 
-from mapchete_eo.product import eo_bands_to_assets_indexes
+from mapchete_eo.product import eo_bands_to_band_locations
 
 
 # TODO:
@@ -9,13 +9,13 @@ from mapchete_eo.product import eo_bands_to_assets_indexes
 # DataSet
 # per band 1 DataArray
 # each DataArray has 3 dimensions: time, x, y
-def test_pf_eo_bands_to_assets_indexes(pf_sr_stac_item):
+def test_pf_eo_bands_to_band_locations(pf_sr_stac_item):
     eo_bands = ["B3", "B2", "B4"]
-    assets_indexes = eo_bands_to_assets_indexes(pf_sr_stac_item, eo_bands)
-    assert len(eo_bands) == len(assets_indexes)
-    for band_index, (asset, index) in zip([1, 2, 4], assets_indexes):
-        assert asset == "bands"
-        assert band_index == index
+    band_locations = eo_bands_to_band_locations(pf_sr_stac_item, eo_bands)
+    assert len(eo_bands) == len(band_locations)
+    for band_index, band_location in zip([1, 2, 4], band_locations):
+        assert band_location.asset_name == "bands"
+        assert band_location.band_index == band_index
 
 
 def test_format_available():

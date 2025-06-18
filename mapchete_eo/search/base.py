@@ -1,10 +1,10 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Generator, List, Optional, Protocol, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
-import pystac
-from mapchete.io.vector import IndexedFeatures
+from pydantic import BaseModel
+from pystac import Item, Catalog, CatalogType, Extent
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
@@ -43,29 +43,30 @@ class FSSpecStacIO(StacApiIO):
             return dst.write(json.dumps(json_dict, indent=2))
 
 
-class CatalogProtocol(Protocol):
-    items: IndexedFeatures
+class CatalogSearcher(ABC):
+    """
+    This class serves as a bridge between an Archive and a catalog implementation.
+    """
+
     eo_bands: List[str]
     id: str
     description: str
     stac_extensions: List[str]
+    collections: List[str]
+    config_cls: Type[BaseModel]
 
-    def __init__(
+    @abstractmethod
+    def search(
         self,
-        collections: List[str],
-        time: Union[TimeRange, List[TimeRange]],
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
-    ):
-        pass
-
-    def standardize_item(self, item: pystac.Item) -> pystac.Item:
-        return item
+        search_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Generator[Item, None, None]: ...
 
 
-class StaticCatalogWriterMixin(ABC):
+class StaticCatalogWriterMixin(CatalogSearcher):
     client: Client
-    items: IndexedFeatures
     id: str
     description: str
     stac_extensions: List[str]
@@ -77,6 +78,10 @@ class StaticCatalogWriterMixin(ABC):
     def write_static_catalog(
         self,
         output_path: MPathLike,
+        bounds: Optional[Bounds] = None,
+        area: Optional[BaseGeometry] = None,
+        time: Optional[TimeRange] = None,
+        search_kwargs: Optional[Dict[str, Any]] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
         assets: Optional[List[str]] = None,
@@ -100,18 +105,23 @@ class StaticCatalogWriterMixin(ABC):
             existing_collections = list(client.get_collections())
         else:
             existing_collections = []
-        catalog = pystac.Catalog(
+        catalog = Catalog(
             name or f"{self.id}",
             description or f"Static subset of {self.description}",
             stac_extensions=self.stac_extensions,
             href=str(catalog_json),
-            catalog_type=pystac.CatalogType.SELF_CONTAINED,
+            catalog_type=CatalogType.SELF_CONTAINED,
+        )
+        src_items = list(
+            self.search(
+                time=time, bounds=bounds, area=area, search_kwargs=search_kwargs
+            )
         )
         for collection in self.get_collections():
             # collect all items and download assets if required
-            items: List[pystac.Item] = []
+            items: List[Item] = []
             item_ids = set()
-            for n, item in enumerate(self.items, 1):
+            for n, item in enumerate(src_items, 1):
                 logger.debug("found item %s", item)
                 item = item.clone()
                 if assets:
@@ -142,7 +152,7 @@ class StaticCatalogWriterMixin(ABC):
                 item_ids.add(item.id)
 
                 if progress_callback:
-                    progress_callback(n=n, total=len(self.items))
+                    progress_callback(n=n, total=len(src_items))
 
             for existing_collection in existing_collections:
                 if existing_collection.id == collection.id:
@@ -153,7 +163,7 @@ class StaticCatalogWriterMixin(ABC):
                     for subpath in collection_root_path.ls():
                         if subpath.is_directory():
                             try:
-                                item = pystac.Item.from_file(
+                                item = Item.from_file(
                                     subpath / subpath.with_suffix(".json").name
                                 )
                                 if item.id not in item_ids:
@@ -169,7 +179,7 @@ class StaticCatalogWriterMixin(ABC):
             logger.debug("create new collection")
             out_collection = Collection(
                 id=collection.id,
-                extent=pystac.Extent.from_items(items),
+                extent=Extent.from_items(items),
                 description=collection.description,
                 title=collection.title,
                 stac_extensions=collection.stac_extensions,
@@ -178,7 +188,7 @@ class StaticCatalogWriterMixin(ABC):
                 providers=collection.providers,
                 summaries=collection.summaries,
                 extra_fields=collection.extra_fields,
-                catalog_type=pystac.CatalogType.SELF_CONTAINED,
+                catalog_type=CatalogType.SELF_CONTAINED,
             )
 
             # finally, add all items to collection
@@ -197,11 +207,11 @@ class StaticCatalogWriterMixin(ABC):
         return catalog_json
 
 
-def _filter_items(
-    items: Generator[pystac.Item, None, None],
+def filter_items(
+    items: Generator[Item, None, None],
     cloud_cover_field: str = "eo:cloud_cover",
     max_cloud_cover: float = 100.0,
-) -> Generator[pystac.Item, None, None]:
+) -> Generator[Item, None, None]:
     """
     Only for cloudcover now, this can and should be adapted for filter field and value
     the field and value for the item filter would be defined in search.config.py corresponding configs

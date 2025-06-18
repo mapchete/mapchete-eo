@@ -165,7 +165,7 @@ def merge_products_masks(
                     new = np.expand_dims(
                         product.get_mask(**product_read_kwargs).data, axis=0
                     )
-                    yield ma.masked_array(data=new).astype(bool, copy=False)
+                    yield ma.masked_array(data=new.astype(bool, copy=False))
                 except (AssetKeyError, CorruptedProduct) as exc:
                     logger.debug("skip product %s because of %s", product.item.id, exc)
         except StopIteration:
@@ -179,10 +179,11 @@ def merge_products_masks(
     # read first valid product
     for product in products_iter:
         try:
-            out = np.expand_dims(
-                product.get_mask(**product_read_kwargs).data, axis=0
-            ).astype(bool, copy=False)
-            out = ma.masked_array(data=out)
+            out: ma.MaskedArray = ma.masked_array(
+                data=np.expand_dims(
+                    product.get_mask(**product_read_kwargs).data, axis=0
+                ).astype(bool, copy=False)
+            )
             break
         except (AssetKeyError, CorruptedProduct) as exc:
             logger.debug("skip product mask %s because of %s", product.item.id, exc)
@@ -202,7 +203,7 @@ def merge_products_masks(
             if out.all():
                 return out
 
-    # read all and concatate
+        # read all and concatate
     elif merge_method == MergeMethod.all:
 
         def _generate_arrays(

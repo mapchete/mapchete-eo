@@ -1,21 +1,19 @@
 import logging
 from datetime import datetime
 from functools import cached_property
-from typing import Dict, Iterator, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
 
-from mapchete.io.vector import IndexedFeatures
+from mapchete import Timer
 from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
+from pystac import Item
 from pystac_client import Client
-from shapely.errors import GEOSException
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.exceptions import ItemGeometryError
-from mapchete_eo.io.items import item_fix_footprint
 from mapchete_eo.product import blacklist_products
-from mapchete_eo.search.base import CatalogProtocol, StaticCatalogWriterMixin
+from mapchete_eo.search.base import CatalogSearcher, StaticCatalogWriterMixin
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
@@ -23,90 +21,95 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
+class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
     endpoint: str
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)
         if mapchete_eo_settings.blacklist
         else set()
     )
+    config_cls = StacSearchConfig
 
     def __init__(
         self,
-        collections: List[str],
-        time: Union[TimeRange, List[TimeRange]],
+        collections: Optional[List[str]] = None,
+        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
         endpoint: Optional[MPathLike] = None,
-        bounds: Optional[Bounds] = None,
-        area: Optional[BaseGeometry] = None,
-        config: StacSearchConfig = StacSearchConfig(),
-        **kwargs,
-    ) -> None:
-        if area is not None:
-            self.area = area
-            self.bounds = None
-        elif bounds is not None:
-            self.bounds = bounds
-            self.area = None
+    ):
+        if collections:
+            self.collections = collections
         else:  # pragma: no cover
-            raise ValueError("either bounds or area have to be given")
-
-        if len(collections) == 0:  # pragma: no cover
-            raise ValueError("no collections provided")
-
-        self.time = time if isinstance(time, list) else [time]
+            raise ValueError("collections must be given")
         self.client = Client.open(endpoint or self.endpoint)
         self.id = self.client.id
         self.description = self.client.description
         self.stac_extensions = self.client.stac_extensions
-
-        self.collections = collections
-        self.config = config
-
-        self._collection_items: Dict = {}
         self.eo_bands = self._eo_bands()
+        self.stac_item_modifiers = stac_item_modifiers
 
-    @cached_property
-    def items(self) -> IndexedFeatures:
-        def _get_items():
-            for time_range in self.time:
-                search = self._search(time_range=time_range)
-                if search.matched() > self.config.catalog_chunk_threshold:
+    def search(
+        self,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        bounds: Optional[BoundsLike] = None,
+        area: Optional[BaseGeometry] = None,
+        search_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Generator[Item, None, None]:
+        config = self.config_cls(**search_kwargs or {})
+        if bounds:
+            bounds = Bounds.from_inp(bounds)
+        if time is None:  # pragma: no cover
+            raise ValueError("time must be set")
+        if area is None and bounds is None:  # pragma: no cover
+            raise ValueError("either bounds or area have to be given")
+
+        if area is not None and area.is_empty:  # pragma: no cover
+            return
+
+        def _searches():
+            for time_range in time if isinstance(time, list) else [time]:
+                search = self._search(
+                    time_range=time_range, bounds=bounds, area=area, config=config
+                )
+                logger.debug("found %s products", search.matched())
+                matched = search.matched() or 0
+                if matched > config.catalog_chunk_threshold:
                     spatial_search_chunks = SpatialSearchChunks(
-                        bounds=self.bounds,
-                        area=self.area,
+                        bounds=bounds,
+                        area=area,
                         grid="geodetic",
-                        zoom=self.config.catalog_chunk_zoom,
+                        zoom=config.catalog_chunk_zoom,
                     )
                     logger.debug(
                         "too many products (%s), query catalog in %s chunks",
-                        search.matched(),
+                        matched,
                         len(spatial_search_chunks),
                     )
-                    searches = (
-                        self._search(time_range=time_range, **chunk_kwargs)
-                        for chunk_kwargs in spatial_search_chunks
-                    )
-                else:
-                    searches = (search,)
-
-                for search in searches:
-                    for item in search.items():
-                        try:
-                            item_path = item.get_self_href()
-                            if item_path in self.blacklist:  # pragma: no cover
-                                logger.debug(
-                                    "item %s found in blacklist and skipping", item_path
-                                )
-                            else:
-                                yield item_fix_footprint(item)
-                        except GEOSException as exc:
-                            raise ItemGeometryError(
-                                f"item {item.get_self_href()} geometry could not be resolved: {str(exc)}"
+                    for counter, chunk_kwargs in enumerate(spatial_search_chunks, 1):
+                        with Timer() as duration:
+                            chunk_search = self._search(
+                                time_range=time_range,
+                                config=config,
+                                **chunk_kwargs,
                             )
+                            yield chunk_search
+                        logger.debug(
+                            "returned chunk %s/%s (%s items) in %s",
+                            counter,
+                            len(spatial_search_chunks),
+                            chunk_search.matched(),
+                            duration,
+                        )
+                else:
+                    yield search
 
-        if self.area is not None and self.area.is_empty:
-            return IndexedFeatures([])
-        return IndexedFeatures(_get_items())
+        for search in _searches():
+            for count, item in enumerate(search.items(), 1):
+                item_path = item.get_self_href()
+                # logger.debug("item %s/%s ...", count, search.matched())
+                if item_path in self.blacklist:  # pragma: no cover
+                    logger.debug("item %s found in blacklist and skipping", item_path)
+                else:
+                    yield item
 
     def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
@@ -119,15 +122,15 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
             else:  # pragma: no cover
                 raise ValueError(f"cannot find collection {collection}")
         else:  # pragma: no cover
-            raise ValueError("cannot find eo:bands definition from collections")
+            logger.debug("cannot find eo:bands definition from collections")
+            return []
 
     @cached_property
     def default_search_params(self):
         return {
             "collections": self.collections,
-            "bbox": ",".join(map(str, self.bounds)) if self.bounds else None,
-            "intersects": self.area if self.area else None,
-            "query": [f"eo:cloud_cover<{self.config.max_cloud_cover}"],
+            "bbox": None,
+            "intersects": None,
         }
 
     def _search(
@@ -135,6 +138,7 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         time_range: Optional[TimeRange] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
+        config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ):
         if time_range is None:  # pragma: no cover
@@ -145,9 +149,9 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
                 raise ValueError("bounds empty")
             kwargs.update(bbox=",".join(map(str, bounds)))
         elif area is not None:
-            if self.area.is_empty:  # pragma: no cover
+            if area.is_empty:  # pragma: no cover
                 raise ValueError("area empty")
-            kwargs.update(intersects=self.area)
+            kwargs.update(intersects=area)
 
         start = (
             time_range.start.date()
@@ -162,10 +166,20 @@ class STACSearchCatalog(CatalogProtocol, StaticCatalogWriterMixin):
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
+            query=[f"eo:cloud_cover<={config.max_cloud_cover}"],
             **kwargs,
         )
+        if (
+            bounds is None
+            and area is None
+            and kwargs.get("bbox", kwargs.get("intersects")) is None
+        ):  # pragma: no cover
+            raise ValueError("no bounds or area given")
         logger.debug("query catalog using params: %s", search_params)
-        return self.client.search(**search_params)
+        with Timer() as duration:
+            result = self.client.search(**search_params, limit=config.catalog_pagesize)
+        logger.debug("query took %s", str(duration))
+        return result
 
     def get_collections(self):
         for collection_name in self.collections:
@@ -221,7 +235,7 @@ class SpatialSearchChunks:
                     self.bounds.top,
                 )
             return [
-                Bounds.from_inp(tile.bbox.intersection(shape(bounds)))
+                list(Bounds.from_inp(tile.bbox.intersection(shape(bounds))))
                 for tile in self.tile_pyramid.tiles_from_bounds(bounds, zoom=self.zoom)
             ]
         else:

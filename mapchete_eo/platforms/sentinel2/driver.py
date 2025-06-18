@@ -6,14 +6,10 @@ from mapchete.types import NodataVal
 from rasterio.enums import Resampling
 
 from mapchete_eo import base
-from mapchete_eo.archives.base import StaticArchive
-from mapchete_eo.platforms.sentinel2.archives import KnownArchives
+from mapchete_eo.archives.base import Archive
 from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
 from mapchete_eo.platforms.sentinel2.preprocessing_tasks import parse_s2_product
 from mapchete_eo.search.stac_static import STACStaticCatalog
-from mapchete_eo.search.config import (
-    StacStaticConfig,
-)
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import MergeMethod
 
@@ -37,6 +33,10 @@ Sentinel2CubeGroup = List[Tuple[str, Sentinel2Cube]]
 
 
 class InputData(base.InputData):
+    """
+    Main driver class used by mapchete.
+    """
+
     # Sentinel-2 driver specific parameters:
     default_preprocessing_task = staticmethod(parse_s2_product)
     driver_config_model = Sentinel2DriverConfig
@@ -45,26 +45,17 @@ class InputData(base.InputData):
 
     def set_archive(self, base_dir: MPath):
         if self.params.cat_baseurl:
-            self.search_config = StacStaticConfig(
-                max_cloud_cover=self.params.max_cloud_cover
-            )
-            self.archive = StaticArchive(
+            self.archive = Archive(
                 catalog=STACStaticCatalog(
                     baseurl=MPath(self.params.cat_baseurl).absolute_path(
                         base_dir=base_dir
                     ),
-                    area=self.bbox(mapchete_eo_settings.default_catalog_crs),
-                    time=self.time,
-                    config=self.search_config,
-                )
+                ),
+                area=self.bbox(mapchete_eo_settings.default_catalog_crs),
+                time=self.time,
+                search_kwargs=dict(max_cloud_cover=self.params.max_cloud_cover),
             )
         elif self.params.archive:
-            for archive in KnownArchives:
-                if self.params.archive is archive.value:
-                    self.search_config = archive.value.default_search_config_cls(
-                        max_cloud_cover=self.params.max_cloud_cover
-                    )
-
             catalog_area = reproject_geometry(
                 self.area,
                 src_crs=self.crs,
@@ -74,12 +65,14 @@ class InputData(base.InputData):
                 time=self.time,
                 bounds=catalog_area.bounds,
                 area=catalog_area,
-                search_index=(
-                    MPath(self.params.search_index).absolute_path(base_dir=base_dir)
-                    if self.params.search_index
-                    else None
+                search_kwargs=dict(
+                    search_index=(
+                        MPath(self.params.search_index).absolute_path(base_dir=base_dir)
+                        if self.params.search_index
+                        else None
+                    ),
+                    max_cloud_cover=self.params.max_cloud_cover,
                 ),
-                config=self.search_config,
             )
         else:
             raise ValueError("either 'archive' or 'cat_baseurl' or both is required.")

@@ -47,7 +47,7 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
         raise TypeError(
             f"array must have between one and four bands but has {num_bands}"
         )
-    return out.astype(np.float16, copy=False)
+    return np.array(out, dtype=np.float16)
 
 
 def _blend_base(

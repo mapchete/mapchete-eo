@@ -1,0 +1,34 @@
+process: read_xarray.py
+input:
+  inp:
+    format: Sentinel-2
+    archive: S2CDSE_JP2
+    level: L2A
+    time:
+      start: 2024-04-01
+      end: 2024-04-03
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel2
+  dtype: uint16
+pyramid:
+  grid: geodetic
+  metatiling: 4
+zoom_levels: 13
+# tmx bounds 13 1879 8938
+bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]
+
+process_parameters:
+  assets: ["B04_10m", "B03_10m" , "B02_10m"]
+  merge_products_by: eopf:datastrip_id
+  merge_method: average
+  mask_config:
+    footprint: true
+    footprint_buffer: -150
+    # buffer: 0
+    scl_classes: ["nodata", "saturated_or_defected", "cloud_shadows", "thin_cirrus", "cloud_medium_probability", "cloud_high_probability"]
+
+    # These wont work until we map to a bucket and can get different AWS (s3) src credentials into the mix
+    # cloud_probability_threshold: 40
+    # cloud_probability_resolution: 20

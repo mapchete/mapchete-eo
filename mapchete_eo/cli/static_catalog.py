@@ -12,7 +12,7 @@ from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
-from mapchete_eo.search.base import CatalogProtocol
+from mapchete_eo.search.base import CatalogSearcher
 from mapchete_eo.types import TimeRange
 
 
@@ -65,14 +65,9 @@ def static_catalog(
     catalog = get_catalog(
         catalog_json=catalog_json,
         endpoint=endpoint,
-        bounds=bounds,
-        start_time=start_time,
-        end_time=end_time,
         known_archive=archive,
         collection=collection,
-        mgrs_tile=mgrs_tile,
     )
-
     if hasattr(catalog, "write_static_catalog"):
         with options_arguments.TqdmUpTo(
             unit="products", unit_scale=True, miniters=1, disable=opt_debug
@@ -80,6 +75,12 @@ def static_catalog(
             catalog_json = catalog.write_static_catalog(
                 dst_path,
                 name=name,
+                bounds=bounds,
+                time=TimeRange(
+                    start=start_time,
+                    end=end_time,
+                ),
+                search_kwargs=dict(mgrs_tile=mgrs_tile),
                 description=description,
                 assets=assets,
                 assets_dst_resolution=assets_dst_resolution.value,
@@ -101,43 +102,22 @@ def static_catalog(
 def get_catalog(
     catalog_json: Optional[MPath],
     endpoint: Optional[MPath],
-    bounds: Bounds,
-    start_time: datetime,
-    end_time: datetime,
     known_archive: Optional[KnownArchives] = None,
     collection: Optional[str] = None,
-    mgrs_tile: Optional[str] = None,
-) -> CatalogProtocol:
+) -> CatalogSearcher:
     if catalog_json:
         return STACStaticCatalog(
             baseurl=catalog_json,
-            bounds=bounds,
-            time=TimeRange(
-                start=start_time,
-                end=end_time,
-            ),
         )
     elif endpoint:
         if collection:
             return STACSearchCatalog(
                 endpoint=endpoint,
                 collections=[collection],
-                bounds=bounds,
-                time=TimeRange(
-                    start=start_time,
-                    end=end_time,
-                ),
             )
         else:
             raise ValueError("collection must be provided")
     elif known_archive:
-        return known_archive.value(
-            bounds=bounds,
-            time=TimeRange(
-                start=start_time,
-                end=end_time,
-            ),
-            mgrs_tile=mgrs_tile,
-        ).catalog
+        return known_archive.value.catalog
     else:
         raise TypeError("cannot determine catalog")

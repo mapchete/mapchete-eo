@@ -3,39 +3,48 @@ from mapchete.tile import BufferedTilePyramid
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
-from mapchete_eo.platforms.sentinel2.archives import AWSL2AJP2, AWSL2ACOGv1
-from mapchete_eo.search.config import UTMSearchConfig
+from mapchete_eo.io.path import asset_mpath
+from mapchete_eo.platforms.sentinel2.archives import (
+    AWSL2AJP2,
+    AWSL2ACOGv1,
+    AWSL2AJP2CSDE,
+)
+from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.types import TimeRange
 
 
 @pytest.mark.remote
 @pytest.mark.parametrize(
     "archive_cls",
-    [AWSL2ACOGv1, AWSL2AJP2],
+    [AWSL2ACOGv1, AWSL2AJP2, AWSL2AJP2CSDE],
 )
 def test_s2_archives(archive_cls):
     time = TimeRange(start="2022-06-06", end="2022-06-06")
     bounds = [16, 46, 17, 47]
     archive = archive_cls(time=time, bounds=bounds)
-    assert len(archive.catalog.items)
-
-
-@pytest.mark.remote
-def test_s2_archives_jp2_static_search(utm_search_index):
-    time = TimeRange(start="2022-06-06", end="2022-06-06")
-    bounds = [16, 46, 17, 47]
-    archive = AWSL2AJP2(
-        time=time,
-        bounds=bounds,
-        config=UTMSearchConfig(search_index=str(utm_search_index)),
-    )
-    assert len(archive.catalog.items)
+    assert len(list(archive.items()))
 
 
 @pytest.mark.remote
 @pytest.mark.parametrize(
     "archive_cls",
-    [AWSL2ACOGv1, AWSL2AJP2],
+    [AWSL2ACOGv1, AWSL2AJP2, AWSL2AJP2CSDE],
+)
+def test_s2_archives_assets(archive_cls):
+    assets = ["red", "green", "blue", "coastal", "nir"]
+    time = TimeRange(start="2022-06-06", end="2022-06-06")
+    bounds = [16, 46, 17, 47]
+    archive = archive_cls(time=time, bounds=bounds)
+    for item in archive.items():
+        product = S2Product.from_stac_item(item)
+        for band_location in product.eo_bands_to_band_location(assets):
+            assert asset_mpath(item, band_location.asset_name).exists()
+
+
+@pytest.mark.remote
+@pytest.mark.parametrize(
+    "archive_cls",
+    [AWSL2ACOGv1, AWSL2AJP2, AWSL2AJP2CSDE],
 )
 def test_s2_archives_multipolygon_search(archive_cls):
     pyramid = BufferedTilePyramid("geodetic")
@@ -47,7 +56,7 @@ def test_s2_archives_multipolygon_search(archive_cls):
         time=time,
         area=area,
     )
-    items = list(archive.catalog.items)
+    items = list(archive.items())
     assert items
     for item in items:
         assert shape(item.geometry).intersects(area)

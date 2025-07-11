@@ -763,18 +763,19 @@ def utm_search_index(testdata_dir) -> MPath:
 
 
 @pytest.fixture(autouse=False)
-def set_cdse_test_env(monkeypatch):
-    access_key = os.getenv("CDSE_S3_ACCESS_KEY")
-    secret_key = os.getenv("CDSE_S3_ACCESS_SECRET")
+def set_cdse_test_env(monkeypatch, request):
+    if "use_cdse_test_env" in request.keywords:
+        access_key = os.getenv("CDSE_S3_ACCESS_KEY")
+        secret_key = os.getenv("CDSE_S3_ACCESS_SECRET")
 
-    if access_key and secret_key:
-        monkeypatch.setenv("AWS_ACCESS_KEY_ID", access_key)
-        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", secret_key)
-        monkeypatch.setenv(
-            "AWS_ENDPOINT_URL", "https://eodata.dataspace.copernicus.eu/"
-        )
-        monkeypatch.setenv("AWS_S3_ENDPOINT", "eodata.dataspace.copernicus.eu")
-        monkeypatch.setenv("AWS_VIRTUAL_HOSTING", "FALSE")
-        monkeypatch.setenv("AWS_DEFAULT_REGION_EOX", "default")
+        if access_key and secret_key:
+            monkeypatch.setenv("AWS_ACCESS_KEY_ID", access_key)
+            monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", secret_key)
+            monkeypatch.setenv(
+                "AWS_ENDPOINT_URL", "https://eodata.dataspace.copernicus.eu/"
+            )
+            monkeypatch.setenv("AWS_S3_ENDPOINT", "eodata.dataspace.copernicus.eu")
+            monkeypatch.setenv("AWS_VIRTUAL_HOSTING", "FALSE")
+            monkeypatch.setenv("AWS_DEFAULT_REGION_EOX", "default")
     else:
         pytest.fail("CDSE AWS credentials not found in environment")

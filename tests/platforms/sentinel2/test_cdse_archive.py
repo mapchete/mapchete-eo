@@ -11,7 +11,7 @@ from mapchete_eo.types import TimeRange
 
 
 @pytest.mark.remote
-@pytest.mark.set_cdse_test_env
+@pytest.mark.use_cdse_test_env
 @pytest.mark.parametrize(
     "archive_cls",
     [CDSEL2AJP2CSDE],
@@ -24,7 +24,7 @@ def test_s2_archives(archive_cls):
 
 
 @pytest.mark.remote
-@pytest.mark.set_cdse_test_env
+@pytest.mark.use_cdse_test_env
 @pytest.mark.parametrize(
     "archive_cls",
     [CDSEL2AJP2CSDE],
@@ -41,7 +41,7 @@ def test_s2_archives_assets(archive_cls):
 
 
 @pytest.mark.remote
-@pytest.mark.set_cdse_test_env
+@pytest.mark.use_cdse_test_env
 @pytest.mark.parametrize(
     "archive_cls",
     [CDSEL2AJP2CSDE],

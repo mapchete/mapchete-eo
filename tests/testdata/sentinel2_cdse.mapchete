@@ -20,7 +20,7 @@ zoom_levels: 13
 bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]
 
 process_parameters:
-  assets: ["red", "green" , "blue"]
+  assets: [B04_10m, B03_10m, B02_10m]
   merge_products_by: eopf:datastrip_id
   merge_method: average
   mask_config:

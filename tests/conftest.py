@@ -762,7 +762,7 @@ def utm_search_index(testdata_dir) -> MPath:
     return testdata_dir / "s2-jp2-fgb-catalog/index.fgb"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=False)
 def set_cdse_test_env(monkeypatch):
     access_key = os.getenv("CDSE_S3_ACCESS_KEY")
     secret_key = os.getenv("CDSE_S3_ACCESS_SECRET")

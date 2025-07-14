@@ -234,7 +234,7 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 @pytest.fixture
 def sentinel2_aws_cdse_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        testdata_dir / "sentinel2_aws_cdse_mapchete.mapchete",
+        testdata_dir / "sentinel2_aws_cdse.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example

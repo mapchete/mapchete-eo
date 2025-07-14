@@ -126,6 +126,15 @@ def s2_stac_item_jp2():
 
 
 @pytest.fixture
+def s2_stac_item_cdse_jp2():
+    item = pystac.pystac.Item.from_file(
+        "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a/items/S2B_MSIL2A_20230810T094549_N0509_R079_T33TWM_20230810T130104"
+    )
+    item.make_asset_hrefs_absolute()
+    return item
+
+
+@pytest.fixture
 def s2_remote_stac_item():
     item = pystac.pystac.Item.from_file(
         "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/U/WP/2023/7/S2B_33UWP_20230704_0_L2A/S2B_33UWP_20230704_0_L2A.json"

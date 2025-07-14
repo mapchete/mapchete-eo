@@ -689,3 +689,30 @@ def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     )
     assert (jp2_unapplied != cog).all()
     assert (jp2_unapplied - 1000 == cog).all()
+
+
+@pytest.mark.remote
+@pytest.mark.use_cdse_test_env
+def test_read_apply_offset_cdse(s2_stac_item, s2_stac_item_cdse_jp2):
+    cog_assets = ["coastal"]
+    jp2_cdse_assets = ["B01_60m"]
+    cog_product = S2Product(s2_stac_item)
+    jp2_product = S2Product(s2_stac_item_cdse_jp2)
+    tile = _get_product_tile(cog_product)
+
+    # (1) read array from COG archive where offset was already applied by the provider
+    cog = cog_product.read_np_array(assets=cog_assets, grid=tile)
+
+    # (2) read array from JP2 CDSE archive where offset was not provided but apply it ourselves
+    jp2 = jp2_product.read_np_array(assets=jp2_cdse_assets, grid=tile)
+
+    # --> 1 and 2 should be identical
+    assert (cog == jp2).all()
+
+    # (3) read array from JP2 archive but deactivate offset appliance
+    # --> 1 and 3 should differ by 1000
+    jp2_unapplied = jp2_product.read_np_array(
+        assets=jp2_cdse_assets, grid=tile, apply_offset=False
+    )
+    assert (jp2_unapplied != cog).all()
+    assert (jp2_unapplied - 1000 == cog).all()

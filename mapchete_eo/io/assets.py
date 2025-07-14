@@ -42,14 +42,22 @@ class STACRasterBandProperties(BaseModel):
         asset: pystac.Asset,
         nodataval: NodataVal = None,
     ) -> STACRasterBandProperties:
-        properties = asset.extra_fields.get("raster:bands", [{}])[0]
-        properties.update(
-            nodata=(
-                nodataval
-                if properties.get("nodata") is None
-                else properties.get("nodata")
-            ),
-        )
+        if asset.extra_fields.get("raster:offset") is not None:
+            properties = dict(
+                offset=asset.extra_fields.get("raster:offset"),
+                scale=asset.extra_fields.get("raster:scale"),
+                nodata=asset.extra_fields.get("nodata", nodataval),
+            )
+        else:
+            properties = asset.extra_fields.get("raster:bands", [{}])[0]
+            properties.update(
+                nodata=(
+                    nodataval
+                    if properties.get("nodata") is None
+                    else properties.get("nodata")
+                ),
+            )
+
         return STACRasterBandProperties(
             **properties,
         )

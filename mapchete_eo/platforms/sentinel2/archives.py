@@ -168,7 +168,23 @@ class AWSL2AJP2CSDE(Archive):
     processing_level = ProcessingLevel.level2a
 
 
+class CDSEL2AJP2CSDE(Archive):
+    """
+    JP2000 archive on CDSE (EODATA s3) using CDSE STAC search endpoint.
+    """
+
+    catalog = CDSESearch(
+        collections=["sentinel-2-l2a"],
+    )
+    item_modifier_funcs = [
+        item_fix_footprint,
+        add_datastrip_id,
+    ]
+    processing_level = ProcessingLevel.level2a
+
+
 class KnownArchives(Enum):
     S2AWS_COG = AWSL2ACOGv1
     S2AWS_JP2 = AWSL2AJP2
-    S2CDSE_JP2 = AWSL2AJP2CSDE
+    S2CDSE_AWSJP2 = AWSL2AJP2CSDE
+    S2CDSE_JP2 = CDSEL2AJP2CSDE

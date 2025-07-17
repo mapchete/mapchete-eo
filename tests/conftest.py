@@ -126,6 +126,15 @@ def s2_stac_item_jp2():
 
 
 @pytest.fixture
+def s2_stac_item_cdse_jp2():
+    item = pystac.pystac.Item.from_file(
+        "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a/items/S2B_MSIL2A_20230810T094549_N0509_R079_T33TWM_20230810T130104"
+    )
+    item.make_asset_hrefs_absolute()
+    return item
+
+
+@pytest.fixture
 def s2_remote_stac_item():
     item = pystac.pystac.Item.from_file(
         "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/33/U/WP/2023/7/S2B_33UWP_20230704_0_L2A/S2B_33UWP_20230704_0_L2A.json"
@@ -232,9 +241,18 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
-def sentinel2_csde_mapchete(tmp_path, testdata_dir):
+def sentinel2_aws_cdse_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
-        testdata_dir / "sentinel2_csde.mapchete",
+        testdata_dir / "sentinel2_aws_cdse.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
+def sentinel2_cdse_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_cdse.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
@@ -760,3 +778,25 @@ def broken_footprint() -> base.BaseGeometry:
 @pytest.fixture
 def utm_search_index(testdata_dir) -> MPath:
     return testdata_dir / "s2-jp2-fgb-catalog/index.fgb"
+
+
+@pytest.fixture(autouse=True)
+def set_cdse_test_env(monkeypatch, request):
+    if "use_cdse_test_env" not in request.keywords:
+        return  # Don't patch for unmarked tests
+
+    access_key = os.getenv("CDSE_S3_ACCESS_KEY")
+    secret_key = os.getenv("CDSE_S3_ACCESS_SECRET")
+
+    if access_key and secret_key:
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", access_key)
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", secret_key)
+        monkeypatch.setenv(
+            "AWS_ENDPOINT_URL", "https://eodata.dataspace.copernicus.eu/"
+        )
+        monkeypatch.setenv("AWS_S3_ENDPOINT", "eodata.dataspace.copernicus.eu")
+        monkeypatch.setenv("AWS_VIRTUAL_HOSTING", "FALSE")
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "default")
+        monkeypatch.delenv("AWS_REQUEST_PAYER", raising=False)
+    else:
+        pytest.fail("CDSE AWS credentials not found in environment")

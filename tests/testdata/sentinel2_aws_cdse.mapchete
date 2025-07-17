@@ -2,7 +2,7 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    archive: S2CDSE_JP2
+    archive: S2CDSE_AWSJP2
     level: L2A
     time:
       start: 2024-04-01
@@ -20,7 +20,7 @@ zoom_levels: 13
 bounds: [16.3916015625, 48.69140625, 16.41357421875, 48.71337890625]
 
 process_parameters:
-  assets: ["B04_10m", "B03_10m" , "B02_10m"]
+  assets: ["red", "green" , "blue"]
   merge_products_by: eopf:datastrip_id
   merge_method: average
   mask_config:

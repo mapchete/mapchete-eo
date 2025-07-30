@@ -8,6 +8,7 @@ Changelog
 
 * Migrated public repository at: `https://github.com/mapchete/mapchete-eo`
 * Package name changed from `mapchete_eo` to `mapchete-eo`; python module still with underscore `from mapchete_eo import *`
+* Dropped support and tests for `python 3.9`
 
 * core
   

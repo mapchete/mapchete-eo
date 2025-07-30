@@ -56,7 +56,7 @@ jobs:
           CDSE_S3_ACCESS_KEY: ${{ secrets.CDSE_S3_ACCESS_KEY }}
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: pytest -v --cov mapchete_eo --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered
+        run: pytest -v --cov mapchete-eo --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
 
       # report detailed coverage in PR comment
       - name: comment test coverage report on PR

@@ -28,7 +28,6 @@ dependencies = [
     "lxml",
     "mapchete>=2025.6.0",
     "opencv-python",
-    "orgonite",
     "Pillow",
     "pydantic",
     "pystac[urllib3]>=1.12.2",

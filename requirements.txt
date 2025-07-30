@@ -4,7 +4,6 @@ croniter
 lxml
 mapchete>=2025.4.0
 opencv-python
-orgonite
 pillow
 pydantic
 pystac-client>=0.7.5

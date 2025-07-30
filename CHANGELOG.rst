@@ -3,14 +3,35 @@ Changelog
 #########
 
 
+2025.7.0 - 2025-07-30
+----------------------
+
+* Migrated public repository at: `https://github.com/mapchete/mapchete-eo`
+* Package name changed from `mapchete_eo` to `mapchete-eo`; python module still with underscore `from mapchete_eo import *`
+
+* core
+  
+  * added/implemented `CDSESearch(STACSearchCatalog)` as search
+  * added following archive options to utilize the CDSE seach, the `S2CDSE_AWSJP2` searches at CDSE, but reads from `AWS Open Data Sentinel-2`, 
+    `S2CDSE_JP2` searches and reads data both from CDSE (needs to have correct asset names given for reading):
+
+    * `S2CDSE_AWSJP2 = AWSL2AJP2CSDE`
+    * `S2CDSE_JP2 = CDSEL2AJP2CSDE`
+
+* CI/CD
+
+  * `.github/workflows/` for running tests and publishing the `mapchete-eo` releases via hatch to `pypi`
+  * removed double dependency files, now dependencies are defined in `pyproject.toml`
+
+
 2025.5.0 - 2025-05-19
 ----------------------
 
 * core
 
-  * set `clip_to_crs_bounds=False` in `reproject_geometry` of `platforms.sentinel2.product` `footprint_nodata_mask()` as if clipped and at CRS border it will for some reason clip products; this make footprits too large or missprojected
+  * set `clip_to_crs_bounds=False` in `reproject_geometry` of `platforms.sentinel2.product` `footprint_nodata_mask()` as if clipped and at CRS border it will for some reason clip products; this make footprints too large or missprojected
     * This can also be due to smaller CRS bounds (from `pyproj`) than mapchete Grid Pyramid definition
-  * use `|` in `platforms.sentinel2.product` `get_mask()` fuction to preserve `bool` types while going through masks
+  * use `|` in `platforms.sentinel2.product` `get_mask()` function to preserve `bool` types while going through masks
   * fix `first` Slice product reading logic, also make `average` for read_products and `all` for `read_masks` to only use products that are not fully masked
 
 * CI/CD

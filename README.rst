@@ -1,12 +1,11 @@
-# mapchete-eo
+.. image:: logo/mapchete_eo_grey.svg
 
-A collection of Earth Observation–specific driver extensions for [Mapchete](https://github.com/ungarj/mapchete).
+A collection of Earth Observation–specific driver extensions for `Mapchete <https://github.com/ungarj/mapchete>`_.
 
 This package provides custom input and output drivers tailored for common EO data formats and workflows, enabling seamless integration of satellite data sources into the Mapchete tile-based geoprocessing framework.
 
----
-
-## What is this?
+What is this?
+-------------
 
 **mapchete-eo** extends Mapchete by adding support for:
 
@@ -15,18 +14,17 @@ This package provides custom input and output drivers tailored for common EO dat
 
 This package is intended for advanced users or developers who are working with remote sensing workflows using Mapchete.
 
----
+Installation
+------------
 
-## 📦 Installation
+You must have ``mapchete`` installed:
 
-You must have `mapchete` installed:
+.. code-block:: bash
 
-```bash
-pip install mapchete
-```
+    pip install mapchete
 
 Then install mapchete-eo:
 
-```bash
-pip install mapchete-eo
-```
+.. code-block:: bash
+
+    pip install mapchete-eo

@@ -1,4 +1,4 @@
-.. image:: logo/mapchete_eo_grey.svg
+.. image:: logo/mapchete_eo.svg
 
 A collection of Earth Observation–specific driver extensions for `Mapchete <https://github.com/ungarj/mapchete>`_.
 

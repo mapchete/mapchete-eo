@@ -26,17 +26,18 @@ What is this?
 
 - Custom **input drivers** to read EO datasets, from STAC search or metadata (catalogs, collections, items)
 - Metadata extraction and band management for optical satellite products
+- Reading data from sources via **STAC assets**
 
 This package is intended for advanced users or developers who are working with remote sensing workflows using Mapchete.
 
 Installation
 ------------
 
-You must have ``mapchete`` installed:
+You must have ``mapchete`` with ``s3`` installed, so let's grab the ``complete`` dependencies in this case for convenience:
 
 .. code-block:: bash
 
-    pip install mapchete
+    pip install mapchete[complete]
 
 Then install mapchete-eo:
 

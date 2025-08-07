@@ -21,13 +21,22 @@ def execute(
     resampling: str = "bilinear",
     nodata: float = 0.0,
     merge_products_by: str = "s2:datastrip_id",
-    mask_config: Union[MaskConfig, dict] = MaskConfig(scl_classes= ["nodata", "saturated_or_defected", "cloud_shadows", "thin_cirrus", "cloud_medium_probability", "cloud_high_probability"]),
+    mask_config: Union[MaskConfig, dict] = MaskConfig(
+        scl_classes=[
+            "nodata",
+            "saturated_or_defected",
+            "cloud_shadows",
+            "thin_cirrus",
+            "cloud_medium_probability",
+            "cloud_high_probability",
+        ]
+    ),
     target_date: Optional[DateTimeLike] = None,
 ) -> ma.MaskedArray:
-    '''
+    """
     This mapchete execute process reads the time-series and tries to fill an array with singular data value from the time-series.
 
-    '''    
+    """
     logger.debug("Reading Sentinel-2 data stack.")
     with Timer() as t:
         data_stack = element84_sentinel2.read_levelled_np_array(
@@ -42,5 +51,5 @@ def execute(
             sort=TargetDateSort(target_date=target_date),
         )
     logger.debug("Sentinel-2 stack of shape %s read took %s", data_stack.shape, t)
-    
+
     return data_stack[0]

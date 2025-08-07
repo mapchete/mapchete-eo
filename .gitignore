@@ -11,3 +11,4 @@ dist/
 *.gfs
 .vscode/
 __pycache__
+examples/sentinel-2*/

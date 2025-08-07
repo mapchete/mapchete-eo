@@ -1,2 +1,0 @@
-# Mapchete EO driver
-

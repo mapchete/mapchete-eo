@@ -1,0 +1,37 @@
+process: first_pixel_process.py
+input:
+  element84_sentinel2:
+    format: Sentinel-2
+    level: L2A
+    # The process only masks by SCL masks and is not evaluating values from the timeseries, thus we are taking perfect scenes only (up to 2% cloudcover)
+    # Note: This could lead to granule and/or tile stripes in the output
+    max_cloud_percent: 2
+    time:
+      start: 2025-05-01
+      end: 2025-06-30
+output:
+  format: GTiff
+  # In this example we will be getting Sentinel 2 bands: B04, B03, B02, B08, B11, B12 (RGB, NIR, SWIR)
+  bands: 6
+  path: sentinel-2_2025-may-june_first_pixel
+  dtype: uint16
+pyramid:
+  grid: geodetic
+  metatiling: 8
+zoom_levels:
+  min: 8
+  max: 13
+baselevels:
+  lower: cubic
+  min: 13  
+
+# Some bounds around Vienna
+bounds: [16.20, 48.00, 16.75,48.5]
+
+process_parameters:
+  target_height: 1
+  target_date: 2025-05-01
+  assets: [red, green, blue, nir, swir16, swir22]
+  mask_config:
+    footprint: true
+    scl_classes: ["nodata", "saturated_or_defected", "cloud_shadows", "thin_cirrus", "cloud_medium_probability", "cloud_high_probability"]

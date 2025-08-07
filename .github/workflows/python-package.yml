@@ -60,4 +60,16 @@ jobs:
           CDSE_S3_ACCESS_KEY: ${{ secrets.CDSE_S3_ACCESS_KEY }}
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: pytest -v --cov mapchete-eo --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered
+        run: pytest -v --cov mapchete_eo --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
+
+      # Upload the report to Codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: mapchete/mapchete-eo
+
+      # this will let the workflow fail if coverage is below 100%
+      - name: Pytest coverage
+        run: coverage report --skip-covered --show-missing
+        # --fail-under 100

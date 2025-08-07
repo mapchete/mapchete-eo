@@ -7,7 +7,7 @@ Changelog
 ----------------------
 
 * add rudimentary example
-* add init docs and readthedocs.yaml for docs build and publish
+* add init docs, TODO: decide on CI for docs build and publish
 
 2025.7.0 - 2025-07-30
 ----------------------

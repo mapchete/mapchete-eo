@@ -91,6 +91,9 @@ class EODataCube(base.InputTile):
                     if not isinstance(item, CorruptedProductMetadata)
                 ],
                 crs=self.tile.crs,
+                # by not using rtree, we avoid an edge case where products outside of process CRS bounds
+                # cause rtree to fail when indexing the products.
+                index=None,
             )
 
         # just return the prouducts as is
@@ -101,6 +104,9 @@ class EODataCube(base.InputTile):
                 if not isinstance(item, CorruptedProductMetadata)
             ],
             crs=self.tile.crs,
+            # by not using rtree, we avoid an edge case where products outside of process CRS bounds
+            # cause rtree to fail when indexing the products.
+            index=None,
         )
 
     def read(

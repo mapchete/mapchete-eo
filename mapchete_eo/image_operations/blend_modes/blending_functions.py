@@ -69,18 +69,21 @@ Detailed Documentation
 ----------------------
 
 """
+
 import numpy as np
 
-from mapchete_eo.image_operations.blend_modes.type_checks import assert_image_format, assert_opacity
+from mapchete_eo.image_operations.blend_modes.type_checks import (
+    assert_image_format,
+    assert_opacity,
+)
 
 
 def _compose_alpha(img_in, img_layer, opacity):
-    """Calculate alpha composition ratio between two images.
-    """
+    """Calculate alpha composition ratio between two images."""
 
     comp_alpha = np.minimum(img_in[:, :, 3], img_layer[:, :, 3]) * opacity
     new_alpha = img_in[:, :, 3] + (1.0 - img_in[:, :, 3]) * comp_alpha
-    np.seterr(divide='ignore', invalid='ignore')
+    np.seterr(divide="ignore", invalid="ignore")
     ratio = comp_alpha / new_alpha
     ratio[np.isnan(ratio)] = 0.0
     return ratio
@@ -119,9 +122,9 @@ def normal(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'normal'
-        assert_image_format(img_in, _fcn_name, 'img_in', force_alpha=False)
-        assert_image_format(img_layer, _fcn_name, 'img_layer', force_alpha=False)
+        _fcn_name = "normal"
+        assert_image_format(img_in, _fcn_name, "img_in", force_alpha=False)
+        assert_image_format(img_layer, _fcn_name, "img_layer", force_alpha=False)
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -131,15 +134,23 @@ def normal(img_in, img_layer, opacity, disable_type_checks: bool = False):
     if img_in_norm.shape[2] == 3:
         img_in_norm = np.dstack((img_in_norm, np.zeros(img_in_norm.shape[:2] + (3,))))
     if img_layer_norm.shape[2] == 3:
-        img_layer_norm = np.dstack((img_layer_norm, np.zeros(img_layer_norm.shape[:2] + (3,))))
+        img_layer_norm = np.dstack(
+            (img_layer_norm, np.zeros(img_layer_norm.shape[:2] + (3,)))
+        )
 
     # Extract alpha-channels and apply opacity
-    img_in_alp = np.expand_dims(img_in_norm[:, :, 3], 2)  # alpha of b, prepared for broadcasting
-    img_layer_alp = np.expand_dims(img_layer_norm[:, :, 3], 2) * opacity  # alpha of a, prepared for broadcasting
+    img_in_alp = np.expand_dims(
+        img_in_norm[:, :, 3], 2
+    )  # alpha of b, prepared for broadcasting
+    img_layer_alp = (
+        np.expand_dims(img_layer_norm[:, :, 3], 2) * opacity
+    )  # alpha of a, prepared for broadcasting
 
     # Blend images
-    c_out = (img_layer_norm[:, :, :3] * img_layer_alp + img_in_norm[:, :, :3] * img_in_alp * (1 - img_layer_alp)) \
-            / (img_layer_alp + img_in_alp * (1 - img_layer_alp))
+    c_out = (
+        img_layer_norm[:, :, :3] * img_layer_alp
+        + img_in_norm[:, :, :3] * img_in_alp * (1 - img_layer_alp)
+    ) / (img_layer_alp + img_in_alp * (1 - img_layer_alp))
 
     # Blend alpha
     cout_alp = img_layer_alp + img_in_alp * (1 - img_layer_alp)
@@ -187,9 +198,9 @@ def soft_light(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'soft_light'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "soft_light"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -204,12 +215,19 @@ def soft_light(img_in, img_layer, opacity, disable_type_checks: bool = False):
     #   ratio_rs = np.reshape(np.repeat(ratio,3),comp.shape)
     #   img_out = comp*ratio_rs + img_in_norm[:, :, :3] * (1.0-ratio_rs)
 
-    comp = (1.0 - img_in_norm[:, :, :3]) * img_in_norm[:, :, :3] * img_layer_norm[:, :, :3] \
-           + img_in_norm[:, :, :3] * (1.0 - (1.0 - img_in_norm[:, :, :3]) * (1.0 - img_layer_norm[:, :, :3]))
+    comp = (1.0 - img_in_norm[:, :, :3]) * img_in_norm[:, :, :3] * img_layer_norm[
+        :, :, :3
+    ] + img_in_norm[:, :, :3] * (
+        1.0 - (1.0 - img_in_norm[:, :, :3]) * (1.0 - img_layer_norm[:, :, :3])
+    )
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -248,9 +266,9 @@ def lighten_only(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'lighten_only'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "lighten_only"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -260,9 +278,13 @@ def lighten_only(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = np.maximum(img_in_norm[:, :, :3], img_layer_norm[:, :, :3])
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -301,9 +323,9 @@ def screen(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'screen'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "screen"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -313,9 +335,13 @@ def screen(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = 1.0 - (1.0 - img_in_norm[:, :, :3]) * (1.0 - img_layer_norm[:, :, :3])
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -354,9 +380,9 @@ def dodge(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'dodge'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "dodge"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -366,9 +392,13 @@ def dodge(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = np.minimum(img_in_norm[:, :, :3] / (1.0 - img_layer_norm[:, :, :3]), 1.0)
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -407,9 +437,9 @@ def addition(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'addition'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "addition"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -419,9 +449,15 @@ def addition(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = img_in_norm[:, :, :3] + img_layer_norm[:, :, :3]
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
-    img_out = np.clip(comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = np.clip(
+        comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0
+    )
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -460,9 +496,9 @@ def darken_only(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'darken_only'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "darken_only"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -472,9 +508,13 @@ def darken_only(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = np.minimum(img_in_norm[:, :, :3], img_layer_norm[:, :, :3])
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -513,9 +553,9 @@ def multiply(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'multiply'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "multiply"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -525,9 +565,13 @@ def multiply(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = np.clip(img_layer_norm[:, :, :3] * img_in_norm[:, :, :3], 0.0, 1.0)
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -566,9 +610,9 @@ def hard_light(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'hard_light'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "hard_light"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -576,15 +620,24 @@ def hard_light(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     ratio = _compose_alpha(img_in_norm, img_layer_norm, opacity)
 
-    comp = np.greater(img_layer_norm[:, :, :3], 0.5) \
-           * np.minimum(1.0 - ((1.0 - img_in_norm[:, :, :3])
-                               * (1.0 - (img_layer_norm[:, :, :3] - 0.5) * 2.0)), 1.0) \
-           + np.logical_not(np.greater(img_layer_norm[:, :, :3], 0.5)) \
-           * np.minimum(img_in_norm[:, :, :3] * (img_layer_norm[:, :, :3] * 2.0), 1.0)
+    comp = np.greater(img_layer_norm[:, :, :3], 0.5) * np.minimum(
+        1.0
+        - (
+            (1.0 - img_in_norm[:, :, :3])
+            * (1.0 - (img_layer_norm[:, :, :3] - 0.5) * 2.0)
+        ),
+        1.0,
+    ) + np.logical_not(np.greater(img_layer_norm[:, :, :3], 0.5)) * np.minimum(
+        img_in_norm[:, :, :3] * (img_layer_norm[:, :, :3] * 2.0), 1.0
+    )
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -623,9 +676,9 @@ def difference(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'difference'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "difference"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -636,9 +689,13 @@ def difference(img_in, img_layer, opacity, disable_type_checks: bool = False):
     comp = img_in_norm[:, :, :3] - img_layer_norm[:, :, :3]
     comp[comp < 0.0] *= -1.0
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -677,9 +734,9 @@ def subtract(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'subtract'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "subtract"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -689,9 +746,15 @@ def subtract(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = img_in[:, :, :3] - img_layer_norm[:, :, :3]
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
-    img_out = np.clip(comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = np.clip(
+        comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0
+    )
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -729,9 +792,9 @@ def grain_extract(img_in, img_layer, opacity, disable_type_checks: bool = False)
     """
 
     if not disable_type_checks:
-        _fcn_name = 'grain_extract'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "grain_extract"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -741,9 +804,13 @@ def grain_extract(img_in, img_layer, opacity, disable_type_checks: bool = False)
 
     comp = np.clip(img_in_norm[:, :, :3] - img_layer_norm[:, :, :3] + 0.5, 0.0, 1.0)
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -781,9 +848,9 @@ def grain_merge(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'grain_merge'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "grain_merge"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -793,9 +860,13 @@ def grain_merge(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     comp = np.clip(img_in_norm[:, :, :3] + img_layer_norm[:, :, :3] - 0.5, 0.0, 1.0)
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -834,9 +905,9 @@ def divide(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'divide'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "divide"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -844,11 +915,19 @@ def divide(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     ratio = _compose_alpha(img_in_norm, img_layer_norm, opacity)
 
-    comp = np.minimum((256.0 / 255.0 * img_in_norm[:, :, :3]) / (1.0 / 255.0 + img_layer_norm[:, :, :3]), 1.0)
+    comp = np.minimum(
+        (256.0 / 255.0 * img_in_norm[:, :, :3])
+        / (1.0 / 255.0 + img_layer_norm[:, :, :3]),
+        1.0,
+    )
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0
 
 
@@ -892,9 +971,9 @@ def overlay(img_in, img_layer, opacity, disable_type_checks: bool = False):
     """
 
     if not disable_type_checks:
-        _fcn_name = 'overlay'
-        assert_image_format(img_in, _fcn_name, 'img_in')
-        assert_image_format(img_layer, _fcn_name, 'img_layer')
+        _fcn_name = "overlay"
+        assert_image_format(img_in, _fcn_name, "img_in")
+        assert_image_format(img_layer, _fcn_name, "img_layer")
         assert_opacity(opacity, _fcn_name)
 
     img_in_norm = img_in / 255.0
@@ -902,11 +981,17 @@ def overlay(img_in, img_layer, opacity, disable_type_checks: bool = False):
 
     ratio = _compose_alpha(img_in_norm, img_layer_norm, opacity)
 
-    comp = np.less(img_in_norm[:, :, :3], 0.5) * (2 * img_in_norm[:, :, :3] * img_layer_norm[:, :, :3]) \
-           + np.greater_equal(img_in_norm[:, :, :3], 0.5) \
-           * (1 - (2 * (1 - img_in_norm[:, :, :3]) * (1 - img_layer_norm[:, :, :3])))
+    comp = np.less(img_in_norm[:, :, :3], 0.5) * (
+        2 * img_in_norm[:, :, :3] * img_layer_norm[:, :, :3]
+    ) + np.greater_equal(img_in_norm[:, :, :3], 0.5) * (
+        1 - (2 * (1 - img_in_norm[:, :, :3]) * (1 - img_layer_norm[:, :, :3]))
+    )
 
-    ratio_rs = np.reshape(np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]])
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
     img_out = comp * ratio_rs + img_in_norm[:, :, :3] * (1.0 - ratio_rs)
-    img_out = np.nan_to_num(np.dstack((img_out, img_in_norm[:, :, 3])))  # add alpha channel and replace nans
+    img_out = np.nan_to_num(
+        np.dstack((img_out, img_in_norm[:, :, 3]))
+    )  # add alpha channel and replace nans
     return img_out * 255.0

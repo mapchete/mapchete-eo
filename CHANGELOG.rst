@@ -3,11 +3,21 @@ Changelog
 #########
 
 
+2025.8.1 - 2025-08-12
+----------------------
+
+* core
+
+  * remove `blend_modes` as external dependency as the package is not being maintained
+  * former `blend_modes` into `image_operations.blend_modes.blending_functions` 
+
+
 2025.8.0 - 2025-08-07
 ----------------------
 
 * add rudimentary example
 * add init docs, TODO: decide on CI for docs build and publish
+
 
 2025.7.0 - 2025-07-30
 ----------------------

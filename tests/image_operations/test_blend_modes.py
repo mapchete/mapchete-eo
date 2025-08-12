@@ -71,6 +71,24 @@ def test_func_behavior_with_blendbase():
     assert result_opacity.shape == src.shape
 
 
+def test_make_blend_function_default_path():
+    # Create a dummy blend function, e.g. returns src
+    def dummy_blend(s, d):
+        return s
+
+    func = bf.make_blend_function(dummy_blend)
+
+    src = np.ones((2, 2, 4), dtype=np.float16)
+    dst = np.zeros((2, 2, 4), dtype=np.float16)
+
+    # Call with default params to hit the return base.blend() line
+    result = func(src, dst)
+
+    assert np.allclose(result, src)
+    assert result.dtype == np.float16
+    assert result.shape == src.shape
+
+
 def test_prepare_type_checks_enabled_casting():
     blend = BlendBase()
     blend.disable_type_checks = False
@@ -242,35 +260,43 @@ def test_blend_functions_opacity_mid(src_image, dst_images, blend_name, opacity)
     assert (result >= 0).all() and (result <= 1).all()
 
 
-def burn_blend(s: np.ndarray, d: np.ndarray) -> np.ndarray:
-    with np.errstate(divide="ignore", invalid="ignore"):
-        res = 1 - np.true_divide(1 - d, s)
-        res[~np.isfinite(res)] = 0
-        return np.clip(res, 0, 1)
-
-
 def test_burn_blend_basic():
-    # Simple inputs
     s = np.array([[0.5, 1.0], [0.2, 0.0]], dtype=np.float32)
     d = np.array([[0.2, 0.3], [0.9, 0.5]], dtype=np.float32)
+    result = bf.burn_blend(s, d)
 
-    result = burn_blend(s, d)
-
-    # Check output shape
+    # output shape and dtype checks
     assert result.shape == s.shape
+    assert result.dtype == s.dtype
 
-    # Check output range
+    # output range check
     assert (result >= 0).all() and (result <= 1).all()
 
-    # Test that division by zero doesn't cause NaNs or Infs, replaced by 0
-    assert not np.isnan(result).any()
+    # no NaNs or Infs in output
     assert np.isfinite(result).all()
 
-    # Manually calculate first element: 1 - (1 - 0.2)/0.5 = 1 - 0.8/0.5 = 1 - 1.6 = -0.6 -> clipped to 0
+    # Check known values manually:
+    # When s=0.5, d=0.2 => 1 - (1 - 0.2)/0.5 = 1 - 0.8/0.5 = 1 - 1.6 = -0.6 clipped to 0
     assert result[0, 0] == 0
 
-    # Manually calculate second element: 1 - (1 - 0.3)/1.0 = 1 - 0.7 = 0.3
+    # When s=1.0, d=0.3 => 1 - (1 - 0.3)/1.0 = 1 - 0.7 = 0.3
     assert np.isclose(result[0, 1], 0.3)
 
-    # Element with s=0 should be set to 0 (due to invalid div)
+    # When s=0 (division by zero), output should be 0, no NaNs
     assert result[1, 1] == 0
+
+
+def test_burn_blend_all_ones():
+    s = np.ones((3, 3), dtype=np.float32)
+    d = np.ones((3, 3), dtype=np.float32)
+    result = bf.burn_blend(s, d)
+    # burn_blend(1,1) == 1 - (1-1)/1 = 1
+    assert np.allclose(result, 1)
+
+
+def test_burn_blend_zero_s_and_d():
+    s = np.zeros((2, 2), dtype=np.float32)
+    d = np.zeros((2, 2), dtype=np.float32)
+    result = bf.burn_blend(s, d)
+    # division by zero case, all values set to 0 safely
+    assert np.all(result == 0)

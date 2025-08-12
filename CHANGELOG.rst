@@ -10,6 +10,7 @@ Changelog
 
   * remove `blend_modes` (https://github.com/flrs/blend_modes) as external dependency as the package is not being maintained
   * former `blend_modes` into `image_operations.blend_modes.blending_functions`, the original repository is under MIT LICENSE thus we will use it under those terms (https://github.com/flrs/blend_modes/blob/master/LICENSE.txt)
+  * added the `blend_modes` tests and images (`tests/testdata/blend_modes/{blend_mode}.png`)
 
 
 2025.8.0 - 2025-08-07

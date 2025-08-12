@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
-import mapchete_eo.image_operations.blend_modes.blending_functions as bf  # Replace with your actual blend functions module
+import mapchete_eo.image_operations.blend_modes.blending_functions as bf
+from mapchete_eo.image_operations.blend_modes.blending_functions import BlendBase
+
 
 # List of blend modes (replace with actual blend function names)
 blend_names = [
@@ -24,6 +26,136 @@ blend_modes_with_opacity = {
 
 # Blend modes where result can equal dst_image at opacity=1.0 (no difference expected)
 blend_modes_allowing_equal = {"lighten_only", "some_other_modes_if_any"}
+
+
+def test_func_behavior_with_blendbase():
+    base = BlendBase()
+
+    def test_blend_func(s, d):
+        return s  # just src, opacity applied outside in BlendBase.blend()
+
+    src = np.ones((2, 2, 4), dtype=np.float16)
+    dst = np.zeros((2, 2, 4), dtype=np.float16)
+
+    def func(
+        src: np.ndarray,
+        dst: np.ndarray,
+        opacity: float = 1.0,
+        disable_type_checks: bool = False,
+        dtype: np.dtype = np.float16,
+    ) -> np.ndarray:
+        if (
+            opacity != base.opacity
+            or disable_type_checks != base.disable_type_checks
+            or dtype != base.dtype
+        ):
+            base_local = BlendBase(opacity, disable_type_checks, dtype)
+
+            def local_blend_func(s, d):
+                return s  # raw src only
+
+            return base_local.blend(src, dst, local_blend_func)
+        return base.blend(src, dst, test_blend_func)
+
+    # opacity=1.0 => output == src
+    result_default = func(src, dst)
+    assert np.allclose(result_default, src)
+    assert result_default.dtype == np.float16
+    assert result_default.shape == src.shape
+
+    # opacity=0.3 => output == 0.3*src + 0.7*dst = 0.3 * 1 + 0.7 * 0 = 0.3
+    result_opacity = func(src, dst, opacity=0.3)
+    expected = 0.3 * src + 0.7 * dst
+    assert np.allclose(result_opacity, expected)
+    assert result_opacity.dtype == np.float16
+    assert result_opacity.shape == src.shape
+
+
+def test_prepare_type_checks_enabled_casting():
+    blend = BlendBase()
+    blend.disable_type_checks = False
+    blend.fcn_name = "test_blend"
+    blend.dtype = np.float16
+    blend.opacity = 1.0
+
+    # Valid 3D float64 arrays with 4 channels -> should cast to float16
+    src = np.ones((2, 2, 4), dtype=np.float64)
+    dst = np.zeros((2, 2, 4), dtype=np.float64)
+
+    src_out, dst_out = blend._prepare(src, dst)
+
+    assert src_out.dtype == np.float16
+    assert dst_out.dtype == np.float16
+    assert src_out.shape == src.shape
+    assert dst_out.shape == dst.shape
+
+
+def test_prepare_type_checks_enabled_no_cast():
+    blend = BlendBase()
+    blend.disable_type_checks = False
+    blend.fcn_name = "test_blend"
+    blend.dtype = np.float16
+    blend.opacity = 1.0
+
+    # Correct dtype and shape: no cast, outputs share memory
+    src = np.ones((2, 2, 4), dtype=np.float16)
+    dst = np.zeros((2, 2, 4), dtype=np.float16)
+
+    src_out, dst_out = blend._prepare(src, dst)
+
+    assert src_out.dtype == np.float16
+    assert dst_out.dtype == np.float16
+    assert np.shares_memory(src, src_out)
+    assert np.shares_memory(dst, dst_out)
+
+
+def test_prepare_type_checks_disabled_casting():
+    blend = BlendBase()
+    blend.disable_type_checks = True  # disables type and shape checks
+    blend.fcn_name = "test_blend"
+    blend.dtype = np.float16
+    blend.opacity = 1.0
+
+    # Invalid shape (2D), but no error because checks disabled; dtype cast applied
+    src = np.ones((2, 2), dtype=np.float64)
+    dst = np.zeros((2, 2), dtype=np.float64)
+
+    src_out, dst_out = blend._prepare(src, dst)
+
+    assert src_out.dtype == np.float16
+    assert dst_out.dtype == np.float16
+    assert src_out.shape == src.shape
+    assert dst_out.shape == dst.shape
+
+
+def test_prepare_type_checks_enabled_invalid_shape_raises():
+    blend = BlendBase()
+    blend.disable_type_checks = False
+    blend.fcn_name = "test_blend"
+    blend.dtype = np.float16
+    blend.opacity = 1.0
+
+    # Invalid 2D shape arrays; should raise TypeError due to assert_image_format
+    src = np.ones((2, 2), dtype=np.float16)
+    dst = np.zeros((2, 2), dtype=np.float16)
+
+    with pytest.raises(TypeError, match="Expected: 3D array"):
+        blend._prepare(src, dst)
+
+
+def test_prepare_type_checks_enabled_invalid_channels_raises():
+    blend = BlendBase()
+    blend.disable_type_checks = False
+    blend.fcn_name = "test_blend"
+    blend.dtype = np.float16
+    blend.opacity = 1.0
+
+    # 3D shape but with 3 channels instead of 4, should raise on channel count
+    src = np.ones((2, 2, 3), dtype=np.float16)
+    dst = np.zeros((2, 2, 3), dtype=np.float16)
+
+    with pytest.raises(TypeError, match="Expected: 4 layers"):
+        blend._prepare(src, dst)
 
 
 @pytest.mark.parametrize("blend_name", blend_names)
@@ -108,3 +240,37 @@ def test_blend_functions_opacity_mid(src_image, dst_images, blend_name, opacity)
     assert result.shape == src_image.shape
     assert result.dtype == np.float16, f"{blend_name} output dtype is not float16"
     assert (result >= 0).all() and (result <= 1).all()
+
+
+def burn_blend(s: np.ndarray, d: np.ndarray) -> np.ndarray:
+    with np.errstate(divide="ignore", invalid="ignore"):
+        res = 1 - np.true_divide(1 - d, s)
+        res[~np.isfinite(res)] = 0
+        return np.clip(res, 0, 1)
+
+
+def test_burn_blend_basic():
+    # Simple inputs
+    s = np.array([[0.5, 1.0], [0.2, 0.0]], dtype=np.float32)
+    d = np.array([[0.2, 0.3], [0.9, 0.5]], dtype=np.float32)
+
+    result = burn_blend(s, d)
+
+    # Check output shape
+    assert result.shape == s.shape
+
+    # Check output range
+    assert (result >= 0).all() and (result <= 1).all()
+
+    # Test that division by zero doesn't cause NaNs or Infs, replaced by 0
+    assert not np.isnan(result).any()
+    assert np.isfinite(result).all()
+
+    # Manually calculate first element: 1 - (1 - 0.2)/0.5 = 1 - 0.8/0.5 = 1 - 1.6 = -0.6 -> clipped to 0
+    assert result[0, 0] == 0
+
+    # Manually calculate second element: 1 - (1 - 0.3)/1.0 = 1 - 0.7 = 0.3
+    assert np.isclose(result[0, 1], 0.3)
+
+    # Element with s=0 should be set to 0 (due to invalid div)
+    assert result[1, 1] == 0

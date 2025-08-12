@@ -179,33 +179,6 @@ def eoxcloudless_8bit_dtype_scale_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
-def eoxcloudless_sentinel2_color_correction_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_sentinel2_color_correction.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_rgb_map_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_sentinel2_rgb_map.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
 def sentinel2_antimeridian_east_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_antimeridian_east.mapchete",
@@ -218,15 +191,6 @@ def sentinel2_antimeridian_east_mapchete(tmp_path, testdata_dir):
 def sentinel2_antimeridian_west_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_antimeridian_west.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_mosaic_regions_merge_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic_regions_merge.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example

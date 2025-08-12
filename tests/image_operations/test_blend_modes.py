@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from mapchete_eo.image_operations.blend_modes import blending_functions as bf
 
 blend_names = [
@@ -34,12 +35,12 @@ def test_blend_functions_with_images(src_image, dst_images, blend_name):
         dst_image,
         opacity=1.0,
         disable_type_checks=True,
-        dtype=src_image.dtype,
+        dtype=np.float16,  # force float16 dtype output
     )
 
     # Basic sanity checks
     assert result.shape == src_image.shape
-    assert result.dtype == src_image.dtype
+    assert result.dtype == np.float16, f"{blend_name} output dtype is not float16"
     assert (result >= 0).all() and (result <= 1).all()
 
 
@@ -58,9 +59,9 @@ def test_blend_functions_run_without_dst(src_image, dst_images, blend_name):
         src_image,
         opacity=1.0,
         disable_type_checks=True,
-        dtype=src_image.dtype,
+        dtype=np.float16,  # force float16 dtype output
     )
 
     assert result.shape == src_image.shape
-    assert result.dtype == src_image.dtype
+    assert result.dtype == np.float16, f"{blend_name} output dtype is not float16"
     assert (result >= 0).all() and (result <= 1).all()

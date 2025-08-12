@@ -3,11 +3,23 @@ Changelog
 #########
 
 
+2025.8.1 - 2025-08-12
+----------------------
+
+* core
+
+  * remove `blend_modes` (https://github.com/flrs/blend_modes) as external dependency as the package is not being maintained
+  * former `blend_modes` into `image_operations.blend_modes.blending_functions`, the original repository is under MIT LICENSE thus we will use it under those terms (https://github.com/flrs/blend_modes/blob/master/LICENSE.txt)
+  * added the `blend_modes` tests and images (`tests/testdata/blend_modes/{blend_mode}.png`)
+  * removed some unused mapchete test configs
+
+
 2025.8.0 - 2025-08-07
 ----------------------
 
 * add rudimentary example
 * add init docs, TODO: decide on CI for docs build and publish
+
 
 2025.7.0 - 2025-07-30
 ----------------------

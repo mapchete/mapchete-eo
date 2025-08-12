@@ -22,7 +22,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "blend-modes",
     "click",
     "croniter",
     "lxml",

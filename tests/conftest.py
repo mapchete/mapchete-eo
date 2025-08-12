@@ -7,6 +7,7 @@ import pytest
 from mapchete.path import MPath
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
+from PIL import Image
 from pystac_client import Client
 from rasterio import Affine
 from shapely import wkt
@@ -178,33 +179,6 @@ def eoxcloudless_8bit_dtype_scale_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
-def eoxcloudless_sentinel2_color_correction_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_sentinel2_color_correction.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_rgb_map_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_sentinel2_rgb_map.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_mosaic_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
 def sentinel2_antimeridian_east_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_antimeridian_east.mapchete",
@@ -217,15 +191,6 @@ def sentinel2_antimeridian_east_mapchete(tmp_path, testdata_dir):
 def sentinel2_antimeridian_west_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "sentinel2_antimeridian_west.mapchete",
-        output_tempdir=tmp_path,
-    ) as example:
-        yield example
-
-
-@pytest.fixture
-def eoxcloudless_mosaic_regions_merge_mapchete(tmp_path, testdata_dir):
-    with ProcessFixture(
-        testdata_dir / "eoxcloudless_mosaic_regions_merge.mapchete",
         output_tempdir=tmp_path,
     ) as example:
         yield example
@@ -800,3 +765,52 @@ def set_cdse_test_env(monkeypatch, request):
         monkeypatch.delenv("AWS_REQUEST_PAYER", raising=False)
     else:
         pytest.fail("CDSE AWS credentials not found in environment")
+
+
+@pytest.fixture(scope="session")
+def testdata_blend_modes_dir():
+    return (
+        MPath(os.path.dirname(os.path.realpath(__file__))) / "testdata" / "blend_modes"
+    )
+
+
+@pytest.fixture(scope="session")
+def src_image(testdata_blend_modes_dir):
+    img_path = testdata_blend_modes_dir / "orig.png"
+    img = Image.open(img_path).convert("RGBA")
+    arr = np.array(img) / 255.0
+    return arr.astype(np.float16)
+
+
+@pytest.fixture(scope="session")
+def dst_images(testdata_blend_modes_dir):
+    blend_names = [
+        "normal",
+        "multiply",
+        "screen",
+        "darken_only",
+        "lighten_only",
+        "difference",
+        "subtract",
+        "divide",
+        "grain_extract",
+        "grain_merge",
+        "overlay",
+        "hard_light",
+        "soft_light",
+        "dodge",
+        "burn",
+        "addition",
+    ]
+
+    dst_imgs = {}
+    for fname in os.listdir(testdata_blend_modes_dir):
+        if fname.endswith(".png"):
+            key = fname[:-4]  # remove .png
+            # Use only if file matches blend_names exactly (ignore *_50p etc)
+            if key in blend_names:
+                img = Image.open(testdata_blend_modes_dir / fname).convert("RGBA")
+                arr = np.array(img) / 255.0
+                dst_imgs[key] = arr.astype(np.float16)
+
+    return dst_imgs

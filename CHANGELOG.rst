@@ -2,9 +2,16 @@
 Changelog
 #########
 
+2025.8.2 - 2025-08-14
+---------------------
+
+* packaging
+
+  * use headless version of opencv (`opencv-python-headless`) to reduce dependency footprint (#5)
+
 
 2025.8.1 - 2025-08-12
-----------------------
+---------------------
 
 * core
 
@@ -15,14 +22,14 @@ Changelog
 
 
 2025.8.0 - 2025-08-07
-----------------------
+---------------------
 
 * add rudimentary example
 * add init docs, TODO: decide on CI for docs build and publish
 
 
 2025.7.0 - 2025-07-30
-----------------------
+---------------------
 
 * Migrated public repository at: `https://github.com/mapchete/mapchete-eo`
 * Package name changed from `mapchete_eo` to `mapchete-eo`; python module still with underscore `from mapchete_eo import *`
@@ -44,7 +51,7 @@ Changelog
 
 
 2025.5.0 - 2025-05-19
-----------------------
+---------------------
 
 * core
 
@@ -59,7 +66,7 @@ Changelog
 
 
 2025.4.0 - 2025-04-17
-----------------------
+---------------------
 
 * CLI
 
@@ -79,14 +86,14 @@ Changelog
 
 
 2025.1.2 - 2025-01-24
-----------------------
+---------------------
 
 * core
 
   * update `mapchete_eo.processes.merge_rasters` to merge multiple geometries for single raster, to have one multigeometry for one raster
 
 2025.1.1 - 2025-01-22
-----------------------
+---------------------
 
 * core
 
@@ -99,7 +106,7 @@ Changelog
 
 
 2025.1.0 - 2025-01-07
-----------------------
+---------------------
 
 * core
 

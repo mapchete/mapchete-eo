@@ -13,7 +13,7 @@ Changelog
 * core
 
   * minimize, fix and make `image_operations.blend_modes.*py` --> `image_operations.blend_functions.py` compatible with `image_operations.compositing.py`
-  * rework tests, make them minimal for `image_operations.blend_functions.py`
+  * tests for `image_operations.blend_functions.py` are in `tests/image_operations/test_compositing.py`; rework the `tests/image_operations/test_compositing.py` altogether
   * added tests for `image_operations.dtype_scale.py` and `image_operations.linear_normalization.py`
 
 * CI/CD

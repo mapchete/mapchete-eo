@@ -1,11 +1,10 @@
 import logging
 from enum import Enum
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import cv2
 import numpy as np
 import numpy.ma as ma
-import numpy.typing as npt
 from mapchete import Timer
 from rasterio.plot import reshape_as_image, reshape_as_raster
 
@@ -15,24 +14,19 @@ from mapchete_eo.image_operations import blend_functions
 logger = logging.getLogger(__name__)
 
 
-def to_rgba(
-    arr: np.ndarray, compute_dtype: type[np.floating] = np.float16
-) -> np.ndarray:
-    def _expanded_mask(a: ma.MaskedArray) -> npt.NDArray[np.bool_]:
-        if isinstance(a.mask, np.bool_):
-            return np.full(a.shape, fill_value=a.mask, dtype=bool)
+def to_rgba(arr: np.ndarray) -> np.ndarray:
+    def _expanded_mask(arr: ma.MaskedArray) -> np.ndarray:
+        if isinstance(arr.mask, np.bool_):
+            return np.full(arr.shape, fill_value=arr.mask, dtype=bool)
         else:
-            return a.mask
+            return arr.mask
 
-    # ensure a masked array
+    # make sure array is a proper MaskedArray with expanded mask
     if not isinstance(arr, ma.MaskedArray):
         arr = ma.masked_array(arr, mask=np.zeros(arr.shape, dtype=bool))
-
     if arr.dtype != np.uint8:
-        raise TypeError(f"image array must be of type uint8, not {arr.dtype}")
-
+        raise TypeError(f"image array must be of type uint8, not {str(arr.dtype)}")
     num_bands = arr.shape[0]
-
     if num_bands == 1:
         alpha = np.where(~_expanded_mask(arr[0]), 255, 0).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[0], arr[0], alpha]).data
@@ -40,39 +34,37 @@ def to_rgba(
         out = np.stack([arr[0], arr[0], arr[0], arr[1]]).data
     elif num_bands == 3:
         alpha = np.where(
-            ~_expanded_mask(arr[0]) & ~_expanded_mask(arr[1]) & ~_expanded_mask(arr[2]),
+            (
+                ~_expanded_mask(arr[0])
+                & ~_expanded_mask(arr[1])
+                & ~_expanded_mask(arr[2])
+            ),
             255,
             0,
         ).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data
     elif num_bands == 4:
         out = arr.data
-    else:
-        raise TypeError(f"array must have between 1 and 4 bands but has {num_bands}")
-
-    # convert to requested compute_dtype for downstream processing
-    return np.array(out, dtype=compute_dtype)
+    else:  # pragma: no cover
+        raise TypeError(
+            f"array must have between one and four bands but has {num_bands}"
+        )
+    return np.array(out, dtype=np.float16)
 
 
 def _blend_base(
-    bg: np.ndarray,
-    fg: np.ndarray,
-    opacity: float,
-    operation: Callable,
-    compute_dtype: Union[str, npt.NDArray[np.float16]] = np.float16,
+    bg: np.ndarray, fg: np.ndarray, opacity: float, operation: Callable
 ) -> ma.MaskedArray:
-    # convert string dtype to np.dtype
-    if isinstance(compute_dtype, str):
-        compute_dtype = np.dtype(compute_dtype)
-
-    # generate RGBA output and run compositing
+    # generate RGBA output and run compositing and normalize by dividing by 255
     out_arr = reshape_as_raster(
-        operation(
-            reshape_as_image(to_rgba(bg)),
-            reshape_as_image(to_rgba(fg)),
-            opacity,
-            compute_dtype,
-        ).astype(np.uint8)
+        (
+            operation(
+                reshape_as_image(to_rgba(bg) / 255),
+                reshape_as_image(to_rgba(fg) / 255),
+                opacity,
+            )
+            * 255
+        ).astype(np.uint8, copy=False)
     )
     # generate mask from alpha band
     out_mask = np.where(out_arr[3] == 0, True, False)
@@ -222,11 +214,14 @@ def fuzzy_alpha_mask(
     gradient_position=GradientPosition.outside,
 ) -> np.ndarray:
     """Return an RGBA array with a fuzzy alpha mask."""
-    gradient_position = (
-        GradientPosition[gradient_position]
-        if isinstance(gradient_position, str)
-        else gradient_position
-    )
+    try:
+        gradient_position = (
+            GradientPosition[gradient_position]
+            if isinstance(gradient_position, str)
+            else gradient_position
+        )
+    except KeyError:
+        raise ValueError(f"unknown gradient_position: {gradient_position}")
 
     if arr.shape[0] != 3:
         raise TypeError("input array must have exactly three bands")

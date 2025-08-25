@@ -7,7 +7,7 @@ MIT License
 Copyright (c) 2016 Florian Roscheck
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation th
 rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
 persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -25,136 +25,555 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy as np
 
 
-def normal(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return fg * opacity + bg * (1 - opacity)
+def _compose_alpha(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Calculate alpha composition ratio between two images."""
+
+    comp_alpha = np.minimum(fg[:, :, 3], bg[:, :, 3]) * opacity
+    new_alpha = fg[:, :, 3] + (1.0 - fg[:, :, 3]) * comp_alpha
+    np.seterr(divide="ignore", invalid="ignore")
+    ratio = comp_alpha / new_alpha
+    ratio[np.isnan(ratio)] = 0.0
+    return ratio
 
 
-def multiply(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return (bg * fg / 255) * opacity + bg * (1 - opacity)
+def normal(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply "normal" blending mode of a layer on an image.
+
+    See Also:
+        Find more information on `Wikipedia <https://en.wikipedia.org/wiki/Alpha_compositing#Description>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+    """
+
+    # Extract alpha-channels and apply opacity
+    fg_alp = np.expand_dims(fg[:, :, 3], 2)  # alpha of b, prepared for broadcasting
+    bg_alp = (
+        np.expand_dims(bg[:, :, 3], 2) * opacity
+    )  # alpha of a, prepared for broadcasting
+
+    # Blend images
+    with np.errstate(divide="ignore", invalid="ignore"):
+        img_out = (bg[:, :, :3] * bg_alp + fg[:, :, :3] * fg_alp * (1 - bg_alp)) / (
+            bg_alp + fg_alp * (1 - bg_alp)
+        )
+        img_out[np.isnan(img_out)] = 0  # replace NaNs with 0
+
+    # Blend alpha
+    cout_alp = bg_alp + fg_alp * (1 - bg_alp)
+
+    # Combine image and alpha
+    img_out = np.dstack((img_out, cout_alp))
+
+    np.nan_to_num(img_out, copy=False)
+
+    return img_out
 
 
-def screen(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return (255 - ((255 - bg) * (255 - fg) / 255)) * opacity + bg * (1 - opacity)
+def soft_light(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply soft light blending mode of a layer on an image.
 
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Soft_Light>`__.
 
-def overlay(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    mask = bg < 128
-    out = np.zeros_like(bg, dtype=compute_dtype)
-    out[mask] = 2 * bg[mask] * fg[mask] / 255
-    out[~mask] = 255 - 2 * (255 - bg[~mask]) * (255 - fg[~mask]) / 255
-    return out * opacity + bg * (1 - opacity)
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
 
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
 
-def soft_light(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype) / 255
-    fg = fg.astype(compute_dtype) / 255
-    out = (1 - 2 * fg) * bg**2 + 2 * fg * bg
-    return np.clip(out * 255 * opacity + bg * 255 * (1 - opacity), 0, 255).astype(
-        compute_dtype
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    # The following code does this:
+    #   multiply = fg[:, :, :3]*bg[:, :, :3]
+    #   screen = 1.0 - (1.0-fg[:, :, :3])*(1.0-bg[:, :, :3])
+    #   comp = (1.0 - fg[:, :, :3]) * multiply + fg[:, :, :3] * screen
+    #   ratio_rs = np.reshape(np.repeat(ratio,3),comp.shape)
+    #   img_out = comp*ratio_rs + fg[:, :, :3] * (1.0-ratio_rs)
+
+    comp = (1.0 - fg[:, :, :3]) * fg[:, :, :3] * bg[:, :, :3] + fg[:, :, :3] * (
+        1.0 - (1.0 - fg[:, :, :3]) * (1.0 - bg[:, :, :3])
     )
 
-
-def hard_light(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    mask = fg < 128
-    out = np.zeros_like(bg, dtype=compute_dtype)
-    out[mask] = 2 * fg[mask] * bg[mask] / 255
-    out[~mask] = 255 - 2 * (255 - fg[~mask]) * (255 - bg[~mask]) / 255
-    return out * opacity + bg * (1 - opacity)
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def lighten_only(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.maximum(bg, fg) * opacity + bg * (1 - opacity)
+def lighten_only(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply lighten only blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Lighten_Only>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.maximum(fg[:, :, :3], bg[:, :, :3])
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def darken_only(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.minimum(bg, fg) * opacity + bg * (1 - opacity)
+def screen(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply screen blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Screen>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = 1.0 - (1.0 - fg[:, :, :3]) * (1.0 - bg[:, :, :3])
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def dodge(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        out = np.where(fg == 255, 255, np.minimum(255, bg * 255 / (255 - fg)))
-    return out * opacity + bg * (1 - opacity)
+def dodge(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply dodge blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Dodge_and_burn>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.minimum(fg[:, :, :3] / (1.0 - bg[:, :, :3]), 1.0)
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def addition(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.clip(bg + fg, 0, 255) * opacity + bg * (1 - opacity)
+def addition(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply addition blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Addition>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = fg[:, :, :3] + bg[:, :, :3]
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = np.clip(comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def subtract(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.clip(bg - fg, 0, 255) * opacity + bg * (1 - opacity)
+def darken_only(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply darken only blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Darken_Only>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.minimum(fg[:, :, :3], bg[:, :, :3])
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def difference(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.abs(bg - fg) * opacity + bg * (1 - opacity)
+def multiply(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply multiply blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Multiply>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.clip(bg[:, :, :3] * fg[:, :, :3], 0.0, 1.0)
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def divide(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        out = np.where(fg == 0, 255, np.clip(bg * 255 / fg, 0, 255))
-    return out * opacity + bg * (1 - opacity)
+def hard_light(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply hard light blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Hard_Light>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.greater(bg[:, :, :3], 0.5) * np.minimum(
+        1.0 - ((1.0 - fg[:, :, :3]) * (1.0 - (bg[:, :, :3] - 0.5) * 2.0)),
+        1.0,
+    ) + np.logical_not(np.greater(bg[:, :, :3], 0.5)) * np.minimum(
+        fg[:, :, :3] * (bg[:, :, :3] * 2.0), 1.0
+    )
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def grain_extract(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.clip(bg - fg + 128, 0, 255) * opacity + bg * (1 - opacity)
+def difference(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply difference blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Difference>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = fg[:, :, :3] - bg[:, :, :3]
+    comp[comp < 0.0] *= -1.0
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
 
 
-def grain_merge(
-    bg: np.ndarray, fg: np.ndarray, opacity: float = 1.0, compute_dtype=np.float16
-) -> np.ndarray:
-    bg = bg.astype(compute_dtype)
-    fg = fg.astype(compute_dtype)
-    return np.clip(bg + fg - 128, 0, 255) * opacity + bg * (1 - opacity)
+def subtract(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply subtract blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Subtract>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = fg[:, :, :3] - bg[:, :, :3]
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = np.clip(comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs), 0.0, 1.0)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
+
+
+def grain_extract(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply grain extract blending mode of a layer on an image.
+
+    See Also:
+        Find more information in the `GIMP Documentation <https://docs.gimp.org/en/gimp-concepts-layer-modes.html>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.clip(fg[:, :, :3] - bg[:, :, :3] + 0.5, 0.0, 1.0)
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
+
+
+def grain_merge(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply grain merge blending mode of a layer on an image.
+
+    See Also:
+        Find more information in the `GIMP Documentation <https://docs.gimp.org/en/gimp-concepts-layer-modes.html>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.clip(fg[:, :, :3] + bg[:, :, :3] - 0.5, 0.0, 1.0)
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
+
+
+def divide(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply divide blending mode of a layer on an image.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=747749280#Divide>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.minimum(
+        (256.0 / 255.0 * fg[:, :, :3]) / (1.0 / 255.0 + bg[:, :, :3]),
+        1.0,
+    )
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out
+
+
+def overlay(fg: np.ndarray, bg: np.ndarray, opacity: float):
+    """Apply overlay blending mode of a layer on an image.
+
+    Note:
+        The implementation of this method was changed in version 2.0.0. Previously, it would be identical to the
+        soft light blending mode. Now, it resembles the implementation on Wikipedia. You can still use the soft light
+        blending mode if you are looking for backwards compatibility.
+
+    See Also:
+        Find more information on
+        `Wikipedia <https://en.wikipedia.org/w/index.php?title=Blend_modes&oldid=868545948#Overlay>`__.
+
+    Args:
+      fg(3-dimensional numpy array of floats (r/g/b/a) in range 0-255.0): Image to be blended upon
+      bg(3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0): Layer to be blended with image
+      opacity(float): Desired opacity of layer for blending
+      disable_type_checks(bool): Whether type checks within the function should be disabled. Disabling the checks may
+        yield a slight performance improvement, but comes at the cost of user experience. If you are certain that
+        you are passing in the right arguments, you may set this argument to 'True'. Defaults to 'False'.
+
+    Returns:
+      3-dimensional numpy array of floats (r/g/b/a) in range 0.0-255.0: Blended image
+
+    """
+
+    ratio = _compose_alpha(fg, bg, opacity)
+
+    comp = np.less(fg[:, :, :3], 0.5) * (
+        2 * fg[:, :, :3] * bg[:, :, :3]
+    ) + np.greater_equal(fg[:, :, :3], 0.5) * (
+        1 - (2 * (1 - fg[:, :, :3]) * (1 - bg[:, :, :3]))
+    )
+
+    ratio_rs = np.reshape(
+        np.repeat(ratio, 3), [comp.shape[0], comp.shape[1], comp.shape[2]]
+    )
+    img_out = comp * ratio_rs + fg[:, :, :3] * (1.0 - ratio_rs)
+    img_out = np.nan_to_num(
+        np.dstack((img_out, fg[:, :, 3]))
+    )  # add alpha channel and replace nans
+    return img_out

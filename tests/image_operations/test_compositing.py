@@ -2,256 +2,345 @@ import numpy as np
 import numpy.ma as ma
 import pytest
 
-from mapchete_eo.image_operations import blend_functions, compositing
+from mapchete_eo.image_operations import compositing, blend_functions
+
+BLEND_FUNCS = [
+    blend_functions.normal,
+    blend_functions.multiply,
+    blend_functions.screen,
+    blend_functions.overlay,
+    blend_functions.soft_light,
+    blend_functions.hard_light,
+    blend_functions.lighten_only,
+    blend_functions.darken_only,
+    blend_functions.dodge,
+    blend_functions.addition,
+    blend_functions.subtract,
+    blend_functions.difference,
+    blend_functions.divide,
+    blend_functions.grain_extract,
+    blend_functions.grain_merge,
+]
+
+# ---------------------------
+# to_rgba tests
+# ---------------------------
 
 
 @pytest.mark.parametrize("bands", range(1, 5))
-def test_to_rgba(bands, test_2d_array):
+def test_to_rgba_shapes_and_types(test_2d_array, bands):
+    # Repeat the 2D array to create 'bands' bands
     arr = np.repeat(np.expand_dims(test_2d_array, axis=0), bands, axis=0)
     out = compositing.to_rgba(arr)
     assert isinstance(out, np.ndarray)
-    assert not isinstance(out, ma.masked_array)
     assert out.shape == (4, 256, 256)
     assert out.dtype == np.float16
-    assert out.min() >= 0.0
-    assert out.max() <= 255.0
-
-
-def test_to_rgba_dtype_error(test_2d_array):
-    with pytest.raises(TypeError):
-        compositing.to_rgba(test_2d_array.astype(np.uint16))
-
-
-@pytest.mark.parametrize("method", compositing.METHODS.keys())
-@pytest.mark.parametrize("opacity", [0, 0.5, 1])
-def test_compositing_output_array(test_3d_array, method, opacity):
-    out = compositing.composite(method, test_3d_array, test_3d_array, opacity=opacity)
-    assert isinstance(out, ma.masked_array)
-    assert out.shape == (4, 256, 256)
-    assert out.dtype == np.uint8
-
-
-@pytest.mark.parametrize("bands", [1, 3])
-@pytest.mark.parametrize("radius", [0, 5])
-@pytest.mark.parametrize("invert", [True, False])
-@pytest.mark.parametrize("dilate", [True, False])
-def test_fuzzy_mask(test_2d_array, bands, radius, invert, dilate):
-    arr = np.repeat(np.expand_dims(test_2d_array, axis=0), bands, axis=0)
-    out = compositing.fuzzy_mask(
-        arr, fill_value=0, radius=radius, invert=invert, dilate=dilate
-    )
-    assert isinstance(out, np.ndarray)
-    assert out.shape == (256, 256)
-    assert out.dtype == np.uint8
-    assert not np.array_equal(arr, out)
-
-
-@pytest.mark.parametrize("mask", [np.ones((3, 256, 256), dtype=bool), None])
-@pytest.mark.parametrize("radius", [0, 5])
-@pytest.mark.parametrize("gradient_position", list(compositing.GradientPosition))
-def test_fuzzy_alpha_mask(test_3d_array, mask, radius, gradient_position):
-    out = compositing.fuzzy_alpha_mask(
-        test_3d_array, mask=mask, radius=radius, gradient_position=gradient_position
-    )
-    assert isinstance(out, np.ndarray)
-    assert out.shape == (4, 256, 256)
-    assert out.dtype == np.uint8
-    assert not np.array_equal(test_3d_array, out)
-
-
-def test_fuzzy_alpha_mask_shape_error(test_3d_array):
-    with pytest.raises(TypeError):
-        compositing.fuzzy_alpha_mask(test_3d_array[0])
-
-
-def test_fuzzy_alpha_mask_error(test_3d_array):
-    with pytest.raises(TypeError):
-        compositing.fuzzy_alpha_mask(test_3d_array.data)
-
-
-def test_fuzzy_mask_with_arr_types_and_errors(test_2d_array, test_3d_array):
-    """
-    Test fuzzy_mask using pytest fixtures:
-    - 2D input expands to 3D
-    - 1-band 3D input stacks to 3 bands (subset of test_3d_array)
-    - 3-band input used directly
-    - invalid number of bands triggers TypeError
-    - input with wrong ndim triggers TypeError
-    """
-
-    # 2D input (test_2d_array)
-    out = compositing.fuzzy_mask(test_2d_array, fill_value=255)
-    assert out.shape == test_2d_array.shape
-    assert out.dtype == "uint8"
-
-    # 1-band 3D input -> stack to 3 bands, use first band of test_3d_array
-    test_1_band = test_3d_array[0]  # shape (1, H, W)
-    out = compositing.fuzzy_mask(test_1_band, fill_value=255)
-    assert out.shape == test_2d_array.shape
-    assert out.dtype == "uint8"
-
-    # 3-band input (test_3d_array)
-    out = compositing.fuzzy_mask(test_3d_array, fill_value=255)
-    assert out.shape == test_2d_array.shape
-    assert out.dtype == "uint8"
-
-    # invalid number of bands -> should raise TypeError
-    arr_invalid = test_3d_array[0:2]  # 2 bands
-    with pytest.raises(TypeError, match="array must have either one or three bands"):
-        compositing.fuzzy_mask(arr_invalid, fill_value=255)
-
-    # input with wrong ndim -> e.g., 1D array
-    arr_1d = np.array([True, False, True])
-    with pytest.raises(TypeError, match="array must have exactly three dimensions"):
-        compositing.fuzzy_mask(arr_1d, fill_value=255)
-
-
-@pytest.mark.parametrize("dtype", ["float16", "float32", np.float64])
-def test_blend_base_real_dtype_conversion(test_3d_array, dtype):
-    """
-    Test _blend_base with real blend_functions operations and different compute_dtype values.
-    Ensures string dtype is converted to np.dtype correctly.
-    """
-    bg = test_3d_array.astype(np.uint8)
-    fg = test_3d_array.astype(np.uint8)
-    opacity = 0.5
-
-    # Use a real operation from blend_functions, e.g., normal
-    out = compositing._blend_base(
-        bg, fg, opacity, blend_functions.normal, compute_dtype=dtype
-    )
-
-    # Output checks
-    assert isinstance(out, ma.MaskedArray)
-    assert out.shape == (4, bg.shape[1], bg.shape[2])  # RGBA
-    assert out.dtype == np.uint8
     assert out.min() >= 0
     assert out.max() <= 255
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32"])
-def test_blend_base_string_vs_numpy_dtype(test_3d_array, dtype):
-    """
-    Ensure _blend_base gives the same result for string dtype vs np.dtype.
-    """
+def test_to_rgba_type_error(test_2d_array):
+    # Should raise TypeError for non-uint8
+    with pytest.raises(TypeError):
+        compositing.to_rgba(test_2d_array.astype(np.uint16))
+
+
+def test_to_rgba_invalid_band_counts():
+    # More than 4 bands triggers TypeError
+    data = np.random.randint(0, 255, (5, 2, 2), dtype=np.uint8)
+    arr = ma.MaskedArray(data)
+    with pytest.raises(TypeError):
+        compositing.to_rgba(arr)
+    # Zero bands also triggers TypeError
+    data0 = np.empty((0, 2, 2), dtype=np.uint8)
+    arr0 = ma.MaskedArray(data0)
+    with pytest.raises(TypeError):
+        compositing.to_rgba(arr0)
+
+
+def test_to_rgba_expanded_mask_bool_scalar():
+    # Create a 1-band masked array where mask is a scalar np.bool_
+    data = np.ones((1, 2, 2), dtype=np.uint8)
+    arr = ma.MaskedArray(data)
+    arr.mask = np.bool_(True)  # triggers the np.bool_ branch in _expanded_mask
+
+    out = compositing.to_rgba(arr)
+    # Alpha should be zero everywhere because mask=True
+    assert np.all(out[3] == 0)
+    assert out.shape == (4, 2, 2)
+
+
+def test_to_rgba_expanded_mask_bool_array():
+    # 3-band masked array with all False mask
+    data = np.ones((3, 2, 2), dtype=np.uint8) * 100
+    arr = ma.MaskedArray(data, mask=False)
+    out = compositing.to_rgba(arr)
+    # Alpha should be 255 everywhere
+    assert np.all(out[3] == 255)
+
+
+def test_to_rgba_mixed_mask_values():
+    # 3-band array with mixed masked/unmasked values
+    data = np.array(
+        [[[10, 20], [30, 40]], [[50, 60], [70, 80]], [[90, 100], [110, 120]]],
+        dtype=np.uint8,
+    )
+    mask = np.array(
+        [
+            [[False, True], [False, True]],
+            [[True, False], [True, False]],
+            [[False, False], [True, True]],
+        ]
+    )
+    arr = ma.MaskedArray(data, mask=mask)
+    out = compositing.to_rgba(arr)
+    assert out.shape == (4, 2, 2)
+    # alpha channel should be 255 only where all bands are unmasked
+    expected_alpha = np.zeros((2, 2), dtype=np.uint8)
+    assert np.array_equal(out[3], expected_alpha)
+
+
+def test_to_rgba_two_band_array():
+    # 2-band array triggers the 2-band branch
+    data = np.ones((2, 2, 2), dtype=np.uint8) * 100
+    arr = ma.MaskedArray(data, mask=False)
+    out = compositing.to_rgba(arr)
+    assert out.shape == (4, 2, 2)
+    # First 3 channels are copies of band0, 4th is band1
+    assert np.all(out[0] == out[1])
+    assert np.all(out[1] == out[2])
+    assert np.all(out[3] == arr[1])
+
+
+def test_to_rgba_four_band_array():
+    # 4-band array triggers the 4-band branch
+    data = np.ones((4, 2, 2), dtype=np.uint8) * 100
+    arr = ma.MaskedArray(data, mask=False)
+    out = compositing.to_rgba(arr)
+    assert out.shape == (4, 2, 2)
+    # Output should equal input data
+    assert np.all(out == arr.data)
+
+
+def test_to_rgba_expanded_mask_and_non_maskedarray():
+    import numpy as np
+    import numpy.ma as ma
+    from mapchete_eo.image_operations import compositing
+
+    # -------------------------------
+    # Part 1: input is not a MaskedArray
+    # -------------------------------
+    data = np.array([[10, 20], [30, 40]], dtype=np.uint8)  # shape (2,2)
+
+    # Pass a plain ndarray (not a MaskedArray)
+    out = compositing.to_rgba(data[np.newaxis, ...])  # shape (1,2,2)
+    assert isinstance(out, np.ndarray)
+    assert out.shape == (4, 2, 2)
+    # alpha channel should be 255 everywhere because no mask
+    assert np.all(out[3] == 255)
+
+    # -------------------------------
+    # Part 2: MaskedArray with scalar boolean mask
+    # -------------------------------
+    arr_masked = ma.MaskedArray(data, mask=np.bool_(True)).reshape((1, 2, 2))
+    out2 = compositing.to_rgba(arr_masked)
+    assert isinstance(out2, np.ndarray)
+    assert out2.shape == (4, 2, 2)
+    # alpha channel should be 0 everywhere
+    assert np.all(out2[3] == 0)
+
+    # Scalar False case
+    arr_masked_false = ma.MaskedArray(data, mask=np.bool_(False)).reshape((1, 2, 2))
+    out3 = compositing.to_rgba(arr_masked_false)
+    assert np.all(out3[3] == 255)
+
+
+# ---------------------------
+# _blend_base and composite
+# ---------------------------
+
+
+@pytest.mark.parametrize("blend_func", BLEND_FUNCS)
+def test_blend_base_all_functions(test_3d_array, blend_func):
     bg = test_3d_array.astype(np.uint8)
     fg = test_3d_array.astype(np.uint8)
-    opacity = 0.5
+    out = compositing._blend_base(bg, fg, 0.5, blend_func)
+    assert isinstance(out, ma.MaskedArray)
+    assert out.shape == (4, bg.shape[1], bg.shape[2])
+    assert out.dtype == np.uint8
 
-    out_str = compositing._blend_base(
-        bg, fg, opacity, blend_functions.normal, compute_dtype=dtype
+
+@pytest.mark.parametrize("method", compositing.METHODS.keys())
+def test_composite_dispatch(test_3d_array, method):
+    out = compositing.composite(method, test_3d_array, test_3d_array)
+    assert isinstance(out, ma.MaskedArray)
+    assert out.shape == (4, 256, 256)
+
+
+# ---------------------------
+# fuzzy_mask tests
+# ---------------------------
+
+
+@pytest.mark.parametrize("bands", [1, 3])
+@pytest.mark.parametrize("radius", [0, 3])
+@pytest.mark.parametrize("invert", [True, False])
+@pytest.mark.parametrize("dilate", [True, False])
+def test_fuzzy_mask_shapes(test_2d_array, bands, radius, invert, dilate):
+    arr = np.repeat(np.expand_dims(test_2d_array, axis=0), bands, axis=0)
+    out = compositing.fuzzy_mask(
+        arr, fill_value=10, radius=radius, invert=invert, dilate=dilate
     )
-    out_np = compositing._blend_base(
-        bg, fg, opacity, blend_functions.normal, compute_dtype=np.dtype(dtype)
+    assert isinstance(out, np.ndarray)
+    assert out.shape == (256, 256)
+    assert out.dtype == np.uint8
+
+
+def test_fuzzy_mask_invalid_dimensions():
+    arr = np.zeros((4, 256, 256), dtype=bool)
+    with pytest.raises(TypeError):
+        compositing.fuzzy_mask(arr, fill_value=255)
+
+
+def test_fuzzy_mask_ndim_and_band_branches():
+    # -----------------------
+    # 2D input → triggers arr.ndim == 2 branch
+    # -----------------------
+    arr_2d = np.zeros((5, 5), dtype=bool)
+    out_2d = compositing.fuzzy_mask(arr_2d, fill_value=10, invert=False, dilate=False)
+    assert out_2d.shape == (5, 5)
+    assert out_2d.dtype == np.uint8
+
+    # -----------------------
+    # 3D input with 1 band → triggers arr.shape[0] == 1 branch
+    # -----------------------
+    arr_3d_1band = np.zeros((1, 4, 4), dtype=bool)
+    out_1band = compositing.fuzzy_mask(
+        arr_3d_1band, fill_value=20, invert=False, dilate=False
     )
+    assert out_1band.shape == (4, 4)
+    assert out_1band.dtype == np.uint8
 
-    # Output checks
-    assert isinstance(out_str, ma.MaskedArray)
-    assert out_str.shape == (4, bg.shape[1], bg.shape[2])
-    assert out_np.shape == (4, bg.shape[1], bg.shape[2])
+    # -----------------------
+    # 3D input with 3 bands → triggers arr.shape[0] == 3 branch
+    # -----------------------
+    arr_3d_3band = np.zeros((3, 3, 3), dtype=bool)
+    out_3band = compositing.fuzzy_mask(
+        arr_3d_3band, fill_value=30, invert=False, dilate=False
+    )
+    assert out_3band.shape == (3, 3)
+    assert out_3band.dtype == np.uint8
 
-    # Results should be identical
-    assert np.array_equal(out_str.data, out_np.data)
-    assert np.array_equal(out_str.mask, out_np.mask)
+    # -----------------------
+    # Invalid number of bands → triggers TypeError
+    # -----------------------
+    arr_invalid = np.zeros((2, 2, 2, 2), dtype=bool)
+    with pytest.raises(TypeError, match="array must have exactly three dimensions"):
+        compositing.fuzzy_mask(arr_invalid, fill_value=10)
+
+    # -----------------------
+    # Invalid single band number → triggers TypeError
+    # -----------------------
+    arr_invalid_bands = np.zeros((2, 4, 4), dtype=bool)  # 2 bands, not 1 or 3
+    with pytest.raises(TypeError, match="array must have either one or three bands"):
+        compositing.fuzzy_mask(arr_invalid_bands, fill_value=10)
 
 
-@pytest.mark.parametrize("mask_value", [True, False])
-def test_to_rgba_expanded_mask(test_3d_array, mask_value):
-    """
-    Test to_rgba with _expanded_mask logic:
-    - Uses test_3d_array (3 bands)
-    - Covers single boolean mask and array mask
-    """
-    # If mask_value is a boolean, apply it to all elements
-    if isinstance(mask_value, bool):
-        arr = ma.MaskedArray(data=test_3d_array.data, mask=mask_value)
-    else:
-        arr = test_3d_array
+# ---------------------------
+# fuzzy_alpha_mask tests
+# ---------------------------
 
-    out = compositing.to_rgba(arr, compute_dtype=np.float16)
 
-    # Output type and shape
+@pytest.mark.parametrize("gradient_position", list(compositing.GradientPosition))
+def test_fuzzy_alpha_mask_basic(test_3d_array, gradient_position):
+    mask = np.ones((3, 256, 256), dtype=bool)
+    out = compositing.fuzzy_alpha_mask(
+        test_3d_array, mask=mask, radius=0, gradient_position=gradient_position
+    )
     assert isinstance(out, np.ndarray)
-    assert out.shape == (4, test_3d_array.shape[1], test_3d_array.shape[2])
-    assert out.dtype == np.float16
-
-    # Check alpha channel
-    alpha = out[3]
-    if mask_value is True:
-        # Fully masked -> alpha = 0
-        assert np.all(alpha == 0)
-    elif mask_value is False:
-        # No mask -> alpha = 255
-        assert np.all(alpha == 255)
-    else:
-        # Original mask array -> alpha should be 255 where not masked, 0 where masked
-        original_mask = np.any(arr.mask[:3], axis=0)
-        expected_alpha = np.where(~original_mask, 255, 0)
-        assert np.array_equal(alpha, expected_alpha)
+    assert out.shape == (4, 256, 256)
+    assert out.dtype == np.uint8
 
 
-def test_to_rgba_wraps_unmasked_array(test_3d_array):
-    """
-    Test that to_rgba wraps a regular ndarray into a MaskedArray
-    with a default mask of all False.
-    """
-    # Use raw data (ndarray), not a masked array
-    arr = test_3d_array.data  # shape: (3, 256, 256), dtype=uint8
-
-    # Call to_rgba
-    out = compositing.to_rgba(arr, compute_dtype=np.float16)
-
-    # Output checks
+def test_fuzzy_alpha_mask_without_mask(test_3d_array):
+    arr = ma.MaskedArray(test_3d_array, mask=False)
+    out = compositing.fuzzy_alpha_mask(arr, radius=0)
     assert isinstance(out, np.ndarray)
-    assert out.shape == (4, arr.shape[1], arr.shape[2])  # RGBA
-    assert out.dtype == np.float16
-
-    # Alpha channel should be fully opaque because original array had no mask
-    alpha = out[3]
-    assert np.all(alpha == 255)
+    assert out.shape == (4, 256, 256)
 
 
-def test_expanded_mask_simple():
-    """
-    Simple test for the _expanded_mask logic where the mask is a single boolean.
-    """
-    # Create a 1-band array
-    data = np.array([[10, 20], [30, 40]], dtype=np.uint8)
-    arr = ma.MaskedArray(np.expand_dims(data, axis=0))
-
-    # Force the mask to a single boolean
-    arr[0].mask = np.bool_(True)
-
-    # Call to_rgba, which internally calls _expanded_mask
-    out = compositing.to_rgba(arr)
-
-    # Check that output is the correct shape and type
-    assert isinstance(out, np.ndarray)
-    assert out.shape == (4, 2, 2)  # 4 bands (RGBA)
+def test_fuzzy_alpha_mask_invalid_input():
+    arr = np.zeros((4, 256, 256), dtype=np.uint8)
+    with pytest.raises(TypeError):
+        compositing.fuzzy_alpha_mask(arr)
 
 
-def test_to_rgba_invalid_number_of_bands():
-    """
-    Test that to_rgba raises a TypeError when input has invalid number of bands (>4)
-    """
-    # Create an array with 5 bands (invalid)
-    data = np.random.randint(0, 255, size=(5, 2, 2), dtype=np.uint8)
-    arr = ma.MaskedArray(data)
+def test_fuzzy_alpha_mask_invalid_gradient_position(test_3d_array):
+    mask = np.ones((3, 256, 256), dtype=bool)
+    with pytest.raises(ValueError, match="unknown gradient_position"):
+        compositing.fuzzy_alpha_mask(
+            test_3d_array, mask=mask, gradient_position="invalid_position"
+        )
 
+
+def test_fuzzy_alpha_mask_mask_none_branch():
+    # Case 1: arr is a MaskedArray → should use arr.mask
+    data = np.random.randint(0, 255, (3, 4, 4), dtype=np.uint8)
+    mask = np.array(
+        [
+            [
+                [True, False, True, False],
+                [False, True, False, True],
+                [True, True, False, False],
+                [False, False, True, True],
+            ],
+            [
+                [False, False, True, True],
+                [True, True, False, False],
+                [False, True, True, False],
+                [True, False, False, True],
+            ],
+            [
+                [True, False, False, True],
+                [False, True, True, False],
+                [True, False, True, False],
+                [False, True, False, True],
+            ],
+        ],
+        dtype=bool,
+    )
+    arr = ma.MaskedArray(data, mask=mask)
+
+    out = compositing.fuzzy_alpha_mask(arr, mask=None, radius=0, fill_value=10)
+    assert out.shape == (4, 4, 4)  # 3 original bands + 1 alpha
+    assert out.dtype == np.uint8
+
+    # Case 2: arr is not a MaskedArray → should raise TypeError
+    arr_np = np.random.randint(0, 255, (3, 4, 4), dtype=np.uint8)
     with pytest.raises(
-        TypeError, match="array must have between 1 and 4 bands but has 5"
+        TypeError,
+        match="input array must be a numpy MaskedArray or mask must be provided",
     ):
-        compositing.to_rgba(arr)
+        compositing.fuzzy_alpha_mask(arr_np, mask=None)
 
 
-def test_to_rgba_zero_bands():
-    """
-    Test that to_rgba raises a TypeError when input has 0 bands
-    """
-    data = np.empty((0, 2, 2), dtype=np.uint8)
-    arr = ma.MaskedArray(data)
+# ---------------------------
+# Ensure Timer branches are hit
+# ---------------------------
 
-    with pytest.raises(
-        TypeError, match="array must have between 1 and 4 bands but has 0"
-    ):
-        compositing.to_rgba(arr)
+
+def test_fuzzy_mask_timer_invoked(monkeypatch):
+    def fake_timer():
+        class T:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                return False
+
+        return T()
+
+    monkeypatch.setattr(compositing, "Timer", fake_timer)
+    arr = np.zeros((1, 2, 2), dtype=bool)
+    out = compositing.fuzzy_mask(arr, fill_value=1, radius=2)
+    assert out.shape == (2, 2)

@@ -1,32 +1,38 @@
 import logging
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import cv2
 import numpy as np
 import numpy.ma as ma
+import numpy.typing as npt
 from mapchete import Timer
 from rasterio.plot import reshape_as_image, reshape_as_raster
 
-from mapchete_eo.image_operations.blend_modes import blending_functions
+from mapchete_eo.image_operations import blend_functions
 
 
 logger = logging.getLogger(__name__)
 
 
-def to_rgba(arr: np.ndarray) -> np.ndarray:
-    def _expanded_mask(arr: ma.MaskedArray) -> np.ndarray:
-        if isinstance(arr.mask, np.bool_):
-            return np.full(arr.shape, fill_value=arr.mask, dtype=bool)
+def to_rgba(
+    arr: np.ndarray, compute_dtype: type[np.floating] = np.float16
+) -> np.ndarray:
+    def _expanded_mask(a: ma.MaskedArray) -> npt.NDArray[np.bool_]:
+        if isinstance(a.mask, np.bool_):
+            return np.full(a.shape, fill_value=a.mask, dtype=bool)
         else:
-            return arr.mask
+            return a.mask
 
-    # make sure array is a proper MaskedArray with expanded mask
+    # ensure a masked array
     if not isinstance(arr, ma.MaskedArray):
         arr = ma.masked_array(arr, mask=np.zeros(arr.shape, dtype=bool))
+
     if arr.dtype != np.uint8:
-        raise TypeError(f"image array must be of type uint8, not {str(arr.dtype)}")
+        raise TypeError(f"image array must be of type uint8, not {arr.dtype}")
+
     num_bands = arr.shape[0]
+
     if num_bands == 1:
         alpha = np.where(~_expanded_mask(arr[0]), 255, 0).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[0], arr[0], alpha]).data
@@ -34,34 +40,38 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
         out = np.stack([arr[0], arr[0], arr[0], arr[1]]).data
     elif num_bands == 3:
         alpha = np.where(
-            (
-                ~_expanded_mask(arr[0])
-                & ~_expanded_mask(arr[1])
-                & ~_expanded_mask(arr[2])
-            ),
+            ~_expanded_mask(arr[0]) & ~_expanded_mask(arr[1]) & ~_expanded_mask(arr[2]),
             255,
             0,
         ).astype(np.uint8, copy=False)
         out = np.stack([arr[0], arr[1], arr[2], alpha]).data
     elif num_bands == 4:
         out = arr.data
-    else:  # pragma: no cover
-        raise TypeError(
-            f"array must have between one and four bands but has {num_bands}"
-        )
-    return np.array(out, dtype=np.float16)
+    else:
+        raise TypeError(f"array must have between 1 and 4 bands but has {num_bands}")
+
+    # convert to requested compute_dtype for downstream processing
+    return np.array(out, dtype=compute_dtype)
 
 
 def _blend_base(
-    bg: np.ndarray, fg: np.ndarray, opacity: float, operation: Callable
+    bg: np.ndarray,
+    fg: np.ndarray,
+    opacity: float,
+    operation: Callable,
+    compute_dtype: Union[str, npt.NDArray[np.float16]] = np.float16,
 ) -> ma.MaskedArray:
+    # convert string dtype to np.dtype
+    if isinstance(compute_dtype, str):
+        compute_dtype = np.dtype(compute_dtype)
+
     # generate RGBA output and run compositing
     out_arr = reshape_as_raster(
         operation(
             reshape_as_image(to_rgba(bg)),
             reshape_as_image(to_rgba(fg)),
             opacity,
-            disable_type_checks=True,
+            compute_dtype,
         ).astype(np.uint8)
     )
     # generate mask from alpha band
@@ -70,63 +80,63 @@ def _blend_base(
 
 
 def normal(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.normal)
+    return _blend_base(bg, fg, opacity, blend_functions.normal)
 
 
 def soft_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.soft_light)
+    return _blend_base(bg, fg, opacity, blend_functions.soft_light)
 
 
 def lighten_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.lighten_only)
+    return _blend_base(bg, fg, opacity, blend_functions.lighten_only)
 
 
 def screen(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.screen)
+    return _blend_base(bg, fg, opacity, blend_functions.screen)
 
 
 def dodge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.dodge)
+    return _blend_base(bg, fg, opacity, blend_functions.dodge)
 
 
 def addition(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.addition)
+    return _blend_base(bg, fg, opacity, blend_functions.addition)
 
 
 def darken_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.darken_only)
+    return _blend_base(bg, fg, opacity, blend_functions.darken_only)
 
 
 def multiply(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.multiply)
+    return _blend_base(bg, fg, opacity, blend_functions.multiply)
 
 
 def hard_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.hard_light)
+    return _blend_base(bg, fg, opacity, blend_functions.hard_light)
 
 
 def difference(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.difference)
+    return _blend_base(bg, fg, opacity, blend_functions.difference)
 
 
 def subtract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.subtract)
+    return _blend_base(bg, fg, opacity, blend_functions.subtract)
 
 
 def grain_extract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.grain_extract)
+    return _blend_base(bg, fg, opacity, blend_functions.grain_extract)
 
 
 def grain_merge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.grain_merge)
+    return _blend_base(bg, fg, opacity, blend_functions.grain_merge)
 
 
 def divide(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.divide)
+    return _blend_base(bg, fg, opacity, blend_functions.divide)
 
 
 def overlay(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.overlay)
+    return _blend_base(bg, fg, opacity, blend_functions.overlay)
 
 
 METHODS = {

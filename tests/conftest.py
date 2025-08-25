@@ -7,7 +7,6 @@ import pytest
 from mapchete.path import MPath
 from mapchete.testing import ProcessFixture
 from mapchete.tile import BufferedTilePyramid
-from PIL import Image
 from pystac_client import Client
 from rasterio import Affine
 from shapely import wkt
@@ -767,50 +766,30 @@ def set_cdse_test_env(monkeypatch, request):
         pytest.fail("CDSE AWS credentials not found in environment")
 
 
-@pytest.fixture(scope="session")
-def testdata_blend_modes_dir():
-    return (
-        MPath(os.path.dirname(os.path.realpath(__file__))) / "testdata" / "blend_modes"
-    )
+@pytest.fixture
+def bg_array() -> np.ndarray:
+    """Background array (3x3 example)"""
+    return np.array([[50, 100, 150], [200, 50, 0], [25, 75, 125]], dtype=np.float32)
 
 
-@pytest.fixture(scope="session")
-def src_image(testdata_blend_modes_dir):
-    img_path = testdata_blend_modes_dir / "orig.png"
-    img = Image.open(img_path).convert("RGBA")
-    arr = np.array(img) / 255.0
-    return arr.astype(np.float16)
+@pytest.fixture
+def fg_array() -> np.ndarray:
+    """Foreground array (3x3 example)"""
+    return np.array([[100, 50, 200], [0, 150, 255], [50, 100, 25]], dtype=np.float32)
 
 
-@pytest.fixture(scope="session")
-def dst_images(testdata_blend_modes_dir):
-    blend_names = [
-        "normal",
-        "multiply",
-        "screen",
-        "darken_only",
-        "lighten_only",
-        "difference",
-        "subtract",
-        "divide",
-        "grain_extract",
-        "grain_merge",
-        "overlay",
-        "hard_light",
-        "soft_light",
-        "dodge",
-        "burn",
-        "addition",
-    ]
+@pytest.fixture
+def edge_bg_array() -> np.ndarray:
+    """Edge case array: min/max values"""
+    return np.array([[0, 255, 128], [255, 0, 128], [128, 128, 128]], dtype=np.float32)
 
-    dst_imgs = {}
-    for fname in os.listdir(testdata_blend_modes_dir):
-        if fname.endswith(".png"):
-            key = fname[:-4]  # remove .png
-            # Use only if file matches blend_names exactly (ignore *_50p etc)
-            if key in blend_names:
-                img = Image.open(testdata_blend_modes_dir / fname).convert("RGBA")
-                arr = np.array(img) / 255.0
-                dst_imgs[key] = arr.astype(np.float16)
 
-    return dst_imgs
+@pytest.fixture
+def edge_fg_array() -> np.ndarray:
+    """Edge case array: min/max values"""
+    return np.array([[255, 0, 128], [0, 255, 128], [128, 128, 128]], dtype=np.float32)
+
+
+@pytest.fixture
+def opacities() -> list[float]:
+    return [0.0, 0.25, 0.5, 0.75, 1.0]

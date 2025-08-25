@@ -5,6 +5,9 @@ Earth Observation–specific driver extensions for `Mapchete <https://github.com
 .. image:: https://img.shields.io/pypi/v/mapchete-eo.svg
   :target: https://pypi.org/project/mapchete-eo/
 
+.. image:: https://img.shields.io/conda/v/conda-forge/mapchete-eo
+  :target: https://anaconda.org/conda-forge/mapchete-eo
+
 .. image:: https://img.shields.io/pypi/l/mapchete-eo.svg
   :target: https://github.com/mapchete/mapchete-eo/blob/main/LICENSE
 

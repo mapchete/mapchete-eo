@@ -8,7 +8,7 @@ import numpy.ma as ma
 from mapchete import Timer
 from rasterio.plot import reshape_as_image, reshape_as_raster
 
-from mapchete_eo.image_operations.blend_modes import blending_functions
+from mapchete_eo.image_operations import blend_functions
 
 
 logger = logging.getLogger(__name__)
@@ -55,14 +55,16 @@ def to_rgba(arr: np.ndarray) -> np.ndarray:
 def _blend_base(
     bg: np.ndarray, fg: np.ndarray, opacity: float, operation: Callable
 ) -> ma.MaskedArray:
-    # generate RGBA output and run compositing
+    # generate RGBA output and run compositing and normalize by dividing by 255
     out_arr = reshape_as_raster(
-        operation(
-            reshape_as_image(to_rgba(bg)),
-            reshape_as_image(to_rgba(fg)),
-            opacity,
-            disable_type_checks=True,
-        ).astype(np.uint8)
+        (
+            operation(
+                reshape_as_image(to_rgba(bg) / 255),
+                reshape_as_image(to_rgba(fg) / 255),
+                opacity,
+            )
+            * 255
+        ).astype(np.uint8, copy=False)
     )
     # generate mask from alpha band
     out_mask = np.where(out_arr[3] == 0, True, False)
@@ -70,63 +72,63 @@ def _blend_base(
 
 
 def normal(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.normal)
+    return _blend_base(bg, fg, opacity, blend_functions.normal)
 
 
 def soft_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.soft_light)
+    return _blend_base(bg, fg, opacity, blend_functions.soft_light)
 
 
 def lighten_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.lighten_only)
+    return _blend_base(bg, fg, opacity, blend_functions.lighten_only)
 
 
 def screen(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.screen)
+    return _blend_base(bg, fg, opacity, blend_functions.screen)
 
 
 def dodge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.dodge)
+    return _blend_base(bg, fg, opacity, blend_functions.dodge)
 
 
 def addition(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.addition)
+    return _blend_base(bg, fg, opacity, blend_functions.addition)
 
 
 def darken_only(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.darken_only)
+    return _blend_base(bg, fg, opacity, blend_functions.darken_only)
 
 
 def multiply(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.multiply)
+    return _blend_base(bg, fg, opacity, blend_functions.multiply)
 
 
 def hard_light(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.hard_light)
+    return _blend_base(bg, fg, opacity, blend_functions.hard_light)
 
 
 def difference(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.difference)
+    return _blend_base(bg, fg, opacity, blend_functions.difference)
 
 
 def subtract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.subtract)
+    return _blend_base(bg, fg, opacity, blend_functions.subtract)
 
 
 def grain_extract(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.grain_extract)
+    return _blend_base(bg, fg, opacity, blend_functions.grain_extract)
 
 
 def grain_merge(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.grain_merge)
+    return _blend_base(bg, fg, opacity, blend_functions.grain_merge)
 
 
 def divide(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.divide)
+    return _blend_base(bg, fg, opacity, blend_functions.divide)
 
 
 def overlay(bg: np.ndarray, fg: np.ndarray, opacity: float = 1) -> ma.MaskedArray:
-    return _blend_base(bg, fg, opacity, blending_functions.overlay)
+    return _blend_base(bg, fg, opacity, blend_functions.overlay)
 
 
 METHODS = {
@@ -212,11 +214,14 @@ def fuzzy_alpha_mask(
     gradient_position=GradientPosition.outside,
 ) -> np.ndarray:
     """Return an RGBA array with a fuzzy alpha mask."""
-    gradient_position = (
-        GradientPosition[gradient_position]
-        if isinstance(gradient_position, str)
-        else gradient_position
-    )
+    try:
+        gradient_position = (
+            GradientPosition[gradient_position]
+            if isinstance(gradient_position, str)
+            else gradient_position
+        )
+    except KeyError:
+        raise ValueError(f"unknown gradient_position: {gradient_position}")
 
     if arr.shape[0] != 3:
         raise TypeError("input array must have exactly three bands")

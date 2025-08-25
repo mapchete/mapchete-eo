@@ -2,6 +2,25 @@
 Changelog
 #########
 
+
+2025.8.3 - 2025-08-25
+---------------------
+
+* packaging
+
+  * add `Python :: 3.13` into `pyproject.toml`
+
+* core
+
+  * minimize, fix and make `image_operations.blend_modes.*py` --> `image_operations.blend_functions.py` compatible with `image_operations.compositing.py`
+  * tests for `image_operations.blend_functions.py` are in `tests/image_operations/test_compositing.py`; rework the `tests/image_operations/test_compositing.py` altogether
+  * added tests for `image_operations.dtype_scale.py` and `image_operations.linear_normalization.py`
+
+* CI/CD
+
+  * test with `python=3.13`
+
+
 2025.8.2 - 2025-08-14
 ---------------------
 

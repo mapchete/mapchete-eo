@@ -6,7 +6,7 @@ import numpy.ma as ma
 from mapchete import Timer
 from rasterio.features import rasterize, shapes
 from rasterio.fill import fillnodata as rio_fillnodata
-from scipy.ndimage.filters import convolve
+from scipy.ndimage import convolve
 from shapely.geometry import shape
 
 logger = logging.getLogger(__name__)

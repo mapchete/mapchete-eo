@@ -95,7 +95,7 @@ def test_static_catalog(tmp_mpath, flag, value, collection):
         "--end-time",
         "2023-08-10",
         flag,
-        value,
+        str(value),
         str(out_path),
     ]
     if collection:

@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Any, Callable, List, Optional, Type, Union
 
 import croniter
+from mapchete import Bounds
 import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
@@ -436,7 +437,13 @@ class InputData(base.InputData):
         process_area = input_params["delimiters"]["effective_area"]
         if self.params.area:
             # read area parameter and intersect with effective area
-            configured_area, configured_area_crs = guess_geometry(self.params.area)
+            configured_area, configured_area_crs = guess_geometry(
+                self.params.area,
+                bounds=Bounds.from_inp(
+                    input_params.get("delimiters", {}).get("bounds"),
+                    crs=getattr(input_params.get("pyramid"), "crs"),
+                ),
+            )
             return process_area.intersection(
                 reproject_geometry(
                     configured_area,

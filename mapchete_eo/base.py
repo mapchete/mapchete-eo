@@ -443,6 +443,7 @@ class InputData(base.InputData):
                     input_params.get("delimiters", {}).get("bounds"),
                     crs=getattr(input_params.get("pyramid"), "crs"),
                 ),
+                raise_if_empty=False,
             )
             return process_area.intersection(
                 reproject_geometry(

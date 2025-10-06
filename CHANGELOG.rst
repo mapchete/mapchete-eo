@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2025.10.0 - 2025-10-06
+----------------------
+
+* core
+
+  * consider process bounds when guessing cube area (#10)
+
+
 2025.8.3 - 2025-08-25
 ---------------------
 

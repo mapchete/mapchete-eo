@@ -109,6 +109,7 @@ def read_levelled_cube_to_np_array(
                         nodatavals=nodatavals,
                         raise_empty=raise_empty,
                         target_mask=~cube_nodata_mask.copy(),
+                        out_dtype=out_dtype,
                     ),
                 )
             slices_read_count += 1

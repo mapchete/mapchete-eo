@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Type, Union
 
 import croniter
 from mapchete import Bounds
+import numpy as np
 import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
@@ -18,6 +19,8 @@ from mapchete.tile import BufferedTile
 from mapchete.types import MPathLike, NodataVal, NodataVals
 from pydantic import BaseModel
 from rasterio.enums import Resampling
+from rasterio.features import geometry_mask
+from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive
@@ -62,6 +65,7 @@ class EODataCube(base.InputTile):
     eo_bands: dict
     time: List[TimeRange]
     area: BaseGeometry
+    area_pixelbuffer: int = 0
 
     def __init__(
         self,
@@ -367,6 +371,18 @@ class EODataCube(base.InputTile):
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
+            target_mask=self.get_target_mask(),
+        )
+
+    def get_target_mask(self) -> np.ndarray:
+        buffered_area = self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
+        if buffered_area.is_empty:
+            return np.ones(shape=self.tile.shape)
+        return geometry_mask(
+            geometries=[mapping(buffered_area)],
+            out_shape=self.tile.shape,
+            transform=self.tile.transform,
+            invert=True,
         )
 
 
@@ -445,7 +461,7 @@ class InputData(base.InputData):
                 ),
                 raise_if_empty=False,
             )
-            return process_area.intersection(
+            process_area = process_area.intersection(
                 reproject_geometry(
                     configured_area,
                     src_crs=configured_area_crs or self.crs,

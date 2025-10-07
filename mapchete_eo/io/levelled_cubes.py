@@ -40,6 +40,7 @@ def read_levelled_cube_to_np_array(
     raise_empty: bool = True,
     out_dtype: DTypeLike = np.uint16,
     out_fill_value: NodataVal = 0,
+    target_mask: Optional[np.ndarray] = None,
 ) -> ma.MaskedArray:
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
@@ -50,11 +51,14 @@ def read_levelled_cube_to_np_array(
     bands = assets or eo_bands
     if bands is None:
         raise ValueError("either assets or eo_bands have to be set")
-
     out_shape = (target_height, len(bands), *grid.shape)
+    if target_mask is None:
+        target_mask = np.ones(out_shape, dtype=bool)
+    else:
+        target_mask = np.tile(target_mask, (target_height, len(bands)))
     out: ma.MaskedArray = ma.masked_array(
         data=np.zeros(out_shape, dtype=out_dtype),
-        mask=np.ones(out_shape, dtype=out_dtype),
+        mask=target_mask,
         fill_value=out_fill_value,
     )
     logger.debug(

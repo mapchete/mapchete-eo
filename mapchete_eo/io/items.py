@@ -104,7 +104,9 @@ def get_item_property(
     | ``collection``     | The collection ID of an Item's collection.             |
     +--------------------+--------------------------------------------------------+
     """
-    if property in ["year", "month", "day", "date", "datetime"]:
+    if property == "id":
+        return item.id
+    elif property in ["year", "month", "day", "date", "datetime"]:
         if item.datetime is None:
             raise ValueError(
                 f"STAC item has no datetime attached, thus cannot get property {property}"

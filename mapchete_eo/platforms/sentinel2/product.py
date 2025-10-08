@@ -469,7 +469,7 @@ class S2Product(EOProduct, EOProductProtocol):
         else:
             if target_mask.shape != grid.shape:
                 raise ValueError("a target mask must have the same shape as the grid")
-            logger.debug("got custom target mask to start with: %s", target_mask)
+            logger.debug("got custom target mask to start with: %s", target_mask.shape)
 
         def _check_full(arr):
             # ATTENTION: target_mask and out have to be combined *after* mask was buffered!

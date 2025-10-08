@@ -55,7 +55,7 @@ def read_levelled_cube_to_np_array(
     if target_mask is None:
         target_mask = np.ones(out_shape, dtype=bool)
     else:
-        target_mask = np.tile(target_mask, (target_height, len(bands)))
+        target_mask = np.full(out_shape, target_mask)
     out: ma.MaskedArray = ma.masked_array(
         data=np.zeros(out_shape, dtype=out_dtype),
         mask=target_mask,
@@ -78,12 +78,13 @@ def read_levelled_cube_to_np_array(
     )
 
     slices_read_count, slices_skip_count = 0, 0
+    percent_full = 0
 
     # pick slices one by one
     for slice_count, slice in enumerate(slices, 1):
         # all filled up? let's get outta here!
         if not out.mask.any():
-            logger.debug("cube is full, quitting!")
+            logger.debug("cube is full %s %, quitting!", percent_full)
             break
 
         # generate 2D mask of holes to be filled in output cube

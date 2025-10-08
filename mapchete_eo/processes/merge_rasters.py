@@ -181,15 +181,19 @@ def gradient_merge(
         # footprint coverage)
         # set 1 to 0:
         gradient_1band[gradient_1band == 1] = 0
-        logger.debug(f"gradient_1band: {gradient_1band}")
+        logger.debug(
+            f"gradient_1band; min: {np.min(gradient_1band)}, max: {np.max(gradient_1band)}"
+        )
 
         # extrude array to match number of raster bands
         gradient_8bit = np.stack([gradient_1band for _ in range(raster.shape[0])])
-        logger.debug(f"gradient_8bit: {gradient_8bit}")
+        logger.debug(
+            f"gradient_8bit; min: {np.min(gradient_8bit)}, max: {np.max(gradient_8bit)}"
+        )
 
         # scale gradient from 0 to 1
         gradient = gradient_8bit / 255
-        logger.debug(f"gradient: {gradient}")
+        logger.debug(f"gradient; min: {np.min(gradient)} , max: {np.max(gradient)}")
 
         # now only apply the gradient where out and raster have values
         # otherwise pick the remaining existing value or keep a masked

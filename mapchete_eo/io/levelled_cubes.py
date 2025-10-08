@@ -84,7 +84,7 @@ def read_levelled_cube_to_np_array(
     for slice_count, slice in enumerate(slices, 1):
         # all filled up? let's get outta here!
         if not out.mask.any():
-            logger.debug("cube is full %s %, quitting!", percent_full)
+            logger.debug("cube is full %s percent, quitting!", percent_full)
             break
 
         # generate 2D mask of holes to be filled in output cube

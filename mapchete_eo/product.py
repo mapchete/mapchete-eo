@@ -113,7 +113,6 @@ class EOProduct(EOProductProtocol):
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
         apply_offset: bool = True,
-        apply_scale: bool = False,
         **kwargs,
     ) -> ma.MaskedArray:
         assets = assets or []

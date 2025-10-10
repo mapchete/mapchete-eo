@@ -56,7 +56,7 @@ def item_to_np_array(
     return out
 
 
-def expand_params(param, length):
+def expand_params(param: Any, length: int) -> List[Any]:
     """
     Expand parameters if they are not a list.
     """

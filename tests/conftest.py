@@ -763,7 +763,7 @@ def set_cdse_test_env(monkeypatch, request):
         monkeypatch.setenv("AWS_DEFAULT_REGION", "default")
         monkeypatch.delenv("AWS_REQUEST_PAYER", raising=False)
     else:
-        pytest.fail("CDSE AWS credentials not found in environment")
+        pytest.skip("CDSE AWS credentials not found in environment")
 
 
 @pytest.fixture

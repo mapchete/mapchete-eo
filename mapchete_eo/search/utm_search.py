@@ -1,4 +1,5 @@
 import datetime
+from functools import cached_property
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 
@@ -51,8 +52,11 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if len(collections) == 0:  # pragma: no cover
             raise ValueError("no collections provided")
         self.collections = collections
-        self.eo_bands = self._eo_bands()
         self.stac_item_modifiers = stac_item_modifiers
+
+    @cached_property
+    def eo_bands(self) -> List[str]:
+        return self._eo_bands()
 
     def search(
         self,

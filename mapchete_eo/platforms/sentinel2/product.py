@@ -214,7 +214,7 @@ class S2Product(EOProduct, EOProductProtocol):
         mask_config: MaskConfig = MaskConfig(),
         brdf_config: Optional[BRDFConfig] = None,
         fill_value: int = 0,
-        target_mask: Optional[np.ndarray] = None,
+        read_mask: Optional[np.ndarray] = None,
         **kwargs,
     ) -> ma.MaskedArray:
         assets = assets or []
@@ -227,7 +227,9 @@ class S2Product(EOProduct, EOProductProtocol):
             count = len(assets)
         if isinstance(grid, Resolution):
             grid = self.metadata.grid(grid)
-        mask = self.get_mask(grid, mask_config, target_mask=target_mask).data
+        mask = self.get_mask(
+            grid, mask_config, target_mask=None if read_mask is None else ~read_mask
+        ).data
         if nodatavals is None:
             nodatavals = fill_value
         elif fill_value is None and nodatavals is not None:
@@ -463,7 +465,6 @@ class S2Product(EOProduct, EOProductProtocol):
             if isinstance(grid, Resolution)
             else Grid.from_obj(grid)
         )
-
         if target_mask is None:
             target_mask = np.zeros(shape=grid.shape, dtype=bool)
         else:

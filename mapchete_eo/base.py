@@ -371,15 +371,27 @@ class EODataCube(base.InputTile):
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
-            target_mask=self.get_target_mask(),
+            read_mask=self.get_read_mask(),
         )
 
-    def get_target_mask(self) -> np.ndarray:
-        buffered_area = self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
-        if buffered_area.is_empty:
-            return np.ones(shape=self.tile.shape)
+    def get_read_mask(self) -> np.ndarray:
+        """
+        Determine read mask according to input area.
+
+        This will generate a numpy array where pixel overlapping the input area
+        are set True and thus will get filled by the read function. Pixel outside
+        of the area are not considered for reading.
+
+        On staged reading, i.e. first checking the product masks to assess valid
+        pixels, this will avoid reading product bands in cases the product only covers
+        pixels outside of the intended reading area.
+        """
         return geometry_mask(
-            geometries=[mapping(buffered_area)],
+            geometries=[
+                mapping(
+                    self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
+                )
+            ],
             out_shape=self.tile.shape,
             transform=self.tile.transform,
             invert=True,

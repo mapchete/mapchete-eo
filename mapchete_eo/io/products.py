@@ -51,7 +51,7 @@ def products_to_np_array(
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
     out_dtype: Optional[DTypeLike] = None,
-    target_mask: Optional[np.ndarray] = None,
+    read_mask: Optional[np.ndarray] = None,
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     return ma.stack(
@@ -69,7 +69,7 @@ def products_to_np_array(
                 sort=sort,
                 product_read_kwargs=product_read_kwargs,
                 raise_empty=raise_empty,
-                target_mask=target_mask,
+                read_mask=read_mask,
             )
         ]
     )
@@ -91,7 +91,7 @@ def products_to_xarray(
     sort: Optional[SortMethodConfig] = None,
     raise_empty: bool = True,
     product_read_kwargs: dict = {},
-    target_mask: Optional[np.ndarray] = None,
+    read_mask: Optional[np.ndarray] = None,
 ) -> xr.Dataset:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     data_vars = [
@@ -108,7 +108,7 @@ def products_to_xarray(
             sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
-            target_mask=target_mask,
+            read_mask=read_mask,
         )
     ]
     if merge_products_by and merge_products_by not in ["date", "datetime"]:
@@ -360,11 +360,12 @@ def generate_slice_dataarrays(
     sort: Optional[SortMethodConfig] = None,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
-    target_mask: Optional[np.ndarray] = None,
+    read_mask: Optional[np.ndarray] = None,
 ) -> Iterator[xr.DataArray]:
     """
     Yield products or merged products into slices as DataArrays.
     """
+
     if len(products) == 0:
         raise NoSourceProducts("no products to read")
 
@@ -406,7 +407,7 @@ def generate_slice_dataarrays(
                             resampling=resampling,
                             nodatavals=nodatavals,
                             raise_empty=raise_empty,
-                            target_mask=target_mask,
+                            read_mask=read_mask,
                         ),
                         raise_empty=raise_empty,
                     ),

@@ -40,27 +40,38 @@ def read_levelled_cube_to_np_array(
     raise_empty: bool = True,
     out_dtype: DTypeLike = np.uint16,
     out_fill_value: NodataVal = 0,
-    target_mask: Optional[np.ndarray] = None,
+    read_mask: Optional[np.ndarray] = None,
 ) -> ma.MaskedArray:
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
+
+    If a read_mask is provided, only the pixels marked True are considered to be read.
     """
     if len(products) == 0:
         raise NoSourceProducts("no products to read")
-
     bands = assets or eo_bands
     if bands is None:
         raise ValueError("either assets or eo_bands have to be set")
     out_shape = (target_height, len(bands), *grid.shape)
-    if target_mask is None:
-        target_mask = np.ones(out_shape, dtype=bool)
-    else:
-        target_mask = np.full(out_shape, target_mask)
+
+    # 2D read_mask shape
+    if read_mask is None:
+        read_mask = np.ones(grid.shape, dtype=bool)
+    elif read_mask.ndim != 2:
+        raise ValueError(
+            "read_mask must be 2-dimensional, not %s-dimensional",
+            read_mask.ndim,
+        )
     out: ma.MaskedArray = ma.masked_array(
-        data=np.zeros(out_shape, dtype=out_dtype),
-        mask=target_mask,
+        data=np.full(out_shape, out_fill_value, dtype=out_dtype),
+        mask=np.ones(out_shape, dtype=bool),
         fill_value=out_fill_value,
     )
+
+    if not read_mask.any():
+        logger.debug("nothing to read")
+        return out
+
     logger.debug(
         "empty cube with shape %s has %s",
         out.shape,
@@ -78,28 +89,27 @@ def read_levelled_cube_to_np_array(
     )
 
     slices_read_count, slices_skip_count = 0, 0
-    percent_full = 0
 
     # pick slices one by one
-    for slice_count, slice in enumerate(slices, 1):
+    for slice_count, slice_ in enumerate(slices, 1):
         # all filled up? let's get outta here!
         if not out.mask.any():
-            logger.debug("cube is full %s percent, quitting!", percent_full)
+            logger.debug("cube has no pixels to be filled, quitting!")
             break
 
         # generate 2D mask of holes to be filled in output cube
-        cube_nodata_mask = out.mask.any(axis=0).any(axis=0)
+        cube_nodata_mask = np.logical_and(out.mask.any(axis=0).any(axis=0), read_mask)
 
         # read slice
         try:
             logger.debug(
                 "see if slice %s %s has some of the %s unmasked pixels for cube",
                 slice_count,
-                slice,
+                slice_,
                 cube_nodata_mask.sum(),
             )
-            with slice.cached():
-                slice_array = slice.read(
+            with slice_.cached():
+                slice_array = slice_.read(
                     merge_method=merge_method,
                     product_read_kwargs=dict(
                         product_read_kwargs,
@@ -109,18 +119,18 @@ def read_levelled_cube_to_np_array(
                         resampling=resampling,
                         nodatavals=nodatavals,
                         raise_empty=raise_empty,
-                        target_mask=~cube_nodata_mask.copy(),
+                        read_mask=cube_nodata_mask.copy(),
                         out_dtype=out_dtype,
                     ),
                 )
             slices_read_count += 1
         except (EmptySliceException, CorruptedSlice) as exc:
-            logger.debug("skipped slice %s: %s", slice, str(exc))
+            logger.debug("skipped slice %s: %s", slice_, str(exc))
             slices_skip_count += 1
             continue
 
         # if slice was not empty, fill pixels into cube
-        logger.debug("add slice %s array to cube", slice)
+        logger.debug("add slice %s array to cube", slice_)
 
         # iterate through layers of cube
         for layer_index in range(target_height):
@@ -150,13 +160,10 @@ def read_levelled_cube_to_np_array(
             out[layer_index][empty_patches] = slice_array[empty_patches]
             masked_pixels = out[layer_index].mask.sum()
             total_pixels = out[layer_index].size
-            percent_full = round(
-                100 * ((total_pixels - masked_pixels) / total_pixels), 2
-            )
             logger.debug(
                 "layer %s: %s%% filled (%s empty pixels remaining)",
                 layer_index,
-                percent_full,
+                round(100 * ((total_pixels - masked_pixels) / total_pixels), 2),
                 out[layer_index].mask.sum(),
             )
 
@@ -169,10 +176,9 @@ def read_levelled_cube_to_np_array(
 
         masked_pixels = out.mask.sum()
         total_pixels = out.size
-        percent_full = round(100 * ((total_pixels - masked_pixels) / total_pixels), 2)
         logger.debug(
             "cube is %s%% filled (%s empty pixels remaining)",
-            percent_full,
+            round(100 * ((total_pixels - masked_pixels) / total_pixels), 2),
             masked_pixels,
         )
 
@@ -203,6 +209,7 @@ def read_levelled_cube_to_xarray(
     band_axis_name: str = "bands",
     x_axis_name: str = "x",
     y_axis_name: str = "y",
+    read_mask: Optional[np.ndarray] = None,
 ) -> xr.Dataset:
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
@@ -224,6 +231,7 @@ def read_levelled_cube_to_xarray(
             sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
+            read_mask=read_mask,
         ),
         slice_names=[f"layer-{ii}" for ii in range(target_height)],
         band_names=variables,

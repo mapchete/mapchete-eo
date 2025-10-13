@@ -16,4 +16,3 @@ output:
 pyramid:
   grid: geodetic
 zoom_levels: 13
-bounds: [16, 46, 16.1, 46.1]

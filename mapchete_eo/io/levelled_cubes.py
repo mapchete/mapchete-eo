@@ -72,10 +72,18 @@ def read_levelled_cube_to_np_array(
         logger.debug("nothing to read")
         return out
 
+    # extrude mask to match each layer
+    layer_read_mask = np.stack([read_mask for _ in bands])
+
+    def _cube_read_mask() -> np.ndarray:
+        # This is only needed for debug output, thus there is no need to materialize always
+        return np.stack([layer_read_mask for _ in range(target_height)])
+
     logger.debug(
-        "empty cube with shape %s has %s",
+        "empty cube with shape %s has %s and %s pixels to be filled",
         out.shape,
         pretty_bytes(out.size * out.itemsize),
+        _cube_read_mask().sum(),
     )
 
     logger.debug("sort products into slices ...")
@@ -140,31 +148,35 @@ def read_levelled_cube_to_np_array(
                 continue
 
             # determine empty patches of current layer
-            empty_patches = out[layer_index].mask.copy()
-            pixels_for_layer = (~slice_array[empty_patches].mask).sum()
+            empty_patches = np.logical_and(out[layer_index].mask, layer_read_mask)
+            remaining_pixels_for_layer = (~slice_array[empty_patches].mask).sum()
 
             # when slice has nothing to offer for this layer, skip
-            if pixels_for_layer == 0:
+            if remaining_pixels_for_layer == 0:
                 logger.debug(
                     "layer %s: slice has no pixels for this layer, jump to next",
                     layer_index,
                 )
                 continue
 
+            # insert slice data into empty patches of layer
             logger.debug(
                 "layer %s: fill with %s pixels ...",
                 layer_index,
-                pixels_for_layer,
+                remaining_pixels_for_layer,
             )
-            # insert slice data into empty patches of layer
             out[layer_index][empty_patches] = slice_array[empty_patches]
-            masked_pixels = out[layer_index].mask.sum()
-            total_pixels = out[layer_index].size
+
+            # report on layer fill status
             logger.debug(
-                "layer %s: %s%% filled (%s empty pixels remaining)",
+                "layer %s: %s",
                 layer_index,
-                round(100 * ((total_pixels - masked_pixels) / total_pixels), 2),
-                out[layer_index].mask.sum(),
+                _percent_full(
+                    remaining=np.logical_and(
+                        out[layer_index].mask, layer_read_mask
+                    ).sum(),
+                    total=layer_read_mask.sum(),
+                ),
             )
 
             # remove slice values which were just inserted for next layer
@@ -174,12 +186,13 @@ def read_levelled_cube_to_np_array(
                 logger.debug("slice fully inserted into cube, skipping")
                 break
 
-        masked_pixels = out.mask.sum()
-        total_pixels = out.size
+        # report on layer fill status
         logger.debug(
-            "cube is %s%% filled (%s empty pixels remaining)",
-            round(100 * ((total_pixels - masked_pixels) / total_pixels), 2),
-            masked_pixels,
+            "cube is %s",
+            _percent_full(
+                remaining=np.logical_and(out.mask, _cube_read_mask()).sum(),
+                total=_cube_read_mask().sum(),
+            ),
         )
 
     logger.debug(
@@ -240,3 +253,7 @@ def read_levelled_cube_to_xarray(
         x_axis_name=x_axis_name,
         y_axis_name=y_axis_name,
     )
+
+
+def _percent_full(remaining: int, total: int, ndigits: int = 2) -> str:
+    return f"{round(100 * (total - remaining) / total, ndigits=ndigits)}% full ({remaining} remaining emtpy pixels)"

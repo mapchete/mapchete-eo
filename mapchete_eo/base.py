@@ -386,12 +386,11 @@ class EODataCube(base.InputTile):
         pixels, this will avoid reading product bands in cases the product only covers
         pixels outside of the intended reading area.
         """
+        area = self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
+        if area.is_empty:
+            return np.zeros((self.tile.shape), dtype=bool)
         return geometry_mask(
-            geometries=[
-                mapping(
-                    self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
-                )
-            ],
+            geometries=[mapping(area)],
             out_shape=self.tile.shape,
             transform=self.tile.transform,
             invert=True,

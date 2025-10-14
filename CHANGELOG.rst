@@ -3,6 +3,20 @@ Changelog
 #########
 
 
+2025.10.1 - 2025-10-14
+----------------------
+
+* core
+
+  * `array.convert.to_masked_array()`: add `out_dtype` kwarg (#11)
+  * `base.EODataCube`: enable reading area subsets of input cubes (added `read_mask` kwarg to read functions) (#11)
+  * `base.EODataCube`: add `area_pixelbuffer` (#11)
+  * `io.levelled_cubes.read_levelled_cube_to_np_array()`: add `read_mask` kwarg (#11)
+  * `io.products.merge_products()`: fix `fill_value` on output array (#11)
+  * `sort`: add `CloudCoverSort` (#11)
+  * `search.stac_search`: lazy load `pystac_client.Client` (#11)
+
+
 2025.10.0 - 2025-10-06
 ----------------------
 

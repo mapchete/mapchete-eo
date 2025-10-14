@@ -56,7 +56,7 @@ def item_to_np_array(
     return out
 
 
-def expand_params(param, length):
+def expand_params(param: Any, length: int) -> List[Any]:
     """
     Expand parameters if they are not a list.
     """
@@ -104,8 +104,10 @@ def get_item_property(
     | ``collection``     | The collection ID of an Item's collection.             |
     +--------------------+--------------------------------------------------------+
     """
-    if property in ["year", "month", "day", "date", "datetime"]:
-        if item.datetime is None:
+    if property == "id":
+        return item.id
+    elif property in ["year", "month", "day", "date", "datetime"]:
+        if item.datetime is None:  # pragma: no cover
             raise ValueError(
                 f"STAC item has no datetime attached, thus cannot get property {property}"
             )

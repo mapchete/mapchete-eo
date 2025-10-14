@@ -14,10 +14,10 @@ from mapchete_eo.io.path import (
 )
 from mapchete_eo.io.products import Slice
 from mapchete_eo.product import EOProduct
-from mapchete_eo.sort import TargetDateSort
 
 
 def test_get_item_property_date(s2_stac_item):
+    assert get_item_property(s2_stac_item, "id") == s2_stac_item.id
     assert get_item_property(s2_stac_item, "day") == s2_stac_item.datetime.day
     assert get_item_property(s2_stac_item, "month") == s2_stac_item.datetime.month
     assert get_item_property(s2_stac_item, "year") == s2_stac_item.datetime.year
@@ -108,11 +108,8 @@ def test_products_to_slices(s2_stac_items):
 
 
 def test_products_to_slices_empty():
-    slices = products_to_slices([], group_by_property="day", sort=TargetDateSort())
-    for slice_ in slices:
-        assert len(slice_.products) > 1
-        for product in slice_.products:
-            assert slice_.name == product.item.datetime.day
+    slices = products_to_slices([])
+    assert not slices
 
 
 @pytest.mark.parametrize(

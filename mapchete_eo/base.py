@@ -6,6 +6,7 @@ from typing import Any, Callable, List, Optional, Type, Union
 
 import croniter
 from mapchete import Bounds
+import numpy as np
 import numpy.ma as ma
 import xarray as xr
 from dateutil.tz import tzutc
@@ -18,6 +19,8 @@ from mapchete.tile import BufferedTile
 from mapchete.types import MPathLike, NodataVal, NodataVals
 from pydantic import BaseModel
 from rasterio.enums import Resampling
+from rasterio.features import geometry_mask
+from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.archives.base import Archive
@@ -62,6 +65,7 @@ class EODataCube(base.InputTile):
     eo_bands: dict
     time: List[TimeRange]
     area: BaseGeometry
+    area_pixelbuffer: int = 0
 
     def __init__(
         self,
@@ -367,6 +371,29 @@ class EODataCube(base.InputTile):
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
+            read_mask=self.get_read_mask(),
+        )
+
+    def get_read_mask(self) -> np.ndarray:
+        """
+        Determine read mask according to input area.
+
+        This will generate a numpy array where pixel overlapping the input area
+        are set True and thus will get filled by the read function. Pixel outside
+        of the area are not considered for reading.
+
+        On staged reading, i.e. first checking the product masks to assess valid
+        pixels, this will avoid reading product bands in cases the product only covers
+        pixels outside of the intended reading area.
+        """
+        area = self.area.buffer(self.area_pixelbuffer * self.tile.pixel_x_size)
+        if area.is_empty:
+            return np.zeros((self.tile.shape), dtype=bool)
+        return geometry_mask(
+            geometries=[mapping(area)],
+            out_shape=self.tile.shape,
+            transform=self.tile.transform,
+            invert=True,
         )
 
 
@@ -443,8 +470,9 @@ class InputData(base.InputData):
                     input_params.get("delimiters", {}).get("bounds"),
                     crs=getattr(input_params.get("pyramid"), "crs"),
                 ),
+                raise_if_empty=False,
             )
-            return process_area.intersection(
+            process_area = process_area.intersection(
                 reproject_geometry(
                     configured_area,
                     src_crs=configured_area_crs or self.crs,

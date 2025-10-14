@@ -36,16 +36,33 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
         endpoint: Optional[MPathLike] = None,
     ):
+        if endpoint is not None:
+            self.endpoint = endpoint
         if collections:
             self.collections = collections
         else:  # pragma: no cover
             raise ValueError("collections must be given")
-        self.client = Client.open(endpoint or self.endpoint)
-        self.id = self.client.id
-        self.description = self.client.description
-        self.stac_extensions = self.client.stac_extensions
-        self.eo_bands = self._eo_bands()
         self.stac_item_modifiers = stac_item_modifiers
+
+    @cached_property
+    def client(self) -> Client:
+        return Client.open(self.endpoint)
+
+    @cached_property
+    def eo_bands(self) -> List[str]:
+        return self._eo_bands()
+
+    @cached_property
+    def id(self) -> str:
+        return self.client.id
+
+    @cached_property
+    def description(self) -> str:
+        return self.client.description
+
+    @cached_property
+    def stac_extensions(self) -> List[str]:
+        return self.client.stac_extensions
 
     def search(
         self,

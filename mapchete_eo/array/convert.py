@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
+from numpy.typing import DTypeLike
 import xarray as xr
 from mapchete.types import NodataVal
 
@@ -19,7 +20,9 @@ _NUMPY_FLOAT_DTYPES = [
 
 
 def to_masked_array(
-    xarr: Union[xr.Dataset, xr.DataArray], copy: bool = False
+    xarr: Union[xr.Dataset, xr.DataArray],
+    copy: bool = False,
+    out_dtype: Optional[DTypeLike] = None,
 ) -> ma.MaskedArray:
     """Convert xr.DataArray to ma.MaskedArray."""
     if isinstance(xarr, xr.Dataset):
@@ -30,6 +33,9 @@ def to_masked_array(
         raise ValueError(
             "Cannot create masked_array because DataArray fill value is None"
         )
+
+    if out_dtype:
+        xarr = xarr.astype(out_dtype, copy=False)
 
     if xarr.dtype in _NUMPY_FLOAT_DTYPES:
         return ma.masked_values(xarr, fill_value, copy=copy, shrink=False)

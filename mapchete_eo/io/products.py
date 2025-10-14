@@ -10,6 +10,7 @@ from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence
 from mapchete import Timer
 import numpy as np
 import numpy.ma as ma
+from numpy.typing import DTypeLike
 import xarray as xr
 from mapchete.config import get_hash
 from mapchete.geometry import to_shape
@@ -49,11 +50,13 @@ def products_to_np_array(
     sort: Optional[SortMethodConfig] = None,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
+    out_dtype: Optional[DTypeLike] = None,
+    read_mask: Optional[np.ndarray] = None,
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     return ma.stack(
         [
-            to_masked_array(s)
+            to_masked_array(s, out_dtype=out_dtype)
             for s in generate_slice_dataarrays(
                 products=products,
                 assets=assets,
@@ -66,6 +69,7 @@ def products_to_np_array(
                 sort=sort,
                 product_read_kwargs=product_read_kwargs,
                 raise_empty=raise_empty,
+                read_mask=read_mask,
             )
         ]
     )
@@ -87,6 +91,7 @@ def products_to_xarray(
     sort: Optional[SortMethodConfig] = None,
     raise_empty: bool = True,
     product_read_kwargs: dict = {},
+    read_mask: Optional[np.ndarray] = None,
 ) -> xr.Dataset:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     data_vars = [
@@ -103,6 +108,7 @@ def products_to_xarray(
             sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
+            read_mask=read_mask,
         )
     ]
     if merge_products_by and merge_products_by not in ["date", "datetime"]:
@@ -322,8 +328,11 @@ def merge_products(
         valid_arrays = [a for a in arrays if not ma.getmaskarray(a).all()]
 
         if valid_arrays:
-            stacked = ma.stack(valid_arrays, dtype=out.dtype)
-            out = stacked.mean(axis=0, dtype=out.dtype)
+            out_dtype = out.dtype
+            out_fill_value = out.fill_value
+            stacked = ma.stack(valid_arrays, dtype=out_dtype)
+            out = stacked.mean(axis=0, dtype=out_dtype).astype(out_dtype, copy=False)
+            out.set_fill_value(out_fill_value)
         else:
             # All arrays were fully masked — return fully masked output
             out = ma.masked_all(out.shape, dtype=out.dtype)
@@ -351,10 +360,12 @@ def generate_slice_dataarrays(
     sort: Optional[SortMethodConfig] = None,
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
+    read_mask: Optional[np.ndarray] = None,
 ) -> Iterator[xr.DataArray]:
     """
     Yield products or merged products into slices as DataArrays.
     """
+
     if len(products) == 0:
         raise NoSourceProducts("no products to read")
 
@@ -396,6 +407,7 @@ def generate_slice_dataarrays(
                             resampling=resampling,
                             nodatavals=nodatavals,
                             raise_empty=raise_empty,
+                            read_mask=read_mask,
                         ),
                         raise_empty=raise_empty,
                     ),

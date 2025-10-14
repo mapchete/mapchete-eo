@@ -1,3 +1,4 @@
+from functools import cached_property
 import logging
 import warnings
 from typing import Any, Callable, Dict, Generator, List, Optional, Union
@@ -37,12 +38,24 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
     ):
         self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
-        self.id = self.client.id
-        self.description = self.client.description
-        self.stac_extensions = self.client.stac_extensions
         self.collections = [c.id for c in self.client.get_children()]
-        self.eo_bands = self._eo_bands()
         self.stac_item_modifiers = stac_item_modifiers
+
+    @cached_property
+    def eo_bands(self) -> List[str]:
+        return self._eo_bands()
+
+    @cached_property
+    def id(self) -> str:
+        return self.client.id
+
+    @cached_property
+    def description(self) -> str:
+        return self.client.description
+
+    @cached_property
+    def stac_extensions(self) -> List[str]:
+        return self.client.stac_extensions
 
     def search(
         self,

@@ -1,3 +1,4 @@
+from functools import cached_property
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -48,12 +49,24 @@ class CatalogSearcher(ABC):
     This class serves as a bridge between an Archive and a catalog implementation.
     """
 
-    eo_bands: List[str]
-    id: str
-    description: str
-    stac_extensions: List[str]
     collections: List[str]
     config_cls: Type[BaseModel]
+
+    @abstractmethod
+    @cached_property
+    def eo_bands(self) -> List[str]: ...
+
+    @abstractmethod
+    @cached_property
+    def id(self) -> str: ...
+
+    @abstractmethod
+    @cached_property
+    def description(self) -> str: ...
+
+    @abstractmethod
+    @cached_property
+    def stac_extensions(self) -> List[str]: ...
 
     @abstractmethod
     def search(
@@ -66,10 +79,10 @@ class CatalogSearcher(ABC):
 
 
 class StaticCatalogWriterMixin(CatalogSearcher):
-    client: Client
-    id: str
-    description: str
-    stac_extensions: List[str]
+    # client: Client
+    # id: str
+    # description: str
+    # stac_extensions: List[str]
 
     @abstractmethod
     def get_collections(self) -> List[Collection]:  # pragma: no cover

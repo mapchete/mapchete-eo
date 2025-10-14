@@ -101,10 +101,17 @@ def test_to_dataset_4d(test_4d_array):
         lazy_fixture("test_3d_array"),
     ],
 )
-def test_dataarray_to_masked_array(masked_array):
-    converted = to_masked_array(to_dataarray(masked_array))
+@pytest.mark.parametrize(
+    "out_dtype",
+    [None, "int8", "int16"],
+)
+def test_dataarray_to_masked_array(masked_array, out_dtype):
+    out_dtype = out_dtype or masked_array.dtype
+
+    converted = to_masked_array(to_dataarray(masked_array), out_dtype=out_dtype)
+
     assert converted.shape == masked_array.shape
-    assert converted.dtype == masked_array.dtype
+    assert converted.dtype == out_dtype
 
 
 @pytest.mark.parametrize(

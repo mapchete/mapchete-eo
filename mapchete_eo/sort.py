@@ -53,7 +53,7 @@ class TargetDateSort(SortMethodConfig):
 def sort_objects_by_cloud_cover(
     objects: List[Item], reverse: bool = False
 ) -> List[Item]:
-    if len(objects) == 0:
+    if len(objects) == 0:  # pragma: no cover
         return objects
     objects.sort(key=lambda x: get_item_property(x, "eo:cloud_cover"), reverse=reverse)
     return objects

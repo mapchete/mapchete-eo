@@ -55,7 +55,7 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         self.stac_item_modifiers = stac_item_modifiers
 
     @cached_property
-    def eo_bands(self) -> List[str]:
+    def eo_bands(self) -> List[str]:  # pragma: no cover
         return self._eo_bands()
 
     def search(

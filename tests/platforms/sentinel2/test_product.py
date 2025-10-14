@@ -615,7 +615,19 @@ def test_read_levelled_cube_xarray(s2_stac_items, test_tile):
     assert isinstance(xarr, xr.Dataset)
 
 
-def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
+@pytest.mark.parametrize(
+    "read_mask",
+    [
+        None,
+        np.zeros((256, 256), dtype=bool),
+        np.ones((256, 256), dtype=bool),
+        np.concatenate(
+            [np.zeros((128, 256), dtype=bool), np.ones((128, 256), dtype=bool)],
+            dtype=bool,
+        ),
+    ],
+)
+def test_read_levelled_cube_np_array(s2_stac_items, test_tile, read_mask):
     assets = ["red"]
     target_height = 5
     arr = read_levelled_cube_to_np_array(
@@ -630,11 +642,28 @@ def test_read_levelled_cube_np_array(s2_stac_items, test_tile):
                 cloud_probability_threshold=50,
             )
         ),
+        read_mask=read_mask,
     )
     assert isinstance(arr, ma.MaskedArray)
-    assert arr.any()
-    assert not arr.mask.all()
     assert arr.shape[0] == target_height
+
+    # no read_mask given or fully set to True
+    if read_mask is None or read_mask.all():
+        assert arr.any()
+        assert not arr.mask.all()
+
+    # read_mask full of False
+    elif not read_mask.any():
+        assert not arr.any()
+        assert arr.mask.all()
+
+    # mixed read_mask
+    else:
+        assert arr.any()
+        # flatten cube to 2D indicating where data was inserted
+        flattened_arr = arr.any(axis=0).any(axis=0)
+        # any area *not* indicated by read_mask *must* be empty
+        assert not flattened_arr[~read_mask].any()
 
     # not much a better way of testing it than to make sure, cube is filled from the bottom
     layers = list(range(target_height))

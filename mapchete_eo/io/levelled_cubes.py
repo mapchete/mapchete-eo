@@ -47,17 +47,17 @@ def read_levelled_cube_to_np_array(
 
     If a read_mask is provided, only the pixels marked True are considered to be read.
     """
-    if len(products) == 0:
+    if len(products) == 0:  # pragma: no cover
         raise NoSourceProducts("no products to read")
     bands = assets or eo_bands
-    if bands is None:
+    if bands is None:  # pragma: no cover
         raise ValueError("either assets or eo_bands have to be set")
     out_shape = (target_height, len(bands), *grid.shape)
 
     # 2D read_mask shape
     if read_mask is None:
         read_mask = np.ones(grid.shape, dtype=bool)
-    elif read_mask.ndim != 2:
+    elif read_mask.ndim != 2:  # pragma: no cover
         raise ValueError(
             "read_mask must be 2-dimensional, not %s-dimensional",
             read_mask.ndim,

@@ -107,7 +107,7 @@ def get_item_property(
     if property == "id":
         return item.id
     elif property in ["year", "month", "day", "date", "datetime"]:
-        if item.datetime is None:
+        if item.datetime is None:  # pragma: no cover
             raise ValueError(
                 f"STAC item has no datetime attached, thus cannot get property {property}"
             )

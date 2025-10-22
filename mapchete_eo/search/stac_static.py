@@ -19,7 +19,6 @@ from mapchete_eo.search.base import (
     StaticCatalogWriterMixin,
     filter_items,
 )
-from mapchete_eo.search.config import StacStaticConfig
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import TimeRange
 
@@ -30,8 +29,6 @@ StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
-    config_cls = StacStaticConfig
-
     def __init__(
         self,
         baseurl: MPathLike,
@@ -68,10 +65,7 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if area is None and bounds:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)
-        for item in filter_items(
-            self._raw_search(time=time, area=area),
-            max_cloud_cover=config.max_cloud_cover,
-        ):
+        for item in filter_items(self._raw_search(time=time, area=area), **config):
             yield item
 
     def _raw_search(

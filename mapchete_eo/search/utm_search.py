@@ -19,7 +19,9 @@ from mapchete_eo.search.base import (
     StaticCatalogWriterMixin,
     filter_items,
 )
-from mapchete_eo.search.config import UTMSearchConfig
+from mapchete_eo.search.platforms.sentinel2.config import (
+    Sentinel2UTMSearchQueryablesConfig,
+)
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.time import day_range, to_datetime
@@ -40,7 +42,7 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if mapchete_eo_settings.blacklist
         else set()
     )
-    config_cls = UTMSearchConfig
+    config_cls = Sentinel2UTMSearchQueryablesConfig
 
     def __init__(
         self,
@@ -80,7 +82,7 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
-        config: UTMSearchConfig = UTMSearchConfig(),
+        config: Sentinel2UTMSearchQueryablesConfig = Sentinel2UTMSearchQueryablesConfig(),
     ) -> Generator[Item, None, None]:
         if time is None:
             raise ValueError("time must be given")
@@ -153,9 +155,9 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
 
     def _eo_bands(self) -> list:
         for collection_name in self.collections:
-            for (
-                collection_properties
-            ) in UTMSearchConfig().sinergise_aws_collections.values():
+            for collection_properties in (
+                Sentinel2UTMSearchQueryablesConfig().sinergise_aws_collections.values()
+            ):
                 if collection_properties["id"] == collection_name:
                     collection = Collection.from_dict(
                         collection_properties["path"].read_json()

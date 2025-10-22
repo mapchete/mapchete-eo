@@ -13,10 +13,15 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
+
 from mapchete_eo.search.base import CatalogSearcher, StaticCatalogWriterMixin
-from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
+
+from mapchete_eo.search.platforms.sentinel2.config import (
+    ALLOWED_SENTINEL2_QUERIES_LIST,
+    Sentinel2STACSearchQueryablesConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +33,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if mapchete_eo_settings.blacklist
         else set()
     )
-    config_cls = StacSearchConfig
+    config_cls = Sentinel2STACSearchQueryablesConfig
 
     def __init__(
         self,
@@ -155,7 +160,8 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time_range: Optional[TimeRange] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
-        config: StacSearchConfig = StacSearchConfig(),
+        config: Sentinel2STACSearchQueryablesConfig = Sentinel2STACSearchQueryablesConfig(),
+        stac_query: Union[Sentinel2STACSearchQueryablesConfig, List] = [],
         **kwargs,
     ):
         if time_range is None:  # pragma: no cover
@@ -180,10 +186,18 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
             if isinstance(time_range.end, datetime)
             else time_range.end
         )
+
+        for i in ALLOWED_SENTINEL2_QUERIES_LIST:
+            for k, v in config.model_dump(by_alias=True).items():
+                if k == i:
+                    if "cloud_cover" in k:
+                        stac_query.append(f"{k}<={v}")
+
+        # query = generate_stac_query_str(self)
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
-            query=[f"eo:cloud_cover<={config.max_cloud_cover}"],
+            query=stac_query,
             **kwargs,
         )
         if (

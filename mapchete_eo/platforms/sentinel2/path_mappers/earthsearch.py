@@ -27,7 +27,17 @@ class EarthSearchPathMapper(SinergisePathMapper):
         **kwargs,
     ):
         basedir = metadata_xml.parent
-        self._path = (basedir / "tileinfo_metadata.json").read_json()["path"]
+        if basedir.startswith(
+            "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/"
+        ):
+            tile_info_json = "tileInfo.json"
+        elif basedir.startswith("https://sentinel-cogs.s3.us-west-2.amazonaws.com"):
+            tile_info_json = "tileinfo_metadata.json"
+        else:
+            raise ValueError(
+                f"cannot determine tile info JSON path from basepath {basedir}"
+            )
+        self._path = (basedir / tile_info_json).read_json()["path"]
         self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol

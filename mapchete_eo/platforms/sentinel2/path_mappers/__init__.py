@@ -16,13 +16,19 @@ def default_path_mapper_guesser(
     in order to be detected.
     """
     if url.startswith(
-        ("https://roda.sentinel-hub.com/sentinel-s2-l2a/", "s3://sentinel-s2-l2a/")
-    ) or url.startswith(
-        ("https://roda.sentinel-hub.com/sentinel-s2-l1c/", "s3://sentinel-s2-l1c/")
+        (
+            "https://roda.sentinel-hub.com/sentinel-s2-l2a/",
+            "s3://sentinel-s2-l2a/",
+            "https://roda.sentinel-hub.com/sentinel-s2-l1c/",
+            "s3://sentinel-s2-l1c/",
+        )
     ):
         return SinergisePathMapper(url, **kwargs)
     elif url.startswith(
-        "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
+        (
+            "https://sentinel-cogs.s3.us-west-2.amazonaws.com/",
+            "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/",
+        )
     ):
         return EarthSearchPathMapper(url, **kwargs)
     else:

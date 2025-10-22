@@ -129,7 +129,7 @@ class AWSL2ACOGv1(Archive):
     """COG archive on AWS using E84 STAC search endpoint."""
 
     catalog = EarthSearchV1S2L2A(
-        collections=["sentinel-2-l2a"],
+        collections=["sentinel-2-c1-l2a"],
     )
     item_modifier_funcs = [
         item_fix_footprint,

@@ -20,6 +20,7 @@ def test_e84_cog_catalog_search_items(e84_cog_catalog):
                         end="2022-06-06",
                     ),
                     bounds=[16, 46, 17, 47],
+                    search_kwargs=dict(max_cloud_cover=80),
                 )
             )
         )
@@ -44,6 +45,7 @@ def test_utm_search_catalog_search_items(utm_search_catalog):
                         end="2022-06-05",
                     ),
                     bounds=[-180, 65, -179, 65.3],
+                    search_kwargs=dict(max_cloud_cover=80),
                 )
             )
         )
@@ -71,5 +73,6 @@ def test_known_catalogs(catalog_cls, collection_name):
             end="2022-06-05",
         ),
         bounds=[-180, 65, -179, 65.3],
+        search_kwargs=dict(max_cloud_cover=80),
     )
     assert items

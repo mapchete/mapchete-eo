@@ -73,7 +73,9 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if area is None and bounds:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)
-        for item in filter_items(self._raw_search(time=time, area=area), **config):
+        for item in filter_items(
+            self._raw_search(time=time, area=area), **config.model_dump()
+        ):
             yield item
 
     def _raw_search(

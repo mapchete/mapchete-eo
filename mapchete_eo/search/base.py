@@ -224,6 +224,7 @@ def filter_items(
     items: Generator[Item, None, None],
     cloud_cover_field: str = "eo:cloud_cover",
     max_cloud_cover: float = 100.0,
+    **kwargs,
 ) -> Generator[Item, None, None]:
     """
     Only for cloudcover now, this can and should be adapted for filter field and value

@@ -22,6 +22,10 @@ from mapchete_eo.search.base import (
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import TimeRange
 
+from mapchete_eo.search.platforms.sentinel2.config import (
+    Sentinel2STACSearchQueryablesConfig,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +65,11 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         area: Optional[BaseGeometry] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
+        if [s for s in self.collections if "sentinel-2" or "sentinel-s2" in s]:
+            self.config_cls = Sentinel2STACSearchQueryablesConfig
+
         config = self.config_cls(**search_kwargs or {})
+
         if area is None and bounds:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)

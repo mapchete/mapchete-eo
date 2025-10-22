@@ -14,10 +14,11 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
 
-from mapchete_eo.search.base import CatalogSearcher, StaticCatalogWriterMixin
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
+from mapchete_eo.search.base import CatalogSearcher, StaticCatalogWriterMixin
+from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.search.platforms.sentinel2.config import (
     ALLOWED_SENTINEL2_QUERIES_LIST,
     Sentinel2STACSearchQueryablesConfig,
@@ -33,7 +34,8 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if mapchete_eo_settings.blacklist
         else set()
     )
-    config_cls = Sentinel2STACSearchQueryablesConfig
+
+    config_cls = StacSearchConfig
 
     def __init__(
         self,
@@ -76,7 +78,11 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         area: Optional[BaseGeometry] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
+        if [s for s in self.collections if "sentinel-2" or "sentinel-s2" in s]:
+            self.config_cls = Sentinel2STACSearchQueryablesConfig
+
         config = self.config_cls(**search_kwargs or {})
+
         if bounds:
             bounds = Bounds.from_inp(bounds)
         if time is None:  # pragma: no cover
@@ -193,7 +199,6 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
                     if "cloud_cover" in k:
                         stac_query.append(f"{k}<={v}")
 
-        # query = generate_stac_query_str(self)
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",

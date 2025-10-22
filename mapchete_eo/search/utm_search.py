@@ -19,6 +19,7 @@ from mapchete_eo.search.base import (
     StaticCatalogWriterMixin,
     filter_items,
 )
+from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.search.platforms.sentinel2.config import (
     Sentinel2UTMSearchQueryablesConfig,
 )
@@ -42,7 +43,7 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if mapchete_eo_settings.blacklist
         else set()
     )
-    config_cls = Sentinel2UTMSearchQueryablesConfig
+    config_cls = UTMSearchConfig
 
     def __init__(
         self,
@@ -67,6 +68,9 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         area: Optional[BaseGeometry] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
+        if [s for s in self.collections if "sentinel-2" or "sentinel-s2" in s]:
+            self.config_cls = Sentinel2UTMSearchQueryablesConfig
+
         config = self.config_cls(**search_kwargs or {})
         if bounds:
             bounds = Bounds.from_inp(bounds)

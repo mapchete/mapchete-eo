@@ -467,7 +467,7 @@ class InputData(base.InputData):
             configured_area, configured_area_crs = guess_geometry(
                 self.params.area,
                 bounds=Bounds.from_inp(
-                    input_params.get("delimiters", {}).get("bounds"),
+                    input_params.get("delimiters", {}).get("effective_bounds"),
                     crs=getattr(input_params.get("pyramid"), "crs"),
                 ),
                 raise_if_empty=False,

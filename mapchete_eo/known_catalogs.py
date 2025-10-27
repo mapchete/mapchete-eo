@@ -9,7 +9,14 @@ from mapchete_eo.search import STACSearchCatalog, UTMSearchCatalog
 
 
 class EarthSearchV1S2L2A(STACSearchCatalog):
+    # DEPRECATED
     """Earth-Search catalog for Sentinel-2 Level 2A COGs."""
+
+    endpoint: str = "https://earth-search.aws.element84.com/v1/"
+
+
+class EarthSearchV1(STACSearchCatalog):
+    """Earth-Search catalog V1."""
 
     endpoint: str = "https://earth-search.aws.element84.com/v1/"
 

@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any, Callable
 
 from mapchete.path import MPathLike
-from pydantic import (
-    BaseModel,
-    ValidationError,
-    field_validator,
-)
+from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
 from mapchete_eo.platforms.sentinel2.archives import ArchiveClsFromString, AWSL2ACOGv1
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
+from mapchete_eo.platforms.sentinel2.customizations import (
+    DataArchive,
+    MetadataArchive,
+    KNOWN_SOURCES,
+)
+from mapchete_eo.platforms.sentinel2.mapper_registry import MAPPER_REGISTRIES
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProductQIMaskResolution,
@@ -21,6 +23,84 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
+
+
+def known_catalog_to_url(stac_catalog: str) -> str:
+    if stac_catalog in KNOWN_SOURCES:
+        return KNOWN_SOURCES[stac_catalog]["stac_catalog"]
+    return stac_catalog
+
+
+class Source(BaseModel):
+    """All information required to consume Sentinel-2 products."""
+
+    stac_catalog: str
+
+    # if known STAC catalog is given, fill in the defaults
+    collections: Optional[List[str]] = None
+    data_archive: Optional[DataArchive] = None
+    metadata_archive: MetadataArchive = "roda"
+
+    @model_validator(mode="before")
+    def determine_data_source(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Handles short names of sources."""
+        if isinstance(values, str):
+            values = dict(stac_catalog=values)
+        stac_catalog = values.get("stac_catalog")
+        if stac_catalog in KNOWN_SOURCES:
+            values.update(KNOWN_SOURCES[stac_catalog])
+        else:
+            # TODO: make sure catalog then is either a path or an URL
+            pass
+        return values
+
+    @model_validator(mode="after")
+    def verify_mappers(self) -> Source:
+        # make sure all required mappers are registered
+        self.get_id_mapper()
+        self.get_asset_paths_mapper()
+        self.get_s2metadata_mapper()
+        return self
+
+    def get_id_mapper(self) -> Callable:
+        for key in MAPPER_REGISTRIES["ID"]:
+            if self.stac_catalog == known_catalog_to_url(key):
+                return MAPPER_REGISTRIES["ID"][key]
+        else:
+            raise ValueError(f"no ID mapper for {self.stac_catalog} found")
+
+    def get_asset_paths_mapper(self) -> Union[Callable, None]:
+        if self.data_archive is None:
+            return None
+        for key in MAPPER_REGISTRIES["asset paths"]:
+            stac_catalog, data_archive = key
+            if (
+                self.stac_catalog == known_catalog_to_url(stac_catalog)
+                and data_archive == self.data_archive
+            ):
+                return MAPPER_REGISTRIES["asset paths"][key]
+        else:
+            raise ValueError(
+                f"no asset paths mapper from {self.stac_catalog} to {self.data_archive} found"
+            )
+
+    def get_s2metadata_mapper(self) -> Union[Callable, None]:
+        if self.metadata_archive is None:
+            return None
+        for key in MAPPER_REGISTRIES["S2Metadata"]:
+            stac_catalog, metadata_archive = key
+            if (
+                self.stac_catalog == known_catalog_to_url(stac_catalog)
+                and metadata_archive == self.metadata_archive
+            ):
+                return MAPPER_REGISTRIES["S2Metadata"][key]
+        else:
+            raise ValueError(
+                f"no S2Metadata mapper from {self.stac_catalog} to {self.metadata_archive} found"
+            )
+
+
+default_source = Source.model_validate(KNOWN_SOURCES["EarthSearch"])
 
 
 class BRDFModelConfig(BaseModel):
@@ -107,9 +187,20 @@ class CacheConfig(BaseModel):
 class Sentinel2DriverConfig(BaseDriverConfig):
     format: str = "Sentinel-2"
     time: Union[TimeRange, List[TimeRange]]
+
+    # new
+    source: List[Source] = [default_source]
+
+    # deprecated
+    # for backwards compatibility, archive should be converted to
+    # catalog & data_archive
     archive: ArchiveClsFromString = AWSL2ACOGv1
+
+    # don't know yet how to handle this
     cat_baseurl: Optional[MPathLike] = None
     search_index: Optional[MPathLike] = None
+
+    # custom params
     max_cloud_cover: float = 100.0
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
@@ -117,6 +208,15 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     with_scl: bool = False
     brdf: Optional[BRDFConfig] = None
     cache: Optional[CacheConfig] = None
+
+    @model_validator(mode="before")
+    def to_list(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Expands source to list."""
+        for field in ["source"]:
+            value = values.get(field)
+            if value is not None and not isinstance(value, list):
+                values[field] = [value]
+        return values
 
 
 class MaskConfig(BaseModel):

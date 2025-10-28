@@ -32,7 +32,7 @@ DEPRECATED_ARCHIVES = {
         "data_archive": "AWSCOG",
     },
     "S2AWS_JP2": {
-        "stac_catalog": "https://earth-search.aws.element84.com/v1/",
+        "stac_catalog": "https://stac.dataspace.copernicus.eu/v1",
         "collections": ["sentinel-2-l2a"],
         "data_archive": "AWSJP2",
     },

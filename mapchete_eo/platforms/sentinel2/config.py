@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError, field_validator, model_validato
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
+from mapchete_eo.source import Source
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.customizations import (
     DataArchive,
@@ -32,13 +33,10 @@ def known_catalog_to_url(stac_catalog: str) -> str:
     return stac_catalog
 
 
-class Sentinel2Source(BaseModel):
+class Sentinel2Source(Source):
     """All information required to consume Sentinel-2 products."""
 
-    stac_catalog: str
-
-    # if known STAC catalog is given, fill in the defaults
-    collections: Optional[List[str]] = None
+    # extends base model with those properties
     data_archive: Optional[DataArchive] = None
     metadata_archive: MetadataArchive = "roda"
 
@@ -47,7 +45,7 @@ class Sentinel2Source(BaseModel):
         """Handles short names of sources."""
         if isinstance(values, str):
             values = dict(stac_catalog=values)
-        stac_catalog = values.get("stac_catalog")
+        stac_catalog = values.get("stac_catalog", None)
         if stac_catalog in KNOWN_SOURCES:
             values.update(KNOWN_SOURCES[stac_catalog])
         else:
@@ -224,15 +222,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                     values["source"] = DEPRECATED_ARCHIVES[archive]
                 except KeyError:
                     raise
-        return values
-
-    @model_validator(mode="before")
-    def to_list(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """Expands source to list."""
-        for field in ["source"]:
-            value = values.get(field)
-            if value is not None and not isinstance(value, list):
-                values[field] = [value]
         return values
 
 

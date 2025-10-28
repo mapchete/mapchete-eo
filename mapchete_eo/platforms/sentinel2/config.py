@@ -32,7 +32,7 @@ def known_catalog_to_url(stac_catalog: str) -> str:
     return stac_catalog
 
 
-class Source(BaseModel):
+class Sentinel2Source(BaseModel):
     """All information required to consume Sentinel-2 products."""
 
     stac_catalog: str
@@ -56,7 +56,7 @@ class Source(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def verify_mappers(self) -> Source:
+    def verify_mappers(self) -> Sentinel2Source:
         # make sure all required mappers are registered
         self.get_id_mapper()
         self.get_asset_paths_mapper()
@@ -101,7 +101,7 @@ class Source(BaseModel):
             )
 
 
-default_source = Source.model_validate(KNOWN_SOURCES["EarthSearch"])
+default_source = Sentinel2Source.model_validate(KNOWN_SOURCES["EarthSearch"])
 
 
 class BRDFModelConfig(BaseModel):
@@ -190,7 +190,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     time: Union[TimeRange, List[TimeRange]]
 
     # new
-    source: List[Source] = [default_source]
+    source: List[Sentinel2Source] = [default_source]
 
     # deprecated
     # for backwards compatibility, archive should be converted to

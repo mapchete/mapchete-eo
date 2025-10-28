@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from typing import List, Optional, Union, Dict, Any, Callable
+import warnings
 
 from mapchete.path import MPathLike
 from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
-from mapchete_eo.platforms.sentinel2.archives import ArchiveClsFromString, AWSL2ACOGv1
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.customizations import (
     DataArchive,
     MetadataArchive,
     KNOWN_SOURCES,
+    DEPRECATED_ARCHIVES,
 )
 from mapchete_eo.platforms.sentinel2.mapper_registry import MAPPER_REGISTRIES
 from mapchete_eo.platforms.sentinel2.types import (
@@ -194,7 +195,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     # deprecated
     # for backwards compatibility, archive should be converted to
     # catalog & data_archive
-    archive: ArchiveClsFromString = AWSL2ACOGv1
+    # archive: ArchiveClsFromString = AWSL2ACOGv1
 
     # don't know yet how to handle this
     cat_baseurl: Optional[MPathLike] = None
@@ -208,6 +209,22 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     with_scl: bool = False
     brdf: Optional[BRDFConfig] = None
     cache: Optional[CacheConfig] = None
+
+    @model_validator(mode="before")
+    def deprecate_archive(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        archive = values.get("archive")
+        if archive:
+            warnings.warn(
+                "'archive' will be deprecated soon. Please use 'source'.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source") is None:
+                try:
+                    values["source"] = DEPRECATED_ARCHIVES[archive]
+                except KeyError:
+                    raise
+        return values
 
     @model_validator(mode="before")
     def to_list(cls, values: Dict[str, Any]) -> Dict[str, Any]:

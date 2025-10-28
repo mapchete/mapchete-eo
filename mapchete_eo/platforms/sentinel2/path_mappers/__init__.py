@@ -1,3 +1,5 @@
+# TODO: deprecate this whole module!
+
 from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
 from mapchete_eo.platforms.sentinel2.path_mappers.earthsearch import (
     EarthSearchPathMapper,

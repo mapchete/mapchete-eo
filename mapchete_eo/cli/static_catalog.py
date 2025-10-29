@@ -9,7 +9,6 @@ from rasterio.profiles import Profile
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.platforms.sentinel2 import S2Metadata
-from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.types import Resolution
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.search.base import CatalogSearcher
@@ -40,7 +39,7 @@ def static_catalog(
     end_time: datetime,
     bounds: Optional[Bounds] = None,
     mgrs_tile: Optional[str] = None,
-    archive: Optional[KnownArchives] = None,
+    archive: Optional[str] = None,
     collection: Optional[str] = None,
     endpoint: Optional[str] = None,
     catalog_json: Optional[MPath] = None,
@@ -102,7 +101,7 @@ def static_catalog(
 def get_catalog(
     catalog_json: Optional[MPath],
     endpoint: Optional[MPath],
-    known_archive: Optional[KnownArchives] = None,
+    known_archive: Optional[str] = None,
     collection: Optional[str] = None,
 ) -> CatalogSearcher:
     if catalog_json:
@@ -118,6 +117,6 @@ def get_catalog(
         else:
             raise ValueError("collection must be provided")
     elif known_archive:
-        return known_archive.value.catalog
+        raise NotImplementedError()
     else:
         raise TypeError("cannot determine catalog")

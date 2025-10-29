@@ -12,7 +12,6 @@ from rasterio import Affine
 from shapely import wkt
 from shapely.geometry import base
 
-from mapchete_eo.known_catalogs import AWSSearchCatalogS2L2A, EarthSearchV1S2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.types import TimeRange
@@ -339,34 +338,6 @@ def stac_search_catalog():
         ),
         bounds=[16, 46, 17, 47],
         endpoint="https://earth-search.aws.element84.com/v1/",
-    )
-
-
-@pytest.mark.remote
-@pytest.fixture(scope="session")
-def e84_cog_catalog():
-    return EarthSearchV1S2L2A(
-        collections=["sentinel-2-l2a"],
-    )
-
-
-@pytest.mark.remote
-@pytest.fixture
-def utm_search_catalog():
-    return AWSSearchCatalogS2L2A(
-        collections=["sentinel-s2-l2a"],
-    )
-
-
-@pytest.fixture(scope="session")
-def e84_cog_catalog_short():
-    return EarthSearchV1S2L2A(
-        time=TimeRange(
-            start="2022-06-01",
-            end="2022-06-03",
-        ),
-        bounds=[16, 46.4, 16.1, 46.5],
-        collections=["sentinel-2-l2a"],
     )
 
 

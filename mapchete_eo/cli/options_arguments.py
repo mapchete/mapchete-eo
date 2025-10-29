@@ -6,8 +6,8 @@ from mapchete.path import MPath
 
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
-from mapchete_eo.platforms.sentinel2.archives import KnownArchives
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
+from mapchete_eo.platforms.sentinel2.sources_mappers import DEPRECATED_ARCHIVES
 from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
 from mapchete_eo.time import to_datetime
 
@@ -56,11 +56,6 @@ def _brdf_model_str_to_brdf(_, __, value):
 def _str_to_l2a_bands(_, __, value):
     if value:
         return [L2ABand[v] for v in value.split(",")]
-
-
-def _archive_name_to_archive_cls(_, __, value):
-    if value:
-        return KnownArchives[value]
 
 
 def _str_to_datetime(_, param, value):
@@ -169,10 +164,9 @@ opt_end_time = click.option(
 )
 opt_archive = click.option(
     "--archive",
-    type=click.Choice([archive.name for archive in KnownArchives]),
+    type=click.Choice(list(DEPRECATED_ARCHIVES.keys())),
     default="S2AWS_COG",
     help="Archive to read from.",
-    callback=_archive_name_to_archive_cls,
 )
 opt_collection = click.option(
     "--collection",

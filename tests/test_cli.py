@@ -4,7 +4,6 @@ from mapchete.io import rasterio_open
 from pytest_lazyfixture import lazy_fixture
 
 from mapchete_eo.cli import eo
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 
 
 def test_s2_mask(s2_stac_json_half_footprint, tmp_mpath):
@@ -77,7 +76,7 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
     [
         ("--catalog-json", lazy_fixture("s2_stac_collection"), None),
         ("--archive", "S2AWS_COG", None),
-        ("--endpoint", EarthSearchV1S2L2A.endpoint, "sentinel-2-l2a"),
+        ("--endpoint", "https://earth-search.aws.element84.com/v1/", "sentinel-2-l2a"),
     ],
 )
 def test_static_catalog(tmp_mpath, flag, value, collection):

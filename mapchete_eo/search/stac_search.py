@@ -183,7 +183,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
-            query=[f"eo:cloud_cover<={config.max_cloud_cover}"],
+            query=config.query,
             **kwargs,
         )
         if (

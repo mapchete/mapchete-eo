@@ -14,6 +14,12 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
             source=["EarthSearch"],
         ),
         dict(
+            source=dict(
+                stac_catalog="EarthSearch",
+                metadata_archive="roda",
+            )
+        ),
+        dict(
             source=[
                 dict(
                     stac_catalog="EarthSearch",

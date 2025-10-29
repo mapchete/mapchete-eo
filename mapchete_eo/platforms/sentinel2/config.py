@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union, Dict, Any, Callable
+from typing import List, Optional, Union, Dict, Any
 import warnings
 
 from mapchete.path import MPathLike
@@ -8,15 +8,12 @@ from pydantic import BaseModel, ValidationError, field_validator, model_validato
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
-from mapchete_eo.source import Source
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
-from mapchete_eo.platforms.sentinel2.customizations import (
-    DataArchive,
-    MetadataArchive,
+from mapchete_eo.platforms.sentinel2.sources_mappers import (
     KNOWN_SOURCES,
     DEPRECATED_ARCHIVES,
 )
-from mapchete_eo.platforms.sentinel2.mapper_registry import MAPPER_REGISTRIES
+from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProductQIMaskResolution,
@@ -25,78 +22,6 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
-
-
-def known_catalog_to_url(stac_catalog: str) -> str:
-    if stac_catalog in KNOWN_SOURCES:
-        return KNOWN_SOURCES[stac_catalog]["stac_catalog"]
-    return stac_catalog
-
-
-class Sentinel2Source(Source):
-    """All information required to consume Sentinel-2 products."""
-
-    # extends base model with those properties
-    data_archive: Optional[DataArchive] = None
-    metadata_archive: MetadataArchive = "roda"
-
-    @model_validator(mode="before")
-    def determine_data_source(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """Handles short names of sources."""
-        if isinstance(values, str):
-            values = dict(stac_catalog=values)
-        stac_catalog = values.get("stac_catalog", None)
-        if stac_catalog in KNOWN_SOURCES:
-            values.update(KNOWN_SOURCES[stac_catalog])
-        else:
-            # TODO: make sure catalog then is either a path or an URL
-            pass
-        return values
-
-    @model_validator(mode="after")
-    def verify_mappers(self) -> Sentinel2Source:
-        # make sure all required mappers are registered
-        self.get_id_mapper()
-        self.get_asset_paths_mapper()
-        self.get_s2metadata_mapper()
-        return self
-
-    def get_id_mapper(self) -> Callable:
-        for key in MAPPER_REGISTRIES["ID"]:
-            if self.stac_catalog == known_catalog_to_url(key):
-                return MAPPER_REGISTRIES["ID"][key]
-        else:
-            raise ValueError(f"no ID mapper for {self.stac_catalog} found")
-
-    def get_asset_paths_mapper(self) -> Union[Callable, None]:
-        if self.data_archive is None:
-            return None
-        for key in MAPPER_REGISTRIES["asset paths"]:
-            stac_catalog, data_archive = key
-            if (
-                self.stac_catalog == known_catalog_to_url(stac_catalog)
-                and data_archive == self.data_archive
-            ):
-                return MAPPER_REGISTRIES["asset paths"][key]
-        else:
-            raise ValueError(
-                f"no asset paths mapper from {self.stac_catalog} to {self.data_archive} found"
-            )
-
-    def get_s2metadata_mapper(self) -> Union[Callable, None]:
-        if self.metadata_archive is None:
-            return None
-        for key in MAPPER_REGISTRIES["S2Metadata"]:
-            stac_catalog, metadata_archive = key
-            if (
-                self.stac_catalog == known_catalog_to_url(stac_catalog)
-                and metadata_archive == self.metadata_archive
-            ):
-                return MAPPER_REGISTRIES["S2Metadata"][key]
-        else:
-            raise ValueError(
-                f"no S2Metadata mapper from {self.stac_catalog} to {self.metadata_archive} found"
-            )
 
 
 default_source = Sentinel2Source.model_validate(KNOWN_SOURCES["EarthSearch"])
@@ -200,7 +125,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     search_index: Optional[MPathLike] = None
 
     # custom params
-    max_cloud_cover: float = 100.0
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None
@@ -222,6 +146,46 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                     values["source"] = DEPRECATED_ARCHIVES[archive]
                 except KeyError:
                     raise
+        return values
+
+    @model_validator(mode="before")
+    def deprecate_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        max_cloud_cover = values.get("max_cloud_cover")
+        if max_cloud_cover:
+            warnings.warn(
+                "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            sources = values.get("source", [])
+            updated_sources = []
+            for source in sources:
+                if source.get("query") is not None:
+                    raise ValueError(
+                        f"deprecated max_cloud_cover is set but also a query field is given in {source}"
+                    )
+                source["query"] = f"eo:cloud_cover<={max_cloud_cover}"
+                updated_sources.append(source)
+            values.pop("max_cloud_cover")
+            values["source"] = updated_sources
+        return values
+
+    @model_validator(mode="before")
+    def deprecate_cat_baseurl(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        cat_baseurl = values.get("cat_baseurl")
+        if cat_baseurl:
+            warnings.warn(
+                "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            sources = values.get("source", [])
+            updated_sources = []
+            for source in sources:
+                source.update(stac_catalog=cat_baseurl, catalog_type="static")
+                updated_sources.append(source)
+            values.pop("cat_baseurl")
+            values["source"] = updated_sources
         return values
 
 

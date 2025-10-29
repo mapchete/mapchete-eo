@@ -505,7 +505,6 @@ class InputData(base.InputData):
                     src_crs=self.crs,
                     dst_crs=source.catalog_crs,
                 ),
-                search_kwargs=self.params.search_kwargs,
             ):
                 # if item was already found in previous source, skip
                 if item.id in already_returned:

@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Generator, Union, Dict, Any, Callable
+from typing import List, Literal, Optional, Generator, Union, Callable
 
 from mapchete.path import MPath
 from mapchete.types import BoundsLike, CRSLike, MPathLike
@@ -21,6 +21,7 @@ class Source(BaseModel):
     collections: Optional[List[str]] = None
     catalog_crs: CRSLike = mapchete_eo_settings.default_catalog_crs
     catalog_type: Literal["search", "static"] = "search"
+    query: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -33,11 +34,13 @@ class Source(BaseModel):
         time: Union[TimeRange, List[TimeRange]],
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
-        search_kwargs: Optional[Dict[str, Any]] = None,
         base_dir: Optional[MPathLike] = None,
     ) -> Generator[Item, None, None]:
         for item in self.get_catalog(base_dir=base_dir).search(
-            time=time, bounds=bounds, area=area, search_kwargs=search_kwargs
+            time=time,
+            bounds=bounds,
+            area=area,
+            search_kwargs=dict(query=self.query) if self.query else None,
         ):
             yield self.apply_item_modifier_funcs(item)
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class StacSearchConfig(BaseModel):
     max_cloud_cover: float = 100.0
+    query: Optional[str] = None
     catalog_chunk_threshold: int = 10_000
     catalog_chunk_zoom: int = 5
     catalog_pagesize: int = 100

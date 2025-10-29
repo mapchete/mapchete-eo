@@ -179,13 +179,11 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-            sources = values.get("source", [])
-            updated_sources = []
-            for source in sources:
-                source.update(stac_catalog=cat_baseurl, catalog_type="static")
-                updated_sources.append(source)
-            values.pop("cat_baseurl")
-            values["source"] = updated_sources
+            if values.get("source", []):
+                raise ValueError(
+                    "deprecated cat_baseurl field found alongside sources."
+                )
+            values["source"] = [dict(stac_catalog=cat_baseurl, catalog_type="static")]
         return values
 
 

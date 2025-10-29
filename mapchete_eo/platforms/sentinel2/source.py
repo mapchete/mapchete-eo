@@ -55,7 +55,9 @@ class Sentinel2Source(Source):
         self.get_s2metadata_mapper()
         return self
 
-    def get_id_mapper(self) -> Callable:
+    def get_id_mapper(self) -> Union[Callable, None]:
+        if self.catalog_type == "static":
+            return None
         for key in MAPPER_REGISTRIES["ID"]:
             if self.stac_catalog == known_catalog_to_url(key):
                 return MAPPER_REGISTRIES["ID"][key]
@@ -63,7 +65,7 @@ class Sentinel2Source(Source):
             raise ValueError(f"no ID mapper for {self.stac_catalog} found")
 
     def get_asset_paths_mapper(self) -> Union[Callable, None]:
-        if self.data_archive is None:
+        if self.catalog_type == "static" or self.data_archive is None:
             return None
         for key in MAPPER_REGISTRIES["asset paths"]:
             stac_catalog, data_archive = key
@@ -78,7 +80,7 @@ class Sentinel2Source(Source):
             )
 
     def get_s2metadata_mapper(self) -> Union[Callable, None]:
-        if self.metadata_archive is None:
+        if self.catalog_type == "static" or self.metadata_archive is None:
             return None
         for key in MAPPER_REGISTRIES["S2Metadata"]:
             stac_catalog, metadata_archive = key

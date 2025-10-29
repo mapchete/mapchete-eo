@@ -65,5 +65,5 @@ class Source(BaseModel):
                     baseurl=MPath(self.stac_catalog).absolute_path(base_dir=base_dir)
                 )
 
-    def eo_bands(self) -> List[str]:
-        return self.get_catalog().eo_bands
+    def eo_bands(self, base_dir: Optional[MPathLike] = None) -> List[str]:
+        return self.get_catalog(base_dir=base_dir).eo_bands

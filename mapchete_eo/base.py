@@ -430,6 +430,7 @@ class InputData(base.InputData):
         self.standalone = standalone
 
         self.params = self.driver_config_model(**input_params["abstract"])
+        self.conf_dir = input_params.get("conf_dir")
 
         # we have to make sure, the cache path is absolute
         # not quite fond of this solution
@@ -441,12 +442,13 @@ class InputData(base.InputData):
         self.time = self.params.time
 
         self.eo_bands = [
-            eo_band for source in self.params.source for eo_band in source.eo_bands()
+            eo_band
+            for source in self.params.source
+            for eo_band in source.eo_bands(base_dir=self.conf_dir)
         ]
 
         if self.readonly:  # pragma: no cover
             return
-
         # don't use preprocessing tasks for Sentinel-2 products:
         if self.params.preprocessing_tasks or self.params.cache is not None:
             for item in self.source_items():
@@ -496,7 +498,6 @@ class InputData(base.InputData):
 
     def source_items(self) -> Generator[Item, None, None]:
         already_returned = set()
-
         for source in self.params.source:
             for item in source.search(
                 time=self.time,
@@ -505,6 +506,7 @@ class InputData(base.InputData):
                     src_crs=self.crs,
                     dst_crs=source.catalog_crs,
                 ),
+                base_dir=self.conf_dir,
             ):
                 # if item was already found in previous source, skip
                 if item.id in already_returned:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 import logging
 from functools import cached_property
 from typing import Any, Callable, List, Optional, Sequence, Type, Union, Dict, Generator
@@ -60,6 +61,22 @@ class BaseDriverConfig(BaseModel):
             value = values.get(field)
             if value is not None and not isinstance(value, list):
                 values[field] = [value]
+        return values
+
+    @model_validator(mode="before")
+    def deprecate_cat_baseurl(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        cat_baseurl = values.get("cat_baseurl")
+        if cat_baseurl:
+            warnings.warn(
+                "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source", []):
+                raise ValueError(
+                    "deprecated cat_baseurl field found alongside sources."
+                )
+            values["source"] = [dict(stac_catalog=cat_baseurl, catalog_type="static")]
         return values
 
 

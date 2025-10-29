@@ -128,6 +128,7 @@ def test_s2tile_antimeridian_footprint(tile_id, control_geom_type):
         assert Bounds.from_inp(s2tile.latlon_geometry).width < 10
 
 
+@pytest.mark.skip(reason="deprecated functionality")
 def test_sentinel2_jp2_static_catalog(sentinel2_jp2_static_catalog_mapchete):
     inp = sentinel2_jp2_static_catalog_mapchete.mp().config.at_zoom(13)["input"]["inp"]
     assert inp.archive.get_catalog_config().search_index

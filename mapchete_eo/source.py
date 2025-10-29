@@ -21,7 +21,7 @@ class Source(BaseModel):
     collections: Optional[List[str]] = None
     catalog_crs: CRSLike = mapchete_eo_settings.default_catalog_crs
     catalog_type: Literal["search", "static"] = "search"
-    query: Optional[str] = None
+    query: Optional[List[str]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -36,11 +36,16 @@ class Source(BaseModel):
         area: Optional[BaseGeometry] = None,
         base_dir: Optional[MPathLike] = None,
     ) -> Generator[Item, None, None]:
+        """
+        TODO: search needs to handle multiple collections and make (mapchete) EO Cubes
+        """
         for item in self.get_catalog(base_dir=base_dir).search(
             time=time,
             bounds=bounds,
             area=area,
-            search_kwargs=dict(query=self.query) if self.query else None,
+            search_kwargs=dict(collections=self.collections, query=self.query)
+            if self.query
+            else None,
         ):
             yield self.apply_item_modifier_funcs(item)
 

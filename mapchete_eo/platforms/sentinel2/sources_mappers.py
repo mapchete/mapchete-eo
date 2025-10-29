@@ -16,7 +16,7 @@ DataArchive = Literal["AWSCOG", "AWSJP2"]
 KNOWN_SOURCES: Dict[str, Any] = {
     "EarthSearch": {
         "stac_catalog": "https://earth-search.aws.element84.com/v1/",
-        "collections": ["sentinel-2-c1-l2a"],
+        # "collections": ["sentinel-2-c1-l2a"],
     },
     "EarthSearch_legacy": {
         "stac_catalog": "https://earth-search.aws.element84.com/v1/",

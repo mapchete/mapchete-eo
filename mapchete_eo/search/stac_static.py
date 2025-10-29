@@ -19,7 +19,7 @@ from mapchete_eo.search.base import (
     StaticCatalogWriterMixin,
     filter_items,
 )
-from mapchete_eo.search.config import StacStaticConfig
+from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import TimeRange
 
@@ -30,7 +30,7 @@ StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
-    config_cls = StacStaticConfig
+    config_cls = StacSearchConfig
 
     def __init__(
         self,

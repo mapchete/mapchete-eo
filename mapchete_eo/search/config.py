@@ -1,25 +1,19 @@
-from typing import Optional
+from typing import List, Optional
 
 from mapchete.path import MPath, MPathLike
 from pydantic import BaseModel
 
 
 class StacSearchConfig(BaseModel):
-    max_cloud_cover: float = 100.0
-    query: Optional[str] = None
+    collections: Optional[List[str]] = None
+    query: Optional[List[str]] = None
     catalog_chunk_threshold: int = 10_000
     catalog_chunk_zoom: int = 5
     catalog_pagesize: int = 100
     footprint_buffer: float = 0
 
 
-class StacStaticConfig(BaseModel):
-    max_cloud_cover: float = 100.0
-
-
 class UTMSearchConfig(BaseModel):
-    max_cloud_cover: float = 100.0
-
     sinergise_aws_collections: dict = dict(
         S2_L2A=dict(
             id="sentinel-s2-l2a",

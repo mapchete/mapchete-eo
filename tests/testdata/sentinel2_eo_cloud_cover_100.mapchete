@@ -1,6 +1,3 @@
-# This should remain backwards compatible until the "max_cloud_cover" gets removed
-# Even tho it might have been faulty even before the refractor to "source"
-
 process: read_xarray.py
 input:
   inp:
@@ -9,7 +6,10 @@ input:
     time:
       start: 2022-06-01
       end: 2022-06-10
-    max_cloud_cover: 60
+    source:
+      stac_catalog: EarthSearch
+      collections: [sentinel-2-l2a]
+      query: [eo:cloud_cover<=100]
 output:
   format: GTiff
   bands: 3

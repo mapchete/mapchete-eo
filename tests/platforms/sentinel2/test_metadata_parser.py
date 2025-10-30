@@ -6,6 +6,7 @@ import pytest
 from affine import Affine
 from mapchete.io.raster import ReferencedRaster
 
+
 try:
     from mapchete import Bounds, Grid
 except ImportError:
@@ -16,11 +17,13 @@ from rasterio.crs import CRS
 from shapely.geometry import shape
 
 from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.path_mappers import (
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
+    XMLMapper,
+)
+from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers import (
     EarthSearchPathMapper,
     SinergisePathMapper,
-    XMLMapper,
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 from mapchete_eo.platforms.sentinel2.types import (

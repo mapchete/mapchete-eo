@@ -3,7 +3,7 @@ from typing import Tuple
 from fiona.transform import transform
 import numpy as np
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 
 
 def get_sun_zenith_angles(s2_metadata: S2Metadata) -> np.ndarray:

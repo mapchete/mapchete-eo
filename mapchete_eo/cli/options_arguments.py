@@ -7,7 +7,9 @@ from mapchete.path import MPath
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
-from mapchete_eo.platforms.sentinel2.sources_mappers import DEPRECATED_ARCHIVES
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    DEPRECATED_ARCHIVES,
+)
 from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
 from mapchete_eo.time import to_datetime
 

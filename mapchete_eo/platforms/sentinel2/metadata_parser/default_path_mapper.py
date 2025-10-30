@@ -11,7 +11,7 @@ from typing import Optional
 from mapchete.path import MPath
 
 from mapchete_eo.io import open_xml
-from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
+from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
@@ -23,7 +23,7 @@ from mapchete_eo.platforms.sentinel2.types import (
 logger = logging.getLogger(__name__)
 
 
-class XMLMapper(S2PathMapper):
+class XMLMapper(S2MetadataPathMapper):
     def __init__(
         self, metadata_xml: MPath, xml_root: Optional[Element] = None, **kwargs
     ):

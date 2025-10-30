@@ -5,12 +5,12 @@ from typing import Optional, List, Callable, Dict, Any, Union
 from pydantic import model_validator
 
 from mapchete_eo.source import Source
-from mapchete_eo.platforms.sentinel2.sources_mappers import (
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
     DataArchive,
     MetadataArchive,
     KNOWN_SOURCES,
 )
-from mapchete_eo.platforms.sentinel2.mapper_registry import MAPPER_REGISTRIES
+from mapchete_eo.platforms.sentinel2._mapper_registry import MAPPER_REGISTRIES
 
 
 def known_catalog_to_url(stac_catalog: str) -> str:

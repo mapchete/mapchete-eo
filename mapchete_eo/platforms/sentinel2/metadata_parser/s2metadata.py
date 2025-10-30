@@ -6,14 +6,12 @@ sun angles, quality masks, etc.
 from __future__ import annotations
 
 import logging
-import warnings
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Union
 from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
 import numpy.ma as ma
-from pydantic import BaseModel
 import pystac
 from affine import Affine
 from fiona.transform import transform_geom
@@ -33,9 +31,15 @@ from tilematrix import Shape
 
 from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
 from mapchete_eo.io import open_xml, read_mask_as_raster
-from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
-from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
-from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
+from mapchete_eo.platforms.sentinel2.metadata_parser.models import (
+    ViewingIncidenceAngles,
+    SunAngleData,
+    SunAnglesData,
+)
+from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper
+from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
+    XMLMapper,
+)
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
@@ -124,11 +128,10 @@ def s2metadata_from_stac_item(
 
 class S2Metadata:
     metadata_xml: MPath
-    path_mapper: S2PathMapper
+    path_mapper: S2MetadataPathMapper
     processing_baseline: ProcessingBaseline
     boa_offset_applied: bool = False
     _cached_xml_root: Optional[Element] = None
-    path_mapper_guesser: Callable = default_path_mapper_guesser
     from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
@@ -138,7 +141,7 @@ class S2Metadata:
     def __init__(
         self,
         metadata_xml: MPath,
-        path_mapper: S2PathMapper,
+        path_mapper: S2MetadataPathMapper,
         xml_root: Optional[Element] = None,
         boa_offset_applied: bool = False,
         **kwargs,
@@ -186,19 +189,15 @@ class S2Metadata:
     def from_metadata_xml(
         cls,
         metadata_xml: Union[str, MPath],
+        path_mapper: Optional[S2MetadataPathMapper] = None,
         processing_baseline: Optional[str] = None,
-        path_mapper: Optional[S2PathMapper] = None,
         **kwargs,
     ) -> S2Metadata:
         metadata_xml = MPath.from_inp(metadata_xml, **kwargs)
         xml_root = open_granule_metadata_xml(metadata_xml)
+
         if path_mapper is None:
-            # guess correct path mapper
-            path_mapper = cls.path_mapper_guesser(
-                metadata_xml,
-                xml_root=xml_root,
-                **kwargs,
-            )
+            path_mapper = XMLMapper(metadata_xml=metadata_xml, xml_root=xml_root)
 
         # use processing baseline version from argument if available
         if processing_baseline:
@@ -585,65 +584,6 @@ class S2Metadata:
             "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
         return mean
-
-
-class SunAngleData(BaseModel):
-    model_config = dict(arbitrary_types_allowed=True)
-    raster: ReferencedRaster
-    mean: float
-
-
-class SunAnglesData(BaseModel):
-    azimuth: SunAngleData
-    zenith: SunAngleData
-
-    def get_angle(self, angle: SunAngle) -> SunAngleData:
-        if angle == SunAngle.azimuth:
-            return self.azimuth
-        elif angle == SunAngle.zenith:
-            return self.zenith
-        else:
-            raise KeyError(f"unknown angle: {angle}")
-
-
-class ViewingIncidenceAngle(BaseModel):
-    model_config = dict(arbitrary_types_allowed=True)
-    detectors: Dict[int, ReferencedRaster]
-    mean: float
-
-    def merge_detectors(
-        self, fill_edges: bool = True, smoothing_iterations: int = 3
-    ) -> ReferencedRaster:
-        if not self.detectors:
-            raise CorruptedProductMetadata("no viewing incidence angles available")
-        sample = next(iter(self.detectors.values()))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            merged = np.nanmean(
-                np.stack([raster.data for raster in self.detectors.values()]), axis=0
-            )
-        if fill_edges:
-            merged = fillnodata(
-                ma.masked_invalid(merged), smoothing_iterations=smoothing_iterations
-            )
-        return ReferencedRaster.from_array_like(
-            array_like=ma.masked_invalid(merged),
-            transform=sample.transform,
-            crs=sample.crs,
-        )
-
-
-class ViewingIncidenceAngles(BaseModel):
-    azimuth: ViewingIncidenceAngle
-    zenith: ViewingIncidenceAngle
-
-    def get_angle(self, angle: ViewAngle) -> ViewingIncidenceAngle:
-        if angle == ViewAngle.azimuth:
-            return self.azimuth
-        elif angle == ViewAngle.zenith:
-            return self.zenith
-        else:
-            raise KeyError(f"unknown angle: {angle}")
 
 
 def _get_grids(root: Element, crs: CRS) -> Dict[Resolution, Grid]:

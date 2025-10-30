@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError, field_validator, model_validato
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
-from mapchete_eo.platforms.sentinel2.sources_mappers import (
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
     KNOWN_SOURCES,
     DEPRECATED_ARCHIVES,
 )

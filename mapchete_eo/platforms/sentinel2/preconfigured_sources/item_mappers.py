@@ -1,57 +1,16 @@
-from typing import Literal, Dict, Any
-
 from mapchete.path import MPath
 from pystac import Item
 
-from mapchete_eo.platforms.sentinel2.mapper_registry import (
+from mapchete_eo.platforms.sentinel2._mapper_registry import (
     maps_item_id,
     maps_stac_metadata,
     creates_s2metadata,
 )
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers import (
+    EarthSearchPathMapper,
+)
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.search.s2_mgrs import S2Tile
-
-
-DataArchive = Literal["AWSCOG", "AWSJP2"]
-KNOWN_SOURCES: Dict[str, Any] = {
-    "EarthSearch": {
-        "stac_catalog": "https://earth-search.aws.element84.com/v1/",
-        "collections": ["sentinel-2-c1-l2a"],
-    },
-    "EarthSearch_legacy": {
-        "stac_catalog": "https://earth-search.aws.element84.com/v1/",
-        "collections": ["sentinel-2-l2a"],
-    },
-    "CDSE": {
-        "stac_catalog": "https://stac.dataspace.copernicus.eu/v1",
-        "collections": ["sentinel-2-l2a"],
-    },
-}
-
-DEPRECATED_ARCHIVES = {
-    "S2AWS_COG": {
-        "stac_catalog": "https://earth-search.aws.element84.com/v1/",
-        "collections": ["sentinel-2-l2a"],
-        "data_archive": "AWSCOG",
-    },
-    "S2AWS_JP2": {
-        "stac_catalog": "https://stac.dataspace.copernicus.eu/v1",
-        "collections": ["sentinel-2-l2a"],
-        "data_archive": "AWSJP2",
-    },
-    "S2CDSE_AWSJP2": {
-        "stac_catalog": "https://stac.dataspace.copernicus.eu/v1",
-        "collections": ["sentinel-2-l2a"],
-        "data_archive": "AWSJP2",
-    },
-    "S2CDSE_JP2": {
-        "stac_catalog": "https://stac.dataspace.copernicus.eu/v1",
-        "collections": ["sentinel-2-l2a"],
-    },
-}
-
-
-MetadataArchive = Literal["roda"]
 
 
 # mapper functions decorated with metadata to have driver decide which one to apply when #
@@ -71,7 +30,7 @@ def earthsearch_assets_paths_mapper(item: Item) -> Item:
 
 @creates_s2metadata(from_catalogs=["EarthSearch"], to_metadata_archives=["roda"])
 def earthsearch_to_s2metadata(item: Item) -> S2Metadata:
-    return S2Metadata.from_stac_item(item)
+    return S2Metadata.from_stac_item(item, path_mapper=EarthSearchPathMapper)
 
 
 @maps_item_id(from_catalogs=["CDSE"])
@@ -174,3 +133,36 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
 @creates_s2metadata(from_catalogs=["CDSE"], to_metadata_archives=["roda"])
 def cdse_s2metadata(item: Item) -> S2Metadata:
     return S2Metadata.from_stac_item(item)
+
+
+# from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper
+# from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_earthsearch import (
+#     EarthSearchPathMapper,
+# )
+# from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
+#     XMLMapper,
+# )
+# from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_sinergise import SinergisePathMapper
+
+
+# def default_path_mapper_guesser(
+#     url: str,
+#     **kwargs,
+# ) -> S2MetadataPathMapper:
+#     """Guess S2PathMapper based on URL.
+
+#     If a new path mapper is added in this module, it should also be added to this function
+#     in order to be detected.
+#     """
+#     if url.startswith(
+#         ("https://roda.sentinel-hub.com/sentinel-s2-l2a/", "s3://sentinel-s2-l2a/")
+#     ) or url.startswith(
+#         ("https://roda.sentinel-hub.com/sentinel-s2-l1c/", "s3://sentinel-s2-l1c/")
+#     ):
+#         return SinergisePathMapper(url, **kwargs)
+#     elif url.startswith(
+#         "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
+#     ):
+#         return EarthSearchPathMapper(url, **kwargs)
+#     else:
+#         return XMLMapper(url, **kwargs)

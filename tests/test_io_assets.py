@@ -13,7 +13,7 @@ from mapchete_eo.io.assets import (
     should_be_converted,
 )
 from mapchete_eo.io.profiles import COGDeflateProfile, JP2LossyProfile
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 
 
 def test_asset_mpath(s2_stac_item):

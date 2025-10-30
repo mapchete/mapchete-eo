@@ -8,7 +8,18 @@ from mapchete_eo.platforms.sentinel2.preconfigured_sources.item_mappers import (
     cdse_asset_names,  # noqa: F401
     cdse_s2metadata,  # noqa: F401
 )
+from mapchete_eo.platforms.sentinel2.preconfigured_sources.guessers import (
+    guess_metadata_path_mapper,
+    guess_s2metadata_from_item,
+    guess_s2metadata_from_metadata_xml,
+)
 
+
+__all__ = [
+    "guess_metadata_path_mapper",
+    "guess_s2metadata_from_item",
+    "guess_s2metadata_from_metadata_xml",
+]
 
 DataArchive = Literal["AWSCOG", "AWSJP2"]
 KNOWN_SOURCES: Dict[str, Any] = {

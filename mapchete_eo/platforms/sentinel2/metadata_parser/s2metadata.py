@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
@@ -63,76 +63,12 @@ def open_granule_metadata_xml(metadata_xml: MPath) -> Element:
         raise CorruptedProductMetadata(exc)
 
 
-def s2metadata_from_stac_item(
-    item: pystac.Item,
-    metadata_assets: List[str] = ["metadata", "granule_metadata"],
-    boa_offset_fields: List[str] = [
-        "sentinel:boa_offset_applied",
-        "sentinel2:boa_offset_applied",
-        "earthsearch:boa_offset_applied",
-    ],
-    processing_baseline_fields: List[str] = [
-        "s2:processing_baseline",
-        "sentinel:processing_baseline",
-        "sentinel2:processing_baseline",
-        "processing:version",
-    ],
-    **kwargs,
-) -> S2Metadata:
-    """Custom code to initialize S2Metadata from a STAC item.
-
-    Depending on from which catalog the STAC item comes, this function should correctly
-    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
-    using the proper asset name.
-    """
-    metadata_assets = metadata_assets
-    for metadata_asset in metadata_assets:
-        if metadata_asset in item.assets:
-            metadata_path = MPath(item.assets[metadata_asset].href)
-            break
-    else:  # pragma: no cover
-        raise KeyError(
-            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
-        )
-
-    def _determine_offset():
-        for field in boa_offset_fields:
-            if item.properties.get(field):
-                return True
-
-        return False
-
-    boa_offset_applied = _determine_offset()
-
-    if metadata_path.is_remote() or metadata_path.is_absolute():
-        metadata_xml = metadata_path
-    else:
-        metadata_xml = MPath(item.self_href).parent / metadata_path
-    for processing_baseline_field in processing_baseline_fields:
-        try:
-            processing_baseline = item.properties[processing_baseline_field]
-            break
-        except KeyError:
-            pass
-    else:  # pragma: no cover
-        raise KeyError(
-            f"could not find processing baseline version in item properties: {item.properties}"
-        )
-    return S2Metadata.from_metadata_xml(
-        metadata_xml=metadata_xml,
-        processing_baseline=processing_baseline,
-        boa_offset_applied=boa_offset_applied,
-        **kwargs,
-    )
-
-
 class S2Metadata:
     metadata_xml: MPath
     path_mapper: S2MetadataPathMapper
     processing_baseline: ProcessingBaseline
     boa_offset_applied: bool = False
     _cached_xml_root: Optional[Element] = None
-    from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
     footprint: Union[Polygon, MultiPolygon]
@@ -216,9 +152,44 @@ class S2Metadata:
             metadata_xml, path_mapper=path_mapper, xml_root=xml_root, **kwargs
         )
 
-    @classmethod
-    def from_stac_item(cls, item: pystac.Item, **kwargs) -> S2Metadata:
-        return cls.from_stac_item_constructor(item, **kwargs)
+    @staticmethod
+    def from_stac_item(
+        item: pystac.Item,
+        metadata_xml_asset_name: List[str] = ["metadata", "granule_metadata"],
+        boa_offset_field: Optional[str] = None,
+        processing_baseline_field: Optional[str] = None,
+        **kwargs,
+    ) -> S2Metadata:
+        metadata_xml_asset_name = metadata_xml_asset_name
+        if processing_baseline_field is None:
+            raise NotImplementedError()
+        for metadata_asset in metadata_xml_asset_name:
+            if metadata_asset in item.assets:
+                metadata_path = MPath(item.assets[metadata_asset].href)
+                break
+        else:  # pragma: no cover
+            raise KeyError(
+                f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
+            )
+
+        if metadata_path.is_remote() or metadata_path.is_absolute():
+            metadata_xml = metadata_path
+        else:
+            metadata_xml = MPath(item.self_href).parent / metadata_path
+        try:
+            processing_baseline = item.properties[processing_baseline_field]
+        except KeyError:
+            raise KeyError(
+                f"could not find processing baseline version in item properties: {item.properties}"
+            )
+        return S2Metadata.from_metadata_xml(
+            metadata_xml=metadata_xml,
+            processing_baseline=processing_baseline,
+            boa_offset_applied=item.properties[boa_offset_field]
+            if boa_offset_field
+            else False,
+            **kwargs,
+        )
 
     @property
     def xml_root(self):
@@ -269,13 +240,13 @@ class S2Metadata:
         for product_qi_mask in ProductQI:
             if product_qi_mask == ProductQI.classification:
                 out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
-                    product_qi_mask
+                    qi_mask=product_qi_mask
                 )
             else:
                 for resolution in ProductQIMaskResolution:
                     out[f"{product_qi_mask.name}-{resolution.name}"] = (
                         self.path_mapper.product_qi_mask(
-                            product_qi_mask, resolution=resolution
+                            qi_mask=product_qi_mask, resolution=resolution
                         )
                     )
 

@@ -12,7 +12,10 @@ from rasterio import Affine
 from shapely import wkt
 from shapely.geometry import base
 
-from mapchete_eo.platforms.sentinel2 import S2Metadata
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    guess_s2metadata_from_item,
+    guess_s2metadata_from_metadata_xml,
+)
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.types import TimeRange
 
@@ -361,12 +364,12 @@ def s2_l2a_metadata_xml(s2_testdata_dir):
 
 @pytest.fixture(scope="session")
 def s2_l2a_metadata(s2_l2a_metadata_xml):
-    return S2Metadata.from_metadata_xml(s2_l2a_metadata_xml)
+    return guess_s2metadata_from_metadata_xml(s2_l2a_metadata_xml)
 
 
 @pytest.fixture(scope="session")
 def s2_l2a_safe_metadata(s2_testdata_dir):
-    return S2Metadata.from_metadata_xml(
+    return guess_s2metadata_from_metadata_xml(
         str(
             s2_testdata_dir.joinpath(
                 "SAFE",
@@ -381,7 +384,7 @@ def s2_l2a_safe_metadata(s2_testdata_dir):
 @pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_metadata_remote():
-    return S2Metadata.from_metadata_xml(
+    return guess_s2metadata_from_metadata_xml(
         "s3://sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/metadata.xml"
     )
 
@@ -390,7 +393,7 @@ def s2_l2a_metadata_remote():
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_remote():
     """Same content as s2_l2a_metadata_remote, but hosted on different server."""
-    return S2Metadata.from_metadata_xml(
+    return guess_s2metadata_from_metadata_xml(
         "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/51/K/XR/2020/7/31/0/metadata.xml"
     )
 
@@ -399,7 +402,7 @@ def s2_l2a_roda_metadata_remote():
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_jp2_masks_remote():
     """From about 2022 on, ahte masks are now encoded as JP2 (rasters), not as GMLs (features)."""
-    return S2Metadata.from_metadata_xml(
+    return guess_s2metadata_from_metadata_xml(
         "https://roda.sentinel-hub.com/sentinel-s2-l2a/tiles/33/T/WL/2022/6/6/0/metadata.xml"
     )
 
@@ -426,7 +429,7 @@ def s2_l2a_earthsearch_xml_remote_broken():
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote(s2_l2a_earthsearch_remote_item):
     """Metadata used by Earth-Search V1 endpoint"""
-    return S2Metadata.from_stac_item(s2_l2a_earthsearch_remote_item)
+    return guess_s2metadata_from_item(s2_l2a_earthsearch_remote_item)
 
 
 @pytest.mark.remote

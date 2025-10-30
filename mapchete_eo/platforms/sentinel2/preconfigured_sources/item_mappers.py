@@ -30,7 +30,23 @@ def earthsearch_assets_paths_mapper(item: Item) -> Item:
 
 @creates_s2metadata(from_catalogs=["EarthSearch"], to_metadata_archives=["roda"])
 def earthsearch_to_s2metadata(item: Item) -> S2Metadata:
-    return S2Metadata.from_stac_item(item, path_mapper=EarthSearchPathMapper)
+    1 / 0
+    # TODO: write new path mapper!
+    return S2Metadata.from_stac_item(
+        item,
+        path_mapper=EarthSearchPathMapper(MPath(item.assets["granule_metadata"].href)),
+        processing_baseline_field="s2:processing_baseline",
+    )
+
+
+@creates_s2metadata(from_catalogs=["EarthSearch_legacy"], to_metadata_archives=["roda"])
+def earthsearch_legacy_to_s2metadata(item: Item) -> S2Metadata:
+    return S2Metadata.from_stac_item(
+        item,
+        path_mapper=EarthSearchPathMapper(MPath(item.assets["granule_metadata"].href)),
+        boa_offset_field="earthsearch:boa_offset_applied",
+        processing_baseline_field="s2:processing_baseline",
+    )
 
 
 @maps_item_id(from_catalogs=["CDSE"])
@@ -132,7 +148,10 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
 
 @creates_s2metadata(from_catalogs=["CDSE"], to_metadata_archives=["roda"])
 def cdse_s2metadata(item: Item) -> S2Metadata:
-    return S2Metadata.from_stac_item(item)
+    return S2Metadata.from_stac_item(
+        item,
+        processing_baseline_field="processing:version",
+    )
 
 
 # from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper

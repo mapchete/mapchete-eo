@@ -1,6 +1,8 @@
 # This should remain backwards compatible until the "max_cloud_cover" gets removed
 # Even tho it might have been faulty even before the refractor to "source"
 
+# what if I dont choose, have a source and want to use just "Sentinel-2" default search config
+
 process: read_xarray.py
 input:
   inp:

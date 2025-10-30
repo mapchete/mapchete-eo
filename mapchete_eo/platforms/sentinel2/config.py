@@ -27,6 +27,11 @@ from mapchete_eo.types import TimeRange
 default_source = Sentinel2Source.model_validate(KNOWN_SOURCES["EarthSearch"])
 
 
+class Sentinel2SearchSourceConfig(StacSearchConfig):
+    collections: List[str] = ["sentinel-2-c1-l2a"]
+    query: Optional[List[str]] = ["eo:cloud_cover<=100"]
+
+
 class BRDFModelConfig(BaseModel):
     model: BRDFModels = BRDFModels.HLS
     bands: List[str] = ["blue", "green", "red", "nir"]
@@ -125,7 +130,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     search_index: Optional[MPathLike] = None
 
     # custom params
-    stac_config: StacSearchConfig = StacSearchConfig()
+    stac_config: Sentinel2SearchSourceConfig = Sentinel2SearchSourceConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None
     with_scl: bool = False

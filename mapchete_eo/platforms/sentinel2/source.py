@@ -30,7 +30,7 @@ class Sentinel2Source(Source):
     def item_modifier_funcs(self) -> List[Callable]:
         return [
             func
-            for func in (self.get_id_mapper(), self.get_asset_paths_mapper())
+            for func in (self.get_id_mapper(), self.get_stac_metadata_mapper())
             if func is not None
         ]
 
@@ -51,7 +51,7 @@ class Sentinel2Source(Source):
     def verify_mappers(self) -> Sentinel2Source:
         # make sure all required mappers are registered
         self.get_id_mapper()
-        self.get_asset_paths_mapper()
+        self.get_stac_metadata_mapper()
         self.get_s2metadata_mapper()
         return self
 
@@ -64,19 +64,29 @@ class Sentinel2Source(Source):
         else:
             raise ValueError(f"no ID mapper for {self.stac_catalog} found")
 
-    def get_asset_paths_mapper(self) -> Union[Callable, None]:
-        if self.catalog_type == "static" or self.data_archive is None:
+    def get_stac_metadata_mapper(self) -> Union[Callable, None]:
+        """Find mapper function.
+
+        A mapper function must be provided if a custom data_archive was configured.
+        """
+        if self.catalog_type == "static":
             return None
-        for key in MAPPER_REGISTRIES["asset paths"]:
-            stac_catalog, data_archive = key
-            if (
-                self.stac_catalog == known_catalog_to_url(stac_catalog)
-                and data_archive == self.data_archive
-            ):
-                return MAPPER_REGISTRIES["asset paths"][key]
+        for key in MAPPER_REGISTRIES["STAC metadata"]:
+            if isinstance(key, tuple):
+                stac_catalog, data_archive = key
+                if (
+                    self.stac_catalog == known_catalog_to_url(stac_catalog)
+                    and data_archive == self.data_archive
+                ):
+                    return MAPPER_REGISTRIES["STAC metadata"][key]
+            else:
+                if self.stac_catalog == known_catalog_to_url(key):
+                    return MAPPER_REGISTRIES["STAC metadata"][key]
         else:
+            if self.data_archive is None:
+                return None
             raise ValueError(
-                f"no asset paths mapper from {self.stac_catalog} to {self.data_archive} found"
+                f"no STAC metadata mapper from {self.stac_catalog} to {self.data_archive} found"
             )
 
     def get_s2metadata_mapper(self) -> Union[Callable, None]:

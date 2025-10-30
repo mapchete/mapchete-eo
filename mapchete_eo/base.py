@@ -111,6 +111,16 @@ class EODataCube(base.InputTile):
         self.time = time
         self.input_key = input_key
         self.area = tile.bbox if area is None else area
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        if not self.eo_bands:
+            try:
+                if len(self._products[0].item.assets.keys()) == 1 and not self.eo_bands:
+                    # self.eo_bands = list(self._products[0].item.assets.keys())[0]
+                    self.assets = [list(self._products[0].item.assets.keys())[0]]
+            except Exception as e:
+                raise e
 
     @cached_property
     def products(self) -> IndexedFeatures[EOProductProtocol]:
@@ -143,8 +153,8 @@ class EODataCube(base.InputTile):
 
     def read(
         self,
-        assets: Optional[List[str]] = None,
-        eo_bands: Optional[List[str]] = None,
+        # assets: Optional[List[str]] = None,
+        # eo_bands: Optional[List[str]] = None,
         start_time: Optional[DateTimeLike] = None,
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
@@ -171,8 +181,8 @@ class EODataCube(base.InputTile):
                 timestamps=timestamps,
                 time_pattern=time_pattern,
             ),
-            eo_bands=eo_bands,
-            assets=assets,
+            eo_bands=self.eo_bands,
+            assets=self.assets,
             grid=self.tile,
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
@@ -187,8 +197,8 @@ class EODataCube(base.InputTile):
 
     def read_np_array(
         self,
-        assets: Optional[List[str]] = None,
-        eo_bands: Optional[List[str]] = None,
+        # assets: Optional[List[str]] = None,
+        # eo_bands: Optional[List[str]] = None,
         start_time: Optional[DateTimeLike] = None,
         end_time: Optional[DateTimeLike] = None,
         timestamps: Optional[List[DateTimeLike]] = None,
@@ -208,8 +218,8 @@ class EODataCube(base.InputTile):
                 timestamps=timestamps,
                 time_pattern=time_pattern,
             ),
-            eo_bands=eo_bands,
-            assets=assets,
+            eo_bands=self.eo_bands,
+            assets=self.assets,
             grid=self.tile,
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,

@@ -15,6 +15,7 @@ output:
     bands: 2
     format: PNG
     path: tmp/dem_to_hillshade
+bounds: [16, 45, 17, 46]
 
 process_parameters:
-    assets: [dem]
+    eo_bands: [data]

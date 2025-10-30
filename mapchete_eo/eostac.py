@@ -58,3 +58,5 @@ class InputData(base.InputData):
 
     # custom params
     stac_config: StacSearchConfig = StacSearchConfig()
+
+    assets: List[str] = []

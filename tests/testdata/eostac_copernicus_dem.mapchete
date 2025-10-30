@@ -1,0 +1,20 @@
+process: mapchete.processes.hillshade
+input:
+ dem: 
+    format: EOSTAC
+    source:
+      stac_catalog: EarthSearch
+      collections: [cop-dem-glo-30]
+zoom_levels:
+    min: 0
+    max: 5
+pyramid:
+    grid: geodetic
+    pixelbuffer: 5
+output:
+    bands: 2
+    format: PNG
+    path: tmp/dem_to_hillshade
+
+process_parameters:
+    assets: [dem]

@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class BaseDriverConfig(BaseModel):
     format: str
     source: Sequence[Source]
-    time: Union[TimeRange, List[TimeRange]]
+    time: Optional[Union[TimeRange, List[TimeRange]]] = None
     cat_baseurl: Optional[str] = None
     cache: Optional[Any] = None
     footprint_buffer: float = 0
@@ -428,7 +428,7 @@ class InputData(base.InputData):
     default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig
-    time: Union[TimeRange, List[TimeRange]]
+    time: Optional[Union[TimeRange, List[TimeRange]]] = None
     area: BaseGeometry
     _products: Optional[IndexedFeatures] = None
 
@@ -456,7 +456,8 @@ class InputData(base.InputData):
                 self.params.cache.dict()
             ).absolute_path(base_dir=input_params.get("conf_dir"))
         self.area = self._init_area(input_params)
-        self.time = self.params.time
+        if self.params.time:
+            self.time = self.params.time
 
         self.eo_bands = [
             eo_band

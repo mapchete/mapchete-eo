@@ -1,15 +1,15 @@
-from typing import List, Callable, Dict, Any
+from typing import List, Callable, Dict, Any, Optional
 
 
 # decorators for mapper functions using the registry pattern #
 ##############################################################
 ID_MAPPER_REGISTRY: Dict[Any, Callable] = {}
-ASSET_PATHS_MAPPER_REGISTRY: Dict[Any, Callable] = {}
+STAC_METADATA_MAPPER_REGISTRY: Dict[Any, Callable] = {}
 S2METADATA_MAPPER_REGISTRY: Dict[Any, Callable] = {}
 
 MAPPER_REGISTRIES = {
     "ID": ID_MAPPER_REGISTRY,
-    "asset paths": ASSET_PATHS_MAPPER_REGISTRY,
+    "STAC metadata": STAC_METADATA_MAPPER_REGISTRY,
     "S2Metadata": S2METADATA_MAPPER_REGISTRY,
 }
 
@@ -35,18 +35,27 @@ def maps_item_id(from_catalogs: List[str]):
     return decorator
 
 
-def maps_asset_paths(from_catalogs: List[str], to_data_archives: List[str]):
+def maps_stac_metadata(
+    from_catalogs: List[str], to_data_archives: Optional[List[str]] = None
+):
     """
-    Decorator registering asset path mapper.
+    Decorator registering STAC metadata mapper.
     """
 
     def decorator(func):
         # Use a tuple of the metadata as the key
         for catalog in from_catalogs:
-            for data_archive in to_data_archives:
+            if to_data_archives:
+                for data_archive in to_data_archives:
+                    _register_func(
+                        registry=STAC_METADATA_MAPPER_REGISTRY,
+                        key=(catalog, data_archive),
+                        func=func,
+                    )
+            else:
                 _register_func(
-                    registry=ASSET_PATHS_MAPPER_REGISTRY,
-                    key=(catalog, data_archive),
+                    registry=STAC_METADATA_MAPPER_REGISTRY,
+                    key=catalog,
                     func=func,
                 )
         return func

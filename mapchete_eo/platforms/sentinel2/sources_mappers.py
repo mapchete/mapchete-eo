@@ -5,7 +5,7 @@ from pystac import Item
 
 from mapchete_eo.platforms.sentinel2.mapper_registry import (
     maps_item_id,
-    maps_asset_paths,
+    maps_stac_metadata,
     creates_s2metadata,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
@@ -63,7 +63,7 @@ def earthsearch_id_mapper(item: Item) -> Item:
     return item
 
 
-@maps_asset_paths(from_catalogs=["EarthSearch"], to_data_archives=["AWSCOG"])
+@maps_stac_metadata(from_catalogs=["EarthSearch"], to_data_archives=["AWSCOG"])
 def earthsearch_assets_paths_mapper(item: Item) -> Item:
     """Nothing to do here as paths match catalog."""
     return item
@@ -79,7 +79,39 @@ def plain_id_mapper(item: Item) -> Item:
     return item
 
 
-@maps_asset_paths(from_catalogs=["CDSE"], to_data_archives=["AWSJP2"])
+CDSE_ASSET_NAME_MAPPING = {
+    "AOT_10m": "aot",
+    "B01_20m": "coastal",
+    "B02_10m": "blue",
+    "B03_10m": "green",
+    "B04_10m": "red",
+    "B05_20m": "rededge1",
+    "B06_20m": "rededge2",
+    "B07_20m": "rededge3",
+    "B08_10m": "nir",
+    "B09_60m": "nir09",
+    "B11_20m": "swir16",
+    "B12_20m": "swir22",
+    "B8A_20m": "nir08",
+    "SCL_20m": "scl",
+    "TCI_10m": "visual",
+    "WVP_10m": "wvp",
+}
+
+
+@maps_stac_metadata(from_catalogs=["CDSE"])
+def cdse_asset_names(item: Item) -> Item:
+    new_assets = {}
+    for asset_name, asset in item.assets.items():
+        if asset_name in CDSE_ASSET_NAME_MAPPING:
+            asset_name = CDSE_ASSET_NAME_MAPPING[asset_name]
+        new_assets[asset_name] = asset
+
+    item.assets = new_assets
+    return item
+
+
+@maps_stac_metadata(from_catalogs=["CDSE"], to_data_archives=["AWSJP2"])
 def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     """
     CSDE has the following assets:
@@ -94,24 +126,6 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     """
     if item.datetime is None:
         raise ValueError(f"product {item.get_self_href()} does not have a timestamp")
-    band_name_mapping = {
-        "AOT_10m": "aot",
-        "B01_20m": "coastal",
-        "B02_10m": "blue",
-        "B03_10m": "green",
-        "B04_10m": "red",
-        "B05_20m": "rededge1",
-        "B06_20m": "rededge2",
-        "B07_20m": "rededge3",
-        "B08_10m": "nir",
-        "B09_60m": "nir09",
-        "B11_20m": "swir16",
-        "B12_20m": "swir22",
-        "B8A_20m": "nir08",
-        "SCL_20m": "scl",
-        "TCI_10m": "visual",
-        "WVP_10m": "wvp",
-    }
     path_base_scheme = "s3://sentinel-s2-l2a/tiles/{utm_zone}/{latitude_band}/{grid_square}/{year}/{month}/{day}/{count}"
     s2tile = S2Tile.from_grid_code(item.properties["grid:code"])
     product_basepath = MPath(
@@ -143,10 +157,10 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
         elif asset_name == "granule_metadata":
             asset.href = str(product_basepath / "metadata.xml")
         # change band asset names and point to their new locations
-        elif asset_name in band_name_mapping:
+        elif asset_name in CDSE_ASSET_NAME_MAPPING:
             name, resolution = asset_name.split("_")
             asset.href = product_basepath / f"R{resolution}" / f"{name}.jp2"
-            asset_name = band_name_mapping[asset_name]
+            asset_name = CDSE_ASSET_NAME_MAPPING[asset_name]
         else:
             continue
         new_assets[asset_name] = asset

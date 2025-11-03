@@ -40,15 +40,15 @@ DEPRECATED_ARCHIVES = {
         "data_archive": "AWSCOG",
     },
     "S2AWS_JP2": {
-        "collection": "https://stac.dataspace.copernicus.eu/v1collections/sentinel-2-l2a",
+        "collection": "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a",
         "data_archive": "AWSJP2",
     },
     "S2CDSE_AWSJP2": {
-        "collection": "https://stac.dataspace.copernicus.eu/v1collections/sentinel-2-l2a",
+        "collection": "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a",
         "data_archive": "AWSJP2",
     },
     "S2CDSE_JP2": {
-        "collection": "https://stac.dataspace.copernicus.eu/v1collections/sentinel-2-l2a",
+        "collection": "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a",
     },
 }
 MetadataArchive = Literal["roda"]

@@ -20,7 +20,9 @@ def test_s2_mask(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert out_path.exists()
     with rasterio_open(out_path) as src:
         assert src.read().any()
@@ -40,7 +42,9 @@ def test_s2_rgb(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert out_path.exists()
     with rasterio_open(out_path) as src:
         assert not src.read(masked=True).mask.all()
@@ -63,7 +67,9 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert len(out_path.ls()) == 2
     for path in out_path.ls():
         with rasterio_open(path) as src:
@@ -100,5 +106,6 @@ def test_static_catalog(tmp_mpath, flag, value, collection):
     if collection:
         params.extend(["--collection", collection])
     result = runner.invoke(eo, params)
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
     assert out_path.ls()

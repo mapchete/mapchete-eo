@@ -157,12 +157,14 @@ class S2Metadata:
         item: pystac.Item,
         metadata_xml_asset_name: List[str] = ["metadata", "granule_metadata"],
         boa_offset_field: Optional[str] = None,
-        processing_baseline_field: Optional[str] = None,
+        processing_baseline_field: Union[str, List[str]] = [
+            "s2:processing_baseline",
+            "sentinel2:processing_baseline",
+            "processing:version",
+        ],
         **kwargs,
     ) -> S2Metadata:
-        metadata_xml_asset_name = metadata_xml_asset_name
-        if processing_baseline_field is None:
-            raise NotImplementedError()
+        # try to find path to metadata.xml
         for metadata_asset in metadata_xml_asset_name:
             if metadata_asset in item.assets:
                 metadata_path = MPath(item.assets[metadata_asset].href)
@@ -172,16 +174,28 @@ class S2Metadata:
                 f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
             )
 
+        # maek path absolute
         if metadata_path.is_remote() or metadata_path.is_absolute():
             metadata_xml = metadata_path
         else:
             metadata_xml = MPath(item.self_href).parent / metadata_path
-        try:
-            processing_baseline = item.properties[processing_baseline_field]
-        except KeyError:
+
+        # try to find information on processing baseline version
+        for field in (
+            processing_baseline_field
+            if isinstance(processing_baseline_field, list)
+            else [processing_baseline_field]
+        ):
+            try:
+                processing_baseline = item.properties[field]
+                break
+            except KeyError:
+                pass
+        else:  # pragma: no cover
             raise KeyError(
                 f"could not find processing baseline version in item properties: {item.properties}"
             )
+
         return S2Metadata.from_metadata_xml(
             metadata_xml=metadata_xml,
             processing_baseline=processing_baseline,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from functools import cached_property
@@ -201,6 +203,13 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
     def get_collections(self):
         for collection_name in self.collections:
             yield self.client.get_collection(collection_name)
+
+    @staticmethod
+    def from_collection_url(collection_url: str) -> STACSearchCatalog:
+        return STACSearchCatalog(
+            endpoint="/".join(collection_url.rstrip("/").split("/")[:-2]),
+            collections=[collection_url.rstrip("/").split("/")[-1]],
+        )
 
 
 class SpatialSearchChunks:

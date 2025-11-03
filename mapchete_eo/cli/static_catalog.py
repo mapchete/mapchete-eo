@@ -10,6 +10,9 @@ from rasterio.profiles import Profile
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    DEPRECATED_ARCHIVES,
+)
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.search.base import CatalogSearcher
 from mapchete_eo.types import TimeRange
@@ -117,6 +120,8 @@ def get_catalog(
         else:
             raise ValueError("collection must be provided")
     elif known_archive:
-        raise NotImplementedError()
+        return STACSearchCatalog.from_collection_url(
+            DEPRECATED_ARCHIVES[known_archive]["collection"]
+        )
     else:
         raise TypeError("cannot determine catalog")

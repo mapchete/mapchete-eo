@@ -6,11 +6,9 @@ from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 
 
 @pytest.mark.remote
-@pytest.mark.parametrize("source_id", ["EarthSearch", "EarthSearch_legacy"])
-def test_known_sources(source_id):
-    source = Sentinel2Source(stac_catalog=source_id)
-    breakpoint()
-    return
+@pytest.mark.parametrize("collection", ["EarthSearch", "EarthSearch_legacy"])
+def test_known_sources(collection):
+    source = Sentinel2Source(collection=collection)
     assert source
     for item in source.search(
         time=TimeRange(start="2025-01-01", end="2025-01-10"), bounds=[16, 46, 17, 47]
@@ -35,6 +33,6 @@ def test_known_sources(source_id):
 
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
-@pytest.mark.parametrize("source_id", ["CSDE"])
-def test_known_sources_cdse(source_id):
-    test_known_sources(source_id)
+@pytest.mark.parametrize("collection", ["CSDE"])
+def test_known_sources_cdse(collection):
+    test_known_sources(collection)

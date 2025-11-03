@@ -17,8 +17,7 @@ from mapchete_eo.types import TimeRange
 class Source(BaseModel):
     """All information required to consume EO products."""
 
-    stac_catalog: str
-    collections: Optional[List[str]] = None
+    collection: str
     catalog_crs: CRSLike = mapchete_eo_settings.default_catalog_crs
     catalog_type: Literal["search", "static"] = "search"
     query: Optional[str] = None
@@ -55,14 +54,15 @@ class Source(BaseModel):
         return item
 
     def get_catalog(self, base_dir: Optional[MPathLike] = None) -> CatalogSearcher:
+        # TODO: adapt catalog classes
+        endpoint = "/".join(self.collection.rstrip("/").split("/")[:-2])
+        collections = [self.collection.rstrip("/").split("/")[-1]]
         match self.catalog_type:
             case "search":
-                return STACSearchCatalog(
-                    endpoint=self.stac_catalog, collections=self.collections
-                )
+                return STACSearchCatalog(endpoint=endpoint, collections=collections)
             case "static":
                 return STACStaticCatalog(
-                    baseurl=MPath(self.stac_catalog).absolute_path(base_dir=base_dir)
+                    baseurl=MPath(endpoint).absolute_path(base_dir=base_dir)
                 )
 
     def eo_bands(self, base_dir: Optional[MPathLike] = None) -> List[str]:

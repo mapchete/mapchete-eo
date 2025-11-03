@@ -18,18 +18,18 @@ from mapchete_eo.search.s2_mgrs import S2Tile
 ##########################################################################################
 
 
-@maps_item_id(from_catalogs=["EarthSearch"])
+@maps_item_id(from_collections=["EarthSearch", "EarthSearch_legacy"])
 def earthsearch_id_mapper(item: Item) -> Item:
     return item
 
 
-@maps_stac_metadata(from_catalogs=["EarthSearch"], to_data_archives=["AWSCOG"])
+@maps_stac_metadata(from_collections=["EarthSearch"], to_data_archives=["AWSCOG"])
 def earthsearch_assets_paths_mapper(item: Item) -> Item:
     """Nothing to do here as paths match catalog."""
     return item
 
 
-@creates_s2metadata(from_catalogs=["EarthSearch"], to_metadata_archives=["roda"])
+@creates_s2metadata(from_collections=["EarthSearch"], to_metadata_archives=["roda"])
 def earthsearch_to_s2metadata(item: Item) -> S2Metadata:
     return S2Metadata.from_stac_item(
         item,
@@ -40,9 +40,10 @@ def earthsearch_to_s2metadata(item: Item) -> S2Metadata:
     )
 
 
-@creates_s2metadata(from_catalogs=["EarthSearch_legacy"], to_metadata_archives=["roda"])
+@creates_s2metadata(
+    from_collections=["EarthSearch_legacy"], to_metadata_archives=["roda"]
+)
 def earthsearch_legacy_to_s2metadata(item: Item) -> S2Metadata:
-    breakpoint()
     return S2Metadata.from_stac_item(
         item,
         path_mapper=EarthSearchPathMapper(MPath(item.assets["granule_metadata"].href)),
@@ -51,7 +52,7 @@ def earthsearch_legacy_to_s2metadata(item: Item) -> S2Metadata:
     )
 
 
-@maps_item_id(from_catalogs=["CDSE"])
+@maps_item_id(from_collections=["CDSE"])
 def plain_id_mapper(item: Item) -> Item:
     return item
 
@@ -76,7 +77,7 @@ CDSE_ASSET_NAME_MAPPING = {
 }
 
 
-@maps_stac_metadata(from_catalogs=["CDSE"])
+@maps_stac_metadata(from_collections=["CDSE"])
 def cdse_asset_names(item: Item) -> Item:
     new_assets = {}
     for asset_name, asset in item.assets.items():
@@ -88,7 +89,7 @@ def cdse_asset_names(item: Item) -> Item:
     return item
 
 
-@maps_stac_metadata(from_catalogs=["CDSE"], to_data_archives=["AWSJP2"])
+@maps_stac_metadata(from_collections=["CDSE"], to_data_archives=["AWSJP2"])
 def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     """
     CSDE has the following assets:
@@ -148,7 +149,7 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     return item
 
 
-@creates_s2metadata(from_catalogs=["CDSE"], to_metadata_archives=["roda"])
+@creates_s2metadata(from_collections=["CDSE"], to_metadata_archives=["roda"])
 def cdse_s2metadata(item: Item) -> S2Metadata:
     return S2Metadata.from_stac_item(
         item,

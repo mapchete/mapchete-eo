@@ -40,7 +40,7 @@ def _register_func(registry: Dict[str, Callable], key: Any, func: Callable):
     registry[key] = func
 
 
-def maps_item_id(from_catalogs: List[str]):
+def maps_item_id(from_collections: List[str]):
     """
     Decorator registering mapper to common ID.
     """
@@ -48,15 +48,15 @@ def maps_item_id(from_catalogs: List[str]):
     def decorator(func):
         # Use a tuple of the metadata as the key
         # key = (path_type, version)
-        for catalog in from_catalogs:
-            _register_func(registry=ID_MAPPER_REGISTRY, key=catalog, func=func)
+        for collection in from_collections:
+            _register_func(registry=ID_MAPPER_REGISTRY, key=collection, func=func)
         return func
 
     return decorator
 
 
 def maps_stac_metadata(
-    from_catalogs: List[str], to_data_archives: Optional[List[str]] = None
+    from_collections: List[str], to_data_archives: Optional[List[str]] = None
 ):
     """
     Decorator registering STAC metadata mapper.
@@ -64,18 +64,18 @@ def maps_stac_metadata(
 
     def decorator(func):
         # Use a tuple of the metadata as the key
-        for catalog in from_catalogs:
+        for collection in from_collections:
             if to_data_archives:
                 for data_archive in to_data_archives:
                     _register_func(
                         registry=STAC_METADATA_MAPPER_REGISTRY,
-                        key=(catalog, data_archive),
+                        key=(collection, data_archive),
                         func=func,
                     )
             else:
                 _register_func(
                     registry=STAC_METADATA_MAPPER_REGISTRY,
-                    key=catalog,
+                    key=collection,
                     func=func,
                 )
         return func
@@ -83,18 +83,18 @@ def maps_stac_metadata(
     return decorator
 
 
-def creates_s2metadata(from_catalogs: List[str], to_metadata_archives: List[str]):
+def creates_s2metadata(from_collections: List[str], to_metadata_archives: List[str]):
     """
     Decorator registering S2Metadata creator.
     """
 
     def decorator(func):
         # Use a tuple of the metadata as the key
-        for catalog in from_catalogs:
+        for collection in from_collections:
             for metadata_archive in to_metadata_archives:
                 _register_func(
                     registry=S2METADATA_MAPPER_REGISTRY,
-                    key=(catalog, metadata_archive),
+                    key=(collection, metadata_archive),
                     func=func,
                 )
         return func

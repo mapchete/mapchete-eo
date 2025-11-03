@@ -15,14 +15,14 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
         ),
         dict(
             source=dict(
-                stac_catalog="EarthSearch",
+                collection="EarthSearch",
                 metadata_archive="roda",
             )
         ),
         dict(
             source=[
                 dict(
-                    stac_catalog="EarthSearch",
+                    collection="EarthSearch",
                     metadata_archive="roda",
                 )
             ],
@@ -30,16 +30,15 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
         dict(
             source=[
                 dict(
-                    stac_catalog="EarthSearch",
+                    collection="EarthSearch",
                 ),
-                dict(stac_catalog="CDSE", data_archive="AWSJP2"),
+                dict(collection="CDSE", data_archive="AWSJP2"),
             ],
         ),
         dict(
             source=[
                 dict(
-                    stac_catalog="https://earth-search.aws.element84.com/v1/",
-                    collections=["sentinel-s2-l2a"],
+                    collection="https://earth-search.aws.element84.com/v1/collections=sentinel-s2-l2a",
                 ),
             ],
         ),
@@ -55,5 +54,4 @@ def test_valid_configs(config_dict: dict):
     )
     assert config.source
     for source in config.source:
-        assert source.stac_catalog
-        assert source.collections
+        assert source.collection

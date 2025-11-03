@@ -133,7 +133,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     cache: Optional[CacheConfig] = None
 
     @model_validator(mode="before")
-    def deprecate_archive(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def deprecated_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         archive = values.get("archive")
         if archive:
             warnings.warn(
@@ -146,11 +146,21 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                     values["source"] = DEPRECATED_ARCHIVES[archive]
                 except KeyError:
                     raise
-        return values
 
-    @model_validator(mode="before")
-    def deprecate_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        max_cloud_cover = values.get("max_cloud_cover")
+        cat_baseurl = values.pop("cat_baseurl", None)
+        if cat_baseurl:
+            warnings.warn(
+                "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source", []):
+                raise ValueError(
+                    "deprecated cat_baseurl field found alongside sources."
+                )
+            values["source"] = [dict(collection=cat_baseurl, catalog_type="static")]
+
+        max_cloud_cover = values.pop("max_cloud_cover", None)
         if max_cloud_cover:
             warnings.warn(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
@@ -158,6 +168,8 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 stacklevel=2,
             )
             sources = values.get("source", [])
+            if not sources:
+                raise ValueError("no sources defined")
             updated_sources = []
             for source in sources:
                 if source.get("query") is not None:
@@ -166,7 +178,6 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                     )
                 source["query"] = f"eo:cloud_cover<={max_cloud_cover}"
                 updated_sources.append(source)
-            values.pop("max_cloud_cover")
             values["source"] = updated_sources
         return values
 

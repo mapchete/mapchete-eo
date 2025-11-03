@@ -71,6 +71,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
         config = self.config_cls(**search_kwargs or {})
@@ -87,7 +88,11 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         def _searches():
             for time_range in time if isinstance(time, list) else [time]:
                 search = self._search(
-                    time_range=time_range, bounds=bounds, area=area, config=config
+                    time_range=time_range,
+                    bounds=bounds,
+                    area=area,
+                    query=query,
+                    config=config,
                 )
                 logger.debug("found %s products", search.matched())
                 matched = search.matched() or 0
@@ -107,6 +112,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
                         with Timer() as duration:
                             chunk_search = self._search(
                                 time_range=time_range,
+                                query=query,
                                 config=config,
                                 **chunk_kwargs,
                             )
@@ -124,11 +130,11 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         for search in _searches():
             for count, item in enumerate(search.items(), 1):
                 item_path = item.get_self_href()
-                # logger.debug("item %s/%s ...", count, search.matched())
                 if item_path in self.blacklist:  # pragma: no cover
                     logger.debug("item %s found in blacklist and skipping", item_path)
                 else:
                     yield item
+        logger.debug("returned %s items in total", count)
 
     def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
@@ -157,6 +163,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time_range: Optional[TimeRange] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ):
@@ -185,7 +192,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
-            query=config.query,
+            query=query,
             **kwargs,
         )
         if (

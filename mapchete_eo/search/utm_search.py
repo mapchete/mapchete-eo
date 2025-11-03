@@ -63,15 +63,14 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
-        config = self.config_cls(**search_kwargs or {})
         if bounds:
             bounds = Bounds.from_inp(bounds)
 
         for item in filter_items(
             self._raw_search(time=time, bounds=bounds, area=area),
-            max_cloud_cover=config.max_cloud_cover,
         ):
             yield item
 

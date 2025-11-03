@@ -1,8 +1,8 @@
-from typing import List, Literal, Optional, Generator, Union, Callable
+from typing import Any, Dict, List, Literal, Optional, Generator, Union, Callable
 
 from mapchete.path import MPath
 from mapchete.types import BoundsLike, CRSLike, MPathLike
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from pystac import Item
 from shapely.geometry.base import BaseGeometry
 from shapely.errors import GEOSException
@@ -39,6 +39,7 @@ class Source(BaseModel):
             time=time,
             bounds=bounds,
             area=area,
+            query=self.query,
             search_kwargs=dict(query=self.query) if self.query else None,
         ):
             yield self.apply_item_modifier_funcs(item)
@@ -64,3 +65,11 @@ class Source(BaseModel):
 
     def eo_bands(self, base_dir: Optional[MPathLike] = None) -> List[str]:
         return self.get_catalog(base_dir=base_dir).eo_bands
+
+    @model_validator(mode="before")
+    def deprecate_max_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if "max_cloud_cover" in values:
+            raise DeprecationWarning(
+                "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
+            )
+        return values

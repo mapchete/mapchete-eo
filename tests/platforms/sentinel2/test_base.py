@@ -102,10 +102,9 @@ def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
         some_in_second = True
         for product in cube.products:
             first, second = cube.time
-            print((product.item.datetime.date(), first, second))
-            if first.start < product.item.datetime.date() < first.end:
+            if first.start <= product.item.datetime.date() <= first.end:
                 some_in_first = True
-            elif second.start < product.item.datetime.date() < second.end:
+            elif second.start <= product.item.datetime.date() <= second.end:
                 some_in_second = True
             else:
                 raise ValueError("product outside of given time ranges")

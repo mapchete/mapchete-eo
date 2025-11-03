@@ -62,16 +62,13 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
-        config = self.config_cls(**search_kwargs or {})
         if area is None and bounds:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)
-        for item in filter_items(
-            self._raw_search(time=time, area=area),
-            max_cloud_cover=config.max_cloud_cover,
-        ):
+        for item in filter_items(self._raw_search(time=time, area=area), query=query):
             yield item
 
     def _raw_search(

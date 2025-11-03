@@ -4,6 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
+from cql2 import Expr
 from pydantic import BaseModel
 from pystac import Item, Catalog, CatalogType, Extent
 from mapchete.path import MPath, MPathLike
@@ -74,6 +75,7 @@ class CatalogSearcher(ABC):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]: ...
 
@@ -222,14 +224,17 @@ class StaticCatalogWriterMixin(CatalogSearcher):
 
 def filter_items(
     items: Generator[Item, None, None],
-    cloud_cover_field: str = "eo:cloud_cover",
-    max_cloud_cover: float = 100.0,
+    query: Optional[str] = None,
 ) -> Generator[Item, None, None]:
     """
     Only for cloudcover now, this can and should be adapted for filter field and value
     the field and value for the item filter would be defined in search.config.py corresponding configs
     and passed down to the individual search approaches via said config and this Function.
     """
-    for item in items:
-        if item.properties.get(cloud_cover_field, 0.0) <= max_cloud_cover:
-            yield item
+    if query:
+        expr = Expr(query)
+        for item in items:
+            if expr.matches(item.properties):
+                yield item
+    else:
+        yield from items

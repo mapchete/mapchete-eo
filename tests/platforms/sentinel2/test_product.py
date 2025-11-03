@@ -378,7 +378,7 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
     scl = product.read_scl(grid=tile).data
     available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
     # for each available class, activate/deactivate BRDF correction and compare with rest of image
-    uncorrected = product.read_np_array(assets=assets, grid=tile)
+    uncorrected = product.read_np_array(assets=assets, grid=tile)[0]
     for scl_class in available_scl_classes:
         corrected = product.read_np_array(
             assets=assets,
@@ -393,19 +393,17 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
                     )
                 ],
             ),
-        )
+        )[0]
         scl_class_mask = np.where(scl == scl_class.value, True, False)
-        for corrected_band, uncorrected_band in zip(corrected, uncorrected):
-            # there should be some pixels not affected by correction
-            assert np.where(corrected_band == uncorrected_band, True, False).any()
-            # make sure pixel were not corrected for SCL class
-            assert (
-                uncorrected_band[scl_class_mask] == corrected_band[scl_class_mask]
-            ).all()
-            # make sure all other pixels were corrected
-            assert (
-                uncorrected_band[~scl_class_mask] != corrected_band[~scl_class_mask]
-            ).all()
+
+        # there should be some pixels not affected by correction
+        assert np.where(corrected == uncorrected, True, False).any()
+
+        # make sure pixel were not corrected for SCL class
+        assert (uncorrected[scl_class_mask] == corrected[scl_class_mask]).all()
+
+        # make sure all other pixels were corrected
+        assert (uncorrected[~scl_class_mask] != corrected[~scl_class_mask]).all()
 
 
 def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):

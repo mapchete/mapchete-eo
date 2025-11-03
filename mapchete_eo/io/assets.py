@@ -82,7 +82,7 @@ def asset_to_np_array(
     path = asset_mpath(item, asset)
 
     # find out asset details if raster:bands is available
-    stac_raster_bands = STACRasterBandProperties.from_asset(
+    band_properties = STACRasterBandProperties.from_asset(
         item.assets[asset], nodataval=nodataval
     )
 
@@ -92,23 +92,23 @@ def asset_to_np_array(
         indexes=indexes,
         grid=grid,
         resampling=resampling.name,
-        dst_nodata=stac_raster_bands.nodata,
+        dst_nodata=band_properties.nodata,
     ).data
 
-    if apply_offset and stac_raster_bands.offset:
-        data_type = stac_raster_bands.data_type or data.dtype
+    if apply_offset and band_properties.offset:
+        data_type = band_properties.data_type or data.dtype
 
         # determine value range for the target data_type
         clip_min, clip_max = dtype_ranges[str(data_type)]
 
         # increase minimum clip value to avoid collission with nodata value
-        if clip_min == stac_raster_bands.nodata:
+        if clip_min == band_properties.nodata:
             clip_min += 1
 
         data[:] = (
             (
-                ((data * stac_raster_bands.scale) + stac_raster_bands.offset)
-                / stac_raster_bands.scale
+                ((data * band_properties.scale) + band_properties.offset)
+                / band_properties.scale
             )
             .round()
             .clip(clip_min, clip_max)

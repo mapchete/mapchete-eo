@@ -38,7 +38,7 @@ from mapchete_eo.platforms.sentinel2.config import Sentinel2DriverConfig
         dict(
             source=[
                 dict(
-                    collection="https://earth-search.aws.element84.com/v1/collections=sentinel-s2-l2a",
+                    collection="https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
                 ),
             ],
         ),

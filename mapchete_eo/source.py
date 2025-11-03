@@ -54,15 +54,12 @@ class Source(BaseModel):
         return item
 
     def get_catalog(self, base_dir: Optional[MPathLike] = None) -> CatalogSearcher:
-        # TODO: adapt catalog classes
-        endpoint = "/".join(self.collection.rstrip("/").split("/")[:-2])
-        collections = [self.collection.rstrip("/").split("/")[-1]]
         match self.catalog_type:
             case "search":
-                return STACSearchCatalog(endpoint=endpoint, collections=collections)
+                return STACSearchCatalog.from_collection_url(self.collection)
             case "static":
                 return STACStaticCatalog(
-                    baseurl=MPath(endpoint).absolute_path(base_dir=base_dir)
+                    baseurl=MPath(self.collection).absolute_path(base_dir=base_dir)
                 )
 
     def eo_bands(self, base_dir: Optional[MPathLike] = None) -> List[str]:

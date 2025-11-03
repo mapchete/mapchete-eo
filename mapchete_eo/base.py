@@ -76,7 +76,7 @@ class BaseDriverConfig(BaseModel):
                 raise ValueError(
                     "deprecated cat_baseurl field found alongside sources."
                 )
-            values["source"] = [dict(stac_catalog=cat_baseurl, catalog_type="static")]
+            values["source"] = [dict(collection=cat_baseurl, catalog_type="static")]
         return values
 
 

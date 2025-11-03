@@ -86,6 +86,8 @@ def cdse_asset_names(item: Item) -> Item:
         new_assets[asset_name] = asset
 
     item.assets = new_assets
+
+    item.properties["s2:datastrip_id"] = item.properties.get("eopf:datastrip_id")
     return item
 
 
@@ -145,7 +147,6 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
 
     item.assets = new_assets
 
-    item.properties["s2:datastrip_id"] = item.properties.get("eopf:datastrip_id")
     return item
 
 

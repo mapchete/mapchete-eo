@@ -8,6 +8,7 @@ from mapchete_eo.platforms.sentinel2._mapper_registry import (
 )
 from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers import (
     EarthSearchPathMapper,
+    EarthSearchC1PathMapper,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.search.s2_mgrs import S2Tile
@@ -30,17 +31,18 @@ def earthsearch_assets_paths_mapper(item: Item) -> Item:
 
 @creates_s2metadata(from_catalogs=["EarthSearch"], to_metadata_archives=["roda"])
 def earthsearch_to_s2metadata(item: Item) -> S2Metadata:
-    1 / 0
-    # TODO: write new path mapper!
     return S2Metadata.from_stac_item(
         item,
-        path_mapper=EarthSearchPathMapper(MPath(item.assets["granule_metadata"].href)),
+        path_mapper=EarthSearchC1PathMapper(
+            MPath(item.assets["granule_metadata"].href)
+        ),
         processing_baseline_field="s2:processing_baseline",
     )
 
 
 @creates_s2metadata(from_catalogs=["EarthSearch_legacy"], to_metadata_archives=["roda"])
 def earthsearch_legacy_to_s2metadata(item: Item) -> S2Metadata:
+    breakpoint()
     return S2Metadata.from_stac_item(
         item,
         path_mapper=EarthSearchPathMapper(MPath(item.assets["granule_metadata"].href)),

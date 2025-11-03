@@ -172,7 +172,7 @@ class S2Product(EOProduct, EOProductProtocol):
         cache_all: bool = False,
         **kwargs,
     ) -> S2Product:
-        s2product = S2Product(item, cache_config=cache_config)
+        s2product = S2Product(item, cache_config=cache_config, **kwargs)
 
         if cache_all:
             # cache assets if configured
@@ -362,7 +362,23 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
-        logger.debug("read cloud probability mask for %s", str(self))
+        if "cloud" in self.item.assets:
+            logger.debug("read cloud probability mask for %s from asset", str(self))
+            return read_mask_as_raster(
+                path=asset_mpath(item=self.item, asset="cloud"),
+                dst_grid=(
+                    self.metadata.grid(grid)
+                    if isinstance(grid, Resolution)
+                    else Grid.from_obj(grid)
+                ),
+                resampling=resampling,
+                rasterize_value_func=lambda feature: True,
+                masked=False,
+                cached_read=cached_read,
+            )
+        logger.debug(
+            "read cloud probability mask for %s from metadata archive", str(self)
+        )
         return self.metadata.cloud_probability(
             dst_grid=grid,
             resampling=resampling,
@@ -378,7 +394,23 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
-        logger.debug("read snow probability mask for %s", str(self))
+        if "snow" in self.item.assets:
+            logger.debug("read snow probability mask for %s from asset", str(self))
+            return read_mask_as_raster(
+                path=asset_mpath(item=self.item, asset="cloud"),
+                dst_grid=(
+                    self.metadata.grid(grid)
+                    if isinstance(grid, Resolution)
+                    else Grid.from_obj(grid)
+                ),
+                resampling=resampling,
+                rasterize_value_func=lambda feature: True,
+                masked=False,
+                cached_read=cached_read,
+            )
+        logger.debug(
+            "read snow probability mask for %s from metadata archive", str(self)
+        )
         return self.metadata.snow_probability(
             dst_grid=grid,
             resampling=resampling,

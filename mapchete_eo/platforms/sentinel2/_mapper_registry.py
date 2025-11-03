@@ -14,6 +14,26 @@ MAPPER_REGISTRIES = {
 }
 
 
+# @dataclass
+# class Registries:
+#     id_mappers: Dict[Any, Callable] = field(default_factory=dict)
+#     stac_metadata_mappers: Dict[Any, Callable] = field(default_factory=dict)
+#     s2metadata_mappers: Dict[Any, Callable] = field(default_factory=dict)
+
+#     def register(
+#         self,
+#         mapper: Literal["ID", "STAC metadata", "S2Metadata"],
+#         key: Any,
+#         func: Callable,
+#     ) -> None:
+#         if key in registry:
+#             raise ValueError(f"{key} already registered in {registry}")
+#         registry[key] = func
+
+
+# MAPPER_REGISTRY = Registries()
+
+
 def _register_func(registry: Dict[str, Callable], key: Any, func: Callable):
     if key in registry:
         raise ValueError(f"{key} already registered in {registry}")

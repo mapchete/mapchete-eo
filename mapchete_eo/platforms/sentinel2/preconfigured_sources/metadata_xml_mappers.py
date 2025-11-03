@@ -133,3 +133,25 @@ class EarthSearchPathMapper(SinergisePathMapper):
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol
         self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
+
+
+class EarthSearchC1PathMapper(SinergisePathMapper):
+    """
+    The newer C1 collection has cloud and snow probability masks as assets, so we only need to
+    map to the rest.
+    """
+
+    def __init__(
+        self,
+        metadata_xml: MPath,
+        alternative_metadata_baseurl: str = "sentinel-s2-l2a",
+        protocol: str = "s3",
+        baseline_version: str = "04.00",
+        **kwargs,
+    ):
+        basedir = metadata_xml.parent
+        self._path = (basedir / "tileInfo.json").read_json()["path"]
+        self._utm_zone, self._latitude_band, self._grid_square = basedir.elements[-6:-3]
+        self._baseurl = alternative_metadata_baseurl
+        self._protocol = protocol
+        self.processing_baseline = ProcessingBaseline.from_version(baseline_version)

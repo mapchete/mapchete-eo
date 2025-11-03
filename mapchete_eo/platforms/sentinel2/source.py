@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List, Callable, Dict, Any, Union
+from typing import Optional, List, Callable, Dict, Any, Tuple, Union
 
 from pydantic import model_validator
 
@@ -33,6 +33,13 @@ class Sentinel2Source(Source):
             for func in (self.get_id_mapper(), self.get_stac_metadata_mapper())
             if func is not None
         ]
+
+    @property
+    def _key(self) -> Tuple[Any, ...]:
+        return (
+            self.stac_catalog,
+            tuple(self.collections) if self.collections else None,
+        )
 
     @model_validator(mode="before")
     def determine_data_source(cls, values: Dict[str, Any]) -> Dict[str, Any]:

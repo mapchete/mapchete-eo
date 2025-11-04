@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy.ma as ma
 import pystac
@@ -69,7 +69,8 @@ def expand_params(param: Any, length: int) -> List[Any]:
 
 def get_item_property(
     item: pystac.Item,
-    property: str,
+    property: Union[str, Tuple[str, ...]],
+    default: Any = None,
 ) -> Any:
     """
     Return item property.
@@ -104,28 +105,40 @@ def get_item_property(
     | ``collection``     | The collection ID of an Item's collection.             |
     +--------------------+--------------------------------------------------------+
     """
-    if property == "id":
-        return item.id
-    elif property in ["year", "month", "day", "date", "datetime"]:
-        if item.datetime is None:  # pragma: no cover
-            raise ValueError(
-                f"STAC item has no datetime attached, thus cannot get property {property}"
-            )
-        elif property == "date":
-            return item.datetime.date().isoformat()
-        elif property == "datetime":
-            return item.datetime
+
+    def _get_item_property(item: pystac.Item, property: str) -> Any:
+        if property == "id":
+            return item.id
+        elif property in ["year", "month", "day", "date", "datetime"]:
+            if item.datetime is None:  # pragma: no cover
+                raise ValueError(
+                    f"STAC item has no datetime attached, thus cannot get property {property}"
+                )
+            elif property == "date":
+                return item.datetime.date().isoformat()
+            elif property == "datetime":
+                return item.datetime
+            else:
+                return item.datetime.__getattribute__(property)
+        elif property == "collection":
+            return item.collection_id
+        elif property in item.properties:
+            return item.properties[property]
+        elif property in item.extra_fields:
+            return item.extra_fields[property]
+        elif property == "stac_extensions":
+            return item.stac_extensions
         else:
-            return item.datetime.__getattribute__(property)
-    elif property == "collection":
-        return item.collection_id
-    elif property in item.properties:
-        return item.properties[property]
-    elif property in item.extra_fields:
-        return item.extra_fields[property]
-    elif property == "stac_extensions":
-        return item.stac_extensions
+            raise KeyError
+
+    for prop in property if isinstance(property, tuple) else (property,):
+        try:
+            return _get_item_property(item, prop)
+        except KeyError:
+            pass
     else:
+        if default is not None:
+            return default
         raise KeyError(
             f"item {item.id} does not have property {property} in its datetime, properties "
             f"({', '.join(item.properties.keys())}) or extra_fields "

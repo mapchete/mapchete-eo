@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
@@ -31,6 +31,8 @@ from tilematrix import Shape
 
 from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
 from mapchete_eo.io import open_xml, read_mask_as_raster
+from mapchete_eo.io.items import get_item_property
+from mapchete_eo.io.path import asset_mpath
 from mapchete_eo.platforms.sentinel2.metadata_parser.models import (
     ViewingIncidenceAngles,
     SunAngleData,
@@ -155,53 +157,33 @@ class S2Metadata:
     @staticmethod
     def from_stac_item(
         item: pystac.Item,
-        metadata_xml_asset_name: List[str] = ["metadata", "granule_metadata"],
-        boa_offset_field: Optional[str] = None,
-        processing_baseline_field: Union[str, List[str]] = [
+        metadata_xml_asset_name: Tuple[str, ...] = ("metadata", "granule_metadata"),
+        boa_offset_field: Union[str, Tuple[str, ...]] = (
+            "earthsearch:boa_offset_applied"
+        ),
+        processing_baseline_field: Union[str, Tuple[str, ...]] = (
             "s2:processing_baseline",
             "sentinel2:processing_baseline",
             "processing:version",
-        ],
+        ),
         **kwargs,
     ) -> S2Metadata:
         # try to find path to metadata.xml
-        for metadata_asset in metadata_xml_asset_name:
-            if metadata_asset in item.assets:
-                metadata_path = MPath(item.assets[metadata_asset].href)
-                break
-        else:  # pragma: no cover
-            raise KeyError(
-                f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
-            )
-
-        # maek path absolute
-        if metadata_path.is_remote() or metadata_path.is_absolute():
-            metadata_xml = metadata_path
-        else:
-            metadata_xml = MPath(item.self_href).parent / metadata_path
+        metadata_xml_path = asset_mpath(item, metadata_xml_asset_name)
+        # make path absolute
+        if not (metadata_xml_path.is_remote() or metadata_xml_path.is_absolute()):
+            metadata_xml_path = MPath(item.self_href).parent / metadata_xml_path
 
         # try to find information on processing baseline version
-        for field in (
-            processing_baseline_field
-            if isinstance(processing_baseline_field, list)
-            else [processing_baseline_field]
-        ):
-            try:
-                processing_baseline = item.properties[field]
-                break
-            except KeyError:
-                pass
-        else:  # pragma: no cover
-            raise KeyError(
-                f"could not find processing baseline version in item properties: {item.properties}"
-            )
+        processing_baseline = get_item_property(item, processing_baseline_field)
+
+        # see if boa_offset_applied flag is available
+        boa_offset_applied = get_item_property(item, boa_offset_field, default=False)
 
         return S2Metadata.from_metadata_xml(
-            metadata_xml=metadata_xml,
+            metadata_xml=metadata_xml_path,
             processing_baseline=processing_baseline,
-            boa_offset_applied=item.properties[boa_offset_field]
-            if boa_offset_field
-            else False,
+            boa_offset_applied=boa_offset_applied,
             **kwargs,
         )
 

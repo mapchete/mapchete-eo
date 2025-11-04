@@ -7,6 +7,7 @@ from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 
+
 try:
     from mapchete import Bounds
 except ImportError:
@@ -696,8 +697,8 @@ def test_read_levelled_cube_broken_slice(stac_item_missing_detector_footprints):
 )
 def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     assets = [asset]
-    cog_product = S2Product(s2_stac_item)
-    jp2_product = S2Product(s2_stac_item_jp2)
+    cog_product = S2Product.from_stac_item(s2_stac_item)
+    jp2_product = S2Product.from_stac_item(s2_stac_item_jp2)
     tile = _get_product_tile(cog_product)
 
     # (1) read array from COG archive where offset was already applied by the provider

@@ -92,7 +92,7 @@ def test_remote_s2_read_xarray(mapchete_config):
 )
 def test_remote_s2_read_xarray_cdse(mapchete_config):
     with mapchete_config.process_mp().open("inp") as cube:
-        assert isinstance(cube.read(assets=["B01_20m"]), xr.Dataset)
+        assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
 @pytest.mark.remote

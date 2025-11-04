@@ -11,7 +11,7 @@ from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
 from pystac import Item
-from pystac_client import Client
+from pystac_client import Client, ItemSearch
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
@@ -86,7 +86,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if area is not None and area.is_empty:  # pragma: no cover
             return
 
-        def _searches():
+        def _searches() -> Generator[ItemSearch, None, None]:
             for time_range in time if isinstance(time, list) else [time]:
                 search = self._search(
                     time_range=time_range,
@@ -130,11 +130,12 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
 
         for search in _searches():
             for item in search.items():
-                item_path = item.get_self_href()
-                if item_path in self.blacklist:  # pragma: no cover
-                    logger.debug("item %s found in blacklist and skipping", item_path)
-                else:
-                    yield item
+                if item.get_self_href() in self.blacklist:  # pragma: no cover
+                    logger.debug(
+                        "item %s found in blacklist and skipping", item.get_self_href()
+                    )
+                    continue
+                yield item
 
     def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
@@ -166,7 +167,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         query: Optional[str] = None,
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
-    ):
+    ) -> ItemSearch:
         if time_range is None:  # pragma: no cover
             raise ValueError("time_range not provided")
 

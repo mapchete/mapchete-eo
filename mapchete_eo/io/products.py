@@ -268,7 +268,9 @@ def merge_products(
                 try:
                     yield product.read_np_array(**product_read_kwargs)
                 except (AssetKeyError, CorruptedProduct) as exc:
-                    logger.debug("skip product %s because of %s", product.item.id, exc)
+                    logger.warning(
+                        "skip product %s because of %s", product.item.id, exc
+                    )
         except StopIteration:
             return
 
@@ -286,7 +288,7 @@ def merge_products(
             out = product.read_np_array(**product_read_kwargs)
             break
         except (AssetKeyError, CorruptedProduct) as exc:
-            logger.debug("skip product %s because of %s", product.item.id, exc)
+            logger.warning("skip product %s because of %s", product.item.id, exc)
     else:
         # we cannot do anything here, as all products are broken
         raise CorruptedSlice("all products are broken here")
@@ -378,7 +380,6 @@ def generate_slice_dataarrays(
     slices = products_to_slices(
         products, group_by_property=merge_products_by, sort=sort
     )
-
     logger.debug(
         "reading %s products in %s groups...",
         len(products),
@@ -418,8 +419,8 @@ def generate_slice_dataarrays(
                 )
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
-        except (EmptySliceException, CorruptedSlice):
-            pass
+        except (EmptySliceException, CorruptedSlice) as exception:
+            logger.warning(exception)
 
     if stack_empty:
         raise EmptyStackException("all slices are empty")

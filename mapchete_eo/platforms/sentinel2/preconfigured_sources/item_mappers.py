@@ -7,6 +7,7 @@ from mapchete_eo.platforms.sentinel2._mapper_registry import (
     creates_s2metadata,
 )
 from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers import (
+    CDSEPathMapper,
     EarthSearchPathMapper,
     EarthSearchC1PathMapper,
 )
@@ -154,6 +155,7 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
 def cdse_s2metadata(item: Item) -> S2Metadata:
     return S2Metadata.from_stac_item(
         item,
+        path_mapper=CDSEPathMapper(MPath(item.assets["granule_metadata"].href)),
         processing_baseline_field="processing:version",
     )
 

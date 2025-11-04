@@ -33,6 +33,6 @@ def test_known_sources(collection):
 
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
-@pytest.mark.parametrize("collection", ["CSDE"])
+@pytest.mark.parametrize("collection", ["CDSE"])
 def test_known_sources_cdse(collection):
     test_known_sources(collection)

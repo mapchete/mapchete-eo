@@ -155,3 +155,63 @@ class EarthSearchC1PathMapper(SinergisePathMapper):
         self._baseurl = alternative_metadata_baseurl
         self._protocol = protocol
         self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
+
+
+class CDSEPathMapper(S2MetadataPathMapper):
+    _MASK_FILENAMES = {
+        ProductQI.classification: "MSK_CLASSI_B00.jp2",
+        ProductQI.cloud_probability: "MSK_CLDPRB_{resolution}.jp2",
+        ProductQI.snow_probability: "MSK_SNWPRB_{resolution}.jp2",
+        BandQI.detector_footprints: "MSK_DETFOO_{band_identifier}.jp2",
+        BandQI.technical_quality: "MSK_QUALIT_{band_identifier}.jp2",
+    }
+
+    def __init__(
+        self,
+        url: MPathLike,
+        baseline_version: str = "04.00",
+        **kwargs,
+    ):
+        url = MPath.from_inp(url)
+        self._path = url.parent
+        self.processing_baseline = ProcessingBaseline.from_version(baseline_version)
+
+    def product_qi_mask(
+        self,
+        qi_mask: ProductQI,
+        resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"],
+    ) -> MPath:
+        """Determine product QI mask according to Sinergise bucket schema."""
+        mask_path = self._MASK_FILENAMES[qi_mask]
+        key = f"QI_DATA/{mask_path.format(resolution=resolution.name)}"
+        return self._path / key
+
+    def classification_mask(self) -> MPath:
+        return self.product_qi_mask(ProductQI.classification)
+
+    def cloud_probability_mask(
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
+    ) -> MPath:
+        return self.product_qi_mask(ProductQI.cloud_probability, resolution=resolution)
+
+    def snow_probability_mask(
+        self, resolution: ProductQIMaskResolution = ProductQIMaskResolution["60m"]
+    ) -> MPath:
+        return self.product_qi_mask(ProductQI.snow_probability, resolution=resolution)
+
+    def band_qi_mask(self, qi_mask: BandQI, band: L2ABand) -> MPath:
+        """Determine product QI mask according to Sinergise bucket schema."""
+        try:
+            mask_path = self._MASK_FILENAMES[qi_mask]
+        except KeyError:
+            raise DeprecationWarning(
+                f"'{qi_mask.name}' quality mask not found in this product"
+            )
+        key = f"QI_DATA/{mask_path.format(band_identifier=band.name)}"
+        return self._path / key
+
+    def technical_quality_mask(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQI.technical_quality, band)
+
+    def detector_footprints(self, band: L2ABand) -> MPath:
+        return self.band_qi_mask(BandQI.detector_footprints, band)

@@ -719,13 +719,16 @@ def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     assert (jp2_unapplied - 1000 == cog).all()
 
 
+@pytest.mark.skip(
+    reason="CDSE metadata file does not exist anymore: s3://eodata/Sentinel-2/MSI/L2A/2023/08/10/S2B_MSIL2A_20230810T094549_N0509_R079_T33TWM_20230810T130104.SAFE/GRANULE/L2A_T33TWM_A033567_20230810T095651/MTD_TL.xml"
+)
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
 def test_read_apply_offset_cdse(s2_stac_item, s2_stac_item_cdse_jp2):
     cog_assets = ["coastal"]
     jp2_cdse_assets = ["B01_60m"]
-    cog_product = S2Product(s2_stac_item)
-    jp2_product = S2Product(s2_stac_item_cdse_jp2)
+    cog_product = S2Product.from_stac_item(s2_stac_item)
+    jp2_product = S2Product.from_stac_item(s2_stac_item_cdse_jp2)
     tile = _get_product_tile(cog_product)
 
     # (1) read array from COG archive where offset was already applied by the provider

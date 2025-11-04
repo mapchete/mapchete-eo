@@ -2,11 +2,11 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    cat_baseurl: sentinel2/full_products_antimeridian/catalog.json
-    level: L2A
-    time:    
-      start: 2023-06-01
-      end: 2023-06-10
+    source:
+      collection: sentinel2/full_products_antimeridian/sentinel-s2-l2a/collection.json
+      time:    
+        start: 2023-06-01
+        end: 2023-06-10
 output:
   format: GTiff
   bands: 3

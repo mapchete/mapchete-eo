@@ -78,14 +78,14 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
 
 @pytest.mark.remote
 @pytest.mark.parametrize(
-    "flag,value,collection",
+    "collection",
     [
-        ("--catalog-json", lazy_fixture("s2_stac_collection"), None),
-        ("--archive", "S2AWS_COG", None),
-        ("--endpoint", "https://earth-search.aws.element84.com/v1/", "sentinel-2-l2a"),
+        lazy_fixture("s2_stac_collection"),
+        "S2AWS_COG",
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
     ],
 )
-def test_static_catalog(tmp_mpath, flag, value, collection):
+def test_static_catalog(tmp_mpath, collection):
     runner = CliRunner()
     out_path = tmp_mpath
     params = [
@@ -99,12 +99,10 @@ def test_static_catalog(tmp_mpath, flag, value, collection):
         "2023-08-10",
         "--end-time",
         "2023-08-10",
-        flag,
-        str(value),
+        "--collection",
+        str(collection),
         str(out_path),
     ]
-    if collection:
-        params.extend(["--collection", collection])
     result = runner.invoke(eo, params)
     if result.exit_code != 0:
         raise result.exception

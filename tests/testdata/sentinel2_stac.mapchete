@@ -2,12 +2,11 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    level: L2A
+    source:
+      collection: sentinel2/full_products/sentinel-2-l2a/collection.json
     time:
       start: 2023-08-10
       end: 2023-08-13
-    cat_baseurl: sentinel2/full_products/catalog.json
-    with_cloudmasks: true
 output:
   format: GTiff
   bands: 3

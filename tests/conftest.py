@@ -42,7 +42,7 @@ def eoxcloudless_testdata_dir(testdata_dir):
 
 @pytest.fixture(scope="session")
 def s2_stac_collection(s2_testdata_dir):
-    return s2_testdata_dir / "full_products" / "catalog.json"
+    return s2_testdata_dir / "full_products" / "sentinel-2-l2a" / "collection.json"
 
 
 @pytest.fixture(scope="session")

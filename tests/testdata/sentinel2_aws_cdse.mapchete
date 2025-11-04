@@ -2,11 +2,11 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    archive: S2CDSE_AWSJP2
-    level: L2A
-    time:
-      start: 2024-04-01
-      end: 2024-04-03
+    source: 
+      collection: CDSE_JP2
+      time:
+        start: 2024-04-01
+        end: 2024-04-03
 output:
   format: GTiff
   bands: 3

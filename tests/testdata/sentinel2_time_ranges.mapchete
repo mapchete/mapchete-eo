@@ -2,7 +2,6 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    level: L2A
     time:
       - start: 2024-04-01
         end: 2024-04-03

@@ -267,7 +267,7 @@ class S2Tile:
 def s2_tiles_from_bounds(
     left: float, bottom: float, right: float, top: float
 ) -> List[S2Tile]:
-    bounds = Bounds(left, bottom, right, top)
+    bounds = Bounds(left, bottom, right, top, crs="EPSG:4326")
 
     # determine zones in eastern-western direction
     min_zone_idx = math.floor((left + LATLON_WIDTH_OFFSET) / UTM_ZONE_WIDTH)

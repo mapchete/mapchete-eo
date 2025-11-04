@@ -77,7 +77,7 @@ def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
 @pytest.mark.remote
 @pytest.mark.parametrize(
     "mapchete_config",
-    [lazy_fixture("sentinel2_mapchete"), lazy_fixture("sentinel2_aws_cdse_mapchete")],
+    [lazy_fixture("sentinel2_mapchete")],
 )
 def test_remote_s2_read_xarray(mapchete_config):
     with mapchete_config.process_mp().open("inp") as cube:

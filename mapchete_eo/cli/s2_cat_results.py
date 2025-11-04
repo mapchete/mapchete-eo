@@ -12,10 +12,10 @@ from mapchete.path import MPath
 from mapchete.types import Bounds
 
 from mapchete_eo.cli import options_arguments
-from mapchete_eo.cli.static_catalog import get_catalog
 from mapchete_eo.io.products import Slice, products_to_slices
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.sort import TargetDateSort
+from mapchete_eo.source import Source
 from mapchete_eo.types import TimeRange
 
 
@@ -25,10 +25,7 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_end_time
 @opt_bounds
 @options_arguments.opt_mgrs_tile
-@options_arguments.opt_archive
 @options_arguments.opt_collection
-@options_arguments.opt_endpoint
-@options_arguments.opt_catalog_json
 @click.option(
     "--format",
     type=click.Choice(["FlatGeobuf", "GeoJSON"]),
@@ -45,32 +42,20 @@ def s2_cat_results(
     end_time: datetime,
     bounds: Optional[Bounds] = None,
     mgrs_tile: Optional[str] = None,
-    archive: Optional[str] = None,
-    collection: Optional[str] = None,
-    endpoint: Optional[str] = None,
-    catalog_json: Optional[MPath] = None,
+    collection: str = "EarthSearch",
     format: Literal["FlatGeobuf", "GeoJSON"] = "FlatGeobuf",
     by_slices: bool = False,
     add_index: bool = False,
     debug: bool = False,
 ):
     """Write a search result."""
-    if catalog_json and endpoint:  # pragma: no cover
-        raise click.ClickException(
-            "exactly one of --archive, --catalog-json or --endpoint has to be set."
-        )
     if any([start_time is None, end_time is None]):  # pragma: no cover
         raise click.ClickException("--start-time and --end-time are mandatory")
     if all([bounds is None, mgrs_tile is None]):  # pragma: no cover
         raise click.ClickException("--bounds or --mgrs-tile are required")
     slice_property_key = "s2:datastrip_id"
     with click_spinner.Spinner(disable=debug):
-        catalog = get_catalog(
-            catalog_json=catalog_json,
-            endpoint=endpoint,
-            known_archive=archive,
-            collection=collection,
-        )
+        catalog = Source(collection=collection).get_catalog()
         slices = products_to_slices(
             [
                 S2Product.from_stac_item(item)

@@ -9,14 +9,14 @@ from pystac import Item, Catalog, Collection
 from mapchete.io.vector import bounds_intersect
 from mapchete.path import MPathLike
 from pystac.stac_io import StacIO
-from pystac_client import Client
+from pystac_client import CollectionClient
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.search.base import (
-    CatalogSearcher,
+    CollectionSearcher,
     FSSpecStacIO,
-    StaticCatalogWriterMixin,
+    StaticCollectionWriterMixin,
     filter_items,
 )
 from mapchete_eo.search.config import StacStaticConfig
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 StacIO.set_default(FSSpecStacIO)
 
 
-class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
+class STACStaticCatalog(StaticCollectionWriterMixin, CollectionSearcher):
     config_cls = StacStaticConfig
 
     def __init__(
@@ -37,8 +37,8 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         baseurl: MPathLike,
         stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
     ):
-        self.client = Client.from_file(str(baseurl), stac_io=FSSpecStacIO())
-        self.collections = [c.id for c in self.client.get_children()]
+        self.client = CollectionClient.from_file(str(baseurl), stac_io=FSSpecStacIO())
+        # self.collections = [c.id for c in self.client.get_children()]
         self.stac_item_modifiers = stac_item_modifiers
 
     @cached_property
@@ -79,29 +79,27 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         if area is not None and area.is_empty:
             return
         logger.debug("iterate through children")
-        for collection in self.client.get_collections():
-            if time:
-                for time_range in time if isinstance(time, list) else [time]:
-                    for item in _all_intersecting_items(
-                        collection,
-                        area=area,
-                        time_range=time_range,
-                    ):
-                        item.make_asset_hrefs_absolute()
-                        yield item
-            else:
+        if time:
+            for time_range in time if isinstance(time, list) else [time]:
                 for item in _all_intersecting_items(
-                    collection,
+                    self.client,
                     area=area,
+                    time_range=time_range,
                 ):
                     item.make_asset_hrefs_absolute()
                     yield item
+        else:
+            for item in _all_intersecting_items(
+                self.client,
+                area=area,
+            ):
+                item.make_asset_hrefs_absolute()
+                yield item
 
     def _eo_bands(self) -> List[str]:
-        for collection in self.client.get_children():
-            eo_bands = collection.extra_fields.get("properties", {}).get("eo:bands")
-            if eo_bands:
-                return eo_bands
+        eo_bands = self.client.extra_fields.get("properties", {}).get("eo:bands")
+        if eo_bands:
+            return eo_bands
         else:
             warnings.warn(
                 "Unable to read eo:bands definition from collections. "
@@ -109,7 +107,7 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
             )
 
             # see if eo:bands can be found in properties
-            item = _get_first_item(self.client.get_children())
+            item = next(self.client.get_items())
             eo_bands = item.properties.get("eo:bands")
             if eo_bands:
                 return eo_bands
@@ -124,38 +122,6 @@ class STACStaticCatalog(StaticCatalogWriterMixin, CatalogSearcher):
 
             logger.debug("cannot find eo:bands definition")
             return []
-
-    def get_collections(
-        self,
-        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
-        bounds: Optional[BoundsLike] = None,
-        area: Optional[BaseGeometry] = None,
-    ):
-        if area is None and bounds is not None:
-            area = Bounds.from_inp(bounds).geometry
-        for collection in self.client.get_children():
-            if time:
-                for time_range in time if isinstance(time, list) else [time]:
-                    if _collection_extent_intersects(
-                        collection,
-                        area=area,
-                        time_range=time_range,
-                    ):
-                        yield collection
-            else:
-                if _collection_extent_intersects(collection, area=area):
-                    yield collection
-
-
-def _get_first_item(collections):
-    for collection in collections:
-        for item in collection.get_all_items():
-            return item
-        else:
-            for child in collection.get_children():
-                return _get_first_item(child)
-    else:
-        raise ValueError("collections contain no items")
 
 
 def _all_intersecting_items(

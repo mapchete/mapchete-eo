@@ -16,7 +16,7 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
-from mapchete_eo.search.base import CatalogSearcher, StaticCatalogWriterMixin
+from mapchete_eo.search.base import CollectionSearcher, StaticCollectionWriterMixin
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
@@ -24,7 +24,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
+class STACSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
     endpoint: str
     blacklist: Set[str] = (
         blacklist_products(mapchete_eo_settings.blacklist)

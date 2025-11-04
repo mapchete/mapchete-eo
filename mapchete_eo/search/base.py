@@ -6,12 +6,11 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
 from cql2 import Expr
 from pydantic import BaseModel
-from pystac import Item, Catalog, CatalogType, Extent
+from pystac import Item, CatalogType, Extent
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
-from pystac_client import Client
 from pystac_client.stac_api_io import StacApiIO
 from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
@@ -45,12 +44,11 @@ class FSSpecStacIO(StacApiIO):
             return dst.write(json.dumps(json_dict, indent=2))
 
 
-class CatalogSearcher(ABC):
+class CollectionSearcher(ABC):
     """
     This class serves as a bridge between an Archive and a catalog implementation.
     """
 
-    collections: List[str]
     config_cls: Type[BaseModel]
 
     @abstractmethod
@@ -80,15 +78,11 @@ class CatalogSearcher(ABC):
     ) -> Generator[Item, None, None]: ...
 
 
-class StaticCatalogWriterMixin(CatalogSearcher):
+class StaticCollectionWriterMixin(CollectionSearcher):
     # client: Client
     # id: str
     # description: str
     # stac_extensions: List[str]
-
-    @abstractmethod
-    def get_collections(self) -> List[Collection]:  # pragma: no cover
-        ...
 
     def write_static_catalog(
         self,
@@ -109,100 +103,61 @@ class StaticCatalogWriterMixin(CatalogSearcher):
         progress_callback: Optional[Callable] = None,
     ) -> MPath:
         """Dump static version of current items."""
+        collection_id = name or f"{self.id}"
         output_path = MPath.from_inp(output_path)
         assets = assets or []
         # initialize catalog
-        catalog_json = output_path / "catalog.json"
-        if catalog_json.exists():
-            logger.debug("open existing catalog %s", str(catalog_json))
-            client = Client.from_file(catalog_json)
-            # catalog = pystac.Catalog.from_file(catalog_json)
-            existing_collections = list(client.get_collections())
-        else:
-            existing_collections = []
-        catalog = Catalog(
-            name or f"{self.id}",
-            description or f"Static subset of {self.description}",
-            stac_extensions=self.stac_extensions,
-            href=str(catalog_json),
-            catalog_type=CatalogType.SELF_CONTAINED,
-        )
+        collection_json = output_path / f"{collection_id}.json"
         src_items = list(
             self.search(
                 time=time, bounds=bounds, area=area, search_kwargs=search_kwargs
             )
         )
-        for collection in self.get_collections():
-            # collect all items and download assets if required
-            items: List[Item] = []
-            item_ids = set()
-            for n, item in enumerate(src_items, 1):
-                logger.debug("found item %s", item)
-                item = item.clone()
-                if assets:
-                    logger.debug("get assets %s", assets)
-                    item = get_assets(
-                        item,
-                        assets,
-                        output_path / collection.id / item.id,
-                        resolution=assets_dst_resolution,
-                        convert_profile=assets_convert_profile,
-                        overwrite=overwrite,
-                        ignore_if_exists=True,
-                    )
-                if copy_metadata:
-                    item = get_metadata_assets(
-                        item,
-                        output_path / collection.id / item.id,
-                        metadata_parser_classes=metadata_parser_classes,
-                        resolution=assets_dst_resolution,
-                        convert_profile=assets_convert_profile,
-                        overwrite=overwrite,
-                    )
-                # this has to be set to None, otherwise pystac will mess up the asset paths
-                # after normalizing
-                item.set_self_href(None)
+        # collect all items and download assets if required
+        items: List[Item] = []
+        item_ids = set()
+        for n, item in enumerate(src_items, 1):
+            logger.debug("found item %s", item)
+            item = item.clone()
+            if assets:
+                logger.debug("get assets %s", assets)
+                item = get_assets(
+                    item,
+                    assets,
+                    output_path / item.id,
+                    resolution=assets_dst_resolution,
+                    convert_profile=assets_convert_profile,
+                    overwrite=overwrite,
+                    ignore_if_exists=True,
+                )
+            if copy_metadata:
+                item = get_metadata_assets(
+                    item,
+                    output_path / item.id,
+                    metadata_parser_classes=metadata_parser_classes,
+                    resolution=assets_dst_resolution,
+                    convert_profile=assets_convert_profile,
+                    overwrite=overwrite,
+                )
+            # this has to be set to None, otherwise pystac will mess up the asset paths
+            # after normalizing
+            item.set_self_href(None)
 
-                items.append(item)
-                item_ids.add(item.id)
+            items.append(item)
+            item_ids.add(item.id)
 
-                if progress_callback:
-                    progress_callback(n=n, total=len(src_items))
+            if progress_callback:
+                progress_callback(n=n, total=len(src_items))
 
-            for existing_collection in existing_collections:
-                if existing_collection.id == collection.id:
-                    logger.debug("try to find unregistered items in collection")
-                    collection_root_path = MPath.from_inp(
-                        existing_collection.get_self_href()
-                    ).parent
-                    for subpath in collection_root_path.ls():
-                        if subpath.is_directory():
-                            try:
-                                item = Item.from_file(
-                                    subpath / subpath.with_suffix(".json").name
-                                )
-                                if item.id not in item_ids:
-                                    logger.debug(
-                                        "add existing item with id %s", item.id
-                                    )
-                                    items.append(item)
-                                    item_ids.add(item.id)
-                            except FileNotFoundError:
-                                pass
-                    break
             # create collection and copy metadata
             logger.debug("create new collection")
+
             out_collection = Collection(
-                id=collection.id,
+                id=collection_id,
                 extent=Extent.from_items(items),
-                description=collection.description,
-                title=collection.title,
-                stac_extensions=collection.stac_extensions,
-                license=collection.license,
-                keywords=collection.keywords,
-                providers=collection.providers,
-                summaries=collection.summaries,
-                extra_fields=collection.extra_fields,
+                description=description or f"Static subset of {self.description}",
+                stac_extensions=self.stac_extensions,
+                href=str(collection_json),
                 catalog_type=CatalogType.SELF_CONTAINED,
             )
 
@@ -212,14 +167,12 @@ class StaticCatalogWriterMixin(CatalogSearcher):
 
             out_collection.update_extent_from_items()
 
-            catalog.add_child(out_collection)
-
         logger.debug("write catalog to %s", output_path)
-        catalog.normalize_hrefs(str(output_path))
-        catalog.make_all_asset_hrefs_relative()
-        catalog.save(dest_href=str(output_path), stac_io=stac_io)
+        out_collection.normalize_hrefs(str(output_path))
+        out_collection.make_all_asset_hrefs_relative()
+        out_collection.save(dest_href=str(output_path), stac_io=stac_io)
 
-        return catalog_json
+        return collection_json
 
 
 def filter_items(

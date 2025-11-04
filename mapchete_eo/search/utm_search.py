@@ -15,8 +15,8 @@ from shapely.geometry.base import BaseGeometry
 from mapchete_eo.exceptions import ItemGeometryError
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import (
-    CatalogSearcher,
-    StaticCatalogWriterMixin,
+    CollectionSearcher,
+    StaticCollectionWriterMixin,
     filter_items,
 )
 from mapchete_eo.search.config import UTMSearchConfig
@@ -28,7 +28,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
+class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
     endpoint: str
     id: str
     day_subdir_schema: str

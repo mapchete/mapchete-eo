@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.cli.s2_verify import verify_item
-from mapchete_eo.cli.static_catalog import get_catalog
 from mapchete_eo.product import add_to_blacklist, blacklist_products
+from mapchete_eo.source import Source
 from mapchete_eo.types import TimeRange
 
 
@@ -18,10 +18,7 @@ from mapchete_eo.types import TimeRange
 @opt_bounds
 @options_arguments.opt_start_time
 @options_arguments.opt_end_time
-@options_arguments.opt_archive
 @options_arguments.opt_collection
-@options_arguments.opt_endpoint
-@options_arguments.opt_catalog_json
 @options_arguments.opt_assets
 @options_arguments.opt_blacklist
 @options_arguments.opt_thumbnail_dir
@@ -31,10 +28,7 @@ def s2_find_broken_products(
     end_time: datetime,
     bounds: Optional[Bounds] = None,
     mgrs_tile: Optional[str] = None,
-    archive: Optional[str] = None,
-    collection: Optional[str] = None,
-    endpoint: Optional[str] = None,
-    catalog_json: Optional[MPath] = None,
+    collection: str = "EarthSearch",
     assets: List[str] = [],
     asset_exists_check: bool = True,
     blacklist: MPath = MPath("s3://eox-mhub-cache/blacklist.txt"),
@@ -42,20 +36,11 @@ def s2_find_broken_products(
     **__,
 ):
     """Find broken Sentinel-2 products."""
-    if catalog_json and endpoint:  # pragma: no cover
-        raise click.ClickException(
-            "exactly one of --archive, --catalog-json or --endpoint has to be set."
-        )
     if any([start_time is None, end_time is None]):  # pragma: no cover
         raise click.ClickException("--start-time and --end-time are mandatory")
     if all([bounds is None, mgrs_tile is None]):  # pragma: no cover
         raise click.ClickException("--bounds or --mgrs-tile are required")
-    catalog = get_catalog(
-        catalog_json=catalog_json,
-        endpoint=endpoint,
-        known_archive=archive,
-        collection=collection,
-    )
+    catalog = Source(collection=collection).get_catalog()
     blacklisted_products = blacklist_products(blacklist)
     for item in tqdm(
         catalog.search(

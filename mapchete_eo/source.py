@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any, Dict, List, Literal, Optional, Generator, Union, Callable
 
 from mapchete.path import MPath
@@ -8,7 +9,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely.errors import GEOSException
 
 from mapchete_eo.exceptions import ItemGeometryError
-from mapchete_eo.search.base import CatalogSearcher
+from mapchete_eo.search.base import CollectionSearcher
 from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
@@ -19,7 +20,6 @@ class Source(BaseModel):
 
     collection: str
     catalog_crs: CRSLike = mapchete_eo_settings.default_catalog_crs
-    catalog_type: Literal["search", "static"] = "search"
     query: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -27,6 +27,14 @@ class Source(BaseModel):
     @property
     def item_modifier_funcs(self) -> List[Callable]:
         return []
+
+    @cached_property
+    def catalog_type(self) -> Literal["search", "static"]:
+        try:
+            (MPath(self.collection) / "items?limit=1").read_json()
+            return "search"
+        except FileNotFoundError:
+            return "static"
 
     def search(
         self,
@@ -54,7 +62,7 @@ class Source(BaseModel):
             )
         return item
 
-    def get_catalog(self, base_dir: Optional[MPathLike] = None) -> CatalogSearcher:
+    def get_catalog(self, base_dir: Optional[MPathLike] = None) -> CollectionSearcher:
         match self.catalog_type:
             case "search":
                 return STACSearchCatalog.from_collection_url(self.collection)

@@ -7,9 +7,6 @@ from mapchete.path import MPath
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
-from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
-    DEPRECATED_ARCHIVES,
-)
 from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
 from mapchete_eo.time import to_datetime
 
@@ -164,26 +161,11 @@ opt_start_time = click.option(
 opt_end_time = click.option(
     "--end-time", type=click.STRING, callback=_str_to_datetime, help="End time"
 )
-opt_archive = click.option(
-    "--archive",
-    type=click.Choice(list(DEPRECATED_ARCHIVES.keys())),
-    default="S2AWS_COG",
-    help="Archive to read from.",
-)
 opt_collection = click.option(
     "--collection",
     type=click.STRING,
+    default="EarthSearch",
     help="Data collection to be queried.",
-)
-opt_endpoint = click.option(
-    "--endpoint",
-    type=click.STRING,
-    help="Search endpoint.",
-)
-opt_catalog_json = click.option(
-    "--catalog-json",
-    type=click.Path(path_type=MPath),
-    help="JSON file for a static catalog.",
 )
 opt_name = click.option("--name", type=click.STRING, help="Static catalog name.")
 opt_description = click.option(

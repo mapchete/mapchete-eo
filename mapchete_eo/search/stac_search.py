@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import cached_property
 from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
 
+from cql2 import Expr
 from mapchete import Timer
 from mapchete.path import MPathLike
 from mapchete.tile import BufferedTilePyramid
@@ -128,13 +129,12 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
                     yield search
 
         for search in _searches():
-            for count, item in enumerate(search.items(), 1):
+            for item in search.items():
                 item_path = item.get_self_href()
                 if item_path in self.blacklist:  # pragma: no cover
                     logger.debug("item %s found in blacklist and skipping", item_path)
                 else:
                     yield item
-        logger.debug("returned %s items in total", count)
 
     def _eo_bands(self) -> List[str]:
         for collection_name in self.collections:
@@ -192,7 +192,7 @@ class STACSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
-            query=query,
+            query=Expr(query).to_json() if query else None,
             **kwargs,
         )
         if (

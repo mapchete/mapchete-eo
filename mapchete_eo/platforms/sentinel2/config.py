@@ -119,9 +119,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
     # for backwards compatibility, archive should be converted to
     # catalog & data_archive
     # archive: ArchiveClsFromString = AWSL2ACOGv1
-
-    # don't know yet how to handle this
-    cat_baseurl: Optional[MPathLike] = None
+    # cat_baseurl: Optional[MPathLike] = None
     search_index: Optional[MPathLike] = None
 
     # custom params
@@ -134,7 +132,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
 
     @model_validator(mode="before")
     def deprecated_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        archive = values.get("archive")
+        archive = values.pop("archive", None)
         if archive:
             warnings.warn(
                 "'archive' will be deprecated soon. Please use 'source'.",
@@ -142,10 +140,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 stacklevel=2,
             )
             if values.get("source") is None:
-                try:
-                    values["source"] = DEPRECATED_ARCHIVES[archive]
-                except KeyError:
-                    raise
+                values["source"] = DEPRECATED_ARCHIVES[archive]
 
         cat_baseurl = values.pop("cat_baseurl", None)
         if cat_baseurl:
@@ -160,6 +155,11 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 )
             values["source"] = [dict(collection=cat_baseurl, catalog_type="static")]
 
+        # add default source if necessary
+        sources = values.get("source", [])
+        if not sources:
+            values["source"] = [default_source.model_dump(exclude_none=True)]
+
         max_cloud_cover = values.pop("max_cloud_cover", None)
         if max_cloud_cover:
             warnings.warn(
@@ -167,11 +167,8 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-            sources = values.get("source", [])
-            if not sources:
-                raise ValueError("no sources defined")
             updated_sources = []
-            for source in sources:
+            for source in values.get("source", []):
                 if source.get("query") is not None:
                     raise ValueError(
                         f"deprecated max_cloud_cover is set but also a query field is given in {source}"

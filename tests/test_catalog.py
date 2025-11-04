@@ -139,8 +139,6 @@ def test_write_static_catalog_metadata_assets(static_catalog_small, tmp_path):
 def test_static_catalog_cloud_percent(s2_stac_collection):
     all_products = list(STACStaticCatalog(s2_stac_collection).search())
     filtered_products = list(
-        STACStaticCatalog(s2_stac_collection).search(
-            search_kwargs=dict(max_cloud_cover=20)
-        )
+        STACStaticCatalog(s2_stac_collection).search(query="eo:cloud_cover<=20")
     )
     assert len(all_products) > len(filtered_products)

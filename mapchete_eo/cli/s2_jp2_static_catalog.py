@@ -19,7 +19,7 @@ from shapely import prepare
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.io.items import item_fix_footprint
-from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile, bounds_to_geom
+from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile
 from mapchete_eo.time import day_range
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ def s2_jp2_static_catalog(
     - each S2Tile file contains for each STAC item one entry with geometry and href
     """
     bounds = bounds or Bounds(-180, -90, 180, 90)
-    aoi = bounds_to_geom(bounds)
+    aoi = bounds.latlon_geometry()
     prepare(aoi)
     items_per_tile = defaultdict(list)
     for day in day_range(start_date=start_time, end_date=end_time):

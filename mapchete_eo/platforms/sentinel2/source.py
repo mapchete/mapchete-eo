@@ -42,9 +42,6 @@ class Sentinel2Source(Source):
         collection = values.get("collection", None)
         if collection in KNOWN_SOURCES:
             values.update(KNOWN_SOURCES[collection])
-        else:
-            # TODO: make sure catalog then is either a path or an URL
-            pass
         return values
 
     @model_validator(mode="after")

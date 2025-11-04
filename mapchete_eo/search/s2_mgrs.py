@@ -6,18 +6,17 @@ from functools import cached_property
 from itertools import product
 from typing import List, Literal, Optional, Tuple, Union
 
-from mapchete.geometry import reproject_geometry
+from mapchete.geometry import (
+    reproject_geometry,
+    repair_antimeridian_geometry,
+    transform_to_latlon,
+)
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from shapely import prepare
 from shapely.geometry import box, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.geometry import (
-    bounds_to_geom,
-    repair_antimeridian_geometry,
-    transform_to_latlon,
-)
 
 LATLON_LEFT = -180
 LATLON_RIGHT = 180
@@ -291,7 +290,7 @@ def s2_tiles_from_bounds(
     min_latitude_band_idx -= 1
     max_latitude_band_idx += 1
 
-    aoi = bounds_to_geom(bounds)
+    aoi = bounds.latlon_geometry()
     prepare(aoi)
 
     def tiles_generator():

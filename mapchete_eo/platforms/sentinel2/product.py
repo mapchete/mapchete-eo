@@ -7,7 +7,7 @@ import numpy as np
 import numpy.ma as ma
 import pystac
 from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_from_array
-from mapchete.geometry import reproject_geometry
+from mapchete.geometry import reproject_geometry, buffer_antimeridian_safe
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds, Grid, NodataVals
@@ -27,7 +27,6 @@ from mapchete_eo.exceptions import (
     EmptyFootprintException,
     EmptyProductException,
 )
-from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile

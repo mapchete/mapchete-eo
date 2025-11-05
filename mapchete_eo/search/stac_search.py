@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from functools import cached_property
-from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Set, Union
+from typing import Any, Dict, Generator, Iterator, List, Optional, Set, Union
 
 from cql2 import Expr
 from mapchete import Timer
@@ -31,14 +31,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         else set()
     )
     config_cls = StacSearchConfig
-
-    def __init__(
-        self,
-        collection: str,
-        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
-    ):
-        self.collection = collection
-        self.stac_item_modifiers = stac_item_modifiers
 
     @cached_property
     def client(self) -> CollectionClient:

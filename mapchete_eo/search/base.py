@@ -52,6 +52,15 @@ class CollectionSearcher(ABC):
 
     config_cls: Type[BaseModel]
     collection: str
+    stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None
+
+    def __init__(
+        self,
+        collection: str,
+        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
+    ):
+        self.collection = collection
+        self.stac_item_modifiers = stac_item_modifiers
 
     @abstractmethod
     @cached_property

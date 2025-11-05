@@ -1,7 +1,7 @@
 from functools import cached_property
 import logging
 import warnings
-from typing import Any, Callable, Dict, Generator, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 
 from mapchete import Bounds
 from mapchete.types import BoundsLike
@@ -30,14 +30,6 @@ StacIO.set_default(FSSpecStacIO)
 
 class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
     config_cls = StacStaticConfig
-
-    def __init__(
-        self,
-        collection: str,
-        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
-    ):
-        self.collection = collection
-        self.stac_item_modifiers = stac_item_modifiers
 
     @cached_property
     def client(self) -> CollectionClient:

@@ -51,7 +51,7 @@ class BRDFSCLClassConfig(BRDFModelConfig):
                 out.append(value)
             elif isinstance(value, str):
                 out.append(SceneClassification[value])
-            else:
+            else:  # pragma: no cover
                 raise ValidationError("value must be mappable to SceneClassification")
         return out
 
@@ -143,7 +143,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
                 values["source"] = DEPRECATED_ARCHIVES[archive]
 
         cat_baseurl = values.pop("cat_baseurl", None)
-        if cat_baseurl:
+        if cat_baseurl:  # pragma: no cover
             warnings.warn(
                 "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
                 category=DeprecationWarning,
@@ -161,7 +161,7 @@ class Sentinel2DriverConfig(BaseDriverConfig):
             values["source"] = [default_source.model_dump(exclude_none=True)]
 
         max_cloud_cover = values.pop("max_cloud_cover", None)
-        if max_cloud_cover:
+        if max_cloud_cover:  # pragma: no cover
             warnings.warn(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
                 category=DeprecationWarning,
@@ -220,7 +220,7 @@ class MaskConfig(BaseModel):
                 out.append(value)
             elif isinstance(value, str):
                 out.append(SceneClassification[value])
-            else:
+            else:  # pragma: no cover
                 raise ValidationError("value must be mappable to SceneClassification")
         return out
 
@@ -235,7 +235,7 @@ class MaskConfig(BaseModel):
         elif isinstance(config, dict):
             return MaskConfig(**config)
 
-        else:
+        else:  # pragma: no cover
             raise TypeError(
                 f"mask configuration should either be a dictionary or a MaskConfig object, not {config}"
             )

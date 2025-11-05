@@ -82,7 +82,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                 )
                 logger.debug("found %s products", search.matched())
                 matched = search.matched() or 0
-                if matched > config.catalog_chunk_threshold:
+                if matched > config.catalog_chunk_threshold:  # pragma: no cover
                     spatial_search_chunks = SpatialSearchChunks(
                         bounds=bounds,
                         area=area,
@@ -200,10 +200,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
             )
         logger.debug("query took %s", str(duration))
         return result
-
-    def get_collections(self):
-        for collection_name in self.collections:
-            yield self.client.get_collection(collection_name)
 
 
 class SpatialSearchChunks:

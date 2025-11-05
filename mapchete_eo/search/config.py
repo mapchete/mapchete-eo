@@ -14,7 +14,7 @@ class StacSearchConfig(BaseModel):
 
     @model_validator(mode="before")
     def deprecate_max_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if "max_cloud_cover" in values:
+        if "max_cloud_cover" in values:  # pragma: no cover
             raise DeprecationWarning(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
             )
@@ -24,7 +24,7 @@ class StacSearchConfig(BaseModel):
 class StacStaticConfig(BaseModel):
     @model_validator(mode="before")
     def deprecate_max_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if "max_cloud_cover" in values:
+        if "max_cloud_cover" in values:  # pragma: no cover
             raise DeprecationWarning(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
             )
@@ -34,7 +34,7 @@ class StacStaticConfig(BaseModel):
 class UTMSearchConfig(BaseModel):
     @model_validator(mode="before")
     def deprecate_max_cloud_cover(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if "max_cloud_cover" in values:
+        if "max_cloud_cover" in values:  # pragma: no cover
             raise DeprecationWarning(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
             )

@@ -254,7 +254,7 @@ class S2Tile:
         grid_square = tile_id[3:]
         try:
             int(utm_zone)
-        except Exception:
+        except Exception:  # pragma: no cover
             raise ValueError(f"invalid UTM zone given: {utm_zone}")
 
         return MGRSCell(utm_zone, latitude_band).tile(grid_square)

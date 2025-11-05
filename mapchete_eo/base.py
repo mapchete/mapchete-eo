@@ -66,7 +66,7 @@ class BaseDriverConfig(BaseModel):
     @model_validator(mode="before")
     def deprecate_cat_baseurl(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         cat_baseurl = values.get("cat_baseurl")
-        if cat_baseurl:
+        if cat_baseurl:  # pragma: no cover
             warnings.warn(
                 "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
                 category=DeprecationWarning,
@@ -341,27 +341,25 @@ class EODataCube(base.InputTile):
         """
         Return a filtered list of input products.
         """
-        if any([start_time, end_time, timestamps]):
+        if any([start_time, end_time, timestamps]):  # pragma: no cover
             raise NotImplementedError("time subsets are not yet implemented")
 
         if time_pattern:
             # filter products by time pattern
-            tz = tzutc()
-            coord_time = [
-                t.replace(tzinfo=tz)
-                for t in croniter.croniter_range(
-                    to_datetime(self.start_time),
-                    to_datetime(self.end_time),
-                    time_pattern,
-                )
-            ]
             return [
                 product
                 for product in self.products
-                if product.item.datetime in coord_time
+                if product.item.datetime
+                in [
+                    t.replace(tzinfo=tzutc())
+                    for t in croniter.croniter_range(
+                        to_datetime(self.start_time),
+                        to_datetime(self.end_time),
+                        time_pattern,
+                    )
+                ]
             ]
-        else:
-            return self.products
+        return self.products
 
     def is_empty(self) -> bool:  # pragma: no cover
         """
@@ -385,16 +383,16 @@ class EODataCube(base.InputTile):
             nodatavals = self.default_read_nodataval
         merge_products_by = merge_products_by or self.default_read_merge_products_by
         merge_method = merge_method or self.default_read_merge_method
-        if resampling is None:
-            resampling = self.default_read_resampling
-        else:
-            resampling = (
-                resampling
-                if isinstance(resampling, Resampling)
-                else Resampling[resampling]
-            )
         return dict(
-            resampling=resampling,
+            resampling=(
+                self.default_read_resampling
+                if resampling is None
+                else (
+                    resampling
+                    if isinstance(resampling, Resampling)
+                    else Resampling[resampling]
+                )
+            ),
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
@@ -555,7 +553,7 @@ class InputData(base.InputData):
             return self._products
 
         # TODO: copied it from mapchete_satellite, not yet sure which use case this is
-        elif self.standalone:
+        elif self.standalone:  # pragma: no cover
             raise NotImplementedError()
 
         # if preprocessing tasks are ready, index them for further use

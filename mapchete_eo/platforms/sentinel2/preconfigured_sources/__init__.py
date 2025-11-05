@@ -36,8 +36,7 @@ KNOWN_SOURCES: Dict[str, Any] = {
 
 DEPRECATED_ARCHIVES = {
     "S2AWS_COG": {
-        "collection": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
-        "data_archive": "AWSCOG",
+        "collection": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a",
     },
     "S2AWS_JP2": {
         "collection": "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a",

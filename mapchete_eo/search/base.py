@@ -6,11 +6,12 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
 from cql2 import Expr
 from pydantic import BaseModel
-from pystac import Item, CatalogType, Extent
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
+from pystac import Catalog, Item, CatalogType, Extent
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
+from pystac_client import CollectionClient
 from pystac_client.stac_api_io import StacApiIO
 from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
@@ -50,6 +51,11 @@ class CollectionSearcher(ABC):
     """
 
     config_cls: Type[BaseModel]
+    collection: str
+
+    @abstractmethod
+    @cached_property
+    def client(self) -> CollectionClient: ...
 
     @abstractmethod
     @cached_property
@@ -103,11 +109,24 @@ class StaticCollectionWriterMixin(CollectionSearcher):
         progress_callback: Optional[Callable] = None,
     ) -> MPath:
         """Dump static version of current items."""
-        collection_id = name or f"{self.id}"
         output_path = MPath.from_inp(output_path)
         assets = assets or []
         # initialize catalog
-        collection_json = output_path / f"{collection_id}.json"
+        catalog_json = output_path / "catalog.json"
+        if catalog_json.exists():
+            logger.debug("open existing catalog %s", str(catalog_json))
+            catalog = Catalog.from_file(catalog_json)
+            # client = Client.from_file(catalog_json)
+            # existing_collection = client.get_collection(self.id)
+        else:
+            # existing_collections = []
+            catalog = Catalog(
+                name or f"{self.id}",
+                description or f"Static subset of {self.description}",
+                stac_extensions=self.stac_extensions,
+                href=str(catalog_json),
+                catalog_type=CatalogType.SELF_CONTAINED,
+            )
         src_items = list(
             self.search(
                 time=time, bounds=bounds, area=area, search_kwargs=search_kwargs
@@ -124,7 +143,7 @@ class StaticCollectionWriterMixin(CollectionSearcher):
                 item = get_assets(
                     item,
                     assets,
-                    output_path / item.id,
+                    output_path / self.id / item.id,
                     resolution=assets_dst_resolution,
                     convert_profile=assets_convert_profile,
                     overwrite=overwrite,
@@ -133,7 +152,7 @@ class StaticCollectionWriterMixin(CollectionSearcher):
             if copy_metadata:
                 item = get_metadata_assets(
                     item,
-                    output_path / item.id,
+                    output_path / self.id / item.id,
                     metadata_parser_classes=metadata_parser_classes,
                     resolution=assets_dst_resolution,
                     convert_profile=assets_convert_profile,
@@ -149,15 +168,40 @@ class StaticCollectionWriterMixin(CollectionSearcher):
             if progress_callback:
                 progress_callback(n=n, total=len(src_items))
 
+            # for existing_collection in existing_collections:
+            #     if existing_collection.id == collection.id:
+            #         logger.debug("try to find unregistered items in collection")
+            #         collection_root_path = MPath.from_inp(
+            #             existing_collection.get_self_href()
+            #         ).parent
+            #         for subpath in collection_root_path.ls():
+            #             if subpath.is_directory():
+            #                 try:
+            #                     item = Item.from_file(
+            #                         subpath / subpath.with_suffix(".json").name
+            #                     )
+            #                     if item.id not in item_ids:
+            #                         logger.debug(
+            #                             "add existing item with id %s", item.id
+            #                         )
+            #                         items.append(item)
+            #                         item_ids.add(item.id)
+            #                 except FileNotFoundError:
+            #                     pass
+            #         break
             # create collection and copy metadata
             logger.debug("create new collection")
-
             out_collection = Collection(
-                id=collection_id,
+                id=self.id,
                 extent=Extent.from_items(items),
-                description=description or f"Static subset of {self.description}",
+                description=self.description,
+                title=self.client.title,
                 stac_extensions=self.stac_extensions,
-                href=str(collection_json),
+                license=self.client.license,
+                keywords=self.client.keywords,
+                providers=self.client.providers,
+                summaries=self.client.summaries,
+                extra_fields=self.client.extra_fields,
                 catalog_type=CatalogType.SELF_CONTAINED,
             )
 
@@ -167,12 +211,14 @@ class StaticCollectionWriterMixin(CollectionSearcher):
 
             out_collection.update_extent_from_items()
 
-        logger.debug("write catalog to %s", output_path)
-        out_collection.normalize_hrefs(str(output_path))
-        out_collection.make_all_asset_hrefs_relative()
-        out_collection.save(dest_href=str(output_path), stac_io=stac_io)
+            catalog.add_child(out_collection)
 
-        return collection_json
+        logger.debug("write catalog to %s", output_path)
+        catalog.normalize_hrefs(str(output_path))
+        catalog.make_all_asset_hrefs_relative()
+        catalog.save(dest_href=str(output_path), stac_io=stac_io)
+
+        return catalog_json
 
 
 def filter_items(

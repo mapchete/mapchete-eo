@@ -7,8 +7,8 @@ of product metadata.
 It helps the InputData class to find the input products and their metadata.
 """
 
-from mapchete_eo.search.stac_search import STACSearchCatalog
-from mapchete_eo.search.stac_static import STACStaticCatalog
+from mapchete_eo.search.stac_search import STACSearchCollection
+from mapchete_eo.search.stac_static import STACStaticCollection
 from mapchete_eo.search.utm_search import UTMSearchCatalog
 
-__all__ = ["STACSearchCatalog", "STACStaticCatalog", "UTMSearchCatalog"]
+__all__ = ["STACSearchCollection", "STACStaticCollection", "UTMSearchCatalog"]

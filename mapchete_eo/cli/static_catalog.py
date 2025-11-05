@@ -9,8 +9,8 @@ from rasterio.profiles import Profile
 
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.platforms.sentinel2 import S2Metadata
+from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.source import Source
 from mapchete_eo.types import TimeRange
 
 
@@ -20,7 +20,7 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_mgrs_tile
 @options_arguments.opt_start_time
 @options_arguments.opt_end_time
-@options_arguments.opt_collection
+@options_arguments.opt_source
 @options_arguments.opt_name
 @options_arguments.opt_description
 @options_arguments.opt_assets
@@ -35,7 +35,7 @@ def static_catalog(
     end_time: datetime,
     bounds: Optional[Bounds] = None,
     mgrs_tile: Optional[str] = None,
-    collection: str = "EarthSearch",
+    source: Sentinel2Source = Sentinel2Source(collection="EarthSearch"),
     name: Optional[str] = None,
     description: Optional[str] = None,
     assets: Optional[List[str]] = None,
@@ -50,7 +50,7 @@ def static_catalog(
         raise click.ClickException("--start-time and --end-time are mandatory")
     if all([bounds is None, mgrs_tile is None]):  # pragma: no cover
         raise click.ClickException("--bounds or --mgrs-tile are required")
-    catalog = Source(collection=collection).get_catalog()
+    catalog = source.get_catalog()
     if hasattr(catalog, "write_static_catalog"):
         with options_arguments.TqdmUpTo(
             unit="products", unit_scale=True, miniters=1, disable=opt_debug

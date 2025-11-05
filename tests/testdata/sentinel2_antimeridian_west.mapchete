@@ -4,9 +4,9 @@ input:
     format: Sentinel-2
     source:
       collection: sentinel2/full_products_antimeridian/sentinel-s2-l2a/collection.json
-      time:    
-        start: 2023-06-01
-        end: 2023-06-10
+    time:
+      start: 2023-06-01
+      end: 2023-06-10
 output:
   format: GTiff
   bands: 3

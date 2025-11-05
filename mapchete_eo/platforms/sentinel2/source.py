@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from typing import Optional, List, Callable, Dict, Any, Union
+import warnings
 
 from pydantic import model_validator
 
 from mapchete_eo.source import Source
 from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    DEPRECATED_ARCHIVES,
     DataArchive,
     MetadataArchive,
     KNOWN_SOURCES,
@@ -42,6 +44,13 @@ class Sentinel2Source(Source):
         collection = values.get("collection", None)
         if collection in KNOWN_SOURCES:
             values.update(KNOWN_SOURCES[collection])
+        elif collection in DEPRECATED_ARCHIVES:
+            warnings.warn(
+                f"deprecated archive '{collection}' found",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            values.update(DEPRECATED_ARCHIVES[collection])
         return values
 
     @model_validator(mode="after")

@@ -7,7 +7,6 @@ from mapchete import Bounds
 from mapchete.types import BoundsLike
 from pystac import Item, Catalog, Collection
 from mapchete.io.vector import bounds_intersect
-from mapchete.path import MPathLike
 from pystac.stac_io import StacIO
 from pystac_client import CollectionClient
 from shapely.geometry import shape
@@ -29,17 +28,20 @@ logger = logging.getLogger(__name__)
 StacIO.set_default(FSSpecStacIO)
 
 
-class STACStaticCatalog(StaticCollectionWriterMixin, CollectionSearcher):
+class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
     config_cls = StacStaticConfig
 
     def __init__(
         self,
-        baseurl: MPathLike,
+        collection: str,
         stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
     ):
-        self.client = CollectionClient.from_file(str(baseurl), stac_io=FSSpecStacIO())
-        # self.collections = [c.id for c in self.client.get_children()]
+        self.collection = collection
         self.stac_item_modifiers = stac_item_modifiers
+
+    @cached_property
+    def client(self) -> CollectionClient:
+        return CollectionClient.from_file(str(self.collection), stac_io=FSSpecStacIO())
 
     @cached_property
     def eo_bands(self) -> List[str]:
@@ -102,23 +104,25 @@ class STACStaticCatalog(StaticCollectionWriterMixin, CollectionSearcher):
             return eo_bands
         else:
             warnings.warn(
-                "Unable to read eo:bands definition from collections. "
+                "Unable to read eo:bands definition from collection. "
                 "Trying now to get information from assets ..."
             )
-
             # see if eo:bands can be found in properties
-            item = next(self.client.get_items())
-            eo_bands = item.properties.get("eo:bands")
-            if eo_bands:
-                return eo_bands
+            try:
+                item = next(self.client.get_items(recursive=True))
+                eo_bands = item.properties.get("eo:bands")
+                if eo_bands:
+                    return eo_bands
 
-            # look through the assets and collect eo:bands
-            out = {}
-            for asset in item.assets.values():
-                for eo_band in asset.extra_fields.get("eo:bands", []):
-                    out[eo_band["name"]] = eo_band
-            if out:
-                return [v for v in out.values()]
+                # look through the assets and collect eo:bands
+                out = {}
+                for asset in item.assets.values():
+                    for eo_band in asset.extra_fields.get("eo:bands", []):
+                        out[eo_band["name"]] = eo_band
+                if out:
+                    return [v for v in out.values()]
+            except StopIteration:
+                pass
 
             logger.debug("cannot find eo:bands definition")
             return []

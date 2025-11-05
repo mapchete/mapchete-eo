@@ -14,8 +14,8 @@ from mapchete.types import Bounds
 from mapchete_eo.cli import options_arguments
 from mapchete_eo.io.products import Slice, products_to_slices
 from mapchete_eo.platforms.sentinel2.product import S2Product
+from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.sort import TargetDateSort
-from mapchete_eo.source import Source
 from mapchete_eo.types import TimeRange
 
 
@@ -25,7 +25,7 @@ from mapchete_eo.types import TimeRange
 @options_arguments.opt_end_time
 @opt_bounds
 @options_arguments.opt_mgrs_tile
-@options_arguments.opt_collection
+@options_arguments.opt_source
 @click.option(
     "--format",
     type=click.Choice(["FlatGeobuf", "GeoJSON"]),
@@ -42,7 +42,7 @@ def s2_cat_results(
     end_time: datetime,
     bounds: Optional[Bounds] = None,
     mgrs_tile: Optional[str] = None,
-    collection: str = "EarthSearch",
+    source: Sentinel2Source = Sentinel2Source(collection="EarthSearch"),
     format: Literal["FlatGeobuf", "GeoJSON"] = "FlatGeobuf",
     by_slices: bool = False,
     add_index: bool = False,
@@ -55,7 +55,7 @@ def s2_cat_results(
         raise click.ClickException("--bounds or --mgrs-tile are required")
     slice_property_key = "s2:datastrip_id"
     with click_spinner.Spinner(disable=debug):
-        catalog = Source(collection=collection).get_catalog()
+        catalog = source.get_catalog()
         slices = products_to_slices(
             [
                 S2Product.from_stac_item(item)

@@ -7,6 +7,7 @@ from mapchete.path import MPath
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels
 from mapchete_eo.io.profiles import rio_profiles
 from mapchete_eo.platforms.sentinel2.config import SceneClassification
+from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.platforms.sentinel2.types import L2ABand, Resolution
 from mapchete_eo.time import to_datetime
 
@@ -60,8 +61,12 @@ def _str_to_l2a_bands(_, __, value):
 def _str_to_datetime(_, param, value):
     if value:
         return to_datetime(value)
-    else:
-        raise ValueError(f"--{param.name} is mandatory")
+    raise ValueError(f"--{param.name} is mandatory")
+
+
+def _str_to_source(_, __, value):
+    if value:
+        return Sentinel2Source(collection=value)
 
 
 arg_stac_item = click.argument("stac-item", type=click.Path(path_type=MPath))
@@ -161,11 +166,12 @@ opt_start_time = click.option(
 opt_end_time = click.option(
     "--end-time", type=click.STRING, callback=_str_to_datetime, help="End time"
 )
-opt_collection = click.option(
-    "--collection",
+opt_source = click.option(
+    "--source",
     type=click.STRING,
     default="EarthSearch",
-    help="Data collection to be queried.",
+    callback=_str_to_source,
+    help="Data source to be queried.",
 )
 opt_name = click.option("--name", type=click.STRING, help="Static catalog name.")
 opt_description = click.option(

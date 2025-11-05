@@ -10,7 +10,7 @@ from shapely.errors import GEOSException
 
 from mapchete_eo.exceptions import ItemGeometryError
 from mapchete_eo.search.base import CollectionSearcher
-from mapchete_eo.search import STACSearchCatalog, STACStaticCatalog
+from mapchete_eo.search import STACSearchCollection, STACStaticCollection
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
@@ -19,7 +19,7 @@ class Source(BaseModel):
     """All information required to consume EO products."""
 
     collection: str
-    catalog_crs: CRSLike = mapchete_eo_settings.default_catalog_crs
+    catalog_crs: Optional[CRSLike] = mapchete_eo_settings.default_catalog_crs
     query: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -30,11 +30,8 @@ class Source(BaseModel):
 
     @cached_property
     def catalog_type(self) -> Literal["search", "static"]:
-        try:
-            (MPath(self.collection) / "items?limit=1").read_json()
-            return "search"
-        except FileNotFoundError:
-            return "static"
+        # TODO: stupid test but probably sufficient
+        return "static" if self.collection.endswith(".json") else "search"
 
     def search(
         self,
@@ -65,10 +62,10 @@ class Source(BaseModel):
     def get_catalog(self, base_dir: Optional[MPathLike] = None) -> CollectionSearcher:
         match self.catalog_type:
             case "search":
-                return STACSearchCatalog.from_collection_url(self.collection)
+                return STACSearchCollection(self.collection)
             case "static":
-                return STACStaticCatalog(
-                    baseurl=MPath(self.collection).absolute_path(base_dir=base_dir)
+                return STACStaticCollection(
+                    collection=MPath(self.collection).absolute_path(base_dir=base_dir)
                 )
 
     def eo_bands(self, base_dir: Optional[MPathLike] = None) -> List[str]:

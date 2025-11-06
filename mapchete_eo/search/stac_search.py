@@ -5,7 +5,6 @@ from datetime import datetime
 from functools import cached_property
 from typing import Any, Dict, Generator, Iterator, List, Optional, Set, Union
 
-from cql2 import Expr
 from mapchete import Timer
 from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
@@ -184,7 +183,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         search_params = dict(
             self.default_search_params,
             datetime=f"{start}/{end}",
-            query=Expr(query).to_json() if query else None,
+            query=[query] if query else None,
             **kwargs,
         )
         if (

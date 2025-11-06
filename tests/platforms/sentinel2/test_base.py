@@ -484,3 +484,10 @@ def test_footprint_buffer(sentinel2_stac_mapchete, test_edge_tile):
         )
 
     assert buffered.mask.sum() > unbuffered.mask.sum()
+
+
+@pytest.mark.remote
+def test_multiple_sources(sentinel2_multiple_sources_mapchete):
+    mp = sentinel2_multiple_sources_mapchete.mp()
+    input_data = list(mp.config.inputs.values())[0]
+    assert input_data.products

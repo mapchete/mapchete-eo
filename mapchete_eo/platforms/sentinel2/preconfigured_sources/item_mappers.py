@@ -21,6 +21,7 @@ from mapchete_eo.search.s2_mgrs import S2Tile
 
 @maps_item_id(from_collections=["EarthSearch", "EarthSearch_legacy"])
 def earthsearch_id_mapper(item: Item) -> Item:
+    item.id = item.properties["s2:product_uri"].rstrip(".SAFE")
     return item
 
 
@@ -158,36 +159,3 @@ def cdse_s2metadata(item: Item) -> S2Metadata:
         path_mapper=CDSEPathMapper(MPath(item.assets["granule_metadata"].href)),
         processing_baseline_field="processing:version",
     )
-
-
-# from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper
-# from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_earthsearch import (
-#     EarthSearchPathMapper,
-# )
-# from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
-#     XMLMapper,
-# )
-# from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_sinergise import SinergisePathMapper
-
-
-# def default_path_mapper_guesser(
-#     url: str,
-#     **kwargs,
-# ) -> S2MetadataPathMapper:
-#     """Guess S2PathMapper based on URL.
-
-#     If a new path mapper is added in this module, it should also be added to this function
-#     in order to be detected.
-#     """
-#     if url.startswith(
-#         ("https://roda.sentinel-hub.com/sentinel-s2-l2a/", "s3://sentinel-s2-l2a/")
-#     ) or url.startswith(
-#         ("https://roda.sentinel-hub.com/sentinel-s2-l1c/", "s3://sentinel-s2-l1c/")
-#     ):
-#         return SinergisePathMapper(url, **kwargs)
-#     elif url.startswith(
-#         "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/"
-#     ):
-#         return EarthSearchPathMapper(url, **kwargs)
-#     else:
-#         return XMLMapper(url, **kwargs)

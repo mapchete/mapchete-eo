@@ -307,6 +307,15 @@ def sentinel2_stac_area_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def sentinel2_multiple_sources_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "sentinel2_multiple_sources.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def merge_rasters_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "merge_rasters.mapchete",

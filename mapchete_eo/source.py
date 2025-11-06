@@ -1,6 +1,7 @@
 from functools import cached_property
 from typing import Any, Dict, List, Literal, Optional, Generator, Union, Callable
 
+from mapchete.bounds import Bounds
 from mapchete.path import MPath
 from mapchete.types import BoundsLike, CRSLike, MPathLike
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -21,6 +22,8 @@ class Source(BaseModel):
     collection: str
     catalog_crs: Optional[CRSLike] = mapchete_eo_settings.default_catalog_crs
     query: Optional[str] = None
+    area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
+    bounds: Optional[BoundsLike] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -33,6 +36,26 @@ class Source(BaseModel):
         # TODO: stupid test but probably sufficient
         return "static" if self.collection.endswith(".json") else "search"
 
+    def _spatial_subset(
+        self,
+        bounds: Optional[BoundsLike] = None,
+        area: Optional[BaseGeometry] = None,
+    ) -> Dict[str, Any]:
+        """Combine bounds and area with bounds defined in Source if any."""
+        if self.bounds is None:
+            return {"bounds": bounds, "area": area}
+        self_bounds = Bounds.from_inp(self.bounds)
+        out = dict()
+        if bounds is not None:
+            bounds = Bounds.from_inp(bounds)
+            if bounds.intersects(self_bounds):
+                out["bounds"] = Bounds.from_inp(
+                    bounds.geometry.intersection(self_bounds.geometry)
+                )
+        if area is not None:
+            out["area"] = area.intersection(self_bounds.geometry)
+        return out
+
     def search(
         self,
         time: Union[TimeRange, List[TimeRange]],
@@ -42,10 +65,12 @@ class Source(BaseModel):
     ) -> Generator[Item, None, None]:
         for item in self.get_catalog(base_dir=base_dir).search(
             time=time,
-            bounds=bounds,
-            area=area,
             query=self.query,
             search_kwargs=dict(query=self.query) if self.query else None,
+            **self._spatial_subset(
+                bounds=bounds,
+                area=area,
+            ),
         ):
             yield self.apply_item_modifier_funcs(item)
 
@@ -77,4 +102,6 @@ class Source(BaseModel):
             raise DeprecationWarning(
                 "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
             )
+        elif "area" in values:  # pragma: no cover
+            raise NotImplementedError("please use 'bounds' as spatial subset for now")
         return values

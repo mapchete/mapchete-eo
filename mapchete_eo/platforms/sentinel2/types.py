@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Literal
 
 Resolution = Enum(
     "Resolution",
@@ -107,3 +108,7 @@ class SceneClassification(int, Enum):
     cloud_high_probability = 9
     thin_cirrus = 10
     snow = 11
+
+
+DataArchive = Literal["AWSCOG", "AWSJP2"]
+MetadataArchive = Literal["roda", "CDSE"]

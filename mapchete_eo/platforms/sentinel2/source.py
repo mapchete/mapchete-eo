@@ -4,13 +4,17 @@ from typing import Optional, List, Callable, Dict, Any, Union
 import warnings
 
 from pydantic import model_validator
+from pystac import Item
 
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.source import Source
 from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
     DEPRECATED_ARCHIVES,
+    KNOWN_SOURCES,
+)
+from mapchete_eo.platforms.sentinel2.types import (
     DataArchive,
     MetadataArchive,
-    KNOWN_SOURCES,
 )
 from mapchete_eo.platforms.sentinel2._mapper_registry import MAPPER_REGISTRIES
 
@@ -32,7 +36,7 @@ class Sentinel2Source(Source):
     def item_modifier_funcs(self) -> List[Callable]:
         return [
             func
-            for func in (self.get_id_mapper(), self.get_stac_metadata_mapper())
+            for func in (self.get_id_mapper(), *self.get_stac_metadata_mappers())
             if func is not None
         ]
 
@@ -57,26 +61,27 @@ class Sentinel2Source(Source):
     def verify_mappers(self) -> Sentinel2Source:
         # make sure all required mappers are registered
         self.get_id_mapper()
-        self.get_stac_metadata_mapper()
+        self.get_stac_metadata_mappers()
         self.get_s2metadata_mapper()
         return self
 
-    def get_id_mapper(self) -> Union[Callable, None]:
+    def get_id_mapper(self) -> Union[Callable[[Item], Item], None]:
         if self.catalog_type == "static":
             return None
-        for key in MAPPER_REGISTRIES["ID"]:
+        for key in MAPPER_REGISTRIES["ID"].keys():
             if self.collection == known_collection_to_url(key):
                 return MAPPER_REGISTRIES["ID"][key]
         else:
             raise ValueError(f"no ID mapper for {self.collection} found")
 
-    def get_stac_metadata_mapper(self) -> Union[Callable, None]:
+    def get_stac_metadata_mappers(self) -> List[Callable[[Item], Item]]:
         """Find mapper function.
 
         A mapper function must be provided if a custom data_archive was configured.
         """
+        mappers: List[Callable] = []
         if self.catalog_type == "static":
-            return None
+            return mappers
         for key in MAPPER_REGISTRIES["STAC metadata"]:
             if isinstance(key, tuple):
                 collection, data_archive = key
@@ -84,18 +89,16 @@ class Sentinel2Source(Source):
                     self.collection == known_collection_to_url(collection)
                     and data_archive == self.data_archive
                 ):
-                    return MAPPER_REGISTRIES["STAC metadata"][key]
-            else:
-                if self.collection == known_collection_to_url(key):
-                    return MAPPER_REGISTRIES["STAC metadata"][key]
-        else:
-            if self.data_archive is None:
-                return None
-            raise ValueError(
-                f"no STAC metadata mapper from {self.collection} to {self.data_archive} found"
-            )
+                    mappers.append(MAPPER_REGISTRIES["STAC metadata"][key])
+            elif self.collection == known_collection_to_url(key):
+                mappers.append(MAPPER_REGISTRIES["STAC metadata"][key])
+        if mappers or self.data_archive is None:
+            return mappers
+        raise ValueError(
+            f"no STAC metadata mapper from {self.collection} to {self.data_archive} found"
+        )
 
-    def get_s2metadata_mapper(self) -> Union[Callable, None]:
+    def get_s2metadata_mapper(self) -> Union[Callable[[Item], S2Metadata], None]:
         if self.catalog_type == "static" or self.metadata_archive is None:
             return None
         for key in MAPPER_REGISTRIES["S2Metadata"]:

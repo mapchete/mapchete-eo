@@ -529,6 +529,7 @@ class InputData(base.InputData):
 
                 # if item is new, add to list and yield
                 already_returned.add(item.id)
+                item.properties["mapchete_eo:source"] = source
                 yield item
         logger.debug("returned set of %s items", len(already_returned))
 

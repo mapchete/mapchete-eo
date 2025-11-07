@@ -10,6 +10,7 @@ from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers 
     CDSEPathMapper,
     EarthSearchPathMapper,
     EarthSearchC1PathMapper,
+    SinergisePathMapper,
 )
 from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.search.s2_mgrs import S2Tile
@@ -112,7 +113,7 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     s2tile = S2Tile.from_grid_code(item.properties["grid:code"])
     product_basepath = MPath(
         path_base_scheme.format(
-            utm_zone=s2tile.utm_zone,
+            utm_zone=int(s2tile.utm_zone),
             latitude_band=s2tile.latitude_band,
             grid_square=s2tile.grid_square,
             year=item.datetime.year,
@@ -152,10 +153,19 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
     return item
 
 
-@creates_s2metadata(from_collections=["CDSE"], to_metadata_archives=["roda"])
+@creates_s2metadata(from_collections=["CDSE"], to_metadata_archives=["CDSE"])
 def cdse_s2metadata(item: Item) -> S2Metadata:
     return S2Metadata.from_stac_item(
         item,
         path_mapper=CDSEPathMapper(MPath(item.assets["granule_metadata"].href)),
+        processing_baseline_field="processing:version",
+    )
+
+
+@creates_s2metadata(from_collections=["CDSE"], to_metadata_archives=["roda"])
+def cdse_to_roda_s2metadata(item: Item) -> S2Metadata:
+    return S2Metadata.from_stac_item(
+        item,
+        path_mapper=SinergisePathMapper(MPath(item.assets["granule_metadata"].href)),
         processing_baseline_field="processing:version",
     )

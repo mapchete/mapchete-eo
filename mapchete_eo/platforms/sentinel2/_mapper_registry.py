@@ -1,37 +1,22 @@
 from typing import List, Callable, Dict, Any, Optional
 
+from pystac import Item
+
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
+from mapchete_eo.platforms.sentinel2.types import DataArchive, MetadataArchive
+
 
 # decorators for mapper functions using the registry pattern #
 ##############################################################
-ID_MAPPER_REGISTRY: Dict[Any, Callable] = {}
-STAC_METADATA_MAPPER_REGISTRY: Dict[Any, Callable] = {}
-S2METADATA_MAPPER_REGISTRY: Dict[Any, Callable] = {}
+ID_MAPPER_REGISTRY: Dict[Any, Callable[[Item], Item]] = {}
+STAC_METADATA_MAPPER_REGISTRY: Dict[Any, Callable[[Item], Item]] = {}
+S2METADATA_MAPPER_REGISTRY: Dict[Any, Callable[[Item], S2Metadata]] = {}
 
-MAPPER_REGISTRIES = {
+MAPPER_REGISTRIES: Dict[str, Any] = {
     "ID": ID_MAPPER_REGISTRY,
     "STAC metadata": STAC_METADATA_MAPPER_REGISTRY,
     "S2Metadata": S2METADATA_MAPPER_REGISTRY,
 }
-
-
-# @dataclass
-# class Registries:
-#     id_mappers: Dict[Any, Callable] = field(default_factory=dict)
-#     stac_metadata_mappers: Dict[Any, Callable] = field(default_factory=dict)
-#     s2metadata_mappers: Dict[Any, Callable] = field(default_factory=dict)
-
-#     def register(
-#         self,
-#         mapper: Literal["ID", "STAC metadata", "S2Metadata"],
-#         key: Any,
-#         func: Callable,
-#     ) -> None:
-#         if key in registry:
-#             raise ValueError(f"{key} already registered in {registry}")
-#         registry[key] = func
-
-
-# MAPPER_REGISTRY = Registries()
 
 
 def _register_func(registry: Dict[str, Callable], key: Any, func: Callable):
@@ -56,7 +41,7 @@ def maps_item_id(from_collections: List[str]):
 
 
 def maps_stac_metadata(
-    from_collections: List[str], to_data_archives: Optional[List[str]] = None
+    from_collections: List[str], to_data_archives: Optional[List[DataArchive]] = None
 ):
     """
     Decorator registering STAC metadata mapper.
@@ -83,7 +68,9 @@ def maps_stac_metadata(
     return decorator
 
 
-def creates_s2metadata(from_collections: List[str], to_metadata_archives: List[str]):
+def creates_s2metadata(
+    from_collections: List[str], to_metadata_archives: List[MetadataArchive]
+):
     """
     Decorator registering S2Metadata creator.
     """

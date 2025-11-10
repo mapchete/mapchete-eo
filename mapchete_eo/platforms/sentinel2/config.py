@@ -110,7 +110,7 @@ class CacheConfig(BaseModel):
 
 class Sentinel2DriverConfig(BaseDriverConfig):
     format: str = "Sentinel-2"
-    time: Union[TimeRange, List[TimeRange]]
+    time: Union[TimeRange, List[Optional[TimeRange]]]
 
     # new
     source: List[Sentinel2Source] = [default_source]

@@ -53,7 +53,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     def search(
         self,
-        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
         query: Optional[str] = None,
@@ -62,8 +62,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         config = self.config_cls(**search_kwargs or {})
         if bounds:
             bounds = Bounds.from_inp(bounds)
-        if time is None:  # pragma: no cover
-            raise ValueError("time must be set")
         if area is None and bounds is None:  # pragma: no cover
             raise ValueError("either bounds or area have to be given")
 
@@ -158,9 +156,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> ItemSearch:
-        if time_range is None:  # pragma: no cover
-            raise ValueError("time_range not provided")
-
         if bounds is not None:
             if shape(bounds).is_empty:  # pragma: no cover
                 raise ValueError("bounds empty")
@@ -170,22 +165,29 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                 raise ValueError("area empty")
             kwargs.update(intersects=area)
 
-        start = (
-            time_range.start.date()
-            if isinstance(time_range.start, datetime)
-            else time_range.start
-        )
-        end = (
-            time_range.end.date()
-            if isinstance(time_range.end, datetime)
-            else time_range.end
-        )
-        search_params = dict(
-            self.default_search_params,
-            datetime=f"{start}/{end}",
-            query=[query] if query else None,
-            **kwargs,
-        )
+        if time_range:
+            start = (
+                time_range.start.date()
+                if isinstance(time_range.start, datetime)
+                else time_range.start
+            )
+            end = (
+                time_range.end.date()
+                if isinstance(time_range.end, datetime)
+                else time_range.end
+            )
+            search_params = dict(
+                self.default_search_params,
+                datetime=f"{start}/{end}",
+                query=[query] if query else None,
+                **kwargs,
+            )
+        else:
+            search_params = dict(
+                self.default_search_params,
+                query=[query] if query else None,
+                **kwargs,
+            )
         if (
             bounds is None
             and area is None

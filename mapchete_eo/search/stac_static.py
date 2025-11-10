@@ -53,7 +53,7 @@ class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     def search(
         self,
-        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
         query: Optional[str] = None,
@@ -67,7 +67,7 @@ class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     def _raw_search(
         self,
-        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
+        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
         area: Optional[BaseGeometry] = None,
     ) -> Generator[Item, None, None]:
         if area is not None and area.is_empty:

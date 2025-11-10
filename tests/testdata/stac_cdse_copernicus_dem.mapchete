@@ -1,13 +1,9 @@
-process: read_xarray.py
+process: read_xarray_dem.py
 input:
   inp:
     format: EOSTAC
-    level: L2A
-    time:
-      start: 2023-08-10
-      end: 2023-08-13
     source:
-      collection: sentinel2/full_products/sentinel-2-l2a/collection.json
+      collection: https://stac.dataspace.copernicus.eu/v1/collections/cop-dem-glo-30-dged-cog
 output:
   format: GTiff
   bands: 3

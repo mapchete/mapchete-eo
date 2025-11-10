@@ -5,7 +5,7 @@ Driver class for EOSTAC static STAC catalogs.
 from mapchete_eo import base
 
 METADATA: dict = {
-    "driver_name": "EOSTAC_DEV",
+    "driver_name": "EOSTAC",
     "data_type": None,
     "mode": "r",
     "file_extensions": [],

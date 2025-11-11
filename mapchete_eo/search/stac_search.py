@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
 from pystac import Item
 from pystac_client import Client, CollectionClient, ItemSearch
-from shapely.geometry import shape
+from shapely.geometry import shape, box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
@@ -73,7 +73,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                 search = self._search(
                     time_range=time_range,
                     bounds=bounds,
-                    area=area,
+                    area=box(*area.bounds),
                     query=query,
                     config=config,
                 )

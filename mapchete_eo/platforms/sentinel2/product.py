@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
-import pystac
 from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_from_array
 from mapchete.geometry import reproject_geometry, buffer_antimeridian_safe
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds, Grid, NodataVals
+from pystac import Item
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
@@ -55,11 +55,11 @@ logger = logging.getLogger(__name__)
 
 
 class Cache:
-    item: pystac.Item
+    item: Item
     config: CacheConfig
     path: MPath
 
-    def __init__(self, item: pystac.Item, config: CacheConfig):
+    def __init__(self, item: Item, config: CacheConfig):
         self.item = item
         self.config = config
         # TODO: maybe move this function here
@@ -148,14 +148,16 @@ class S2Product(EOProduct, EOProductProtocol):
 
     def __init__(
         self,
-        item: pystac.Item,
+        item: Item,
         metadata: Optional[S2Metadata] = None,
         cache_config: Optional[CacheConfig] = None,
+        metadata_mapper: Optional[Callable[[Item], S2Metadata]] = None,
     ):
         self.item_dict = item.to_dict()
         self.id = item.id
 
         self._metadata = metadata
+        self._metadata_mapper = metadata_mapper
         self._scl_cache = dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
@@ -166,7 +168,7 @@ class S2Product(EOProduct, EOProductProtocol):
     @classmethod
     def from_stac_item(
         self,
-        item: pystac.Item,
+        item: Item,
         cache_config: Optional[CacheConfig] = None,
         cache_all: bool = False,
         **kwargs,
@@ -185,9 +187,12 @@ class S2Product(EOProduct, EOProductProtocol):
     @property
     def metadata(self) -> S2Metadata:
         if not self._metadata:
-            self._metadata = S2Metadata.from_stac_item(
-                pystac.Item.from_dict(self.item_dict)
-            )
+            if self._metadata_mapper:
+                self._metadata = self._metadata_mapper(Item.from_dict(self.item_dict))
+            else:
+                self._metadata = S2Metadata.from_stac_item(
+                    Item.from_dict(self.item_dict)
+                )
         return self._metadata
 
     def __repr__(self):
@@ -693,7 +698,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return out_arr
 
 
-def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:
+def asset_name_to_l2a_band(item: Item, asset_name: str) -> L2ABand:
     asset = item.assets[asset_name]
     asset_path = MPath(asset.href)
     band_name = asset_path.name.split(".")[0]

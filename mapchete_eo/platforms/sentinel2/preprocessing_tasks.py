@@ -21,15 +21,12 @@ def parse_s2_product(
     source: Union[Sentinel2Source, None] = item.properties.pop(
         "mapchete_eo:source", None
     )
-    metadata = None
-    if source is not None:
-        mapper = source.get_s2metadata_mapper()
-        if mapper:
-            metadata = mapper(item)
-
     try:
         s2product = S2Product.from_stac_item(
-            item, cache_config=cache_config, cache_all=cache_all, metadata=metadata
+            item,
+            cache_config=cache_config,
+            cache_all=cache_all,
+            metadata_mapper=None if source is None else source.get_s2metadata_mapper(),
         )
     except CorruptedProductMetadata as exc:
         add_to_blacklist(item.get_self_href())

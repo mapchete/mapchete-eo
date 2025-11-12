@@ -53,7 +53,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     def search(
         self,
-        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
         query: Optional[str] = None,
@@ -69,11 +69,16 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
             return
 
         def _searches() -> Generator[ItemSearch, None, None]:
-            for time_range in time if isinstance(time, list) else [time]:
+            def _search_chunks(
+                time_range: Optional[TimeRange] = None,
+                bounds: Optional[BoundsLike] = None,
+                area: Optional[BaseGeometry] = None,
+                query: Optional[str] = None,
+            ):
                 search = self._search(
                     time_range=time_range,
                     bounds=bounds,
-                    area=box(*area.bounds),
+                    area=box(*area.bounds) if area else None,
                     query=query,
                     config=config,
                 )
@@ -109,6 +114,23 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                         )
                 else:
                     yield search
+
+            if time:
+                # search time range(s)
+                for time_range in time if isinstance(time, list) else [time]:
+                    yield from _search_chunks(
+                        time_range=time_range,
+                        bounds=bounds,
+                        area=area,
+                        query=query,
+                    )
+            else:
+                # don't apply temporal filter
+                yield from _search_chunks(
+                    bounds=bounds,
+                    area=area,
+                    query=query,
+                )
 
         for search in _searches():
             for item in search.items():

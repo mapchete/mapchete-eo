@@ -1,5 +1,6 @@
-import xarray as xr
 from mapchete.formats import available_input_formats
+import pytest
+import xarray as xr
 
 from mapchete_eo.product import eo_bands_to_band_locations
 
@@ -38,6 +39,8 @@ def test_preprocessing(stac_mapchete):
     assert tile_mp.open("inp").products
 
 
+@pytest.mark.remote
+@pytest.mark.use_cdse_test_env
 def test_stac_read_xarray_dem(stac_cdse_copernicus_dem_mapchete, test_tile):
     with stac_cdse_copernicus_dem_mapchete.process_mp(tile=test_tile).open(
         "inp"

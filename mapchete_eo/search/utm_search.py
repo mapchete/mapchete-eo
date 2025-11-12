@@ -48,7 +48,7 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
 
     def search(
         self,
-        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
         query: Optional[str] = None,
@@ -64,7 +64,7 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
 
     def _raw_search(
         self,
-        time: Optional[Union[TimeRange, List[Optional[TimeRange]]]] = None,
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
         config: UTMSearchConfig = UTMSearchConfig(),

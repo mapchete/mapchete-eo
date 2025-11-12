@@ -8,6 +8,7 @@ from mapchete_eo.platforms.sentinel2.config import CacheConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.product import add_to_blacklist
+from mapchete_eo.settings import mapchete_eo_settings
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ def parse_s2_product(
             cache_config=cache_config,
             cache_all=cache_all,
             metadata_mapper=None if source is None else source.get_s2metadata_mapper(),
+            item_modifier_funcs=None if source is None else source.item_modifier_funcs,
+            lazy_load_item=mapchete_eo_settings.lazy_load_stac_items,
         )
     except CorruptedProductMetadata as exc:
         add_to_blacklist(item.get_self_href())

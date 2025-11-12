@@ -142,7 +142,7 @@ class Cache:
 
 
 class S2Product(EOProduct, EOProductProtocol):
-    item_dict: dict
+    _item_dict: Optional[dict] = None
     cache: Optional[Cache] = None
     _scl_cache: Dict[GridProtocol, np.ndarray]
 
@@ -152,12 +152,19 @@ class S2Product(EOProduct, EOProductProtocol):
         metadata: Optional[S2Metadata] = None,
         cache_config: Optional[CacheConfig] = None,
         metadata_mapper: Optional[Callable[[Item], S2Metadata]] = None,
+        item_modifier_funcs: Optional[List[Callable[[Item], Item]]] = None,
+        lazy_load_item: bool = False,
     ):
-        self.item_dict = item.to_dict()
+        if lazy_load_item:
+            self._item_dict = None
+        else:
+            self._item_dict = item.to_dict()
+        self.item_href = item.self_href
         self.id = item.id
 
         self._metadata = metadata
         self._metadata_mapper = metadata_mapper
+        self._item_modifier_funcs = item_modifier_funcs
         self._scl_cache = dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
@@ -185,14 +192,24 @@ class S2Product(EOProduct, EOProductProtocol):
         return s2product
 
     @property
+    def item(self) -> Item:
+        if not self._item:
+            if self._item_dict:
+                self._item = Item.from_dict(self._item_dict)
+            else:
+                item = Item.from_file(self.item_href)
+                for modifier in self._item_modifier_funcs or []:
+                    item = modifier(item)
+                self._item = item
+        return self._item
+
+    @property
     def metadata(self) -> S2Metadata:
         if not self._metadata:
             if self._metadata_mapper:
-                self._metadata = self._metadata_mapper(Item.from_dict(self.item_dict))
+                self._metadata = self._metadata_mapper(self.item)
             else:
-                self._metadata = S2Metadata.from_stac_item(
-                    Item.from_dict(self.item_dict)
-                )
+                self._metadata = S2Metadata.from_stac_item(self.item)
         return self._metadata
 
     def __repr__(self):
@@ -202,6 +219,8 @@ class S2Product(EOProduct, EOProductProtocol):
         if self._metadata is not None:
             self._metadata.clear_cached_data()
             self._metadata = None
+        if self._item is not None:
+            self._item = None
         self._scl_cache = dict()
 
     def read_np_array(

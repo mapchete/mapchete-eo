@@ -10,7 +10,7 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete.types import Bounds, BoundsLike
 from pystac import Item
 from pystac_client import Client, CollectionClient, ItemSearch
-from shapely.geometry import shape
+from shapely.geometry import shape, box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
@@ -62,8 +62,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         config = self.config_cls(**search_kwargs or {})
         if bounds:
             bounds = Bounds.from_inp(bounds)
-        if time is None:  # pragma: no cover
-            raise ValueError("time must be set")
         if area is None and bounds is None:  # pragma: no cover
             raise ValueError("either bounds or area have to be given")
 
@@ -71,11 +69,16 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
             return
 
         def _searches() -> Generator[ItemSearch, None, None]:
-            for time_range in time if isinstance(time, list) else [time]:
+            def _search_chunks(
+                time_range: Optional[TimeRange] = None,
+                bounds: Optional[BoundsLike] = None,
+                area: Optional[BaseGeometry] = None,
+                query: Optional[str] = None,
+            ):
                 search = self._search(
                     time_range=time_range,
                     bounds=bounds,
-                    area=area,
+                    area=box(*area.bounds) if area else None,
                     query=query,
                     config=config,
                 )
@@ -111,6 +114,23 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                         )
                 else:
                     yield search
+
+            if time:
+                # search time range(s)
+                for time_range in time if isinstance(time, list) else [time]:
+                    yield from _search_chunks(
+                        time_range=time_range,
+                        bounds=bounds,
+                        area=area,
+                        query=query,
+                    )
+            else:
+                # don't apply temporal filter
+                yield from _search_chunks(
+                    bounds=bounds,
+                    area=area,
+                    query=query,
+                )
 
         for search in _searches():
             for item in search.items():
@@ -158,9 +178,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         config: StacSearchConfig = StacSearchConfig(),
         **kwargs,
     ) -> ItemSearch:
-        if time_range is None:  # pragma: no cover
-            raise ValueError("time_range not provided")
-
         if bounds is not None:
             if shape(bounds).is_empty:  # pragma: no cover
                 raise ValueError("bounds empty")
@@ -170,22 +187,29 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                 raise ValueError("area empty")
             kwargs.update(intersects=area)
 
-        start = (
-            time_range.start.date()
-            if isinstance(time_range.start, datetime)
-            else time_range.start
-        )
-        end = (
-            time_range.end.date()
-            if isinstance(time_range.end, datetime)
-            else time_range.end
-        )
-        search_params = dict(
-            self.default_search_params,
-            datetime=f"{start}/{end}",
-            query=[query] if query else None,
-            **kwargs,
-        )
+        if time_range:
+            start = (
+                time_range.start.date()
+                if isinstance(time_range.start, datetime)
+                else time_range.start
+            )
+            end = (
+                time_range.end.date()
+                if isinstance(time_range.end, datetime)
+                else time_range.end
+            )
+            search_params = dict(
+                self.default_search_params,
+                datetime=f"{start}/{end}",
+                query=[query] if query else None,
+                **kwargs,
+            )
+        else:
+            search_params = dict(
+                self.default_search_params,
+                query=[query] if query else None,
+                **kwargs,
+            )
         if (
             bounds is None
             and area is None

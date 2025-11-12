@@ -79,7 +79,12 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
         elif bounds is not None:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)
-        for time_range in time if isinstance(time, list) else [time]:
+
+        # Cleaner time list in case None present as time (undefined)
+        time_list: list[TimeRange] = (
+            [t for t in time if t is not None] if isinstance(time, list) else [time]
+        )
+        for time_range in time_list:
             start_time = (
                 time_range.start
                 if isinstance(time_range.start, datetime.date)

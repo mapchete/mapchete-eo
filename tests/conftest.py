@@ -172,6 +172,15 @@ def stac_mapchete(tmp_path, testdata_dir):
 
 
 @pytest.fixture
+def stac_cdse_copernicus_dem_mapchete(tmp_path, testdata_dir):
+    with ProcessFixture(
+        testdata_dir / "stac_cdse_copernicus_dem.mapchete",
+        output_tempdir=tmp_path,
+    ) as example:
+        yield example
+
+
+@pytest.fixture
 def eoxcloudless_8bit_dtype_scale_mapchete(tmp_path, testdata_dir):
     with ProcessFixture(
         testdata_dir / "eoxcloudless_8bit_dtype_scale.mapchete",

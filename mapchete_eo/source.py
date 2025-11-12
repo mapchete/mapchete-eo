@@ -58,7 +58,7 @@ class Source(BaseModel):
 
     def search(
         self,
-        time: Union[TimeRange, List[TimeRange]],
+        time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
         base_dir: Optional[MPathLike] = None,

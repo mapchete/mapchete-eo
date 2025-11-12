@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class BaseDriverConfig(BaseModel):
     format: str
     source: Sequence[Source]
-    time: Union[TimeRange, List[TimeRange]]
+    time: Optional[Union[TimeRange, List[TimeRange]]] = None
     cat_baseurl: Optional[str] = None
     cache: Optional[Any] = None
     footprint_buffer: float = 0
@@ -90,7 +90,7 @@ class EODataCube(base.InputTile):
 
     tile: BufferedTile
     eo_bands: dict
-    time: List[TimeRange]
+    time: Optional[List[TimeRange]]
     area: BaseGeometry
     area_pixelbuffer: int = 0
 
@@ -99,7 +99,7 @@ class EODataCube(base.InputTile):
         tile: BufferedTile,
         products: Optional[List[EOProductProtocol]],
         eo_bands: dict,
-        time: List[TimeRange],
+        time: Optional[List[TimeRange]] = None,
         input_key: Optional[str] = None,
         area: Optional[BaseGeometry] = None,
         **kwargs,
@@ -426,7 +426,7 @@ class InputData(base.InputData):
     default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig
-    time: Union[TimeRange, List[TimeRange]]
+    time: Optional[Union[TimeRange, List[TimeRange]]]
     area: BaseGeometry
     _products: Optional[IndexedFeatures] = None
 

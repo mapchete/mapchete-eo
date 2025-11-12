@@ -37,7 +37,13 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     @cached_property
     def eo_bands(self) -> List[str]:
-        return self._eo_bands()
+        item_assets = self.client.extra_fields.get("item_assets", {})
+        for v in item_assets.values():
+            if "eo:bands" in v and "data" in v.get("roles", []):
+                return ["eo:bands"]
+        else:  # pragma: no cover
+            logger.debug("cannot find eo:bands definition from collections")
+            return []
 
     @cached_property
     def id(self) -> str:
@@ -140,15 +146,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                     )
                     continue
                 yield item
-
-    def _eo_bands(self) -> List[str]:
-        item_assets = self.client.extra_fields.get("item_assets", {})
-        for v in item_assets.values():
-            if "eo:bands" in v and "data" in v.get("roles", []):
-                return ["eo:bands"]
-        else:  # pragma: no cover
-            logger.debug("cannot find eo:bands definition from collections")
-            return []
 
     @cached_property
     def default_search_params(self):

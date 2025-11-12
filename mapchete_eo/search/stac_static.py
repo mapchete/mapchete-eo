@@ -37,7 +37,33 @@ class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
     @cached_property
     def eo_bands(self) -> List[str]:
-        return self._eo_bands()
+        eo_bands = self.client.extra_fields.get("properties", {}).get("eo:bands")
+        if eo_bands:
+            return eo_bands
+        else:
+            warnings.warn(
+                "Unable to read eo:bands definition from collection. "
+                "Trying now to get information from assets ..."
+            )
+            # see if eo:bands can be found in properties
+            try:
+                item = next(self.client.get_items(recursive=True))
+                eo_bands = item.properties.get("eo:bands")
+                if eo_bands:
+                    return eo_bands
+
+                # look through the assets and collect eo:bands
+                out = {}
+                for asset in item.assets.values():
+                    for eo_band in asset.extra_fields.get("eo:bands", []):
+                        out[eo_band["name"]] = eo_band
+                if out:
+                    return [v for v in out.values()]
+            except StopIteration:
+                pass
+
+            logger.debug("cannot find eo:bands definition")
+            return []
 
     @cached_property
     def id(self) -> str:
@@ -89,35 +115,6 @@ class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
             ):
                 item.make_asset_hrefs_absolute()
                 yield item
-
-    def _eo_bands(self) -> List[str]:
-        eo_bands = self.client.extra_fields.get("properties", {}).get("eo:bands")
-        if eo_bands:
-            return eo_bands
-        else:
-            warnings.warn(
-                "Unable to read eo:bands definition from collection. "
-                "Trying now to get information from assets ..."
-            )
-            # see if eo:bands can be found in properties
-            try:
-                item = next(self.client.get_items(recursive=True))
-                eo_bands = item.properties.get("eo:bands")
-                if eo_bands:
-                    return eo_bands
-
-                # look through the assets and collect eo:bands
-                out = {}
-                for asset in item.assets.values():
-                    for eo_band in asset.extra_fields.get("eo:bands", []):
-                        out[eo_band["name"]] = eo_band
-                if out:
-                    return [v for v in out.values()]
-            except StopIteration:
-                pass
-
-            logger.debug("cannot find eo:bands definition")
-            return []
 
 
 def _all_intersecting_items(

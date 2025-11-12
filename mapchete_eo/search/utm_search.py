@@ -44,7 +44,25 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
 
     @cached_property
     def eo_bands(self) -> List[str]:  # pragma: no cover
-        return self._eo_bands()
+        for (
+            collection_properties
+        ) in UTMSearchConfig().sinergise_aws_collections.values():
+            if collection_properties["id"] == self.collection.split("/")[-1]:
+                collection = Collection.from_dict(
+                    collection_properties["path"].read_json()
+                )
+                if collection:
+                    summary = collection.summaries.to_dict()
+                    if "eo:bands" in summary:
+                        return summary["eo:bands"]
+                else:
+                    raise ValueError(f"cannot find collection {collection}")
+        else:
+            logger.debug(
+                "cannot find eo:bands definition from collection %s",
+                self.collection,
+            )
+            return []
 
     def search(
         self,
@@ -142,27 +160,6 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
                         )
                     elif area.intersects(shape(item.geometry)):
                         yield item
-
-    def _eo_bands(self) -> list:
-        for (
-            collection_properties
-        ) in UTMSearchConfig().sinergise_aws_collections.values():
-            if collection_properties["id"] == self.collection.split("/")[-1]:
-                collection = Collection.from_dict(
-                    collection_properties["path"].read_json()
-                )
-                if collection:
-                    summary = collection.summaries.to_dict()
-                    if "eo:bands" in summary:
-                        return summary["eo:bands"]
-                else:
-                    raise ValueError(f"cannot find collection {collection}")
-        else:
-            logger.debug(
-                "cannot find eo:bands definition from collection %s",
-                self.collection,
-            )
-            return []
 
     def get_collections(self):
         """

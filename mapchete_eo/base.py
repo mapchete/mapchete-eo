@@ -514,13 +514,16 @@ class InputData(base.InputData):
     def source_items(self) -> Generator[Item, None, None]:
         already_returned = set()
         for source in self.params.source:
+            area = reproject_geometry(
+                self.area,
+                src_crs=self.crs,
+                dst_crs=source.catalog_crs,
+            )
+            if area.is_empty:
+                continue
             for item in source.search(
                 time=self.time,
-                area=reproject_geometry(
-                    self.area,
-                    src_crs=self.crs,
-                    dst_crs=source.catalog_crs,
-                ),
+                area=area,
                 base_dir=self.conf_dir,
             ):
                 # if item was already found in previous source, skip

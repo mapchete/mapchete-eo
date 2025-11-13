@@ -631,7 +631,6 @@ class S2Product(EOProduct, EOProductProtocol):
 
     def get_property(self, name: str) -> Any:
         if name not in self._item_property_cache:
-            raise KeyError(name)
             self._item_property_cache[name] = get_item_property(self.item, name)
         return self._item_property_cache[name]
 

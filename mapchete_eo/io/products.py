@@ -175,9 +175,9 @@ class Slice:
         properties: Dict[str, Any] = {}
         for key in self.products[0].item.properties.keys():
             try:
-                self.properties[key] = self.get_property(key)
+                properties[key] = self.get_property(key)
             except ValueError:
-                self.properties[key] = None
+                properties[key] = None
         return properties
 
     @contextmanager

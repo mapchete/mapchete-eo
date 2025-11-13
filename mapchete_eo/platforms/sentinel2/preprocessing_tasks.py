@@ -4,6 +4,7 @@ from typing import Optional, Union
 import pystac
 
 from mapchete_eo.exceptions import CorruptedProductMetadata
+from mapchete_eo.io.items import get_item_property
 from mapchete_eo.platforms.sentinel2.config import CacheConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
 from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
@@ -30,6 +31,15 @@ def parse_s2_product(
             metadata_mapper=None if source is None else source.get_s2metadata_mapper(),
             item_modifier_funcs=None if source is None else source.item_modifier_funcs,
             lazy_load_item=mapchete_eo_settings.lazy_load_stac_items,
+            item_property_cache={
+                key: get_item_property(item, key)
+                for key in [
+                    "datetime",
+                    "eo:cloud_cover",
+                    "id",
+                    "s2:datastrip_id",
+                ]
+            },
         )
     except CorruptedProductMetadata as exc:
         add_to_blacklist(item.get_self_href())

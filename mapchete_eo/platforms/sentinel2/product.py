@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
@@ -17,6 +17,7 @@ from shapely.geometry import shape
 
 
 from mapchete_eo.array.buffer import buffer_array
+from mapchete_eo.io.items import get_item_property
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.brdf.correction import apply_correction
 from mapchete_eo.exceptions import (
@@ -145,6 +146,7 @@ class S2Product(EOProduct, EOProductProtocol):
     _item_dict: Optional[dict] = None
     cache: Optional[Cache] = None
     _scl_cache: Dict[GridProtocol, np.ndarray]
+    _item_property_cache: Dict[str, Any]
 
     def __init__(
         self,
@@ -154,6 +156,7 @@ class S2Product(EOProduct, EOProductProtocol):
         metadata_mapper: Optional[Callable[[Item], S2Metadata]] = None,
         item_modifier_funcs: Optional[List[Callable[[Item], Item]]] = None,
         lazy_load_item: bool = False,
+        item_property_cache: Optional[Dict[str, Any]] = None,
     ):
         if lazy_load_item:
             self._item_dict = None
@@ -166,6 +169,7 @@ class S2Product(EOProduct, EOProductProtocol):
         self._metadata_mapper = metadata_mapper
         self._item_modifier_funcs = item_modifier_funcs
         self._scl_cache = dict()
+        self._item_property_cache = item_property_cache or dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -221,6 +225,7 @@ class S2Product(EOProduct, EOProductProtocol):
             self._metadata = None
         if self._item is not None:
             self._item = None
+        self._item_property_cache = dict()
         self._scl_cache = dict()
 
     def read_np_array(
@@ -623,6 +628,12 @@ class S2Product(EOProduct, EOProductProtocol):
             crs=grid.crs,
             bounds=grid.bounds,
         )
+
+    def get_property(self, name: str) -> Any:
+        if name not in self._item_property_cache:
+            raise KeyError(name)
+            self._item_property_cache[name] = get_item_property(self.item, name)
+        return self._item_property_cache[name]
 
     def _apply_sentinel2_bandpass_adjustment(
         self, uncorrected: ma.MaskedArray, assets: List[str], computing_dtype=np.float32

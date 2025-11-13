@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 class EOProduct(EOProductProtocol):
     """Wrapper class around a Item which provides read functions."""
 
+    id: str
     default_dtype: DTypeLike = np.uint16
     _item: Optional[Item] = None
 
@@ -37,6 +38,7 @@ class EOProduct(EOProductProtocol):
         self.bounds = Bounds.from_inp(shape(self))
         self.crs = mapchete_eo_settings.default_catalog_crs
         self._item = None
+        self.id = item.id
 
     def __repr__(self):
         return f"<EOProduct product_id={self.item.id}>"

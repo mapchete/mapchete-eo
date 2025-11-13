@@ -5,10 +5,8 @@ This module holds all code required to sort products or slices.
 from typing import Callable, List, Optional
 
 from pydantic import BaseModel
-from pystac import Item
 
-from mapchete_eo.io.items import get_item_property
-from mapchete_eo.protocols import DateTimeProtocol
+from mapchete_eo.protocols import DateTimeProtocol, GetPropertyProtocol
 from mapchete_eo.time import timedelta, to_datetime
 from mapchete_eo.types import DateTimeLike
 
@@ -51,11 +49,11 @@ class TargetDateSort(SortMethodConfig):
 
 
 def sort_objects_by_cloud_cover(
-    objects: List[Item], reverse: bool = False
-) -> List[Item]:
+    objects: List[GetPropertyProtocol], reverse: bool = False
+) -> List[GetPropertyProtocol]:
     if len(objects) == 0:  # pragma: no cover
         return objects
-    objects.sort(key=lambda x: get_item_property(x, "eo:cloud_cover"), reverse=reverse)
+    objects.sort(key=lambda x: x.get_property("eo:cloud_cover"), reverse=reverse)
     return objects
 
 

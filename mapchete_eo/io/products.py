@@ -29,7 +29,6 @@ from mapchete_eo.exceptions import (
     EmptyStackException,
     NoSourceProducts,
 )
-from mapchete_eo.io.items import get_item_property
 from mapchete_eo.protocols import EOProductProtocol
 from mapchete_eo.sort import SortMethodConfig
 from mapchete_eo.types import MergeMethod
@@ -118,7 +117,8 @@ def products_to_xarray(
         coords = {
             slice_axis_name: list(
                 np.array(
-                    [product.item.datetime for product in products], dtype=np.datetime64
+                    [product.get_property("datetime") for product in products],
+                    dtype=np.datetime64,
                 )
             )
         }
@@ -132,7 +132,6 @@ class Slice:
     """Combine multiple products into one slice."""
 
     name: Any
-    properties: dict
     products: Sequence[EOProductProtocol]
     datetime: datetime
 
@@ -151,20 +150,12 @@ class Slice:
 
         # calculate mean datetime
         timestamps = [
-            product.item.datetime.timestamp()
+            product.get_property("datetime").timestamp()
             for product in self.products
-            if product.item.datetime
+            if product.get_property("datetime")
         ]
         mean_timestamp = sum(timestamps) / len(timestamps)
         self.datetime = datetime.fromtimestamp(mean_timestamp)
-
-        # generate combined properties
-        self.properties = {}
-        for key in self.products[0].item.properties.keys():
-            try:
-                self.properties[key] = self.get_property(key)
-            except ValueError:
-                self.properties[key] = None
 
     def __repr__(self) -> str:
         return f"<Slice {self.name} ({len(self.products)} products)>"
@@ -177,6 +168,17 @@ class Slice:
             )
 
         raise EmptySliceException
+
+    @property
+    def properties(self) -> Dict[str, Any]:
+        # generate combined properties
+        properties: Dict[str, Any] = {}
+        for key in self.products[0].item.properties.keys():
+            try:
+                self.properties[key] = self.get_property(key)
+            except ValueError:
+                self.properties[key] = None
+        return properties
 
     @contextmanager
     def cached(self) -> Generator[Slice, None, None]:
@@ -200,12 +202,9 @@ class Slice:
         ValueError is raised.
         """
         # if set of value hashes has a length of 1, all values are the same
-        values = [
-            get_hash(get_item_property(product.item, property=property))
-            for product in self.products
-        ]
+        values = [get_hash(product.get_property(property)) for product in self.products]
         if len(set(values)) == 1:
-            return get_item_property(self.products[0].item, property=property)
+            return self.products[0].get_property(property)
 
         raise ValueError(
             f"cannot get unique property {property} from products {self.products}"
@@ -238,7 +237,7 @@ def products_to_slices(
             grouped[product.get_property(group_by_property)].append(product)
         slices = [Slice(key, products) for key, products in grouped.items()]
     else:
-        slices = [Slice(product.item.id, [product]) for product in products]
+        slices = [Slice(product.id, [product]) for product in products]
 
     # also check if slices is even a list, otherwise it will raise an error
     if sort and slices:
@@ -268,9 +267,7 @@ def merge_products(
                 try:
                     yield product.read_np_array(**product_read_kwargs)
                 except (AssetKeyError, CorruptedProduct) as exc:
-                    logger.warning(
-                        "skip product %s because of %s", product.item.id, exc
-                    )
+                    logger.warning("skip product %s because of %s", product.id, exc)
         except StopIteration:
             return
 
@@ -288,7 +285,7 @@ def merge_products(
             out = product.read_np_array(**product_read_kwargs)
             break
         except (AssetKeyError, CorruptedProduct) as exc:
-            logger.warning("skip product %s because of %s", product.item.id, exc)
+            logger.warning("skip product %s because of %s", product.id, exc)
     else:
         # we cannot do anything here, as all products are broken
         raise CorruptedSlice("all products are broken here")

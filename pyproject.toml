@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
+    "cql2",
     "croniter",
     "lxml",
     "mapchete[complete]>=2025.10.0",
@@ -55,7 +56,7 @@ test = [
 eo = "mapchete_eo.cli:eo"
 
 [project.entry-points."mapchete.formats.drivers"]
-eostac_dev = "mapchete_eo.eostac"
+eostac = "mapchete_eo.eostac"
 sentinel2 = "mapchete_eo.platforms.sentinel2"
 
 [project.entry-points."mapchete.processes"]

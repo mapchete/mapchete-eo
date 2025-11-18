@@ -11,7 +11,7 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 
 
-class S2PathMapper(ABC):
+class S2MetadataPathMapper(ABC):
     """
     Abstract class to help mapping asset paths from metadata.xml to their
     locations of various data archives.

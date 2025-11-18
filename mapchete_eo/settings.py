@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     default_cache_location: MPathLike = MPath("s3://eox-mhub-cache/")
     default_catalog_crs: CRS = CRS.from_epsg(4326)
     blacklist: Optional[MPathLike] = None
+    lazy_load_stac_items: bool = True
 
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MAPCHETE_EO_")

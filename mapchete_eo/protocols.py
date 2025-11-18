@@ -15,6 +15,7 @@ from mapchete.io.raster import ReferencedRaster
 
 
 class EOProductProtocol(Protocol):
+    id: str
     bounds: Bounds
     crs: CRS
     __geo_interface__: Optional[Dict[str, Any]]
@@ -54,3 +55,7 @@ class EOProductProtocol(Protocol):
 
 class DateTimeProtocol(Protocol):
     datetime: DateTimeLike
+
+
+class GetPropertyProtocol(Protocol):
+    def get_property(self, property: str) -> Any: ...

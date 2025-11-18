@@ -5,7 +5,7 @@ from typing import Any, List, Literal, Optional, Set
 
 import numpy as np
 import numpy.ma as ma
-import pystac
+from pystac import Item
 import xarray as xr
 from mapchete import Timer
 from mapchete.io.raster import ReferencedRaster
@@ -26,15 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 class EOProduct(EOProductProtocol):
-    """Wrapper class around a pystac.Item which provides read functions."""
+    """Wrapper class around a Item which provides read functions."""
 
+    id: str
     default_dtype: DTypeLike = np.uint16
+    _item: Optional[Item] = None
 
-    def __init__(self, item: pystac.Item):
+    def __init__(self, item: Item):
         self.item_dict = item.to_dict()
         self.__geo_interface__ = self.item.geometry
         self.bounds = Bounds.from_inp(shape(self))
         self.crs = mapchete_eo_settings.default_catalog_crs
+        self._item = None
+        self.id = item.id
 
     def __repr__(self):
         return f"<EOProduct product_id={self.item.id}>"
@@ -43,11 +47,13 @@ class EOProduct(EOProductProtocol):
         pass
 
     @property
-    def item(self) -> pystac.Item:
-        return pystac.Item.from_dict(self.item_dict)
+    def item(self) -> Item:
+        if not self._item:
+            self._item = Item.from_dict(self.item_dict)
+        return self._item
 
     @classmethod
-    def from_stac_item(self, item: pystac.Item, **kwargs) -> EOProduct:
+    def from_stac_item(self, item: Item, **kwargs) -> EOProduct:
         return EOProduct(item)
 
     def get_mask(self) -> ReferencedRaster: ...
@@ -171,7 +177,7 @@ class EOProduct(EOProductProtocol):
 
 
 def eo_bands_to_band_locations(
-    item: pystac.Item,
+    item: Item,
     eo_bands: List[str],
     role: Literal["data", "reflectance", "visual"] = "data",
 ) -> List[BandLocation]:
@@ -182,7 +188,7 @@ def eo_bands_to_band_locations(
 
 
 def find_eo_band(
-    item: pystac.Item,
+    item: Item,
     eo_band_name: str,
     role: Literal["data", "reflectance", "visual"] = "data",
 ) -> BandLocation:

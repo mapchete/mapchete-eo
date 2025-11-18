@@ -6,6 +6,12 @@ import pytest
 from affine import Affine
 from mapchete.io.raster import ReferencedRaster
 
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    guess_s2metadata_from_item,
+    guess_s2metadata_from_metadata_xml,
+)
+
+
 try:
     from mapchete import Bounds, Grid
 except ImportError:
@@ -16,11 +22,13 @@ from rasterio.crs import CRS
 from shapely.geometry import shape
 
 from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
-from mapchete_eo.platforms.sentinel2.path_mappers import (
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
+    XMLMapper,
+)
+from mapchete_eo.platforms.sentinel2.preconfigured_sources.metadata_xml_mappers import (
     EarthSearchPathMapper,
     SinergisePathMapper,
-    XMLMapper,
 )
 from mapchete_eo.platforms.sentinel2.processing_baseline import BaselineVersion
 from mapchete_eo.platforms.sentinel2.types import (
@@ -472,7 +480,7 @@ def test_remote_metadata_viewing_incidence_angles(metadata: S2Metadata):
 
 def test_unavailable_metadata_xml():
     with pytest.raises(FileNotFoundError):
-        S2Metadata.from_metadata_xml("unavailable_metadata.xml")
+        guess_s2metadata_from_metadata_xml("unavailable_metadata.xml")
 
 
 @pytest.mark.remote
@@ -485,7 +493,7 @@ def test_unavailable_metadata_xml():
 )
 def test_from_stac_item(item_url):
     item = Item.from_file(item_url)
-    s2_metadata = S2Metadata.from_stac_item(item)
+    s2_metadata = guess_s2metadata_from_item(item)
     assert s2_metadata.processing_baseline.version == "04.00"
     if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
         "earthsearch:boa_offset_applied", False
@@ -519,7 +527,7 @@ def test_from_stac_item(item_url):
     ],
 )
 def test_from_stac_item_backwards(item):
-    s2_metadata = S2Metadata.from_stac_item(item)
+    s2_metadata = guess_s2metadata_from_item(item)
     assert s2_metadata.datastrip_id
     if item.properties.get("sentinel:boa_offset_applied", False) or item.properties.get(
         "earthsearch:boa_offset_applied", False
@@ -548,7 +556,7 @@ def test_from_stac_item_backwards(item):
 
 @pytest.mark.remote
 def test_from_stac_item_invalid(stac_item_invalid_pb0001):
-    S2Metadata.from_stac_item(stac_item_invalid_pb0001)
+    guess_s2metadata_from_item(stac_item_invalid_pb0001)
 
 
 def test_baseline_version():
@@ -579,14 +587,14 @@ def test_future_baseline_version():
 
 @pytest.mark.remote
 def test_product_empty_detector_footprints(product_empty_detector_footprints):
-    s2_product = S2Metadata.from_metadata_xml(product_empty_detector_footprints)
+    s2_product = guess_s2metadata_from_metadata_xml(product_empty_detector_footprints)
     with pytest.raises(AssetEmpty):
         s2_product.detector_footprints(L2ABand.B02)
 
 
 @pytest.mark.remote
 def test_product_missing_detector_footprints(product_missing_detector_footprints):
-    s2_product = S2Metadata.from_metadata_xml(product_missing_detector_footprints)
+    s2_product = guess_s2metadata_from_metadata_xml(product_missing_detector_footprints)
     with pytest.raises(AssetMissing):
         s2_product.detector_footprints(L2ABand.B02)
 
@@ -599,8 +607,8 @@ def test_product_missing_detector_footprints(product_missing_detector_footprints
     ],
 )
 def test_full_product_paths(item):
-    metadata = S2Metadata.from_stac_item(item)
-    for name, path in metadata.assets.items():
+    metadata = guess_s2metadata_from_item(item)
+    for path in metadata.assets.values():
         assert path.exists()
 
 
@@ -619,7 +627,7 @@ def test_full_product_paths(item):
     ],
 )
 def test_full_remote_product_paths(item):
-    metadata = S2Metadata.from_stac_item(item)
+    metadata = guess_s2metadata_from_item(item)
     for path in metadata.assets.values():
         assert path.exists()
 
@@ -627,4 +635,4 @@ def test_full_remote_product_paths(item):
 @pytest.mark.remote
 def test_broken_metadata_xml(s2_l2a_earthsearch_xml_remote_broken):
     with pytest.raises(CorruptedProductMetadata):
-        S2Metadata.from_metadata_xml(s2_l2a_earthsearch_xml_remote_broken)
+        guess_s2metadata_from_metadata_xml(s2_l2a_earthsearch_xml_remote_broken)

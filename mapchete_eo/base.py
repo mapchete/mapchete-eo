@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import warnings
 import logging
 from functools import cached_property
-from typing import Any, Callable, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Sequence, Type, Union, Dict, Generator
 
 import croniter
 from mapchete import Bounds
@@ -17,13 +18,13 @@ from mapchete.io.vector import IndexedFeatures
 from mapchete.path import MPath
 from mapchete.tile import BufferedTile
 from mapchete.types import MPathLike, NodataVal, NodataVals
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
+from pystac import Item
 from rasterio.enums import Resampling
 from rasterio.features import geometry_mask
 from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.archives.base import Archive
 from mapchete_eo.exceptions import CorruptedProductMetadata, PreprocessingNotFinished
 from mapchete_eo.io import (
     products_to_np_array,
@@ -31,9 +32,9 @@ from mapchete_eo.io import (
     read_levelled_cube_to_np_array,
     read_levelled_cube_to_xarray,
 )
+from mapchete_eo.source import Source
 from mapchete_eo.product import EOProduct
 from mapchete_eo.protocols import EOProductProtocol
-from mapchete_eo.search.stac_static import STACStaticCatalog
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.sort import SortMethodConfig, TargetDateSort
 from mapchete_eo.time import to_datetime
@@ -44,13 +45,39 @@ logger = logging.getLogger(__name__)
 
 class BaseDriverConfig(BaseModel):
     format: str
-    time: Union[TimeRange, List[TimeRange]]
+    source: Sequence[Source]
+    time: Optional[Union[TimeRange, List[TimeRange]]] = None
     cat_baseurl: Optional[str] = None
     cache: Optional[Any] = None
     footprint_buffer: float = 0
     area: Optional[Union[MPathLike, dict, type[BaseGeometry]]] = None
     preprocessing_tasks: bool = False
-    archive: Optional[Type[Archive]] = None
+    search_kwargs: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="before")
+    def to_list(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Expands source to list."""
+        for field in ["source"]:
+            value = values.get(field)
+            if value is not None and not isinstance(value, list):
+                values[field] = [value]
+        return values
+
+    @model_validator(mode="before")
+    def deprecate_cat_baseurl(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        cat_baseurl = values.get("cat_baseurl")
+        if cat_baseurl:  # pragma: no cover
+            warnings.warn(
+                "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source", []):
+                raise ValueError(
+                    "deprecated cat_baseurl field found alongside sources."
+                )
+            values["source"] = [dict(collection=cat_baseurl, catalog_type="static")]
+        return values
 
 
 class EODataCube(base.InputTile):
@@ -63,7 +90,7 @@ class EODataCube(base.InputTile):
 
     tile: BufferedTile
     eo_bands: dict
-    time: List[TimeRange]
+    time: Optional[List[TimeRange]]
     area: BaseGeometry
     area_pixelbuffer: int = 0
 
@@ -72,7 +99,7 @@ class EODataCube(base.InputTile):
         tile: BufferedTile,
         products: Optional[List[EOProductProtocol]],
         eo_bands: dict,
-        time: List[TimeRange],
+        time: Optional[List[TimeRange]] = None,
         input_key: Optional[str] = None,
         area: Optional[BaseGeometry] = None,
         **kwargs,
@@ -314,27 +341,25 @@ class EODataCube(base.InputTile):
         """
         Return a filtered list of input products.
         """
-        if any([start_time, end_time, timestamps]):
+        if any([start_time, end_time, timestamps]):  # pragma: no cover
             raise NotImplementedError("time subsets are not yet implemented")
 
         if time_pattern:
             # filter products by time pattern
-            tz = tzutc()
-            coord_time = [
-                t.replace(tzinfo=tz)
-                for t in croniter.croniter_range(
-                    to_datetime(self.start_time),
-                    to_datetime(self.end_time),
-                    time_pattern,
-                )
-            ]
             return [
                 product
                 for product in self.products
-                if product.item.datetime in coord_time
+                if product.item.datetime
+                in [
+                    t.replace(tzinfo=tzutc())
+                    for t in croniter.croniter_range(
+                        to_datetime(self.start_time),
+                        to_datetime(self.end_time),
+                        time_pattern,
+                    )
+                ]
             ]
-        else:
-            return self.products
+        return self.products
 
     def is_empty(self) -> bool:  # pragma: no cover
         """
@@ -358,16 +383,16 @@ class EODataCube(base.InputTile):
             nodatavals = self.default_read_nodataval
         merge_products_by = merge_products_by or self.default_read_merge_products_by
         merge_method = merge_method or self.default_read_merge_method
-        if resampling is None:
-            resampling = self.default_read_resampling
-        else:
-            resampling = (
-                resampling
-                if isinstance(resampling, Resampling)
-                else Resampling[resampling]
-            )
         return dict(
-            resampling=resampling,
+            resampling=(
+                self.default_read_resampling
+                if resampling is None
+                else (
+                    resampling
+                    if isinstance(resampling, Resampling)
+                    else Resampling[resampling]
+                )
+            ),
             nodatavals=nodatavals,
             merge_products_by=merge_products_by,
             merge_method=merge_method,
@@ -401,8 +426,7 @@ class InputData(base.InputData):
     default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig
-    archive: Archive
-    time: Union[TimeRange, List[TimeRange]]
+    time: Optional[Union[TimeRange, List[TimeRange]]]
     area: BaseGeometry
     _products: Optional[IndexedFeatures] = None
 
@@ -421,6 +445,8 @@ class InputData(base.InputData):
         self.standalone = standalone
 
         self.params = self.driver_config_model(**input_params["abstract"])
+        self.conf_dir = input_params.get("conf_dir")
+
         # we have to make sure, the cache path is absolute
         # not quite fond of this solution
         if self.params.cache:
@@ -429,14 +455,18 @@ class InputData(base.InputData):
             ).absolute_path(base_dir=input_params.get("conf_dir"))
         self.area = self._init_area(input_params)
         self.time = self.params.time
+
+        self.eo_bands = [
+            eo_band
+            for source in self.params.source
+            for eo_band in source.eo_bands(base_dir=self.conf_dir)
+        ]
+
         if self.readonly:  # pragma: no cover
             return
-
-        self.set_archive(base_dir=input_params["conf_dir"])
-
         # don't use preprocessing tasks for Sentinel-2 products:
         if self.params.preprocessing_tasks or self.params.cache is not None:
-            for item in self.archive.items():
+            for item in self.source_items():
                 self.add_preprocessing_task(
                     self.default_preprocessing_task,
                     fargs=(item,),
@@ -455,7 +485,7 @@ class InputData(base.InputData):
                     self.default_preprocessing_task(
                         item, cache_config=self.params.cache, cache_all=True
                     )
-                    for item in self.archive.items()
+                    for item in self.source_items()
                 ]
             )
 
@@ -481,20 +511,30 @@ class InputData(base.InputData):
             )
         return process_area
 
-    def set_archive(self, base_dir: MPath):
-        # this only works with some static archive:
-        if self.params.cat_baseurl:
-            self.archive = Archive(
-                catalog=STACStaticCatalog(
-                    baseurl=MPath(self.params.cat_baseurl).absolute_path(
-                        base_dir=base_dir
-                    ),
-                ),
-                area=self.bbox(mapchete_eo_settings.default_catalog_crs),
-                time=self.time,
+    def source_items(self) -> Generator[Item, None, None]:
+        already_returned = set()
+        for source in self.params.source:
+            area = reproject_geometry(
+                self.area,
+                src_crs=self.crs,
+                dst_crs=source.catalog_crs,
             )
-        else:
-            raise NotImplementedError()
+            if area.is_empty:
+                continue
+            for item in source.search(
+                time=self.time,
+                area=area,
+                base_dir=self.conf_dir,
+            ):
+                # if item was already found in previous source, skip
+                if item.id in already_returned:
+                    continue
+
+                # if item is new, add to list and yield
+                already_returned.add(item.id)
+                item.properties["mapchete_eo:source"] = source
+                yield item
+        logger.debug("returned set of %s items", len(already_returned))
 
     def bbox(self, out_crs: Optional[str] = None) -> BaseGeometry:
         """Return data bounding box."""
@@ -517,7 +557,7 @@ class InputData(base.InputData):
             return self._products
 
         # TODO: copied it from mapchete_satellite, not yet sure which use case this is
-        elif self.standalone:
+        elif self.standalone:  # pragma: no cover
             raise NotImplementedError()
 
         # if preprocessing tasks are ready, index them for further use
@@ -525,7 +565,7 @@ class InputData(base.InputData):
             return IndexedFeatures(
                 [
                     self.get_preprocessing_task_result(item.id)
-                    for item in self.archive.items()
+                    for item in self.source_items()
                     if not isinstance(item, CorruptedProductMetadata)
                 ],
                 crs=self.crs,
@@ -557,7 +597,7 @@ class InputData(base.InputData):
         return self.input_tile_cls(
             tile,
             products=tile_products,
-            eo_bands=self.archive.catalog.eo_bands,
+            eo_bands=self.eo_bands,
             time=self.time,
             # passing on the input key is essential so dependent preprocessing tasks can be found!
             input_key=self.input_key,

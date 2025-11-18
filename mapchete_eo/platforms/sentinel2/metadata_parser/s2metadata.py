@@ -6,14 +6,12 @@ sun angles, quality masks, etc.
 from __future__ import annotations
 
 import logging
-import warnings
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from xml.etree.ElementTree import Element, ParseError
 
 import numpy as np
 import numpy.ma as ma
-from pydantic import BaseModel
 import pystac
 from affine import Affine
 from fiona.transform import transform_geom
@@ -33,9 +31,17 @@ from tilematrix import Shape
 
 from mapchete_eo.exceptions import AssetEmpty, AssetMissing, CorruptedProductMetadata
 from mapchete_eo.io import open_xml, read_mask_as_raster
-from mapchete_eo.platforms.sentinel2.path_mappers import default_path_mapper_guesser
-from mapchete_eo.platforms.sentinel2.path_mappers.base import S2PathMapper
-from mapchete_eo.platforms.sentinel2.path_mappers.metadata_xml import XMLMapper
+from mapchete_eo.io.items import get_item_property
+from mapchete_eo.io.path import asset_mpath
+from mapchete_eo.platforms.sentinel2.metadata_parser.models import (
+    ViewingIncidenceAngles,
+    SunAngleData,
+    SunAnglesData,
+)
+from mapchete_eo.platforms.sentinel2.metadata_parser.base import S2MetadataPathMapper
+from mapchete_eo.platforms.sentinel2.metadata_parser.default_path_mapper import (
+    XMLMapper,
+)
 from mapchete_eo.platforms.sentinel2.processing_baseline import ProcessingBaseline
 from mapchete_eo.platforms.sentinel2.types import (
     BandQI,
@@ -59,77 +65,12 @@ def open_granule_metadata_xml(metadata_xml: MPath) -> Element:
         raise CorruptedProductMetadata(exc)
 
 
-def s2metadata_from_stac_item(
-    item: pystac.Item,
-    metadata_assets: List[str] = ["metadata", "granule_metadata"],
-    boa_offset_fields: List[str] = [
-        "sentinel:boa_offset_applied",
-        "sentinel2:boa_offset_applied",
-        "earthsearch:boa_offset_applied",
-    ],
-    processing_baseline_fields: List[str] = [
-        "s2:processing_baseline",
-        "sentinel:processing_baseline",
-        "sentinel2:processing_baseline",
-        "processing:version",
-    ],
-    **kwargs,
-) -> S2Metadata:
-    """Custom code to initialize S2Metadata from a STAC item.
-
-    Depending on from which catalog the STAC item comes, this function should correctly
-    set all custom flags such as BOA offsets or pass on the correct path to the metadata XML
-    using the proper asset name.
-    """
-    metadata_assets = metadata_assets
-    for metadata_asset in metadata_assets:
-        if metadata_asset in item.assets:
-            metadata_path = MPath(item.assets[metadata_asset].href)
-            break
-    else:  # pragma: no cover
-        raise KeyError(
-            f"could not find path to metadata XML file in assets: {', '.join(item.assets.keys())}"
-        )
-
-    def _determine_offset():
-        for field in boa_offset_fields:
-            if item.properties.get(field):
-                return True
-
-        return False
-
-    boa_offset_applied = _determine_offset()
-
-    if metadata_path.is_remote() or metadata_path.is_absolute():
-        metadata_xml = metadata_path
-    else:
-        metadata_xml = MPath(item.self_href).parent / metadata_path
-    for processing_baseline_field in processing_baseline_fields:
-        try:
-            processing_baseline = item.properties[processing_baseline_field]
-            break
-        except KeyError:
-            pass
-    else:  # pragma: no cover
-        raise KeyError(
-            f"could not find processing baseline version in item properties: {item.properties}"
-        )
-    return S2Metadata.from_metadata_xml(
-        metadata_xml=metadata_xml,
-        processing_baseline=processing_baseline,
-        boa_offset_applied=boa_offset_applied,
-        **kwargs,
-    )
-
-
 class S2Metadata:
     metadata_xml: MPath
-    path_mapper: S2PathMapper
+    path_mapper: S2MetadataPathMapper
     processing_baseline: ProcessingBaseline
     boa_offset_applied: bool = False
     _cached_xml_root: Optional[Element] = None
-    path_mapper_guesser: Callable = default_path_mapper_guesser
-    from_stac_item_constructor: Callable = s2metadata_from_stac_item
     crs: CRS
     bounds: Bounds
     footprint: Union[Polygon, MultiPolygon]
@@ -138,7 +79,7 @@ class S2Metadata:
     def __init__(
         self,
         metadata_xml: MPath,
-        path_mapper: S2PathMapper,
+        path_mapper: S2MetadataPathMapper,
         xml_root: Optional[Element] = None,
         boa_offset_applied: bool = False,
         **kwargs,
@@ -186,19 +127,15 @@ class S2Metadata:
     def from_metadata_xml(
         cls,
         metadata_xml: Union[str, MPath],
+        path_mapper: Optional[S2MetadataPathMapper] = None,
         processing_baseline: Optional[str] = None,
-        path_mapper: Optional[S2PathMapper] = None,
         **kwargs,
     ) -> S2Metadata:
         metadata_xml = MPath.from_inp(metadata_xml, **kwargs)
         xml_root = open_granule_metadata_xml(metadata_xml)
+
         if path_mapper is None:
-            # guess correct path mapper
-            path_mapper = cls.path_mapper_guesser(
-                metadata_xml,
-                xml_root=xml_root,
-                **kwargs,
-            )
+            path_mapper = XMLMapper(metadata_xml=metadata_xml, xml_root=xml_root)
 
         # use processing baseline version from argument if available
         if processing_baseline:
@@ -217,9 +154,38 @@ class S2Metadata:
             metadata_xml, path_mapper=path_mapper, xml_root=xml_root, **kwargs
         )
 
-    @classmethod
-    def from_stac_item(cls, item: pystac.Item, **kwargs) -> S2Metadata:
-        return cls.from_stac_item_constructor(item, **kwargs)
+    @staticmethod
+    def from_stac_item(
+        item: pystac.Item,
+        metadata_xml_asset_name: Tuple[str, ...] = ("metadata", "granule_metadata"),
+        boa_offset_field: Union[str, Tuple[str, ...]] = (
+            "earthsearch:boa_offset_applied"
+        ),
+        processing_baseline_field: Union[str, Tuple[str, ...]] = (
+            "s2:processing_baseline",
+            "sentinel2:processing_baseline",
+            "processing:version",
+        ),
+        **kwargs,
+    ) -> S2Metadata:
+        # try to find path to metadata.xml
+        metadata_xml_path = asset_mpath(item, metadata_xml_asset_name)
+        # make path absolute
+        if not (metadata_xml_path.is_remote() or metadata_xml_path.is_absolute()):
+            metadata_xml_path = MPath(item.self_href).parent / metadata_xml_path
+
+        # try to find information on processing baseline version
+        processing_baseline = get_item_property(item, processing_baseline_field)
+
+        # see if boa_offset_applied flag is available
+        boa_offset_applied = get_item_property(item, boa_offset_field, default=False)
+
+        return S2Metadata.from_metadata_xml(
+            metadata_xml=metadata_xml_path,
+            processing_baseline=processing_baseline,
+            boa_offset_applied=boa_offset_applied,
+            **kwargs,
+        )
 
     @property
     def xml_root(self):
@@ -270,13 +236,13 @@ class S2Metadata:
         for product_qi_mask in ProductQI:
             if product_qi_mask == ProductQI.classification:
                 out[product_qi_mask.name] = self.path_mapper.product_qi_mask(
-                    product_qi_mask
+                    qi_mask=product_qi_mask
                 )
             else:
                 for resolution in ProductQIMaskResolution:
                     out[f"{product_qi_mask.name}-{resolution.name}"] = (
                         self.path_mapper.product_qi_mask(
-                            product_qi_mask, resolution=resolution
+                            qi_mask=product_qi_mask, resolution=resolution
                         )
                     )
 
@@ -585,65 +551,6 @@ class S2Metadata:
             "mean viewing incidence angles for %s bands generated in %s", len(bands), tt
         )
         return mean
-
-
-class SunAngleData(BaseModel):
-    model_config = dict(arbitrary_types_allowed=True)
-    raster: ReferencedRaster
-    mean: float
-
-
-class SunAnglesData(BaseModel):
-    azimuth: SunAngleData
-    zenith: SunAngleData
-
-    def get_angle(self, angle: SunAngle) -> SunAngleData:
-        if angle == SunAngle.azimuth:
-            return self.azimuth
-        elif angle == SunAngle.zenith:
-            return self.zenith
-        else:
-            raise KeyError(f"unknown angle: {angle}")
-
-
-class ViewingIncidenceAngle(BaseModel):
-    model_config = dict(arbitrary_types_allowed=True)
-    detectors: Dict[int, ReferencedRaster]
-    mean: float
-
-    def merge_detectors(
-        self, fill_edges: bool = True, smoothing_iterations: int = 3
-    ) -> ReferencedRaster:
-        if not self.detectors:
-            raise CorruptedProductMetadata("no viewing incidence angles available")
-        sample = next(iter(self.detectors.values()))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            merged = np.nanmean(
-                np.stack([raster.data for raster in self.detectors.values()]), axis=0
-            )
-        if fill_edges:
-            merged = fillnodata(
-                ma.masked_invalid(merged), smoothing_iterations=smoothing_iterations
-            )
-        return ReferencedRaster.from_array_like(
-            array_like=ma.masked_invalid(merged),
-            transform=sample.transform,
-            crs=sample.crs,
-        )
-
-
-class ViewingIncidenceAngles(BaseModel):
-    azimuth: ViewingIncidenceAngle
-    zenith: ViewingIncidenceAngle
-
-    def get_angle(self, angle: ViewAngle) -> ViewingIncidenceAngle:
-        if angle == ViewAngle.azimuth:
-            return self.azimuth
-        elif angle == ViewAngle.zenith:
-            return self.zenith
-        else:
-            raise KeyError(f"unknown angle: {angle}")
 
 
 def _get_grids(root: Element, crs: CRS) -> Dict[Resolution, Grid]:

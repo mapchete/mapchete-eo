@@ -2,11 +2,10 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    level: L2A
     time:
       start: 2022-04-01
       end: 2022-04-03
-    max_cloud_cover: 20
+    query: "eo:cloud_cover<=20"
 output:
   format: GTiff
   bands: 3

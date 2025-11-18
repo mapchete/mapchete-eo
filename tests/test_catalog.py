@@ -1,34 +1,33 @@
-import pystac_client
+from pystac_client import Client
 import rasterio
 from mapchete.io import fs_from_path, path_exists
 from mapchete.io.raster import rasterio_open
 from mapchete.path import MPath
 from shapely import box
 
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A, AWSSearchCatalogS2L2A
 from mapchete_eo.platforms.sentinel2 import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import Resolution
-from mapchete_eo.search import STACStaticCatalog
+from mapchete_eo.search import STACStaticCollection
 from mapchete_eo.types import TimeRange
 
 
 def test_pf_sr_items(pf_sr_stac_collection):
-    catalog = STACStaticCatalog(pf_sr_stac_collection)
+    catalog = STACStaticCollection(pf_sr_stac_collection)
     assert len(list(catalog.search())) > 0
 
 
 def test_pf_sr_eo_bands(pf_sr_stac_collection):
-    catalog = STACStaticCatalog(pf_sr_stac_collection)
+    catalog = STACStaticCollection(pf_sr_stac_collection)
     assert len(catalog.eo_bands) > 0
 
 
 def test_pf_qa_items(pf_qa_stac_collection):
-    catalog = STACStaticCatalog(pf_qa_stac_collection)
+    catalog = STACStaticCollection(pf_qa_stac_collection)
     assert len(list(catalog.search())) > 0
 
 
 def test_pf_qa_eo_bands(pf_qa_stac_collection):
-    catalog = STACStaticCatalog(pf_qa_stac_collection)
+    catalog = STACStaticCollection(pf_qa_stac_collection)
     assert len(catalog.eo_bands) > 0
 
 
@@ -38,7 +37,7 @@ def test_write_static_catalog(static_catalog_small, tmp_path):
         time=TimeRange(start="2023-08-10", end="2023-08-11"),
         area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
-    cat = pystac_client.Client.from_file(str(output_path))
+    cat = Client.from_file(str(output_path))
     collections = list(cat.get_children())
     assert len(collections) == 1
     collection = collections[0]
@@ -52,7 +51,7 @@ def test_write_static_catalog_copy_assets(static_catalog_small, tmp_path):
         time=TimeRange(start="2023-08-10", end="2023-08-11"),
         area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
-    cat = pystac_client.Client.from_file(str(output_path))
+    cat = Client.from_file(str(output_path))
     collections = list(cat.get_children())
     assert len(collections) == 1
     collection = collections[0]
@@ -73,7 +72,7 @@ def test_write_static_catalog_copy_assets_relative_output_path(static_catalog_sm
             time=TimeRange(start="2023-08-10", end="2023-08-11"),
             area=box(15.71762, 46.22546, 15.78400, 46.27169),
         )
-        cat = pystac_client.Client.from_file(str(output_path))
+        cat = Client.from_file(str(output_path))
         collections = list(cat.get_children())
         assert len(collections) == 1
         collection = collections[0]
@@ -100,7 +99,7 @@ def test_write_static_catalog_convert_assets(static_catalog_small, tmp_path):
         time=TimeRange(start="2023-08-10", end="2023-08-11"),
         area=box(15.71762, 46.22546, 15.78400, 46.27169),
     )
-    cat = pystac_client.Client.from_file(str(output_path))
+    cat = Client.from_file(str(output_path))
     collections = list(cat.get_children())
     assert len(collections) == 1
     collection = collections[0]
@@ -138,73 +137,8 @@ def test_write_static_catalog_metadata_assets(static_catalog_small, tmp_path):
 
 
 def test_static_catalog_cloud_percent(s2_stac_collection):
-    all_products = list(STACStaticCatalog(s2_stac_collection).search())
+    all_products = list(STACStaticCollection(s2_stac_collection).search())
     filtered_products = list(
-        STACStaticCatalog(s2_stac_collection).search(
-            search_kwargs=dict(max_cloud_cover=20)
-        )
-    )
-    assert len(all_products) > len(filtered_products)
-
-
-def test_earthsearch_catalog_cloud_percent():
-    all_products = list(
-        EarthSearchV1S2L2A(
-            collections=["sentinel-2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-        )
-    )
-    filtered_products = list(
-        EarthSearchV1S2L2A(
-            collections=["sentinel-2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-            search_kwargs=dict(max_cloud_cover=20),
-        )
-    )
-    assert len(all_products) > len(filtered_products)
-
-
-def test_earthsearch_catalog_chunked_search():
-    all_products = list(
-        EarthSearchV1S2L2A(
-            collections=["sentinel-2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-        )
-    )
-    chunked_products = list(
-        EarthSearchV1S2L2A(
-            collections=["sentinel-2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-            search_kwargs=dict(catalog_chunk_threshold=2),
-        )
-    )
-    assert len(all_products) == len(chunked_products)
-
-
-def test_awssearch_catalog_cloud_percent():
-    all_products = list(
-        AWSSearchCatalogS2L2A(
-            collections=["sentinel-s2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-        )
-    )
-    filtered_products = list(
-        AWSSearchCatalogS2L2A(
-            collections=["sentinel-s2-l2a"],
-        ).search(
-            time=TimeRange(start="2022-04-01", end="2022-04-03"),
-            bounds=[16.3916015625, 48.69140625, 16.41357421875, 48.71337890625],
-            search_kwargs=dict(max_cloud_cover=20),
-        )
+        STACStaticCollection(s2_stac_collection).search(query="eo:cloud_cover<=20")
     )
     assert len(all_products) > len(filtered_products)

@@ -1,0 +1,15 @@
+process: read_xarray_dem.py
+input:
+  inp:
+    format: EOSTAC
+    source:
+      collection: https://stac.dataspace.copernicus.eu/v1/collections/cop-dem-glo-30-dged-cog
+output:
+  format: GTiff
+  bands: 3
+  path: stac
+  dtype: uint16
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+bounds: [16, 46, 16.1, 46.1]

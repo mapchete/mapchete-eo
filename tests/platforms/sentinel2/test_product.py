@@ -7,6 +7,7 @@ from mapchete.io.raster import ReferencedRaster
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 
+
 try:
     from mapchete import Bounds
 except ImportError:
@@ -378,7 +379,7 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
     scl = product.read_scl(grid=tile).data
     available_scl_classes = [SceneClassification(i) for i in np.unique(scl)]
     # for each available class, activate/deactivate BRDF correction and compare with rest of image
-    uncorrected = product.read_np_array(assets=assets, grid=tile)
+    uncorrected = product.read_np_array(assets=assets, grid=tile)[0]
     for scl_class in available_scl_classes:
         corrected = product.read_np_array(
             assets=assets,
@@ -393,19 +394,17 @@ def test_read_brdf_scl_classes(s2_stac_item_half_footprint):
                     )
                 ],
             ),
-        )
+        )[0]
         scl_class_mask = np.where(scl == scl_class.value, True, False)
-        for corrected_band, uncorrected_band in zip(corrected, uncorrected):
-            # there should be some pixels not affected by correction
-            assert np.where(corrected_band == uncorrected_band, True, False).any()
-            # make sure pixel were not corrected for SCL class
-            assert (
-                uncorrected_band[scl_class_mask] == corrected_band[scl_class_mask]
-            ).all()
-            # make sure all other pixels were corrected
-            assert (
-                uncorrected_band[~scl_class_mask] != corrected_band[~scl_class_mask]
-            ).all()
+
+        # there should be some pixels not affected by correction
+        assert np.where(corrected == uncorrected, True, False).any()
+
+        # make sure pixel were not corrected for SCL class
+        assert (uncorrected[scl_class_mask] == corrected[scl_class_mask]).all()
+
+        # make sure all other pixels were corrected
+        assert (uncorrected[~scl_class_mask] != corrected[~scl_class_mask]).all()
 
 
 def test_read_brdf_scl_classes_inversed(s2_stac_item_half_footprint):
@@ -698,8 +697,8 @@ def test_read_levelled_cube_broken_slice(stac_item_missing_detector_footprints):
 )
 def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     assets = [asset]
-    cog_product = S2Product(s2_stac_item)
-    jp2_product = S2Product(s2_stac_item_jp2)
+    cog_product = S2Product.from_stac_item(s2_stac_item)
+    jp2_product = S2Product.from_stac_item(s2_stac_item_jp2)
     tile = _get_product_tile(cog_product)
 
     # (1) read array from COG archive where offset was already applied by the provider
@@ -720,13 +719,16 @@ def test_read_apply_offset(asset, s2_stac_item, s2_stac_item_jp2):
     assert (jp2_unapplied - 1000 == cog).all()
 
 
+@pytest.mark.skip(
+    reason="CDSE metadata file does not exist anymore: s3://eodata/Sentinel-2/MSI/L2A/2023/08/10/S2B_MSIL2A_20230810T094549_N0509_R079_T33TWM_20230810T130104.SAFE/GRANULE/L2A_T33TWM_A033567_20230810T095651/MTD_TL.xml"
+)
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
 def test_read_apply_offset_cdse(s2_stac_item, s2_stac_item_cdse_jp2):
     cog_assets = ["coastal"]
     jp2_cdse_assets = ["B01_60m"]
-    cog_product = S2Product(s2_stac_item)
-    jp2_product = S2Product(s2_stac_item_cdse_jp2)
+    cog_product = S2Product.from_stac_item(s2_stac_item)
+    jp2_product = S2Product.from_stac_item(s2_stac_item_cdse_jp2)
     tile = _get_product_tile(cog_product)
 
     # (1) read array from COG archive where offset was already applied by the provider

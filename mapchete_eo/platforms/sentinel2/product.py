@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import numpy.ma as ma
-import pystac
 from mapchete.io.raster import ReferencedRaster, read_raster_window, resample_from_array
-from mapchete.geometry import reproject_geometry
+from mapchete.geometry import reproject_geometry, buffer_antimeridian_safe
 from mapchete.path import MPath
 from mapchete.protocols import GridProtocol
 from mapchete.types import Bounds, Grid, NodataVals
+from pystac import Item
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
 
 from mapchete_eo.array.buffer import buffer_array
+from mapchete_eo.io.items import get_item_property
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.brdf.correction import apply_correction
 from mapchete_eo.exceptions import (
@@ -27,7 +28,6 @@ from mapchete_eo.exceptions import (
     EmptyFootprintException,
     EmptyProductException,
 )
-from mapchete_eo.geometry import buffer_antimeridian_safe
 from mapchete_eo.io.assets import get_assets, read_mask_as_raster
 from mapchete_eo.io.path import asset_mpath, get_product_cache_path
 from mapchete_eo.io.profiles import COGDeflateProfile
@@ -41,7 +41,7 @@ from mapchete_eo.platforms.sentinel2.config import (
     CacheConfig,
     MaskConfig,
 )
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     L2ABand,
@@ -56,11 +56,11 @@ logger = logging.getLogger(__name__)
 
 
 class Cache:
-    item: pystac.Item
+    item: Item
     config: CacheConfig
     path: MPath
 
-    def __init__(self, item: pystac.Item, config: CacheConfig):
+    def __init__(self, item: Item, config: CacheConfig):
         self.item = item
         self.config = config
         # TODO: maybe move this function here
@@ -143,21 +143,33 @@ class Cache:
 
 
 class S2Product(EOProduct, EOProductProtocol):
-    item_dict: dict
+    _item_dict: Optional[dict] = None
     cache: Optional[Cache] = None
     _scl_cache: Dict[GridProtocol, np.ndarray]
+    _item_property_cache: Dict[str, Any]
 
     def __init__(
         self,
-        item: pystac.Item,
+        item: Item,
         metadata: Optional[S2Metadata] = None,
         cache_config: Optional[CacheConfig] = None,
+        metadata_mapper: Optional[Callable[[Item], S2Metadata]] = None,
+        item_modifier_funcs: Optional[List[Callable[[Item], Item]]] = None,
+        lazy_load_item: bool = False,
+        item_property_cache: Optional[Dict[str, Any]] = None,
     ):
-        self.item_dict = item.to_dict()
+        if lazy_load_item:
+            self._item_dict = None
+        else:
+            self._item_dict = item.to_dict()
+        self.item_href = item.self_href
         self.id = item.id
 
         self._metadata = metadata
+        self._metadata_mapper = metadata_mapper
+        self._item_modifier_funcs = item_modifier_funcs
         self._scl_cache = dict()
+        self._item_property_cache = item_property_cache or dict()
         self.cache = Cache(item, cache_config) if cache_config else None
 
         self.__geo_interface__ = item.geometry
@@ -167,12 +179,12 @@ class S2Product(EOProduct, EOProductProtocol):
     @classmethod
     def from_stac_item(
         self,
-        item: pystac.Item,
+        item: Item,
         cache_config: Optional[CacheConfig] = None,
         cache_all: bool = False,
         **kwargs,
     ) -> S2Product:
-        s2product = S2Product(item, cache_config=cache_config)
+        s2product = S2Product(item, cache_config=cache_config, **kwargs)
 
         if cache_all:
             # cache assets if configured
@@ -184,11 +196,24 @@ class S2Product(EOProduct, EOProductProtocol):
         return s2product
 
     @property
+    def item(self) -> Item:
+        if not self._item:
+            if self._item_dict:
+                self._item = Item.from_dict(self._item_dict)
+            else:
+                item = Item.from_file(self.item_href)
+                for modifier in self._item_modifier_funcs or []:
+                    item = modifier(item)
+                self._item = item
+        return self._item
+
+    @property
     def metadata(self) -> S2Metadata:
         if not self._metadata:
-            self._metadata = S2Metadata.from_stac_item(
-                pystac.Item.from_dict(self.item_dict)
-            )
+            if self._metadata_mapper:
+                self._metadata = self._metadata_mapper(self.item)
+            else:
+                self._metadata = S2Metadata.from_stac_item(self.item)
         return self._metadata
 
     def __repr__(self):
@@ -198,6 +223,9 @@ class S2Product(EOProduct, EOProductProtocol):
         if self._metadata is not None:
             self._metadata.clear_cached_data()
             self._metadata = None
+        if self._item is not None:
+            self._item = None
+        self._item_property_cache = dict()
         self._scl_cache = dict()
 
     def read_np_array(
@@ -362,7 +390,23 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return cloud probability mask."""
-        logger.debug("read cloud probability mask for %s", str(self))
+        if "cloud" in self.item.assets:
+            logger.debug("read cloud probability mask for %s from asset", str(self))
+            return read_mask_as_raster(
+                path=asset_mpath(item=self.item, asset="cloud"),
+                dst_grid=(
+                    self.metadata.grid(grid)
+                    if isinstance(grid, Resolution)
+                    else Grid.from_obj(grid)
+                ),
+                resampling=resampling,
+                rasterize_value_func=lambda feature: True,
+                masked=False,
+                cached_read=cached_read,
+            )
+        logger.debug(
+            "read cloud probability mask for %s from metadata archive", str(self)
+        )
         return self.metadata.cloud_probability(
             dst_grid=grid,
             resampling=resampling,
@@ -378,7 +422,23 @@ class S2Product(EOProduct, EOProductProtocol):
         cached_read: bool = False,
     ) -> ReferencedRaster:
         """Return classification snow and ice mask."""
-        logger.debug("read snow probability mask for %s", str(self))
+        if "snow" in self.item.assets:
+            logger.debug("read snow probability mask for %s from asset", str(self))
+            return read_mask_as_raster(
+                path=asset_mpath(item=self.item, asset="cloud"),
+                dst_grid=(
+                    self.metadata.grid(grid)
+                    if isinstance(grid, Resolution)
+                    else Grid.from_obj(grid)
+                ),
+                resampling=resampling,
+                rasterize_value_func=lambda feature: True,
+                masked=False,
+                cached_read=cached_read,
+            )
+        logger.debug(
+            "read snow probability mask for %s from metadata archive", str(self)
+        )
         return self.metadata.snow_probability(
             dst_grid=grid,
             resampling=resampling,
@@ -569,6 +629,11 @@ class S2Product(EOProduct, EOProductProtocol):
             bounds=grid.bounds,
         )
 
+    def get_property(self, name: str) -> Any:
+        if name not in self._item_property_cache:
+            self._item_property_cache[name] = get_item_property(self.item, name)
+        return self._item_property_cache[name]
+
     def _apply_sentinel2_bandpass_adjustment(
         self, uncorrected: ma.MaskedArray, assets: List[str], computing_dtype=np.float32
     ) -> ma.MaskedArray:
@@ -662,7 +727,7 @@ class S2Product(EOProduct, EOProductProtocol):
         return out_arr
 
 
-def asset_name_to_l2a_band(item: pystac.Item, asset_name: str) -> L2ABand:
+def asset_name_to_l2a_band(item: Item, asset_name: str) -> L2ABand:
     asset = item.assets[asset_name]
     asset_path = MPath(asset.href)
     band_name = asset_path.name.split(".")[0]

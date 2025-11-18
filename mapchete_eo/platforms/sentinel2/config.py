@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
+import warnings
 
 from mapchete.path import MPathLike
-from pydantic import (
-    BaseModel,
-    ValidationError,
-    field_validator,
-)
+from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
 from mapchete_eo.base import BaseDriverConfig
 from mapchete_eo.io.path import ProductPathGenerationMethod
-from mapchete_eo.platforms.sentinel2.archives import ArchiveClsFromString, AWSL2ACOGv1
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
+from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
+    KNOWN_SOURCES,
+    DEPRECATED_ARCHIVES,
+)
+from mapchete_eo.platforms.sentinel2.source import Sentinel2Source
 from mapchete_eo.platforms.sentinel2.types import (
     CloudType,
     ProductQIMaskResolution,
@@ -21,6 +22,9 @@ from mapchete_eo.platforms.sentinel2.types import (
 )
 from mapchete_eo.search.config import StacSearchConfig
 from mapchete_eo.types import TimeRange
+
+
+default_source = Sentinel2Source.model_validate(KNOWN_SOURCES["EarthSearch"])
 
 
 class BRDFModelConfig(BaseModel):
@@ -47,7 +51,7 @@ class BRDFSCLClassConfig(BRDFModelConfig):
                 out.append(value)
             elif isinstance(value, str):
                 out.append(SceneClassification[value])
-            else:
+            else:  # pragma: no cover
                 raise ValidationError("value must be mappable to SceneClassification")
         return out
 
@@ -107,16 +111,72 @@ class CacheConfig(BaseModel):
 class Sentinel2DriverConfig(BaseDriverConfig):
     format: str = "Sentinel-2"
     time: Union[TimeRange, List[TimeRange]]
-    archive: ArchiveClsFromString = AWSL2ACOGv1
-    cat_baseurl: Optional[MPathLike] = None
+
+    # new
+    source: List[Sentinel2Source] = [default_source]
+
+    # deprecated
+    # for backwards compatibility, archive should be converted to
+    # catalog & data_archive
+    # archive: ArchiveClsFromString = AWSL2ACOGv1
+    # cat_baseurl: Optional[MPathLike] = None
     search_index: Optional[MPathLike] = None
-    max_cloud_cover: float = 100.0
+
+    # custom params
     stac_config: StacSearchConfig = StacSearchConfig()
     first_granule_only: bool = False
     utm_zone: Optional[int] = None
     with_scl: bool = False
     brdf: Optional[BRDFConfig] = None
     cache: Optional[CacheConfig] = None
+
+    @model_validator(mode="before")
+    def deprecated_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        archive = values.pop("archive", None)
+        if archive:
+            warnings.warn(
+                "'archive' will be deprecated soon. Please use 'source'.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source") is None:
+                values["source"] = DEPRECATED_ARCHIVES[archive]
+
+        cat_baseurl = values.pop("cat_baseurl", None)
+        if cat_baseurl:  # pragma: no cover
+            warnings.warn(
+                "'cat_baseurl' will be deprecated soon. Please use 'catalog_type=static' in the source.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            if values.get("source", []):
+                raise ValueError(
+                    "deprecated cat_baseurl field found alongside sources."
+                )
+            values["source"] = [dict(collection=cat_baseurl, catalog_type="static")]
+
+        # add default source if necessary
+        sources = values.get("source", [])
+        if not sources:
+            values["source"] = [default_source.model_dump(exclude_none=True)]
+
+        max_cloud_cover = values.pop("max_cloud_cover", None)
+        if max_cloud_cover:  # pragma: no cover
+            warnings.warn(
+                "'max_cloud_cover' will be deprecated soon. Please use 'eo:cloud_cover<=...' in the source 'query' field.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            updated_sources = []
+            for source in values.get("source", []):
+                if source.get("query") is not None:
+                    raise ValueError(
+                        f"deprecated max_cloud_cover is set but also a query field is given in {source}"
+                    )
+                source["query"] = f"eo:cloud_cover<={max_cloud_cover}"
+                updated_sources.append(source)
+            values["source"] = updated_sources
+        return values
 
 
 class MaskConfig(BaseModel):
@@ -160,7 +220,7 @@ class MaskConfig(BaseModel):
                 out.append(value)
             elif isinstance(value, str):
                 out.append(SceneClassification[value])
-            else:
+            else:  # pragma: no cover
                 raise ValidationError("value must be mappable to SceneClassification")
         return out
 
@@ -175,7 +235,7 @@ class MaskConfig(BaseModel):
         elif isinstance(config, dict):
             return MaskConfig(**config)
 
-        else:
+        else:  # pragma: no cover
             raise TypeError(
                 f"mask configuration should either be a dictionary or a MaskConfig object, not {config}"
             )

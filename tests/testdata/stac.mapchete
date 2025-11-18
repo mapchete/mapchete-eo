@@ -1,13 +1,13 @@
 process: read_xarray.py
 input:
   inp:
-    format: EOSTAC_DEV
+    format: EOSTAC
     level: L2A
     time:
       start: 2023-08-10
       end: 2023-08-13
-    cat_baseurl: sentinel2/full_products/catalog.json
-    with_cloudmasks: true
+    source:
+      collection: sentinel2/full_products/sentinel-2-l2a/collection.json
 output:
   format: GTiff
   bands: 3

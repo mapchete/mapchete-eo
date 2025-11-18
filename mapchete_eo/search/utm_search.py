@@ -1,7 +1,7 @@
 import datetime
 from functools import cached_property
 import logging
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
+from typing import Any, Dict, Generator, List, Optional, Set, Union
 
 from mapchete.io.vector import fiona_open
 from mapchete.path import MPath, MPathLike
@@ -15,8 +15,8 @@ from shapely.geometry.base import BaseGeometry
 from mapchete_eo.exceptions import ItemGeometryError
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import (
-    CatalogSearcher,
-    StaticCatalogWriterMixin,
+    CollectionSearcher,
+    StaticCollectionWriterMixin,
     filter_items,
 )
 from mapchete_eo.search.config import UTMSearchConfig
@@ -28,7 +28,7 @@ from mapchete_eo.types import TimeRange
 logger = logging.getLogger(__name__)
 
 
-class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
+class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
     endpoint: str
     id: str
     day_subdir_schema: str
@@ -42,36 +42,41 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
     )
     config_cls = UTMSearchConfig
 
-    def __init__(
-        self,
-        endpoint: Optional[MPathLike] = None,
-        collections: List[str] = [],
-        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
-    ):
-        self.endpoint = endpoint or self.endpoint
-        if len(collections) == 0:  # pragma: no cover
-            raise ValueError("no collections provided")
-        self.collections = collections
-        self.stac_item_modifiers = stac_item_modifiers
-
     @cached_property
     def eo_bands(self) -> List[str]:  # pragma: no cover
-        return self._eo_bands()
+        for (
+            collection_properties
+        ) in UTMSearchConfig().sinergise_aws_collections.values():
+            if collection_properties["id"] == self.collection.split("/")[-1]:
+                collection = Collection.from_dict(
+                    collection_properties["path"].read_json()
+                )
+                if collection:
+                    summary = collection.summaries.to_dict()
+                    if "eo:bands" in summary:
+                        return summary["eo:bands"]
+                else:
+                    raise ValueError(f"cannot find collection {collection}")
+        else:
+            logger.debug(
+                "cannot find eo:bands definition from collection %s",
+                self.collection,
+            )
+            return []
 
     def search(
         self,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[BoundsLike] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]:
-        config = self.config_cls(**search_kwargs or {})
-        if bounds:
-            bounds = Bounds.from_inp(bounds)
-
         for item in filter_items(
-            self._raw_search(time=time, bounds=bounds, area=area),
-            max_cloud_cover=config.max_cloud_cover,
+            self._raw_search(
+                time=time, bounds=Bounds.from_inp(bounds) if bounds else None, area=area
+            ),
+            query=query,
         ):
             yield item
 
@@ -92,7 +97,12 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         elif bounds is not None:
             bounds = Bounds.from_inp(bounds)
             area = shape(bounds)
-        for time_range in time if isinstance(time, list) else [time]:
+
+        # Cleaner time list in case None present as time (undefined)
+        time_list: list[TimeRange] = (
+            [t for t in time if t is not None] if isinstance(time, list) else [time]
+        )
+        for time_range in time_list:
             start_time = (
                 time_range.start
                 if isinstance(time_range.start, datetime.date)
@@ -151,28 +161,6 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
                     elif area.intersects(shape(item.geometry)):
                         yield item
 
-    def _eo_bands(self) -> list:
-        for collection_name in self.collections:
-            for (
-                collection_properties
-            ) in UTMSearchConfig().sinergise_aws_collections.values():
-                if collection_properties["id"] == collection_name:
-                    collection = Collection.from_dict(
-                        collection_properties["path"].read_json()
-                    )
-                    if collection:
-                        summary = collection.summaries.to_dict()
-                        if "eo:bands" in summary:
-                            return summary["eo:bands"]
-                    else:
-                        raise ValueError(f"cannot find collection {collection}")
-        else:
-            logger.debug(
-                "cannot find eo:bands definition from collections %s",
-                self.collections,
-            )
-            return []
-
     def get_collections(self):
         """
         yeild transformed collection from:
@@ -182,9 +170,8 @@ class UTMSearchCatalog(StaticCatalogWriterMixin, CatalogSearcher):
         """
         for collection_properties in self.config.sinergise_aws_collections.values():
             collection = Collection.from_dict(collection_properties["path"].read_json())
-            for collection_name in self.collections:
-                if collection_name == collection.id:
-                    yield collection
+            if self.collection.split("/")[-1] == collection.id:
+                yield collection
 
 
 def items_from_static_index(

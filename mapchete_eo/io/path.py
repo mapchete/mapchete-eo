@@ -3,7 +3,7 @@ import logging
 from contextlib import contextmanager
 from enum import Enum
 from tempfile import TemporaryDirectory
-from typing import Generator
+from typing import Generator, Tuple, Union
 from xml.etree.ElementTree import Element, fromstring
 
 import fsspec
@@ -126,19 +126,30 @@ def cached_path(path: MPath, active: bool = True) -> Generator[MPath, None, None
 
 def asset_mpath(
     item: pystac.Item,
-    asset: str,
+    asset: Union[str, Tuple[str, ...]],
     fs: fsspec.AbstractFileSystem = None,
     absolute_path: bool = True,
 ) -> MPath:
     """Return MPath instance with asset href."""
 
-    try:
+    def _asset_mpath(
+        item: pystac.Item,
+        asset: str,
+        fs: fsspec.AbstractFileSystem = None,
+        absolute_path: bool = True,
+    ) -> MPath:
         asset_path = MPath(item.assets[asset].href, fs=fs)
-    except KeyError:
+        if absolute_path and not asset_path.is_absolute():
+            return MPath(item.get_self_href(), fs=fs).parent / asset_path
+        else:
+            return asset_path
+
+    for single_asset in asset if isinstance(asset, tuple) else (asset,):
+        try:
+            return _asset_mpath(item, single_asset, fs=fs, absolute_path=absolute_path)
+        except KeyError:
+            pass
+    else:
         raise AssetKeyError(
             f"{item.id} no asset named '{asset}' found in assets: {', '.join(item.assets.keys())}"
         )
-    if absolute_path and not asset_path.is_absolute():
-        return MPath(item.get_self_href(), fs=fs).parent / asset_path
-    else:
-        return asset_path

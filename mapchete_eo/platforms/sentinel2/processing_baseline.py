@@ -152,6 +152,9 @@ class ProcessingBaseline:
         self.band_mask_types = self.item_mapping.band_mask_types
         self.band_mask_extension = self.item_mapping.band_mask_extension
 
+    def __repr__(self) -> str:
+        return f"<ProcessingBaseline version={self.version}>"
+
     @staticmethod
     def from_version(version: Union[BaselineVersion, str]) -> "ProcessingBaseline":
         if isinstance(version, BaselineVersion):

@@ -4,7 +4,6 @@ from mapchete.io import rasterio_open
 from pytest_lazyfixture import lazy_fixture
 
 from mapchete_eo.cli import eo
-from mapchete_eo.known_catalogs import EarthSearchV1S2L2A
 
 
 def test_s2_mask(s2_stac_json_half_footprint, tmp_mpath):
@@ -21,7 +20,9 @@ def test_s2_mask(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert out_path.exists()
     with rasterio_open(out_path) as src:
         assert src.read().any()
@@ -41,7 +42,9 @@ def test_s2_rgb(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert out_path.exists()
     with rasterio_open(out_path) as src:
         assert not src.read(masked=True).mask.all()
@@ -64,7 +67,9 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
             str(out_path),
         ],
     )
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
+
     assert len(out_path.ls()) == 2
     for path in out_path.ls():
         with rasterio_open(path) as src:
@@ -73,14 +78,14 @@ def test_s2_brdf(s2_stac_json_half_footprint, tmp_mpath):
 
 @pytest.mark.remote
 @pytest.mark.parametrize(
-    "flag,value,collection",
+    "source",
     [
-        ("--catalog-json", lazy_fixture("s2_stac_collection"), None),
-        ("--archive", "S2AWS_COG", None),
-        ("--endpoint", EarthSearchV1S2L2A.endpoint, "sentinel-2-l2a"),
+        lazy_fixture("s2_stac_collection"),
+        "S2AWS_COG",
+        "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
     ],
 )
-def test_static_catalog(tmp_mpath, flag, value, collection):
+def test_static_catalog(tmp_mpath, source):
     runner = CliRunner()
     out_path = tmp_mpath
     params = [
@@ -94,12 +99,11 @@ def test_static_catalog(tmp_mpath, flag, value, collection):
         "2023-08-10",
         "--end-time",
         "2023-08-10",
-        flag,
-        str(value),
+        "--source",
+        str(source),
         str(out_path),
     ]
-    if collection:
-        params.extend(["--collection", collection])
     result = runner.invoke(eo, params)
-    assert result.exit_code == 0
+    if result.exit_code != 0:
+        raise result.exception
     assert out_path.ls()

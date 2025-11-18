@@ -6,7 +6,7 @@ from mapchete.io.raster import ReferencedRaster
 import numpy as np
 from numpy.typing import DTypeLike
 
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 

@@ -4,13 +4,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
+from cql2 import Expr
 from pydantic import BaseModel
-from pystac import Item, Catalog, CatalogType, Extent
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
+from pystac import Catalog, Item, CatalogType, Extent
 from pystac.collection import Collection
 from pystac.stac_io import DefaultStacIO
-from pystac_client import Client
+from pystac_client import CollectionClient
 from pystac_client.stac_api_io import StacApiIO
 from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
@@ -44,13 +45,26 @@ class FSSpecStacIO(StacApiIO):
             return dst.write(json.dumps(json_dict, indent=2))
 
 
-class CatalogSearcher(ABC):
+class CollectionSearcher(ABC):
     """
     This class serves as a bridge between an Archive and a catalog implementation.
     """
 
-    collections: List[str]
     config_cls: Type[BaseModel]
+    collection: str
+    stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None
+
+    def __init__(
+        self,
+        collection: str,
+        stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None,
+    ):
+        self.collection = collection
+        self.stac_item_modifiers = stac_item_modifiers
+
+    @abstractmethod
+    @cached_property
+    def client(self) -> CollectionClient: ...
 
     @abstractmethod
     @cached_property
@@ -74,19 +88,16 @@ class CatalogSearcher(ABC):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
+        query: Optional[str] = None,
         search_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Generator[Item, None, None]: ...
 
 
-class StaticCatalogWriterMixin(CatalogSearcher):
+class StaticCollectionWriterMixin(CollectionSearcher):
     # client: Client
     # id: str
     # description: str
     # stac_extensions: List[str]
-
-    @abstractmethod
-    def get_collections(self) -> List[Collection]:  # pragma: no cover
-        ...
 
     def write_static_catalog(
         self,
@@ -113,94 +124,93 @@ class StaticCatalogWriterMixin(CatalogSearcher):
         catalog_json = output_path / "catalog.json"
         if catalog_json.exists():
             logger.debug("open existing catalog %s", str(catalog_json))
-            client = Client.from_file(catalog_json)
-            # catalog = pystac.Catalog.from_file(catalog_json)
-            existing_collections = list(client.get_collections())
+            catalog = Catalog.from_file(catalog_json)
+            # client = Client.from_file(catalog_json)
+            # existing_collection = client.get_collection(self.id)
         else:
-            existing_collections = []
-        catalog = Catalog(
-            name or f"{self.id}",
-            description or f"Static subset of {self.description}",
-            stac_extensions=self.stac_extensions,
-            href=str(catalog_json),
-            catalog_type=CatalogType.SELF_CONTAINED,
-        )
+            # existing_collections = []
+            catalog = Catalog(
+                name or f"{self.id}",
+                description or f"Static subset of {self.description}",
+                stac_extensions=self.stac_extensions,
+                href=str(catalog_json),
+                catalog_type=CatalogType.SELF_CONTAINED,
+            )
         src_items = list(
             self.search(
                 time=time, bounds=bounds, area=area, search_kwargs=search_kwargs
             )
         )
-        for collection in self.get_collections():
-            # collect all items and download assets if required
-            items: List[Item] = []
-            item_ids = set()
-            for n, item in enumerate(src_items, 1):
-                logger.debug("found item %s", item)
-                item = item.clone()
-                if assets:
-                    logger.debug("get assets %s", assets)
-                    item = get_assets(
-                        item,
-                        assets,
-                        output_path / collection.id / item.id,
-                        resolution=assets_dst_resolution,
-                        convert_profile=assets_convert_profile,
-                        overwrite=overwrite,
-                        ignore_if_exists=True,
-                    )
-                if copy_metadata:
-                    item = get_metadata_assets(
-                        item,
-                        output_path / collection.id / item.id,
-                        metadata_parser_classes=metadata_parser_classes,
-                        resolution=assets_dst_resolution,
-                        convert_profile=assets_convert_profile,
-                        overwrite=overwrite,
-                    )
-                # this has to be set to None, otherwise pystac will mess up the asset paths
-                # after normalizing
-                item.set_self_href(None)
+        # collect all items and download assets if required
+        items: List[Item] = []
+        item_ids = set()
+        for n, item in enumerate(src_items, 1):
+            logger.debug("found item %s", item)
+            item = item.clone()
+            if assets:
+                logger.debug("get assets %s", assets)
+                item = get_assets(
+                    item,
+                    assets,
+                    output_path / self.id / item.id,
+                    resolution=assets_dst_resolution,
+                    convert_profile=assets_convert_profile,
+                    overwrite=overwrite,
+                    ignore_if_exists=True,
+                )
+            if copy_metadata:
+                item = get_metadata_assets(
+                    item,
+                    output_path / self.id / item.id,
+                    metadata_parser_classes=metadata_parser_classes,
+                    resolution=assets_dst_resolution,
+                    convert_profile=assets_convert_profile,
+                    overwrite=overwrite,
+                )
+            # this has to be set to None, otherwise pystac will mess up the asset paths
+            # after normalizing
+            item.set_self_href(None)
 
-                items.append(item)
-                item_ids.add(item.id)
+            items.append(item)
+            item_ids.add(item.id)
 
-                if progress_callback:
-                    progress_callback(n=n, total=len(src_items))
+            if progress_callback:
+                progress_callback(n=n, total=len(src_items))
 
-            for existing_collection in existing_collections:
-                if existing_collection.id == collection.id:
-                    logger.debug("try to find unregistered items in collection")
-                    collection_root_path = MPath.from_inp(
-                        existing_collection.get_self_href()
-                    ).parent
-                    for subpath in collection_root_path.ls():
-                        if subpath.is_directory():
-                            try:
-                                item = Item.from_file(
-                                    subpath / subpath.with_suffix(".json").name
-                                )
-                                if item.id not in item_ids:
-                                    logger.debug(
-                                        "add existing item with id %s", item.id
-                                    )
-                                    items.append(item)
-                                    item_ids.add(item.id)
-                            except FileNotFoundError:
-                                pass
-                    break
+            # for existing_collection in existing_collections:
+            #     if existing_collection.id == collection.id:
+            #         logger.debug("try to find unregistered items in collection")
+            #         collection_root_path = MPath.from_inp(
+            #             existing_collection.get_self_href()
+            #         ).parent
+            #         for subpath in collection_root_path.ls():
+            #             if subpath.is_directory():
+            #                 try:
+            #                     item = Item.from_file(
+            #                         subpath / subpath.with_suffix(".json").name
+            #                     )
+            #                     if item.id not in item_ids:
+            #                         logger.debug(
+            #                             "add existing item with id %s", item.id
+            #                         )
+            #                         items.append(item)
+            #                         item_ids.add(item.id)
+            #                 except FileNotFoundError:
+            #                     pass
+            #         break
             # create collection and copy metadata
             logger.debug("create new collection")
             out_collection = Collection(
-                id=collection.id,
+                id=self.id,
                 extent=Extent.from_items(items),
-                description=collection.description,
-                title=collection.title,
-                stac_extensions=collection.stac_extensions,
-                license=collection.license,
-                keywords=collection.keywords,
-                providers=collection.providers,
-                summaries=collection.summaries,
-                extra_fields=collection.extra_fields,
+                description=self.description,
+                title=self.client.title,
+                stac_extensions=self.stac_extensions,
+                license=self.client.license,
+                keywords=self.client.keywords,
+                providers=self.client.providers,
+                summaries=self.client.summaries,
+                extra_fields=self.client.extra_fields,
                 catalog_type=CatalogType.SELF_CONTAINED,
             )
 
@@ -222,14 +232,17 @@ class StaticCatalogWriterMixin(CatalogSearcher):
 
 def filter_items(
     items: Generator[Item, None, None],
-    cloud_cover_field: str = "eo:cloud_cover",
-    max_cloud_cover: float = 100.0,
+    query: Optional[str] = None,
 ) -> Generator[Item, None, None]:
     """
     Only for cloudcover now, this can and should be adapted for filter field and value
     the field and value for the item filter would be defined in search.config.py corresponding configs
     and passed down to the individual search approaches via said config and this Function.
     """
-    for item in items:
-        if item.properties.get(cloud_cover_field, 0.0) <= max_cloud_cover:
-            yield item
+    if query:
+        expr = Expr(query)
+        for item in items:
+            if expr.matches(item.properties):
+                yield item
+    else:
+        yield from items

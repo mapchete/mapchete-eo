@@ -77,7 +77,7 @@ def test_s2_jp2_band_paths(stac_item_sentinel2_jp2):
 @pytest.mark.remote
 @pytest.mark.parametrize(
     "mapchete_config",
-    [lazy_fixture("sentinel2_mapchete"), lazy_fixture("sentinel2_aws_cdse_mapchete")],
+    [lazy_fixture("sentinel2_mapchete")],
 )
 def test_remote_s2_read_xarray(mapchete_config):
     with mapchete_config.process_mp().open("inp") as cube:
@@ -92,7 +92,7 @@ def test_remote_s2_read_xarray(mapchete_config):
 )
 def test_remote_s2_read_xarray_cdse(mapchete_config):
     with mapchete_config.process_mp().open("inp") as cube:
-        assert isinstance(cube.read(assets=["B01_20m"]), xr.Dataset)
+        assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
 
 
 @pytest.mark.remote
@@ -102,10 +102,9 @@ def test_s2_time_ranges(sentinel2_time_ranges_mapchete):
         some_in_second = True
         for product in cube.products:
             first, second = cube.time
-            print((product.item.datetime.date(), first, second))
-            if first.start < product.item.datetime.date() < first.end:
+            if first.start <= product.item.datetime.date() <= first.end:
                 some_in_first = True
-            elif second.start < product.item.datetime.date() < second.end:
+            elif second.start <= product.item.datetime.date() <= second.end:
                 some_in_second = True
             else:
                 raise ValueError("product outside of given time ranges")
@@ -485,3 +484,10 @@ def test_footprint_buffer(sentinel2_stac_mapchete, test_edge_tile):
         )
 
     assert buffered.mask.sum() > unbuffered.mask.sum()
+
+
+@pytest.mark.remote
+def test_multiple_sources(sentinel2_multiple_sources_mapchete):
+    mp = sentinel2_multiple_sources_mapchete.mp()
+    input_data = list(mp.config.inputs.values())[0]
+    assert input_data.products

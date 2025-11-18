@@ -6,18 +6,17 @@ from functools import cached_property
 from itertools import product
 from typing import List, Literal, Optional, Tuple, Union
 
-from mapchete.geometry import reproject_geometry
+from mapchete.geometry import (
+    reproject_geometry,
+    repair_antimeridian_geometry,
+    transform_to_latlon,
+)
 from mapchete.types import Bounds
 from rasterio.crs import CRS
 from shapely import prepare
 from shapely.geometry import box, mapping, shape
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.geometry import (
-    bounds_to_geom,
-    repair_antimeridian_geometry,
-    transform_to_latlon,
-)
 
 LATLON_LEFT = -180
 LATLON_RIGHT = 180
@@ -255,7 +254,7 @@ class S2Tile:
         grid_square = tile_id[3:]
         try:
             int(utm_zone)
-        except Exception:
+        except Exception:  # pragma: no cover
             raise ValueError(f"invalid UTM zone given: {utm_zone}")
 
         return MGRSCell(utm_zone, latitude_band).tile(grid_square)
@@ -268,7 +267,7 @@ class S2Tile:
 def s2_tiles_from_bounds(
     left: float, bottom: float, right: float, top: float
 ) -> List[S2Tile]:
-    bounds = Bounds(left, bottom, right, top)
+    bounds = Bounds(left, bottom, right, top, crs="EPSG:4326")
 
     # determine zones in eastern-western direction
     min_zone_idx = math.floor((left + LATLON_WIDTH_OFFSET) / UTM_ZONE_WIDTH)
@@ -291,7 +290,7 @@ def s2_tiles_from_bounds(
     min_latitude_band_idx -= 1
     max_latitude_band_idx += 1
 
-    aoi = bounds_to_geom(bounds)
+    aoi = bounds.latlon_geometry()
     prepare(aoi)
 
     def tiles_generator():

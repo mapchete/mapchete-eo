@@ -13,7 +13,7 @@ from rasterio.fill import fillnodata
 
 from mapchete_eo.exceptions import BRDFError
 from mapchete_eo.platforms.sentinel2.brdf.models import BRDFModels, get_model
-from mapchete_eo.platforms.sentinel2.metadata_parser import S2Metadata
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import S2Metadata
 from mapchete_eo.platforms.sentinel2.types import (
     L2ABand,
     Resolution,

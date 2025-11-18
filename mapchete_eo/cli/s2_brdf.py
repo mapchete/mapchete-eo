@@ -11,7 +11,7 @@ from mapchete_eo.io.profiles import COGDeflateProfile
 from mapchete_eo.platforms.sentinel2.brdf.config import BRDFModels
 from mapchete_eo.platforms.sentinel2.config import BRDFConfig
 from mapchete_eo.platforms.sentinel2.product import S2Product
-from mapchete_eo.platforms.sentinel2.metadata_parser import Resolution
+from mapchete_eo.platforms.sentinel2.metadata_parser.s2metadata import Resolution
 from mapchete_eo.platforms.sentinel2.types import L2ABand
 
 

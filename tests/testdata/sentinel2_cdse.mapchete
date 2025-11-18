@@ -2,7 +2,7 @@ process: read_xarray.py
 input:
   inp:
     format: Sentinel-2
-    archive: S2CDSE_JP2
+    source: CDSE
     level: L2A
     time:
       start: 2024-04-01

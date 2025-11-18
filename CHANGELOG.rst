@@ -3,6 +3,30 @@ Changelog
 #########
 
 
+2025.11.0 - 2025-11-18
+----------------------
+
+* core
+
+  * driver configuration: replace `archive` with `source` (#17)
+  * `Sentinel-2` driver configuration: (#17)
+    *  removed `archive`, `cat_baseurl` and `max_cloud_cover` parameters
+    * `Sentinel2Source`: new configuration element to customize a source
+    * `EarthSearch` `sentinel-2-c1-l2a` collection is now the default
+  * removed `archives`, `known_catalogs`, `platforms.sentinel2.archives` modules  (#17)
+  * `io.items.get_item_property()`: added `default` kwarg which behaves similar to `dict.get()`; `property` now also accepts a tuple of strings which are checked in that order and the first matching property is being returned  (#17)
+  * `io.path.asset_mpath()`: `asset` now accepts a tuple of strings and the first matching asset path is being returned  (#17)
+  * `platforms.sentinel2`: added `preconfigured_sources` module which holds all custom mapper functions between collections and data/metadata archives  (#17)
+  * removed `platforms.sentinel2.path_mappers` module  (#17)
+  * removed `geometry` module  (#17)
+  * make `time` parameter optional  (#17)
+  * `settings`: add `lazy_load_stac_items` option  (#17)
+
+* packaging
+
+  * added `cql2` to dependencies (#17)
+
+
 2025.10.1 - 2025-10-14
 ----------------------
 

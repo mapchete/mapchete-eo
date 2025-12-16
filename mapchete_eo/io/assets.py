@@ -93,8 +93,7 @@ def asset_to_np_array(
         grid=grid,
         resampling=resampling.name,
         dst_nodata=band_properties.nodata,
-    ).masked_array()
-
+    ).array
     if apply_offset and band_properties.offset:
         logger.debug(
             "apply offset %s and scale %s to asset %s",

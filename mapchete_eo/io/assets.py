@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class STACRasterBandProperties(BaseModel):
-    nodata: NodataVal = None
+    nodata: Optional[NodataVal] = None
     data_type: Optional[str] = None
     scale: float = 1.0
     offset: float = 0.0
@@ -40,9 +40,9 @@ class STACRasterBandProperties(BaseModel):
     @staticmethod
     def from_asset(
         asset: pystac.Asset,
-        nodataval: NodataVal = None,
+        nodataval: Optional[NodataVal] = None,
     ) -> STACRasterBandProperties:
-        if asset.extra_fields.get("raster:offset") is not None:
+        if asset.extra_fields.get("raster:offset", {}):
             properties = dict(
                 offset=asset.extra_fields.get("raster:offset"),
                 scale=asset.extra_fields.get("raster:scale"),
@@ -87,16 +87,22 @@ def asset_to_np_array(
     )
 
     logger.debug("reading asset %s and indexes %s ...", asset, indexes)
-    data = read_raster(
+    array = read_raster(
         inp=path,
         indexes=indexes,
         grid=grid,
         resampling=resampling.name,
         dst_nodata=band_properties.nodata,
-    ).data
+    ).masked_array()
 
     if apply_offset and band_properties.offset:
-        data_type = band_properties.data_type or data.dtype
+        logger.debug(
+            "apply offset %s and scale %s to asset %s",
+            band_properties.offset,
+            band_properties.scale,
+            asset,
+        )
+        data_type = band_properties.data_type or array.dtype
 
         # determine value range for the target data_type
         clip_min, clip_max = dtype_ranges[str(data_type)]
@@ -105,9 +111,9 @@ def asset_to_np_array(
         if clip_min == band_properties.nodata:
             clip_min += 1
 
-        data[:] = (
+        array[~array.mask] = (
             (
-                ((data * band_properties.scale) + band_properties.offset)
+                ((array[~array.mask] * band_properties.scale) + band_properties.offset)
                 / band_properties.scale
             )
             .round()
@@ -115,8 +121,7 @@ def asset_to_np_array(
             .astype(data_type, copy=False)
             .data
         )
-
-    return data
+    return array
 
 
 def get_assets(

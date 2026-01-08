@@ -47,7 +47,7 @@ docs = [
   "sphinx-rtd-theme"
 ]
 test = [
-    "pytest<8",
+    "pytest",
     "pytest-coverage",
     "pytest-lazy-fixture"
 ]

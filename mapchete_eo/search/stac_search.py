@@ -15,7 +15,11 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CollectionSearcher, StaticCollectionWriterMixin
-from mapchete_eo.search.config import StacSearchConfig, patch_invalid_assets, parse_cql_query
+from mapchete_eo.search.config import (
+    StacSearchConfig,
+    patch_invalid_assets,
+    parse_cql_query,
+)
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 

@@ -18,7 +18,7 @@ from mapchete_eo.search.base import (
     StaticCollectionWriterMixin,
     filter_items,
 )
-from mapchete_eo.search.config import StacStaticConfig, parse_cql_query
+from mapchete_eo.search.config import StacStaticConfig
 from mapchete_eo.time import time_ranges_intersect
 from mapchete_eo.types import TimeRange
 

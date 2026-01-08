@@ -4,6 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
+from pygeofilter.parsers.ecql import parse as parse_ecql
 from pygeofilter.backends.native.evaluate import NativeEvaluator
 from pydantic import BaseModel
 from mapchete.path import MPath, MPathLike

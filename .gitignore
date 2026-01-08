@@ -12,3 +12,4 @@ dist/
 .vscode/
 __pycache__
 examples/sentinel-2*/
+.mypy_cache

@@ -36,7 +36,6 @@ dependencies = [
     "retry",
     "rtree",
     "scipy",
-    "retry",
     "tqdm",
     "xarray",
 ]
@@ -77,3 +76,7 @@ include = [
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--verbose"
+testpaths = ["tests"]

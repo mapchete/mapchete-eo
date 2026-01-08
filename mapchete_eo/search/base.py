@@ -2,7 +2,7 @@ from functools import cached_property
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Type, Union
 
 from pygeofilter.parsers.ecql import parse as parse_ecql
 from pygeofilter.backends.native.evaluate import NativeEvaluator
@@ -18,6 +18,8 @@ from rasterio.profiles import Profile
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.io.assets import get_assets, get_metadata_assets
+from mapchete_eo.product import blacklist_products
+from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,11 @@ class CollectionSearcher(ABC):
     config_cls: Type[BaseModel]
     collection: str
     stac_item_modifiers: Optional[List[Callable[[Item], Item]]] = None
+    blacklist: Set[str] = (
+        blacklist_products(mapchete_eo_settings.blacklist)
+        if mapchete_eo_settings.blacklist
+        else set()
+    )
 
     def __init__(
         self,
@@ -71,17 +78,21 @@ class CollectionSearcher(ABC):
     @cached_property
     def eo_bands(self) -> List[str]: ...
 
-    @abstractmethod
-    @cached_property
-    def id(self) -> str: ...
+    @property
+    def config(self) -> BaseModel:
+        return self.config_cls()
 
-    @abstractmethod
     @cached_property
-    def description(self) -> str: ...
+    def id(self) -> str:
+        return self.client.id
 
-    @abstractmethod
     @cached_property
-    def stac_extensions(self) -> List[str]: ...
+    def description(self) -> str:
+        return self.client.description
+
+    @cached_property
+    def stac_extensions(self) -> List[str]:
+        return self.client.stac_extensions
 
     @abstractmethod
     def search(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from functools import cached_property
-from typing import Any, Dict, Generator, Iterator, List, Optional, Set, Union
+from typing import Any, Dict, Generator, Iterator, List, Optional, Union
 
 from mapchete import Timer
 from mapchete.tile import BufferedTilePyramid
@@ -13,14 +13,12 @@ from pystac_client import Client, CollectionClient, ItemSearch
 from shapely.geometry import shape, box
 from shapely.geometry.base import BaseGeometry
 
-from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CollectionSearcher, StaticCollectionWriterMixin
 from mapchete_eo.search.config import (
     StacSearchConfig,
     patch_invalid_assets,
     parse_cql_query,
 )
-from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -28,11 +26,6 @@ logger = logging.getLogger(__name__)
 
 class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
     collection: str
-    blacklist: Set[str] = (
-        blacklist_products(mapchete_eo_settings.blacklist)
-        if mapchete_eo_settings.blacklist
-        else set()
-    )
     config_cls = StacSearchConfig
 
     @cached_property
@@ -48,18 +41,6 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
         else:  # pragma: no cover
             logger.debug("cannot find eo:bands definition from collections")
             return []
-
-    @cached_property
-    def id(self) -> str:
-        return self.client.id
-
-    @cached_property
-    def description(self) -> str:
-        return self.client.description
-
-    @cached_property
-    def stac_extensions(self) -> List[str]:
-        return self.client.stac_extensions
 
     def search(
         self,

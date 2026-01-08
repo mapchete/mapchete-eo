@@ -65,18 +65,6 @@ class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
             logger.debug("cannot find eo:bands definition")
             return []
 
-    @cached_property
-    def id(self) -> str:
-        return self.client.id
-
-    @cached_property
-    def description(self) -> str:
-        return self.client.description
-
-    @cached_property
-    def stac_extensions(self) -> List[str]:
-        return self.client.stac_extensions
-
     def search(
         self,
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,

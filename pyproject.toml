@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
-    "cql2",
+    "pygeofilter",
     "croniter",
     "lxml",
     "mapchete[complete]>=2025.10.0",
@@ -36,7 +36,6 @@ dependencies = [
     "retry",
     "rtree",
     "scipy",
-    "retry",
     "tqdm",
     "xarray",
 ]
@@ -47,9 +46,9 @@ docs = [
   "sphinx-rtd-theme"
 ]
 test = [
-    "pytest<8",
+    "pytest",
     "pytest-coverage",
-    "pytest-lazy-fixture"
+    "pytest-lazy-fixtures"
 ]
 
 [project.entry-points."mapchete.cli.commands"]
@@ -77,3 +76,15 @@ include = [
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["mapchete_eo"]
+
+[tool.pytest.ini_options]
+addopts = "--durations 20 --verbose --nf --cov=mapchete_eo --cov-report=term-missing:skip-covered"
+testpaths = ["tests"]
+markers = [
+    "remote: marks tests which require acces to remote resources (deselect with '-m \"not remote\"')",
+    "use_cdse_test_env: enables CDSE S3 environment access",
+]

@@ -1,7 +1,7 @@
 import pytest
 from mapchete.io.vector import reproject_geometry
 from mapchete.types import Bounds
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely.geometry import box, shape
 
 from mapchete_eo.search.s2_mgrs import InvalidMGRSSquare, S2Tile, s2_tiles_from_bounds

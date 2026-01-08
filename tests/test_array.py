@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
 import xarray as xr
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_dataarray, to_dataset, to_masked_array
+from mapchete_eo.array.color import hex_to_rgb, color_array, outlier_pixels
 
 
 def test_buffer_array(test_2d_array):
@@ -124,3 +125,25 @@ def test_dataset_to_masked_array(masked_array):
     converted = to_masked_array(to_dataset(masked_array))
     assert converted.shape == masked_array.shape
     assert converted.dtype == masked_array.dtype
+
+
+def test_hex_to_rgb():
+    assert hex_to_rgb("#FFFFFF") == (255, 255, 255)
+    assert hex_to_rgb("FFFFFF") == (255, 255, 255)
+    assert hex_to_rgb("#00FF00FF") == (0, 255, 0, 255)
+
+
+def test_color_array():
+    shape = (10, 10)
+    arr = color_array(shape, "#FF0000")
+    assert arr.shape == (3, 10, 10)
+    assert np.all(arr[0] == 255)
+    assert np.all(arr[1] == 0)
+    assert np.all(arr[2] == 0)
+    assert not np.any(arr.mask)
+
+
+def test_outlier_pixels():
+    arr = np.array([[100, 100], [100, 210], [100, 100]])
+    outliers = outlier_pixels(arr, axis=0, range_threshold=100)
+    assert np.array_equal(outliers, [False, True])

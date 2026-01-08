@@ -4,7 +4,7 @@ import xarray as xr
 from mapchete.formats import available_input_formats
 from mapchete.geometry import to_shape
 from mapchete.path import MPath
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely.geometry import Point
 
 from mapchete_eo.array.convert import to_masked_array

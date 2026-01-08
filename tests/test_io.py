@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from mapchete.path import MPath
 from mapchete.types import Bounds
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from shapely.geometry import shape
 
 from mapchete_eo.io import get_item_property, item_fix_footprint, products_to_slices

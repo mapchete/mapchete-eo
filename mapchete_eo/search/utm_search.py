@@ -1,19 +1,19 @@
 import datetime
 from functools import cached_property
 import logging
-from typing import Any, Dict, Generator, List, Optional, Set, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 
 from mapchete.io.vector import fiona_open
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds, BoundsLike
 from pystac.collection import Collection
 from pystac.item import Item
+from pystac_client import CollectionClient
 from shapely.errors import GEOSException
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.exceptions import ItemGeometryError
-from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import (
     CollectionSearcher,
     StaticCollectionWriterMixin,
@@ -21,7 +21,6 @@ from mapchete_eo.search.base import (
 )
 from mapchete_eo.search.config import UTMSearchConfig
 from mapchete_eo.search.s2_mgrs import S2Tile, s2_tiles_from_bounds
-from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.time import day_range, to_datetime
 from mapchete_eo.types import TimeRange
 
@@ -29,18 +28,23 @@ logger = logging.getLogger(__name__)
 
 
 class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
-    endpoint: str
-    id: str
-    day_subdir_schema: str
-    stac_json_endswith: str
-    description: str
-    stac_extensions: List[str]
-    blacklist: Set[str] = (
-        blacklist_products(mapchete_eo_settings.blacklist)
-        if mapchete_eo_settings.blacklist
-        else set()
-    )
     config_cls = UTMSearchConfig
+
+    @cached_property
+    def endpoint(self) -> Optional[str]:
+        for collection_properties in self.config.sinergise_aws_collections.values():
+            if collection_properties["id"] == self.collection.split("/")[-1].replace(
+                ".json", ""
+            ):
+                return collection_properties.get("endpoint")
+        return None
+
+    day_subdir_schema: str = "{year}/{month:02d}/{day:02d}"
+    stac_json_endswith: str = "T{tile_id}.json"
+
+    @cached_property
+    def client(self) -> CollectionClient:
+        return next(self.get_collections())
 
     @cached_property
     def eo_bands(self) -> List[str]:  # pragma: no cover
@@ -85,8 +89,9 @@ class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
         time: Optional[Union[TimeRange, List[TimeRange]]] = None,
         bounds: Optional[Bounds] = None,
         area: Optional[BaseGeometry] = None,
-        config: UTMSearchConfig = UTMSearchConfig(),
+        config: Optional[UTMSearchConfig] = None,
     ) -> Generator[Item, None, None]:
+        config = config or UTMSearchConfig()
         if time is None:
             raise ValueError("time must be given")
         if area is not None and area.is_empty:

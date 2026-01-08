@@ -50,18 +50,21 @@ class UTMSearchConfig(BaseModel):
             path=MPath(
                 "https://sentinel-s2-l2a-stac.s3.amazonaws.com/sentinel-s2-l2a.json"
             ),
+            endpoint="s3://sentinel-s2-l2a-stac",
         ),
         S2_L1C=dict(
             id="sentinel-s2-l1c",
             path=MPath(
                 "https://sentinel-s2-l1c-stac.s3.amazonaws.com/sentinel-s2-l1c.json"
             ),
+            endpoint="s3://sentinel-s2-l1c-stac",
         ),
         S1_GRD=dict(
             id="sentinel-s1-l1c",
             path=MPath(
                 "https://sentinel-s1-l1c-stac.s3.amazonaws.com/sentinel-s1-l1c.json"
             ),
+            endpoint="s3://sentinel-s1-l1c-stac",
         ),
     )
     search_index: Optional[MPathLike] = None

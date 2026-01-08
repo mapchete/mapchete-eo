@@ -49,7 +49,7 @@ docs = [
 test = [
     "pytest",
     "pytest-coverage",
-    "pytest-lazy-fixture"
+    "pytest-lazy-fixtures"
 ]
 
 [project.entry-points."mapchete.cli.commands"]

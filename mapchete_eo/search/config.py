@@ -1,3 +1,7 @@
+import logging
+
+
+from contextlib import contextmanager
 from typing import Optional, Dict, Any
 
 from mapchete.path import MPath, MPathLike
@@ -61,3 +65,46 @@ class UTMSearchConfig(BaseModel):
         ),
     )
     search_index: Optional[MPathLike] = None
+
+
+@contextmanager
+def patch_invalid_assets():
+    """
+    Context manager/decorator to fix pystac crash on malformed assets (strings instead of dicts).
+
+    """
+    try:
+        from pystac.extensions.file import FileExtensionHooks
+    except ImportError:  # pragma: no cover
+        yield
+        return
+
+    logger = logging.getLogger(__name__)
+
+    _original_migrate = FileExtensionHooks.migrate
+
+    def _safe_migrate(self, obj, version, info):
+        if "assets" in obj and isinstance(obj["assets"], dict):
+            bad_keys = []
+            for key, asset in obj["assets"].items():
+                if not isinstance(asset, dict):
+                    logger.debug(
+                        "Removing malformed asset '%s' (type %s) from item %s",
+                        key,
+                        type(asset),
+                        obj.get("id", "unknown"),
+                    )
+                    bad_keys.append(key)
+
+            for key in bad_keys:
+                del obj["assets"][key]
+
+        return _original_migrate(self, obj, version, info)
+
+    # Apply patch
+    FileExtensionHooks.migrate = _safe_migrate
+    try:
+        yield
+    finally:
+        # Restore original
+        FileExtensionHooks.migrate = _original_migrate

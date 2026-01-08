@@ -400,7 +400,6 @@ def s2_l2a_safe_metadata(s2_testdata_dir):
     )
 
 
-@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_metadata_remote():
     return guess_s2metadata_from_metadata_xml(
@@ -408,7 +407,6 @@ def s2_l2a_metadata_remote():
     )
 
 
-@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_remote():
     """Same content as s2_l2a_metadata_remote, but hosted on different server."""
@@ -417,7 +415,6 @@ def s2_l2a_roda_metadata_remote():
     )
 
 
-@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_roda_metadata_jp2_masks_remote():
     """From about 2022 on, ahte masks are now encoded as JP2 (rasters), not as GMLs (features)."""
@@ -426,7 +423,6 @@ def s2_l2a_roda_metadata_jp2_masks_remote():
     )
 
 
-@pytest.mark.remote
 @pytest.fixture()
 def s2_l2a_earthsearch_xml_remote():
     """Metadata used by Earth-Search V1 endpoint"""
@@ -435,7 +431,6 @@ def s2_l2a_earthsearch_xml_remote():
     )
 
 
-@pytest.mark.remote
 @pytest.fixture()
 def s2_l2a_earthsearch_xml_remote_broken():
     """Metadata used by Earth-Search V1 endpoint"""
@@ -444,14 +439,12 @@ def s2_l2a_earthsearch_xml_remote_broken():
     )
 
 
-@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote(s2_l2a_earthsearch_remote_item):
     """Metadata used by Earth-Search V1 endpoint"""
     return guess_s2metadata_from_item(s2_l2a_earthsearch_remote_item)
 
 
-@pytest.mark.remote
 @pytest.fixture(scope="session")
 def s2_l2a_earthsearch_remote_item():
     """Metadata used by Earth-Search V1 endpoint"""

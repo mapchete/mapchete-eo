@@ -17,7 +17,7 @@ try:
 except ImportError:
     from mapchete.types import Bounds, Grid
 from pystac import Item
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from rasterio.crs import CRS
 from shapely.geometry import shape
 

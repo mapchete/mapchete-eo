@@ -1,7 +1,7 @@
 import pytest
 from click.testing import CliRunner
 from mapchete.io import rasterio_open
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete_eo.cli import eo
 

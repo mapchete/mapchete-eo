@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 
 from mapchete_eo.array.buffer import buffer_array
 from mapchete_eo.array.convert import to_dataarray, to_dataset, to_masked_array

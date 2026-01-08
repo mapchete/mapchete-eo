@@ -12,7 +12,7 @@ try:
     from mapchete import Bounds
 except ImportError:
     from mapchete.types import Bounds
-from pytest_lazyfixture import lazy_fixture
+from pytest_lazy_fixtures import lf as lazy_fixture
 from rasterio.crs import CRS
 
 from mapchete_eo.exceptions import (

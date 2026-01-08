@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
-    "cql2",
+    "pygeofilter",
     "croniter",
     "lxml",
     "mapchete[complete]>=2025.10.0",

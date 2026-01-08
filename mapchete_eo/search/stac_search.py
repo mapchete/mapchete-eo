@@ -15,7 +15,7 @@ from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.product import blacklist_products
 from mapchete_eo.search.base import CollectionSearcher, StaticCollectionWriterMixin
-from mapchete_eo.search.config import StacSearchConfig, patch_invalid_assets
+from mapchete_eo.search.config import StacSearchConfig, patch_invalid_assets, parse_cql_query
 from mapchete_eo.settings import mapchete_eo_settings
 from mapchete_eo.types import TimeRange
 
@@ -138,7 +138,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                     query=query,
                 )
 
-        with patch_invalid_assets():
+        with patch_invalid_assets(), parse_cql_query():
             for search in _searches():
                 for item in search.items():
                     if item.get_self_href() in self.blacklist:  # pragma: no cover

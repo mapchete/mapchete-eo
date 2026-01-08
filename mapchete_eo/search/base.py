@@ -1,10 +1,12 @@
 from functools import cached_property
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generator, List, Optional, Type, Union
 
-from cql2 import Expr
+from pygeofilter.parsers.ecql import parse as parse_ecql
+from pygeofilter.backends.native.evaluate import NativeEvaluator
 from pydantic import BaseModel
 from mapchete.path import MPath, MPathLike
 from mapchete.types import Bounds
@@ -239,10 +241,16 @@ def filter_items(
     the field and value for the item filter would be defined in search.config.py corresponding configs
     and passed down to the individual search approaches via said config and this Function.
     """
-    if query:
-        expr = Expr(query)
-        for item in items:
-            if expr.matches(item.properties):
-                yield item
-    else:
-        yield from items
+    from mapchete_eo.search.config import parse_cql_query
+
+    with parse_cql_query():
+        if query:
+            ast = parse_ecql(query)
+            evaluator = NativeEvaluator(use_getattr=False)
+            filter_func = evaluator.evaluate(ast)
+            for item in items:
+                # pystac items store metadata in 'properties'
+                if filter_func(item.properties):
+                    yield item
+        else:
+            yield from items

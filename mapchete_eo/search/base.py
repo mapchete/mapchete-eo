@@ -251,16 +251,13 @@ def filter_items(
     the field and value for the item filter would be defined in search.config.py corresponding configs
     and passed down to the individual search approaches via said config and this Function.
     """
-    from mapchete_eo.search.config import parse_cql_query
-
-    with parse_cql_query():
-        if query:
-            ast = parse_ecql(query)
-            evaluator = NativeEvaluator(use_getattr=False)
-            filter_func = evaluator.evaluate(ast)
-            for item in items:
-                # pystac items store metadata in 'properties'
-                if filter_func(item.properties):
-                    yield item
-        else:
-            yield from items
+    if query:
+        ast = parse_ecql(query)
+        evaluator = NativeEvaluator(use_getattr=False)
+        filter_func = evaluator.evaluate(ast)
+        for item in items:
+            # pystac items store metadata in 'properties'
+            if filter_func(item.properties):
+                yield item
+    else:
+        yield from items

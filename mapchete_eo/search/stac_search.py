@@ -14,11 +14,7 @@ from shapely.geometry import shape, box
 from shapely.geometry.base import BaseGeometry
 
 from mapchete_eo.search.base import CollectionSearcher, StaticCollectionWriterMixin
-from mapchete_eo.search.config import (
-    StacSearchConfig,
-    patch_invalid_assets,
-    parse_cql_query,
-)
+from mapchete_eo.search.config import StacSearchConfig, patch_invalid_assets
 from mapchete_eo.types import TimeRange
 
 logger = logging.getLogger(__name__)
@@ -123,7 +119,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
                     query=query,
                 )
 
-        with patch_invalid_assets(), parse_cql_query():
+        with patch_invalid_assets():
             for search in _searches():
                 for item in search.items():
                     if item.get_self_href() in self.blacklist:  # pragma: no cover

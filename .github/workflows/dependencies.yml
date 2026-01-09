@@ -3,7 +3,7 @@ name: dependabot-uv-conda-sync
 on:
   schedule:
     - cron: '0 0 * * *'       # Daily maintenance
-  pull_request:               # Runs on Dependabot (and all) PRs
+  pull_request:               # Runs when pyproject.toml changes in a PR
     paths:
       - "pyproject.toml"
   workflow_dispatch:          # Manual trigger
@@ -17,9 +17,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Use a PAT if you want this push to trigger other CI workflows
-          ref: ${{ github.head_ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -28,18 +25,34 @@ jobs:
 
       - name: Sync and Upgrade
         run: |
-          # Ensure uv.lock is perfectly synced with pyproject.toml
+          # Ensure uv.lock is perfectly synced and sub-deps are updated
           uv lock --upgrade
 
       - name: Sync Conda Recipe
         run: |
-          # Use pyproject2conda to keep meta.yaml in sync
-          # Note: Add -m for custom name mappings if needed
-          uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml
-
-      - name: Commit Changes
-        # This step only runs if uv or conda files changed
-        uses: stefanzweifel/git-auto-commit-action@v5
+          # Use uvx to run pyproject2conda without adding it to project deps.
+          # We add '-m' for known name mismatches between PyPI and Conda.
+          uvx pyproject2conda yaml \
+            -f pyproject.toml \
+            --output conda/meta.yaml \
+            --python-include infer
+            
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
         with:
-          commit_message: "chore: auto-sync uv.lock and conda recipe"
-          file_pattern: "uv.lock conda/meta.yaml"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update uv.lock and conda recipe"
+          title: "chore(deps): sync uv and conda dependencies"
+          body: |
+            ### Automated Dependency Sync
+            This PR was triggered by the daily maintenance schedule or a change in `pyproject.toml`.
+            
+            - **uv.lock**: Upgraded to latest compatible versions.
+            - **conda/meta.yaml**: Synchronized with `pyproject.toml` using `pyproject2conda`.
+            
+            Please verify that the Conda mappings and lockfile versions are correct.
+          branch: "automated-dependency-sync"
+          delete-branch: true
+          labels: |
+            dependencies
+            automated-pr

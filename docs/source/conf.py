@@ -78,3 +78,10 @@ templates_path = ["_templates"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+# docs/source/conf.py
+
+# Tells Sphinx to be strict, but ignore these specific ambiguous targets
+nitpicky = True
+nitpick_ignore = [
+    ('py:class', 'MergeMethod'), 
+]

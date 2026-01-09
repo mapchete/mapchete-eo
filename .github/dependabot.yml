@@ -1,31 +1,6 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "daily"
-    allow:
-      - dependency-name: "blend-modes"
-      - dependency-name: "click"
-      - dependency-name: "croniter"
-      - dependency-name: "lxml"
-      - dependency-name: "mapchete[complete]"
-      - dependency-name: "opencv-python-headless"
-      - dependency-name: "Pillow"
-      - dependency-name: "pydantic"
-      - dependency-name: "pygeofilter"
-      - dependency-name: "pystac[urllib3]"
-      - dependency-name: "pystac-client"
-      - dependency-name: "pytest"
-      - dependency-name: "pytest-coverage"
-      - dependency-name: "pytest-lazy-fixtures"
-      - dependency-name: "retry"
-      - dependency-name: "rtree"
-      - dependency-name: "scipy"
-      - dependency-name: "tqdm"
-      - dependency-name: "xarray"

@@ -38,17 +38,23 @@ jobs:
           python -m pip install pre-commit
           pre-commit run --show-diff-on-failure --all-files
 
-      - name: Install dependencies
-        env:
-          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      - name: Install System Dependencies (GDAL)
         run: |
-          sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
-          sudo apt-get -y update
-          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev
-          python -m pip install --upgrade pip wheel
-          uv pip install .
-          uv pip install .[test]
-          uv pip freeze
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev g++
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: |
+          uv lock --upgrade
+          uv sync --all-extras
 
       # run tests
       - name: run 

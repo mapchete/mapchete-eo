@@ -3,6 +3,7 @@ build/
 .coverage
 .coverage.*
 dist/
+docs/build/html
 *.egg-info
 .eggs
 examples/sentinel-2*/

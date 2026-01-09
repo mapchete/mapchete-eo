@@ -16,18 +16,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install System Dependencies (GDAL)
+        # Fiona needs gdal-config to determine versions and paths
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev g++
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install
 
       - name: Install dependencies
+        # We set GDAL_CONFIG so Fiona's build backend finds the system GDAL
         run: |
+          export GDAL_CONFIG=/usr/bin/gdal-config
           uv sync --all-extras
+        env:
+          GDAL_CONFIG: /usr/bin/gdal-config
 
       - name: Build documentation
         run: |
+          # Re-export or use uv run --env to ensure Sphinx can see Fiona
           uv run sphinx-build -b html docs/source docs/build/html
 
       - name: Deploy to GitHub Pages

@@ -2,7 +2,7 @@ API Reference
 =============
 
 .. autosummary::
-   :toctree: generated
+   :toctree: apidoc
    :recursive:
 
    mapchete_eo.base

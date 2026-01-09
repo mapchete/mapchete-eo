@@ -17,8 +17,8 @@ Sentinel-2 First Pixel
 
 This example uses Sentinel-2 data and picks the first available cloud-free pixel from a time range.
 
-* `Config <https://github.com/eox-a/mapchete-eo/blob/main/examples/sentinel-2_2025-may-june_first_pixel.mapchete>`_
-* `Process <https://github.com/eox-a/mapchete-eo/blob/main/examples/first_pixel_process.py>`_
+* `Config <https://github.com/mapchete/mapchete-eo/blob/main/examples/sentinel-2_2025-may-june_first_pixel.mapchete>`_
+* `Process <https://github.com/mapchete/mapchete-eo/blob/main/examples/first_pixel_process.py>`_
 
 
 Sentinel-2 NDVI
@@ -26,8 +26,8 @@ Sentinel-2 NDVI
 
 Calculate the Normalized Difference Vegetation Index (NDVI) from Sentinel-2 data.
 
-* `Config <https://github.com/eox-a/mapchete-eo/blob/main/examples/ndvi.mapchete>`_
-* `Process <https://github.com/eox-a/mapchete-eo/blob/main/examples/ndvi_process.py>`_
+* `Config <https://github.com/mapchete/mapchete-eo/blob/main/examples/ndvi.mapchete>`_
+* `Process <https://github.com/mapchete/mapchete-eo/blob/main/examples/ndvi_process.py>`_
 
 
 Sentinel-2 Temporal Mean
@@ -35,8 +35,8 @@ Sentinel-2 Temporal Mean
 
 Create a temporal mean composite of cloud-free pixels over a given time range.
 
-* `Config <https://github.com/eox-a/mapchete-eo/blob/main/examples/temporal_mean.mapchete>`_
-* `Process <https://github.com/eox-a/mapchete-eo/blob/main/examples/temporal_mean_process.py>`_
+* `Config <https://github.com/mapchete/mapchete-eo/blob/main/examples/temporal_mean.mapchete>`_
+* `Process <https://github.com/mapchete/mapchete-eo/blob/main/examples/temporal_mean_process.py>`_
 
 Usage
 -----

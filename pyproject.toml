@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mapchete-eo"
 dynamic = ["version"]
+requires-python = ">=3.10"
 description = "mapchete EO data reader"
 readme = "README.rst"
 license = "MIT"
@@ -88,3 +89,8 @@ markers = [
     "remote: marks tests which require acces to remote resources (deselect with '-m \"not remote\"')",
     "use_cdse_test_env: enables CDSE S3 environment access",
 ]
+
+[tool.pyproject2conda]
+channels = ["conda-forge"]
+# Maps PyPI names to Conda-Forge names if they differ
+map_deps = { "opencv-python-headless" = "opencv", "pystac-client" = "python-pystac-client" }

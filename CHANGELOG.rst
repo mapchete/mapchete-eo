@@ -2,20 +2,21 @@
 Changelog
 #########
 
-Next Release
-------------
+
+2026.1.0 - 2026-01-09
+---------------------
 
 * core
 
-  * fix array mask when applying offset to Sentinel-2 data
-  * refactor search catalog inheritance and consolidate shared properties into `CollectionSearcher`
-  * reimplement `UTMSearchCatalog` and add (more) Sentinel-2 search tests
+  * fix array mask when applying offset to Sentinel-2 data (#21)
+  * refactor search catalog inheritance and consolidate shared properties into `CollectionSearcher` (#19)
+  * reimplement `UTMSearchCatalog` and add (more) Sentinel-2 search tests (#19)
 
 * packaging
 
-  * centralize configuration: migrate `setup.cfg`, `.coveragerc`, and `pytest.ini` into `pyproject.toml`
-  * replace `cql2` with `pygeofilter` (#20)
-  * replace `pytest-lazy-fixture` with `pytest-lazy-fixtures`
+  * centralize configuration: migrate `setup.cfg`, `.coveragerc`, and `pytest.ini` into `pyproject.toml` (#22)
+  * replace `cql2` with `pygeofilter` (#22)
+  * replace `pytest-lazy-fixture` with `pytest-lazy-fixtures` (#22)
 
 
 2025.11.0 - 2025-11-18

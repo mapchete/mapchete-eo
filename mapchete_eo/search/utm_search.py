@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class UTMSearchCatalog(StaticCollectionWriterMixin, CollectionSearcher):
+    """
+    Search implementation for UTM-grid based catalogs (e.g. Sentinel-2 on AWS).
+    """
+
     config_cls = UTMSearchConfig
 
     @cached_property

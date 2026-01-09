@@ -153,6 +153,18 @@ METHODS = {
 def composite(
     method: str, bg: np.ndarray, fg: np.ndarray, opacity: float = 1
 ) -> ma.MaskedArray:
+    """
+    Composite two image arrays using a named blending method.
+
+    Args:
+        method: Blending method name (e.g., 'multiply', 'screen').
+        bg: Background image array (channels-first).
+        fg: Foreground image array (channels-first).
+        opacity: Opacity of the foreground layer (0-1).
+
+    Returns:
+        ma.MaskedArray: Blended RGBA result.
+    """
     return METHODS[method](bg, fg, opacity)
 
 

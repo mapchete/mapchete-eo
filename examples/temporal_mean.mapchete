@@ -1,0 +1,23 @@
+process: temporal_mean_process.py
+input:
+  element84_sentinel2:
+    format: Sentinel-2
+    level: L2A
+    max_cloud_percent: 20
+    time:
+      start: 2025-06-01
+      end: 2025-08-31
+output:
+  format: GTiff
+  bands: 3
+  path: sentinel-2_temporal_mean
+  dtype: uint16
+pyramid:
+  grid: geodetic
+  metatiling: 8
+zoom_levels:
+  min: 8
+  max: 13
+bounds: [16.20, 48.00, 16.75, 48.5]
+process_parameters:
+  assets: [red, green, blue]

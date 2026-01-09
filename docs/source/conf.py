@@ -41,11 +41,8 @@ release, author = get_metadata()
 version, author = get_metadata()
 
 project = "mapchete-eo"
-author = author
 
 release = version
-
-version, author = get_metadata()
 
 rst_prolog = f"""
 .. |author| replace:: {author}
@@ -58,7 +55,17 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
 ]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "mapchete": ("https://mapchete.readthedocs.io/en/latest/", None),
+}
 
 autosummary_generate = True
 
@@ -71,3 +78,10 @@ templates_path = ["_templates"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+# docs/source/conf.py
+
+# Tells Sphinx to be strict, but ignore these specific ambiguous targets
+nitpicky = True
+nitpick_ignore = [
+    ("py:class", "MergeMethod"),
+]

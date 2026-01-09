@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
+    """
+    Search implementation for STAC APIs.
+    """
+
     collection: str
     config_cls = StacSearchConfig
 
@@ -206,6 +210,10 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
 
 
 class SpatialSearchChunks:
+    """
+    Split spatial search areas into smaller chunks for large queries.
+    """
+
     bounds: Bounds
     area: BaseGeometry
     search_kw: str

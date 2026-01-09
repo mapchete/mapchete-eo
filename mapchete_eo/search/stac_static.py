@@ -29,6 +29,10 @@ StacIO.set_default(FSSpecStacIO)
 
 
 class STACStaticCollection(StaticCollectionWriterMixin, CollectionSearcher):
+    """
+    Search implementation for static STAC collections.
+    """
+
     config_cls = StacStaticConfig
 
     @cached_property

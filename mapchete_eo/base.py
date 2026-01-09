@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 
 
 class BaseDriverConfig(BaseModel):
+    """
+    Configuration for mapchete-eo drivers.
+    """
+
     format: str
     source: Sequence[Source]
     time: Optional[Union[TimeRange, List[TimeRange]]] = None
@@ -114,6 +118,9 @@ class EODataCube(base.InputTile):
 
     @cached_property
     def products(self) -> IndexedFeatures[EOProductProtocol]:
+        """
+        Indexed products.
+        """
         # during task graph processing, the products have to be fetched as preprocessing task results
         if self._products is None:  # pragma: no cover
             return IndexedFeatures(
@@ -158,11 +165,7 @@ class EODataCube(base.InputTile):
         **kwargs,
     ) -> xr.Dataset:
         """
-        Read reprojected & resampled input data.
-
-        Returns
-        -------
-        data : xarray.Dataset
+        Read input data into an xarray.Dataset.
         """
         return products_to_xarray(
             products=self.filter_products(
@@ -201,6 +204,9 @@ class EODataCube(base.InputTile):
         raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
+        """
+        Read input data as a MaskedArray.
+        """
         return products_to_np_array(
             products=self.filter_products(
                 start_time=start_time,
@@ -286,6 +292,27 @@ class EODataCube(base.InputTile):
         raise_empty: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
+        """
+        Read levelled data (cubes with depth) as a MaskedArray.
+
+        Args:
+            target_height: Target stack height.
+            assets: List of asset names.
+            eo_bands: List of EO bands.
+            start_time: Start time.
+            end_time: End time.
+            timestamps: List of timestamps.
+            time_pattern: Time pattern.
+            resampling: Resampling method.
+            nodatavals: Nodata values.
+            merge_products_by: Property to merge by.
+            merge_method: Merge method.
+            sort: Sorting configuration.
+            raise_empty: Raise error if no data found.
+
+        Returns:
+            ma.MaskedArray: Output data array.
+        """
         return read_levelled_cube_to_np_array(
             products=self.filter_products(
                 start_time=start_time,
@@ -317,6 +344,19 @@ class EODataCube(base.InputTile):
         nodatavals: NodataVals = None,
         **kwargs,
     ):
+        """
+        Read product masks.
+
+        Args:
+            start_time: Start time.
+            end_time: End time.
+            timestamps: List of timestamps.
+            time_pattern: Time pattern.
+            nodatavals: Nodata values.
+
+        Returns:
+            ma.MaskedArray: Mask data.
+        """
         from mapchete_eo.platforms.sentinel2.masks import read_masks
 
         return read_masks(
@@ -423,6 +463,10 @@ class EODataCube(base.InputTile):
 
 
 class InputData(base.InputData):
+    """
+    Main driver class used by mapchete to handle input data discovery and indexing.
+    """
+
     default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig

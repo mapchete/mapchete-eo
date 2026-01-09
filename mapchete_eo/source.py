@@ -17,7 +17,9 @@ from mapchete_eo.types import TimeRange
 
 
 class Source(BaseModel):
-    """All information required to consume EO products."""
+    """
+    All information required to consume EO products.
+    """
 
     collection: str
     catalog_crs: Optional[CRSLike] = mapchete_eo_settings.default_catalog_crs

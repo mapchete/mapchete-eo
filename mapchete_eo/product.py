@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 class EOProduct(EOProductProtocol):
-    """Wrapper class around a Item which provides read functions."""
+    """
+    Wrapper class around a STAC Item which provides data reading capabilities.
+    """
 
     id: str
     default_dtype: DTypeLike = np.uint16
@@ -70,7 +72,22 @@ class EOProduct(EOProductProtocol):
         raise_empty: bool = True,
         **kwargs,
     ) -> xr.Dataset:
-        """Read bands and assets into xarray."""
+        """
+        Read bands and assets into an xarray.Dataset.
+
+        Args:
+            assets: List of asset names.
+            eo_bands: List of EO band names.
+            grid: Target grid protocol.
+            resampling: Resampling algorithm.
+            nodatavals: Custom nodata values.
+            x_axis_name: Name of X axis in output.
+            y_axis_name: Name of Y axis in output.
+            raise_empty: Raise exception if no data is found.
+
+        Returns:
+            xr.Dataset: Dataset with assets as data variables.
+        """
         # developer info: all fancy stuff for special platforms like Sentinel-2
         # should be implemented in the respective read_np_array() methods which get
         # called by this method. No need to apply masks etc. here too.
@@ -121,6 +138,21 @@ class EOProduct(EOProductProtocol):
         apply_offset: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
+        """
+        Read assets or EO bands into a MaskedArray.
+
+        Args:
+            assets: List of asset names.
+            eo_bands: List of EO band names.
+            grid: Target grid.
+            resampling: Resampling method.
+            nodatavals: Nodata values.
+            raise_empty: Raise if empty.
+            apply_offset: Apply offset/scale metadata if present.
+
+        Returns:
+            ma.MaskedArray: Output array.
+        """
         assets = assets or []
         eo_bands = eo_bands or []
         bands = assets or eo_bands
@@ -182,7 +214,15 @@ def eo_bands_to_band_locations(
     role: Literal["data", "reflectance", "visual"] = "data",
 ) -> List[BandLocation]:
     """
-    Find out location (asset and band index) of EO band.
+    Map EO band names to asset locations.
+
+    Args:
+        item: STAC Item.
+        eo_bands: List of common band names.
+        role: Functional role of the assets.
+
+    Returns:
+        List[BandLocation]: List of location objects.
     """
     return [find_eo_band(item, eo_band, role=role) for eo_band in eo_bands]
 

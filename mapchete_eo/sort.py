@@ -22,9 +22,7 @@ def sort_objects_by_target_date(
     **kwargs,
 ) -> List[DateTimeProtocol]:
     """
-    Return sorted list of objects according to their distance to the target_date.
-
-    Default for target date is the middle between the objects start date and end date.
+    Sort objects by their distance to a target date.
     """
     if len(objects) == 0:
         return objects

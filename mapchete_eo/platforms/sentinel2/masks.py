@@ -61,7 +61,9 @@ def masks_to_xarray(
     raise_empty: bool = True,
     product_read_kwargs: dict = {},
 ) -> xr.Dataset:
-    """Read grid window of EOProducts and merge into a 4D xarray."""
+    """
+    Read masks of products and merge into an xarray.Dataset.
+    """
     data_vars = [
         s
         for s in generate_slice_masks_dataarrays(
@@ -307,7 +309,9 @@ def product_masks_to_slices(
     group_by_property: Optional[str] = None,
     sort: Optional[SortMethodConfig] = None,
 ) -> List[Slice]:
-    """Group products per given property into Slice objects and optionally sort slices."""
+    """
+    Group products by a property into Slices and optionally sort.
+    """
     if group_by_property:
         grouped = defaultdict(list)
         for product in products:

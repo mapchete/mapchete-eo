@@ -50,7 +50,7 @@ class FSSpecStacIO(StacApiIO):
 
 class CollectionSearcher(ABC):
     """
-    This class serves as a bridge between an Archive and a catalog implementation.
+    Bridge between a Source and a catalog implementation.
     """
 
     config_cls: Type[BaseModel]
@@ -129,7 +129,29 @@ class StaticCollectionWriterMixin(CollectionSearcher):
         stac_io: DefaultStacIO = FSSpecStacIO(),
         progress_callback: Optional[Callable] = None,
     ) -> MPath:
-        """Dump static version of current items."""
+        """
+        Export a static STAC catalog from the search results.
+
+        Args:
+            output_path: Destination directory for the static catalog.
+            bounds: Spatial filter bounds.
+            area: Spatial filter geometry.
+            time: Temporal filter range.
+            search_kwargs: Additional search arguments.
+            name: Catalog name.
+            description: Catalog description.
+            assets: List of assets to download.
+            assets_dst_resolution: Sub-sampling resolution for assets.
+            assets_convert_profile: Output profile for assets (e.g. for COG conversion).
+            copy_metadata: Whether to copy sidecar metadata files.
+            metadata_parser_classes: Custom parser classes for metadata.
+            overwrite: Overwrite existing files.
+            stac_io: Custom STAC IO implementation.
+            progress_callback: Optional function for progress reporting.
+
+        Returns:
+            MPath: Path to the generated catalog.json.
+        """
         output_path = MPath.from_inp(output_path)
         assets = assets or []
         # initialize catalog

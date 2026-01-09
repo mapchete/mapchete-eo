@@ -83,5 +83,5 @@ html_static_path = ["_static"]
 # Tells Sphinx to be strict, but ignore these specific ambiguous targets
 nitpicky = True
 nitpick_ignore = [
-    ('py:class', 'MergeMethod'), 
+    ("py:class", "MergeMethod"),
 ]

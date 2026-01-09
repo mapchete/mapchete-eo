@@ -10,8 +10,9 @@ from pystac import Asset
 
 
 class GeodataType(str, Enum):
-    vector = "vector"
-    raster = "raster"
+    """
+    Type of geodata (vector or raster).
+    """
 
 
 class MergeMethod(str, Enum):
@@ -42,12 +43,14 @@ class BandLocation:
     roles: List[str] = field(default_factory=list)
     eo_band_name: Optional[str] = None
 
-    @staticmethod
     def from_asset(
         asset: Asset,
         name: str,
         band_index: PositiveInt,
     ) -> BandLocation:
+        """
+        Extract band location info from STAC Asset.
+        """
         try:
             bands_info = asset.extra_fields.get(
                 "eo:bands", asset.extra_fields.get("bands", [])

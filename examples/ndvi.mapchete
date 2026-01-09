@@ -1,0 +1,21 @@
+process: ndvi_process.py
+input:
+  element84_sentinel2:
+    format: Sentinel-2
+    level: L2A
+    max_cloud_percent: 5
+    time:
+      start: 2025-06-01
+      end: 2025-06-30
+output:
+  format: GTiff
+  bands: 1
+  path: sentinel-2_ndvi
+  dtype: float32
+pyramid:
+  grid: geodetic
+  metatiling: 8
+zoom_levels:
+  min: 8
+  max: 13
+bounds: [16.20, 48.00, 16.75, 48.5]

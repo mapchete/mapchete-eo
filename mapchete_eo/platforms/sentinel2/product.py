@@ -143,6 +143,9 @@ class Cache:
 
 
 class S2Product(EOProduct, EOProductProtocol):
+    """
+    Sentinel-2 specific EOProduct implementation.
+    """
     _item_dict: Optional[dict] = None
     cache: Optional[Cache] = None
     _scl_cache: Dict[GridProtocol, np.ndarray]
@@ -245,6 +248,9 @@ class S2Product(EOProduct, EOProductProtocol):
         read_mask: Optional[np.ndarray] = None,
         **kwargs,
     ) -> ma.MaskedArray:
+        """
+        Read Sentinel-2 assets into a MaskedArray with masks and BRDF.
+        """    
         assets = assets or []
         eo_bands = eo_bands or []
         apply_offset = apply_offset and not self.metadata.boa_offset_applied
@@ -451,7 +457,9 @@ class S2Product(EOProduct, EOProductProtocol):
         grid: Union[GridProtocol, Resolution] = Resolution["20m"],
         cached_read: bool = False,
     ) -> ReferencedRaster:
-        """Return SCL mask."""
+        """
+        Read Scene Classification Layer mask.
+        """
         grid = (
             self.metadata.grid(grid)
             if isinstance(grid, Resolution)
@@ -519,7 +527,9 @@ class S2Product(EOProduct, EOProductProtocol):
         mask_config: MaskConfig = MaskConfig(),
         target_mask: Optional[np.ndarray] = None,
     ) -> ReferencedRaster:
-        """Merge masks into one 2D array."""
+        """
+        Merge all configured masks into one.
+        """
         grid = (
             self.metadata.grid(grid)
             if isinstance(grid, Resolution)

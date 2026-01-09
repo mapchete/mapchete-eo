@@ -12,20 +12,20 @@ cloud masking, temporal compositing, BRDF, etc.
 
 With STAC API and catalogs handling for data sources.
 
-CLI
----
+Generic Info
+------------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Generic Info
 
+   usage
    cli
+   api
 
 Example Usage
 -------------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Basic Examples
 
    examples

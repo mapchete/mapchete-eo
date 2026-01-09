@@ -19,7 +19,10 @@ def parse_s2_product(
     cache_config: Optional[CacheConfig] = None,
     cache_all: bool = False,
 ) -> Union[S2Product, CorruptedProductMetadata]:
-    # use mapper from source if applickable
+    """
+    Parse a Sentinel-2 STAC Item into an S2Product.
+    """
+    # use mapper from source if applicable
     source: Union[Sentinel2Source, None] = item.properties.pop(
         "mapchete_eo:source", None
     )

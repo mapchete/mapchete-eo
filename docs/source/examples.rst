@@ -1,9 +1,4 @@
 Examples
-==========================================
-
-Examples can be found in the `examples` directory of this repository.
-
-List of available Examples
 ========
 
 Mapchete-EO Drivers

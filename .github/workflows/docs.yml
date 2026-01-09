@@ -38,6 +38,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv lock --upgrade
           uv sync --all-extras
         env:
           GDAL_CONFIG: /usr/bin/gdal-config

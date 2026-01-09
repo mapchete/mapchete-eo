@@ -56,6 +56,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx_rtd_theme",
 ]
 
 intersphinx_mapping = {
@@ -77,7 +78,7 @@ templates_path = ["_templates"]
 # exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
+html_static_path = ["html"]
 # docs/source/conf.py
 
 # Tells Sphinx to be strict, but ignore these specific ambiguous targets

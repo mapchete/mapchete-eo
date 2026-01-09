@@ -2,11 +2,11 @@ name: dependabot-uv-conda-sync
 
 on:
   schedule:
-    - cron: '0 0 * * *'       # Daily maintenance
-  pull_request:               # Runs when pyproject.toml changes in a PR
+    - cron: '0 0 * * *'
+  pull_request:
     paths:
       - "pyproject.toml"
-  workflow_dispatch:          # Manual trigger
+  workflow_dispatch:
 
 jobs:
   sync-dependencies:
@@ -25,13 +25,10 @@ jobs:
 
       - name: Sync and Upgrade
         run: |
-          # Ensure uv.lock is perfectly synced and sub-deps are updated
           uv lock --upgrade
 
       - name: Sync Conda Recipe
         run: |
-          # Use uvx to run pyproject2conda without adding it to project deps.
-          # We add '-m' for known name mismatches between PyPI and Conda.
           uvx pyproject2conda yaml \
             -f pyproject.toml \
             --output conda/meta.yaml \
@@ -45,14 +42,11 @@ jobs:
           title: "chore(deps): sync uv and conda dependencies"
           body: |
             ### Automated Dependency Sync
-            This PR was triggered by the daily maintenance schedule or a change in `pyproject.toml`.
-            
-            - **uv.lock**: Upgraded to latest compatible versions.
-            - **conda/meta.yaml**: Synchronized with `pyproject.toml` using `pyproject2conda`.
-            
-            Please verify that the Conda mappings and lockfile versions are correct.
+            This PR ensures the lockfile and Conda recipe match `pyproject.toml`.
           branch: "automated-dependency-sync"
           delete-branch: true
+          assignees: Scartography
+          reviewers: ungarj
           labels: |
             dependencies
             automated-pr

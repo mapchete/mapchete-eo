@@ -18,7 +18,7 @@ def execute(
     Calculate NDVI (Normalized Difference Vegetation Index).
     """
     logger.debug("Reading Sentinel-2 NIR and Red bands.")
-    
+
     # Read the first available cloud-free pixel for NIR and Red
     # (Simplified for example purposes)
     data = element84_sentinel2.read_np_array(
@@ -26,19 +26,16 @@ def execute(
         resampling=Resampling[resampling],
         nodatavals=nodata,
     )
-    
+
     red = data[0].astype(float)
     nir = data[1].astype(float)
-    
+
     # Calculate NDVI: (NIR - Red) / (NIR + Red)
     with np.errstate(divide="ignore", invalid="ignore"):
         ndvi = (nir - red) / (nir + red)
         ndvi[np.isnan(ndvi)] = nodata
-        
+
     # NDVI is typically in range [-1, 1].
     # For visualization, we could scale it to 0-255 or just return the float array.
     # Here we return it as a single-band float32 array.
-    return ma.masked_array(
-        data=ndvi.astype(np.float32),
-        mask=data.mask[0]
-    )
+    return ma.masked_array(data=ndvi.astype(np.float32), mask=data.mask[0])

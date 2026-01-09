@@ -47,6 +47,7 @@ class BaseDriverConfig(BaseModel):
     """
     Configuration for mapchete-eo drivers.
     """
+
     format: str
     source: Sequence[Source]
     time: Optional[Union[TimeRange, List[TimeRange]]] = None
@@ -465,6 +466,7 @@ class InputData(base.InputData):
     """
     Main driver class used by mapchete to handle input data discovery and indexing.
     """
+
     default_preprocessing_task: Callable = staticmethod(EOProduct.from_stac_item)
     driver_config_model: Type[BaseDriverConfig] = BaseDriverConfig
     params: BaseDriverConfig

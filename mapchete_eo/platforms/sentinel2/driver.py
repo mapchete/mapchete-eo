@@ -20,6 +20,7 @@ class Sentinel2Cube(base.EODataCube):
     """
     Sentinel-2 data cube for Mapchete.
     """
+
     # Sentinel-2 driver specific default values:
     default_read_merge_method: MergeMethod = MergeMethod.average
     default_read_merge_products_by: Optional[str] = "s2:datastrip_id"

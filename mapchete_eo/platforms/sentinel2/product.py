@@ -146,6 +146,7 @@ class S2Product(EOProduct, EOProductProtocol):
     """
     Sentinel-2 specific EOProduct implementation.
     """
+
     _item_dict: Optional[dict] = None
     cache: Optional[Cache] = None
     _scl_cache: Dict[GridProtocol, np.ndarray]
@@ -250,7 +251,7 @@ class S2Product(EOProduct, EOProductProtocol):
     ) -> ma.MaskedArray:
         """
         Read Sentinel-2 assets into a MaskedArray with masks and BRDF.
-        """    
+        """
         assets = assets or []
         eo_bands = eo_bands or []
         apply_offset = apply_offset and not self.metadata.boa_offset_applied

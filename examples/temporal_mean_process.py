@@ -20,18 +20,18 @@ def execute(
     Create a temporal mean composite of cloud-free pixels.
     """
     logger.debug("Reading Sentinel-2 time series.")
-    
+
     # Read all available products into an xarray dataset
     ds = element84_sentinel2.read(
         assets=assets,
         resampling=Resampling[resampling],
         nodatavals=nodata,
     )
-    
+
     # Calculate mean over the time dimension
     # (Assuming xarray handle mask/nodata correctly via _FillValue)
     mean_composite = ds.mean(dim="time", skipna=True)
-    
+
     # Convert back to numpy masked array
     # This is a simplified conversion for the example
     out_data = []
@@ -40,8 +40,7 @@ def execute(
         arr = mean_composite[asset].values
         out_data.append(arr)
         out_mask.append(np.isnan(arr))
-        
+
     return ma.masked_array(
-        data=np.stack(out_data).astype(np.uint16),
-        mask=np.stack(out_mask)
+        data=np.stack(out_data).astype(np.uint16), mask=np.stack(out_mask)
     )

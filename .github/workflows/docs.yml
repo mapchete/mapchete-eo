@@ -7,17 +7,23 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write      # Required for deploying to GitHub Pages
+  id-token: write   # Required for OIDC tokens
+
+# Ensure only one concurrent deployment is running
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install System Dependencies (GDAL)
-        # Fiona needs gdal-config to determine versions and paths
         run: |
           sudo apt-get update
           sudo apt-get install -y libgdal-dev g++
@@ -31,20 +37,28 @@ jobs:
         run: uv python install
 
       - name: Install dependencies
-        # We set GDAL_CONFIG so Fiona's build backend finds the system GDAL
         run: |
-          export GDAL_CONFIG=/usr/bin/gdal-config
           uv sync --all-extras
         env:
           GDAL_CONFIG: /usr/bin/gdal-config
 
       - name: Build documentation
         run: |
-          # Re-export or use uv run --env to ensure Sphinx can see Fiona
           uv run sphinx-build -b html docs/source docs/build/html
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/build/html
+          path: ./docs/build/html
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

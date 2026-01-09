@@ -1,4 +1,4 @@
-name: dependabot-uv-conda-sync
+name: sync-dependencies
 
 on:
   schedule:
@@ -44,6 +44,7 @@ jobs:
             ### Automated Dependency Sync
             This PR ensures the lockfile and Conda recipe match `pyproject.toml`.
           branch: "automated-dependency-sync"
+          base: ${{ github.event.pull_request.base.ref || 'main' }}
           delete-branch: true
           assignees: Scartography
           reviewers: ungarj

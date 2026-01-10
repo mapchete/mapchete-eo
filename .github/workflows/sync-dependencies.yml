@@ -84,8 +84,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update uv.lock and conda recipe"
-          title: "chore(deps): sync uv and conda (verified)"
-          body: "Automated daily sync. Verified by the full test suite."
+          title: "chore(deps): sync uv and conda"
+          body: "Automated daily sync."
           branch: "automated-dependency-sync"
           delete-branch: true
           assignees: Scartography

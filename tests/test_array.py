@@ -10,7 +10,7 @@ from mapchete_eo.array.color import hex_to_rgb, color_array, outlier_pixels
 
 def test_buffer_array(test_2d_array):
     buffered_arr = buffer_array(test_2d_array, buffer=4)
-    assert not np.in1d(test_2d_array, buffered_arr).all()
+    assert not np.isin(test_2d_array, buffered_arr).all()
     assert buffered_arr.dtype == test_2d_array.dtype
 
 

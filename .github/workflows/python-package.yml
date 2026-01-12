@@ -7,7 +7,7 @@ on:
     branches: [main]
   schedule:
     - cron: '0 8 * * 1,4'
-  workflow_call: # This allows sync-dependencies.yml to trigger this logic
+  workflow_call:
 
 permissions:
   pull-requests: write
@@ -20,18 +20,16 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        os: ["ubuntu-latest"] # Simplified to ubuntu-latest for reliability
+        os: ["ubuntu-latest"]
 
     steps:
       - uses: actions/checkout@v4
 
-      # --- CRITICAL FOR SYNC ---
       - name: Download updated dependencies
         uses: actions/download-artifact@v4
-        continue-on-error: true # Safe to fail if running normally on push/PR
+        continue-on-error: true
         with:
           name: updated-deps
-      # -------------------------
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

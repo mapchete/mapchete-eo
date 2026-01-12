@@ -40,10 +40,10 @@ You must have ``mapchete`` with ``s3`` installed, so let's grab the ``complete``
 
 .. code-block:: bash
 
-    pip install mapchete[complete]
+    uv pip install mapchete[complete]
 
 Then install mapchete-eo:
 
 .. code-block:: bash
 
-    pip install mapchete-eo
+    uv pip install mapchete-eo

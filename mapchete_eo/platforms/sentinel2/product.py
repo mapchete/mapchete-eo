@@ -630,6 +630,8 @@ class S2Product(EOProduct, EOProductProtocol):
             logger.debug(
                 "mask for product %s already full, skip reading other masks", self.id
             )
+        except FileNotFoundError as exc:  # pragma: no cover
+            raise CorruptedProduct from exc
 
         # ATTENTION: target_mask and out have to be combined *after* mask was buffered!
         # use 'logical or' not '+' !!!

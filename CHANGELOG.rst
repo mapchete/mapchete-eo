@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2026.2.0 - 2026-02-04
+---------------------
+
+* core
+
+  * `platforms.sentinel2.product.S2Product`: raise `CorruptedProduct` exception if a mask file does not exist (#47)
+
+
 2026.1.0 - 2026-01-09
 ---------------------
 

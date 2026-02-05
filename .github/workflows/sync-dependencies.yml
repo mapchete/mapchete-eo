@@ -75,7 +75,7 @@ jobs:
     uses: ./.github/workflows/python-package.yml
     secrets: inherit
 
-  finalize:
+finalize:
     needs: [sync-and-prepare, run-tests]
     if: |
       always() && 
@@ -89,7 +89,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync Local Branch with Remote
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref || github.ref_name }}"
+          git pull --rebase origin $BRANCH_NAME
 
       - name: Download updated files
         uses: actions/download-artifact@v4
@@ -99,12 +110,13 @@ jobs:
       - name: Push to Existing PR
         if: github.event_name == 'pull_request'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
           git add uv.lock conda/meta.yaml
-          git commit -m "chore: sync uv.lock and conda recipe (tests passed)" || echo "No changes"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          if git diff --cached --quiet; then
+            echo "No changes detected after rebase."
+          else
+            git commit -m "chore: sync uv.lock and conda recipe (tests passed)"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
 
       - name: Create New Pull Request
         if: github.event_name != 'pull_request'

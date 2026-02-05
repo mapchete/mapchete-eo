@@ -41,8 +41,10 @@ jobs:
         - name: 📤 Upload venv Workspace
           uses: actions/upload-artifact@v4
           with:
-            name: workspace-${{ matrix.python-version }}
+            name: venv-artifact-${{ matrix.python-version }}
             path: workspace.tar
+            retention-days: 1
+
   test:
     needs: setup
     name: "🧪 py${{ matrix.python-version }} [${{ matrix.split }}/4]"
@@ -58,7 +60,7 @@ jobs:
       - name: 📥 Download Environment
         uses: actions/download-artifact@v4
         with:
-          name: venv-${{ matrix.python-version }}
+          name: venv-artifact-${{ matrix.python-version }}
       
       - name: 🔓 Restore Env
         run: |
@@ -75,7 +77,6 @@ jobs:
           CDSE_S3_ACCESS_KEY: ${{ secrets.CDSE_S3_ACCESS_KEY }}
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-          UV_LINK_MODE: copy
           UV_PYTHON_PREFERENCE: only-managed
         run: |
           uv run --no-sync python -m pytest -v \

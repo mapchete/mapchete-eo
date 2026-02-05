@@ -3,41 +3,41 @@ name: sync-dependencies
 on:
   schedule:
     - cron: '0 0 * * *'
-  pull_request:
-    paths:
-      - "pyproject.toml"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml" # ⬅️ Only trigger when the "source" of deps changes
 
 jobs:
   sync-and-prepare:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.check.outputs.changed }}
+      sync_needed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Install uv
+      - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Sync and Upgrade
+      - name: 🛠️ Upgrade & Sync
         run: |
-          uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
-
-      - name: Sync Conda Recipe
-        run: |
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
 
-      - name: Check for changes
+      - name: 📋 Check for Changes
         id: check
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi                
 
-      - name: Upload artifacts for testing
+      - name: 📤 Upload Updated Deps
         if: steps.check.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -46,48 +46,41 @@ jobs:
             uv.lock
             conda/meta.yaml
 
+  # This job runs the full 16-matrix test suite using the new lockfile
   run-tests:
     needs: sync-and-prepare
-    if: needs.sync-and-prepare.outputs.changed == 'true'
+    if: needs.sync-and-prepare.outputs.sync_needed == 'true'
     uses: ./.github/workflows/python-package.yml
     secrets: inherit
 
   finalize:
     needs: [sync-and-prepare, run-tests]
-    if: success()
+    if: |
+      always() && 
+      needs.run-tests.result == 'success' &&
+      needs.sync-and-prepare.outputs.sync_needed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: Download updated files
+      - name: 🛠️ Git Rebase (Clean Tree)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin ${{ github.event.pull_request.head.ref || github.ref_name }}
+
+      - name: 📥 Apply Verified Artifacts
         uses: actions/download-artifact@v4
         with:
           name: updated-deps
 
-      - name: Push to Existing PR
-        if: github.event_name == 'pull_request'
+      - name: 🚀 Commit and Push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add uv.lock conda/meta.yaml
-          git commit -m "chore: sync uv.lock and conda recipe (tests passed)" || echo "No changes"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
-
-      - name: Create New Pull Request
-        if: github.event_name != 'pull_request'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update uv.lock and conda recipe"
-          title: "chore(deps): sync uv and conda"
-          body: "Automated daily sync."
-          branch: "automated-dependency-sync"
-          delete-branch: true
-          assignees: Scartography
-          reviewers: ungarj
-          labels: dependencies, automated-pr
+          git commit -m "chore: automated dependency sync (verified)"
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}

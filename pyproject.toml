@@ -50,7 +50,8 @@ docs = [
 test = [
     "pytest",
     "pytest-coverage",
-    "pytest-lazy-fixtures"
+    "pytest-lazy-fixtures",
+    "pytest-split"
 ]
 
 [project.entry-points."mapchete.cli.commands"]
@@ -84,7 +85,15 @@ branch = true
 source = ["mapchete_eo"]
 
 [tool.pytest.ini_options]
-addopts = "--durations 20 --verbose --nf --cov=mapchete_eo --cov-report=term-missing:skip-covered"
+addopts = [
+    "--durations=20",
+    "--verbose",
+    "--splitting-algorithm", "least_duration",
+    "--nf",
+    "--cov=mapchete_eo",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-append"
+]
 testpaths = ["tests"]
 markers = [
     "remote: marks tests which require acces to remote resources (deselect with '-m \"not remote\"')",

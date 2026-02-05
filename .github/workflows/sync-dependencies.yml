@@ -4,10 +4,13 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "pyproject.toml"
   push:
     branches: [main]
     paths:
-      - "pyproject.toml" # ⬅️ Only trigger when the "source" of deps changes
+      - "pyproject.toml"
 
 jobs:
   sync-and-prepare:
@@ -25,7 +28,11 @@ jobs:
 
       - name: 🛠️ Upgrade & Sync
         run: |
+          # Robust repair: if the lockfile is out of sync/corrupted, fix it, then upgrade everything
+          uv lock || (rm uv.lock && uv lock)
           uv lock --upgrade
+          
+          # Sync the conda recipe
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
 
       - name: 📋 Check for Changes
@@ -46,7 +53,6 @@ jobs:
             uv.lock
             conda/meta.yaml
 
-  # This job runs the full 16-matrix test suite using the new lockfile
   run-tests:
     needs: sync-and-prepare
     if: needs.sync-and-prepare.outputs.sync_needed == 'true'
@@ -62,25 +68,43 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
 
-      - name: 🛠️ Git Rebase (Clean Tree)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin ${{ github.event.pull_request.head.ref || github.ref_name }}
-
-      - name: 📥 Apply Verified Artifacts
+      - name: 📥 Download Verified Artifacts
         uses: actions/download-artifact@v4
         with:
           name: updated-deps
 
-      - name: 🚀 Commit and Push
+      - name: ⬆️ Push to Existing PR
+        if: github.event_name == 'pull_request'
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add uv.lock conda/meta.yaml
-          git commit -m "chore: automated dependency sync (verified)"
-          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
+          git commit -m "chore: sync uv.lock and conda (tests passed)" || echo "No changes"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
+      - name: ➕ Create New Pull Request
+        if: github.event_name != 'pull_request'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update uv.lock and conda recipe"
+          title: "chore(deps): sync uv and conda"
+          body: |
+            ## 🤖 Automated Dependency Sync
+            This PR updates `uv.lock` and `conda/meta.yaml` to match `pyproject.toml`.
+            
+            ✅ **Verification:** The full parallelized test suite passed with these new versions.
+          branch: "automated-dependency-sync"
+          delete-branch: true
+          assignees: Scartography
+          reviewers: ungarj
+          labels: |
+            dependencies
+            automated-pr

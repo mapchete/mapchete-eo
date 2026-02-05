@@ -61,7 +61,6 @@ jobs:
             uv run pytest -v \
               --splits 4 \
               --group "$i" \
-              --splitting-algorithm simple_split \
               --cov=mapchete_eo \
               --cov-append \
               --cov-report=xml:coverage.xml \

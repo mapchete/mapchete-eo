@@ -33,27 +33,16 @@ jobs:
             curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
         - name: 🏗️ Create Environment
-          env:
-            UV_LINK_MODE: copy        
           run: |
             uv python install ${{ matrix.python-version }}
             uv sync --frozen --all-extras --python ${{ matrix.python-version }}
-      
-        - name: 📦 Archive Venv
-          run: |
-            if [ -d ".venv" ]; then
-              tar -cf venv-${{ matrix.python-version }}.tar .venv pyproject.toml uv.lock
-            else
-              echo "❌ Error: .venv directory not found!"
-              exit 1
-            fi
-
-        - name: 📤 Upload Venv
+        - name: 📦 Archive Workspace
+          run: tar -cf workspace.tar . 
+        - name: 📤 Upload venv Workspace
           uses: actions/upload-artifact@v4
           with:
-            name: venv-${{ matrix.python-version }}
-            path: venv-${{ matrix.python-version }}.tar
-            retention-days: 1
+            name: workspace-${{ matrix.python-version }}
+            path: workspace.tar
   test:
     needs: setup
     name: "🧪 py${{ matrix.python-version }} [${{ matrix.split }}/4]"
@@ -73,7 +62,7 @@ jobs:
       
       - name: 🔓 Restore Env
         run: |
-          tar -xf venv-${{ matrix.python-version }}.tar
+          tar -xf workspace.tar
           apt-get update && apt-get install -y curl
           curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
@@ -87,12 +76,13 @@ jobs:
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
           UV_LINK_MODE: copy
+          UV_PYTHON_PREFERENCE: only-managed
         run: |
-          uv run pytest -v \
+          uv run --no-sync python -m pytest -v \
             --splits 4 \
             --group ${{ matrix.split }} \
             --cov=mapchete_eo \
-            --cov-report=xml:coverage.xml
+            --cov-report=xml:coverage.xml \
             --junitxml="pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml"
 
       - name: 📊 Upload to Codecov

@@ -26,21 +26,28 @@ jobs:
       container: ghcr.io/osgeo/gdal:ubuntu-full-latest
       steps:
         - uses: actions/checkout@v4
-        - name: ⚡ Install uv & Sync
+
+        - name: ⚡ Install uv
           run: |
+            apt-get update && apt-get install -y curl
             curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+
+        - name: 🏗️ Create Environment
+          run: |
             uv python install ${{ matrix.python-version }}
             uv sync --frozen --all-extras --python ${{ matrix.python-version }}
-        
-        - name: 📦 Archive Environment
-          # We save the .venv and the uv cache so the next job is "ready to go"
-          run: tar -cf venv.tar .venv .python-version
+          # We include the test tools in the lock/sync
+      
+        - name: 📦 Archive Venv
+          # We archive the .venv folder. Using --zstd makes it fast and small.
+          run: tar -cf venv-${{ matrix.python-version }}.tar .venv .python-version pyproject.toml uv.lock
 
-        - name: 📤 Upload Environment
+        - name: 📤 Upload Venv
           uses: actions/upload-artifact@v4
           with:
             name: venv-${{ matrix.python-version }}
-            path: venv.tar  
+            path: venv-${{ matrix.python-version }}.tar
+            retention-days: 1
   test:
     needs: setup
     name: "🧪 py${{ matrix.python-version }} [${{ matrix.split }}/4]"
@@ -78,9 +85,11 @@ jobs:
             --group ${{ matrix.split }} \
             --cov=mapchete_eo \
             --cov-report=xml:coverage.xml
+            --junitxml="pytest-${{ matrix.split }}.xml"
 
-      - name: 📊 Codecov
+      - name: 📊 Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
           flags: py${{ matrix.python-version }},split${{ matrix.split }}

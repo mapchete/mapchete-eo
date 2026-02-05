@@ -62,7 +62,7 @@ jobs:
       
       - name: ⚡ Install uv
         run: |
-          apt-get update && apt-get install -y curl
+          apt-get update && apt-get install -y curl git
           curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
       - name: 🏗️ Restore Native Env

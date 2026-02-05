@@ -19,7 +19,7 @@ on:
 jobs:
   test:
     # 🏷️ This keeps the UI clean: Only 4 jobs total
-    name: "🧪 Python ${{ matrix.python-version }} (Sequential Splits)"
+    name: "🧪 Python ${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,14 +35,12 @@ jobs:
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
 
-      - name: ⚡ Install uv (Binary Copy)
+      - name: ⚡ Install uv
         run: |
-          docker create --name uv-exporter ghcr.io/astral-sh/uv:latest
-          docker cp uv-exporter:/uv /usr/local/bin/uv
-          docker cp uv-exporter:/uvx /usr/local/bin/uvx
-          docker rm uv-exporter
+          apt-get update && apt-get install -y curl
+          curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
-      - name: 🏗️ Setup Env
+      - name: 🏗️ Setup Python ${{ matrix.python-version }} Env
         run: |
           uv python install ${{ matrix.python-version }}
           uv sync --all-extras --python ${{ matrix.python-version }}

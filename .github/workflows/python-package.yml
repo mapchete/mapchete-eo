@@ -36,11 +36,15 @@ jobs:
           run: |
             uv python install ${{ matrix.python-version }}
             uv sync --frozen --all-extras --python ${{ matrix.python-version }}
-          # We include the test tools in the lock/sync
       
         - name: 📦 Archive Venv
-          # We archive the .venv folder. Using --zstd makes it fast and small.
-          run: tar -cf venv-${{ matrix.python-version }}.tar .venv .python-version pyproject.toml uv.lock
+          run: |
+            if [ -d ".venv" ]; then
+              tar -cf venv-${{ matrix.python-version }}.tar .venv pyproject.toml uv.lock
+            else
+              echo "❌ Error: .venv directory not found!"
+              exit 1
+            fi
 
         - name: 📤 Upload Venv
           uses: actions/upload-artifact@v4

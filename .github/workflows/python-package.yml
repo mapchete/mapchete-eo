@@ -19,7 +19,7 @@ on:
 jobs:
   test:
     # 🏷️ This keeps the UI clean: Only 4 jobs total
-    name: "🧪 Python ${{ matrix.python-version }}"
+    name: "🧪 Test with Python ${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -43,8 +43,7 @@ jobs:
       - name: 🏗️ Setup Python ${{ matrix.python-version }} Env
         run: |
           uv python install ${{ matrix.python-version }}
-          uv sync --all-extras --python ${{ matrix.python-version }}
-          uv pip install pytest-split pytest-cov
+          uv sync --frozen --all-extras --python ${{ matrix.python-version }}
 
       - name: 🧪 Run Sequential Splits
         env:
@@ -56,17 +55,17 @@ jobs:
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
-          # Loop through 4 splits to avoid a "Wall of Tests" in the UI
-          # --cov-append merges coverage data from each split as we go
+          set -e
           for i in {1..4}; do
             echo "▶️ Running Split $i of 4..."
             uv run pytest -v \
               --splits 4 \
-              --group $i \
+              --group "$i" \
+              --splitting-algorithm simple_split \
               --cov=mapchete_eo \
               --cov-append \
               --cov-report=xml:coverage.xml \
-              --junitxml=pytest-split-$i.xml
+              --junitxml="pytest-split-$i.xml"
           done
 
       - name: 📊 Upload to Codecov

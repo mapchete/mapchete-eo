@@ -56,8 +56,8 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
           set -e
-          for i in {1..4}; do
-            echo "▶️ Running Split $i of 4..."
+          for i in $(seq 1 4); do
+            echo "▶️ Starting Split $i of 4..."
             uv run pytest -v \
               --splits 4 \
               --group "$i" \

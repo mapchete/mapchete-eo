@@ -21,6 +21,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: ["ubuntu-latest"]
+        split: [1, 2, 3, 4]
 
     steps:
       - uses: actions/checkout@v4
@@ -69,7 +70,15 @@ jobs:
           CDSE_S3_ACCESS_KEY: ${{ secrets.CDSE_S3_ACCESS_KEY }}
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: uv run pytest -v --cov mapchete_eo --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
+        run: |
+          # Use --splits 4 (matches matrix) and --group ${{ matrix.split }}
+          uv run pytest -v \
+            --splits 4 \
+            --group ${{ matrix.split }} \
+            --cov mapchete_eo \
+            --cov-report xml:coverage.xml \
+            --cov-report=term-missing:skip-covered \
+            --junitxml=pytest.xml
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5

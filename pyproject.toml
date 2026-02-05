@@ -51,7 +51,7 @@ test = [
     "pytest",
     "pytest-coverage",
     "pytest-lazy-fixtures",
-    "pytest-xdist"
+    "pytest-split"
 ]
 
 [project.entry-points."mapchete.cli.commands"]
@@ -88,13 +88,11 @@ source = ["mapchete_eo"]
 addopts = [
     "--durations=20",
     "--verbose",
+    "--splitting-algorithm", "least_duration",
     "--nf",
     "--cov=mapchete_eo",
     "--cov-report=term-missing:skip-covered",
-    "--cov-append",
-    "--numprocesses=auto",
-    "--dist=loadscope",
-    "--max-worker-restart=3"
+    "--cov-append"
 ]
 testpaths = ["tests"]
 markers = [

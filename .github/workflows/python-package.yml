@@ -15,8 +15,8 @@ permissions:
 
 jobs:
   test:
-    # 🏷️ This makes the UI subdivided and easy to read!
-    name: 🐍 ${{ matrix.python-version }} • 🧩 Split ${{ matrix.split }}/${{ strategy.job-total / 4 }}
+    # 🏷️ Fixed naming logic: Simple and clean subdivision
+    name: "🐍 ${{ matrix.python-version }} • 🧩 Split ${{ matrix.split }} of 4"
     runs-on: ${{ matrix.os }}
     
     strategy:
@@ -26,17 +26,18 @@ jobs:
         os: ["ubuntu-latest"]
         split: [1, 2, 3, 4]
 
-    # Move common env vars here to keep the "run" step clean
+    # Global Job Environment - keeps the individual steps surgical
     env:
       CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       OPENBLAS_NUM_THREADS: 1
       OMP_NUM_THREADS: 1
+      MKL_NUM_THREADS: 1
 
     steps:
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Load Updated Artifacts
+      - name: 📦 Download updated dependencies
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -52,7 +53,7 @@ jobs:
           python -m pip install pre-commit
           pre-commit run --show-diff-on-failure --all-files
 
-      - name: 🌍 Install GIS System Deps
+      - name: 🌍 Install GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get -y update
@@ -63,7 +64,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: 🛠️ Sync Environment
+      - name: 🛠️ Install dependencies
         env:
           GDAL_CONFIG: /usr/bin/gdal-config
         run: |
@@ -92,5 +93,4 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: mapchete/mapchete-eo
-          # Adding flags makes the Codecov UI prettier too!
           flags: py${{ matrix.python-version }},split${{ matrix.split }}

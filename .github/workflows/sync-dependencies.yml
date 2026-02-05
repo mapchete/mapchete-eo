@@ -75,7 +75,7 @@ jobs:
     uses: ./.github/workflows/python-package.yml
     secrets: inherit
 
-finalize:
+  finalize:
     needs: [sync-and-prepare, run-tests]
     if: |
       always() && 

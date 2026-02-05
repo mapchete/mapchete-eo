@@ -93,7 +93,8 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
-          flags: py${{ matrix.python-version }},split${{ matrix.split }}
+          flags: py${{ matrix.python-version }}-split${{ matrix.split }}
+          fail_ci_if_error: true
 
       - name: 📤 Archive JUnit Results
         if: always()
@@ -115,11 +116,20 @@ jobs:
           path: all-results
           pattern: results-*
           merge-multiple: true
-
-      - name: 📝 Check Matrix Success
+      - name: 📊 Results of the Test Suite
         run: |
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "❌ Some test splits failed."
+          echo "### 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          
+          # Count XML files
+          COUNT=$(ls all-results/*.xml 2>/dev/null | wc -l || echo "0")
+          
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully collected and verified $COUNT test report files." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ **Some test splits failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "Review the 'test' matrix for specific logs. Collected $COUNT reports before failure." >> $GITHUB_STEP_SUMMARY
+            echo "Check the 'Artifacts' section below to download individual JUnit XML reports." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          echo "✅ All 16 splits passed across all Python versions!"          

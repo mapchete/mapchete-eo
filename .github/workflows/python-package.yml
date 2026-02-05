@@ -60,13 +60,16 @@ jobs:
         with:
           name: frozen-reqs-${{ matrix.python-version }}
       
-      - name: 🏗️ Restore Environment
+      - name: ⚡ Install uv
         run: |
           apt-get update && apt-get install -y curl
           curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+
+      - name: 🏗️ Restore Native Env
+        run: |
           uv venv --python ${{ matrix.python-version }}
           uv pip install -r requirements.txt
-          uv pip install -e .[test] --no-deps
+          uv pip install -e ".[test]" --no-deps
 
       - name: 🧪 Run Split
         env:
@@ -78,7 +81,7 @@ jobs:
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
         run: |
-          uv run --no-sync python -m pytest -v \
+            uv run pytest -v \
             --splits 4 \
             --group ${{ matrix.split }} \
             --cov=mapchete_eo \

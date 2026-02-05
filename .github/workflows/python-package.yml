@@ -69,9 +69,10 @@ jobs:
         with:
           name: venv-${{ matrix.python-version }}
       
-      - name: 🔓 Unpack & Inject uv
+      - name: 🔓 Restore Env
         run: |
-          tar -xf venv.tar
+          tar -xf venv-${{ matrix.python-version }}.tar
+          apt-get update && apt-get install -y curl
           curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
 
       - name: 🧪 Run Split

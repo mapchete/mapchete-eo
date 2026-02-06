@@ -19,6 +19,20 @@ on:
         type: string    
 
 jobs:
+  lint:
+    name: "📝 Pre-commit / Code Quality"
+    runs-on: ubuntu-latest
+    # Skip linting when triggered by the Sync Workflow (it just updated locks)
+    if: github.event_name != 'workflow_call'
+    steps:
+      - uses: actions/checkout@v4
+      - name: ⚡ Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: 🏃 Run Pre-commit
+        run: |
+          uv tool install pre-commit
+          uv tool run pre-commit run --show-diff-on-failure --all-files
+
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       runs-on: ubuntu-latest
@@ -88,12 +102,6 @@ jobs:
           uv venv --python ${{ matrix.python-version }}
           uv pip install -r requirements.txt
           uv pip install -e ".[test]" --no-deps
-
-      - name: 📝 Lint
-        if: github.event_name != 'workflow_call'
-        run: |
-          uv pip install pre-commit
-          uv run pre-commit run --show-diff-on-failure --all-files
 
       - name: 🧪 Run Split
         env:

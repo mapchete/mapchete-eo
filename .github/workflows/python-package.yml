@@ -56,7 +56,16 @@ jobs:
         split: [1, 2, 3, 4]
     container: ghcr.io/osgeo/gdal:ubuntu-small-latest
     steps:
+      - name: ⚡ Prepare Container
+        run: |
+          apt-get update
+          apt-get install -y curl git gpg
+          
+          # Fix "Dubious Ownership" error (Required for containerized Git)
+          git config --global --add safe.directory '*'
+
       - uses: actions/checkout@v4
+
       - name: 📥 Download Requirements
         uses: actions/download-artifact@v4
         with:
@@ -70,8 +79,9 @@ jobs:
       
       - name: ⚡ Install uv
         run: |
-          apt-get update && apt-get install -y curl git gpg
-          curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh
+
+          uv --version
 
       - name: 🏗️ Restore Native Env
         run: |

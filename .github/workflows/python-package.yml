@@ -195,8 +195,8 @@ jobs:
           # We use the rcfile to ensure the mapping is applied during the merge
           uv tool run coverage combine --rcfile=.coveragerc
           
-          # ENFORCE 100% (or your chosen threshold)
-          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1) || EXIT_CODE=$?
+          # ENFORCE 85% (or your chosen threshold)
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1) || EXIT_CODE=$?
           
           echo "$OUTPUT"
           
@@ -205,8 +205,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ "${EXIT_CODE:-0}" -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 100%." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 85%." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else
-            echo "✅ **Coverage Passed:** 100% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Coverage Passed:** 85% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
           fi

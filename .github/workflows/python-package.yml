@@ -79,6 +79,12 @@ jobs:
           uv pip install -r requirements.txt
           uv pip install -e ".[test]" --no-deps
 
+      - name: 📝 Lint
+        if: github.event_name != 'workflow_call'
+        run: |
+          uv pip install pre-commit
+          uv run pre-commit run --show-diff-on-failure --all-files
+
       - name: 🧪 Run Split
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -88,6 +94,7 @@ jobs:
           CDSE_S3_ACCESS_KEY: ${{ secrets.CDSE_S3_ACCESS_KEY }}
           CDSE_S3_ACCESS_SECRET: ${{ secrets.CDSE_S3_ACCESS_SECRET }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          COVERAGE_FILE: .coverage.python.${{ matrix.python-version }}.test.split.${{ matrix.split }}
         run: |
             uv run pytest -v \
             --splits 4 \
@@ -100,9 +107,18 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: py${{ matrix.python-version }}-split${{ matrix.split }}
           fail_ci_if_error: true
+
+      - name: 📤 Upload Coverage Chunk (Latest Only)
+        if: matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-chunk-${{ matrix.split }}
+          path: .coverage.python.${{ matrix.python-version }}.test.split.${{ matrix.split }}
+          include-hidden-files: true
+          retention-days: 1
 
       - name: 📤 Archive JUnit Results
         if: always()
@@ -113,31 +129,59 @@ jobs:
           retention-days: 1
 
   summary:
-    name: "📊 Final Summary"
+    name: "📊 Final Summary & Coverage"
     needs: test
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Download All Results
+      - uses: actions/checkout@v4 # Needed for coverage to see source files
+
+      - name: ⚡ Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-results
-          pattern: results-*
+          pattern: "*-*" 
           merge-multiple: true
-      - name: 📊 Results of the Test Suite
+
+      - name: 📊 Check Tests & Coverage
         run: |
-          echo "### 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧪 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           
-          # Count XML files
-          COUNT=$(ls all-results/*.xml 2>/dev/null | wc -l || echo "0")
-          
-          if [[ "${{ needs.test.result }}" == "success" ]]; then
-            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
-            echo "Successfully collected and verified $COUNT test report files." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          else
-            echo "❌ **Some test splits failed.**" >> $GITHUB_STEP_SUMMARY
-            echo "Review the 'test' matrix for specific logs. Collected $COUNT reports before failure." >> $GITHUB_STEP_SUMMARY
-            echo "Check the 'Artifacts' section below to download individual JUnit XML reports." >> $GITHUB_STEP_SUMMARY
+          # 1. CHECK OVERALL TEST STATUS
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage check skipped because tests failed." >> $GITHUB_STEP_SUMMARY
             exit 1
+          fi
+          echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
+
+          # 2. COMBINE COVERAGE (Only 3.13 files exist here)
+          uv tool install coverage
+          
+          # Move the specific 3.13 files to root
+          mv all-results/.coverage* .
+          
+          echo "Merging coverage files..."
+          uv tool run coverage combine
+          
+          # 3. ENFORCE 85%
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1)
+          EXIT_CODE=$?
+          
+          echo "$OUTPUT"
+          
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 85%." >> $GITHUB_STEP_SUMMARY
+            # Exit with the original code to fail the build
+            exit $EXIT_CODE
+          else
+            echo "✅ **Coverage Passed:** 85% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            exit 0
           fi

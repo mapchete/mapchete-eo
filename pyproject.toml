@@ -89,6 +89,7 @@ addopts = [
     "--durations=20",
     "--verbose",
     "--splitting-algorithm", "least_duration",
+    "--durations-path", "tests/.test_duration",
     "--nf",
     "--cov=mapchete_eo",
     "--cov-report=term-missing:skip-covered",

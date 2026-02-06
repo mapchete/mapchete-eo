@@ -4,17 +4,19 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - "uv.lock"
-      - "conda/meta.yaml"
       - "docs/**"
   pull_request:
     branches: [main]
     paths-ignore:
-      - "uv.lock"
       - "conda/meta.yaml"     
   schedule:
     - cron: '0 8 * * 1,4'
   workflow_call:
+    inputs:
+      override-deps-artifact:
+        description: "Name of artifact containing updated lockfiles"
+        required: false
+        type: string    
 
 jobs:
   setup:
@@ -59,6 +61,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frozen-reqs-${{ matrix.python-version }}
+
+      - name: 📥 Apply Dependency Overrides
+        if: "${{ inputs.override-deps-artifact != '' }}"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.override-deps-artifact }}          
       
       - name: ⚡ Install uv
         run: |

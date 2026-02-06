@@ -57,6 +57,8 @@ jobs:
     needs: sync-and-prepare
     if: needs.sync-and-prepare.outputs.sync_needed == 'true'
     uses: ./.github/workflows/python-package.yml
+    with:
+      override-deps-artifact: updated-deps
     secrets: inherit
 
   finalize:

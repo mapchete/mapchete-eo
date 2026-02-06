@@ -176,28 +176,37 @@ jobs:
             echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
 
           uv tool install coverage
           mv all-results/.coverage* .
           
-          echo "Merging coverage files..."
-          uv tool run coverage combine
+          cat <<EOF > .coveragerc
+          [run]
+          relative_files = True
+
+          [paths]
+          source =
+              .
+              /__w/mapchete-eo/mapchete-eo/
+          EOF
           
-          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1) || EXIT_CODE=$?
+          echo "Merging coverage files with path remapping..."
+          # 2️⃣ COMBINE & REPORT
+          # We use the rcfile to ensure the mapping is applied during the merge
+          uv tool run coverage combine --rcfile=.coveragerc
           
-          # Show the report in the console logs
+          # ENFORCE 100% (or your chosen threshold)
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=100 2>&1) || EXIT_CODE=$?
+          
           echo "$OUTPUT"
           
-          # Write the report to the GitHub Summary UI
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
-          # Now we handle the exit code
           if [ "${EXIT_CODE:-0}" -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 85%." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 100%." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else
-            echo "✅ **Coverage Passed:** 85% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Coverage Passed:** 100% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
           fi

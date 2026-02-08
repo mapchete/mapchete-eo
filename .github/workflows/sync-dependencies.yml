@@ -10,6 +10,7 @@ on:
       - "uv.lock"
   push:
     branches: [main]
+    tags: ['*']
     paths:
       - "pyproject.toml"
       - "uv.lock"
@@ -69,12 +70,15 @@ jobs:
             fi
             
           else
-            # 💤 CASE 3: Absolutely nothing changed
             echo "changed=false" >> $GITHUB_OUTPUT
             
             echo "### ✅ Everything is Up-to-Date" >> $GITHUB_STEP_SUMMARY
             echo "No changes detected in \`uv.lock\`." >> $GITHUB_STEP_SUMMARY
-            echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event_name }}" == "pull_request" ] || [ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]; then
+              echo "🚀 **Action:** Running tests to verify PR/Release state." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "💤 **Action:** Skipping tests and PR creation." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: 📤 Upload Updated Deps
@@ -88,10 +92,19 @@ jobs:
 
   run-tests:
     needs: sync-and-prepare
-    if: needs.sync-and-prepare.outputs.sync_needed == 'true'
+    # Always run tests on Pull Requests and Tags to satisfy mandatory status checks.
+    # On other events (like schedule), only run if a sync was actually needed.
+    if: |
+      always() &&
+      needs.sync-and-prepare.result == 'success' &&
+      (
+        needs.sync-and-prepare.outputs.sync_needed == 'true' || 
+        github.event_name == 'pull_request' ||
+        startsWith(github.ref, 'refs/tags/')
+      )
     uses: ./.github/workflows/python-package.yml
     with:
-      override-deps-artifact: updated-deps
+      override-deps-artifact: ${{ needs.sync-and-prepare.outputs.sync_needed == 'true' && 'updated-deps' || '' }}
     secrets: inherit
 
   finalize:
@@ -109,6 +122,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
 
       - name: 📥 Download Verified Artifacts
         uses: actions/download-artifact@v4
@@ -125,13 +139,13 @@ jobs:
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
           
           echo "### 🚀 PR Updated" >> $GITHUB_STEP_SUMMARY
-          echo "Pushed verified changes to existing PR." >> $GITHUB_STEP_SUMMARY
+          echo "Pushed verified changes to existing PR. CI will re-run now." >> $GITHUB_STEP_SUMMARY
 
       - name: ➕ Create New Pull Request
         if: github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MAPCHETE_PAT_CONTAINER_IMAGES_TOKEN }}
           commit-message: "chore: update uv.lock and conda recipe"
           title: "chore(deps): sync uv and conda"
           body: |

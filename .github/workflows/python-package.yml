@@ -2,13 +2,17 @@ name: Python package test
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
+    tags: ['*']
     paths-ignore:
       - "docs/**"
   pull_request:
     branches: [main]
     paths-ignore:
       - "docs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "conda/meta.yaml"
   schedule:
     - cron: '0 8 * * 1,4'
   workflow_call:
@@ -22,8 +26,6 @@ jobs:
   lint:
     name: "📝 Pre-commit / Code Quality"
     runs-on: ubuntu-latest
-    # Skip linting when triggered by the Sync Workflow (it just updated locks)
-    if: github.event_name != 'workflow_call'
     steps:
       - uses: actions/checkout@v4
       - name: ⚡ Install uv
@@ -184,7 +186,9 @@ jobs:
           fi
 
           uv tool install coverage
-          mv all-results/.coverage* .
+          if ls all-results/.coverage* 1> /dev/null 2>&1; then
+            mv all-results/.coverage* .
+          fi
           
           cat <<EOF > .coveragerc
           [run]
@@ -199,18 +203,19 @@ jobs:
           echo "Merging coverage files with path remapping..."
           # 2️⃣ COMBINE & REPORT
           # We use the rcfile to ensure the mapping is applied during the merge
-          uv tool run coverage combine --rcfile=.coveragerc
+          uv tool run coverage combine --append --rcfile=.coveragerc || echo "No extra coverage files to combine."
           
           # ENFORCE 85% (or your chosen threshold)
-          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1) || EXIT_CODE=$?
+          REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1)
+          EXIT_CODE=$?
           
-          echo "$OUTPUT"
+          echo "$REPORT_OUTPUT"
           
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
-          if [ "${EXIT_CODE:-0}" -ne 0 ]; then
+          if [ $EXIT_CODE -ne 0 ]; then
             echo "❌ **Coverage Failed:** Python 3.13 coverage is below 85%." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else

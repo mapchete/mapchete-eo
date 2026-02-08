@@ -1,23 +1,19 @@
 name: Python package test
 
 on:
-  push:
-    branches: ['**']
-    tags: ['*']
-    paths-ignore:
-      - "docs/**"
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
   schedule:
-    - cron: '0 8 * * 1,4'
+    - cron: '0 8 * * 1,4'  
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+    branches: ['**']
   workflow_call:
     inputs:
       override-deps-artifact:
         description: "Name of artifact containing updated lockfiles"
         required: false
-        type: string    
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,9 +35,6 @@ jobs:
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       needs: lint
-      if: |
-        always() && 
-        (needs.lint.result == 'success' || needs.lint.result == 'skipped')
       runs-on: ubuntu-latest
       strategy:
         matrix:

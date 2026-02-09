@@ -89,13 +89,7 @@ jobs:
       - name: 📥 Download Requirements
         uses: actions/download-artifact@v4
         with:
-          name: frozen-reqs-${{ matrix.python-version }}
-
-      - name: 📥 Apply Dependency Overrides
-        if: "${{ inputs.override-deps-artifact != '' }}"
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.override-deps-artifact }}          
+          name: frozen-reqs-${{ matrix.python-version }}        
       
       - name: ⚡ Install uv
         run: |

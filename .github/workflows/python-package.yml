@@ -89,13 +89,7 @@ jobs:
       - name: 📥 Download Requirements
         uses: actions/download-artifact@v4
         with:
-          name: frozen-reqs-${{ matrix.python-version }}
-
-      - name: 📥 Apply Dependency Overrides
-        if: "${{ inputs.override-deps-artifact != '' }}"
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.override-deps-artifact }}          
+          name: frozen-reqs-${{ matrix.python-version }}        
       
       - name: ⚡ Install uv
         run: |
@@ -109,7 +103,7 @@ jobs:
           uv pip install -r requirements.txt
           uv pip install -e ".[test]" --no-deps
 
-      - name: 🧪 Run Split
+      - name: 🧪 Run Tests (Split ${{ matrix.split }}/4)
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

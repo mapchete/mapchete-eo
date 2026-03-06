@@ -41,6 +41,7 @@ def test_preprocessing(stac_mapchete):
 
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
+@pytest.mark.xfail(reason="CDSE endpoint is flaky")
 def test_stac_read_xarray_dem(stac_cdse_copernicus_dem_mapchete, test_tile):
     with stac_cdse_copernicus_dem_mapchete.process_mp(tile=test_tile).open(
         "inp"

@@ -34,5 +34,7 @@ def test_known_sources(collection):
 @pytest.mark.remote
 @pytest.mark.use_cdse_test_env
 @pytest.mark.parametrize("collection", ["CDSE"])
-def test_known_sources_cdse(collection):
+@pytest.mark.xfail(reason="CDSE endpoint is flaky")
+def test_known_sources_cdse(collection, sentinel2_cdse_mapchete):
+    # using sentinel2_cdse_mapchete fixture to trigger CDSE endpoint check
     test_known_sources(collection)

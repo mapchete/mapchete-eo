@@ -25,7 +25,7 @@ def check_cdse_endpoint():
     response = Client().get(
         "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a"
     )
-    if response.is_server_error:
+    if response.is_error:
         pytest.skip(f"CDSE endpoint is experiencing issues: {response.text}")
 
 

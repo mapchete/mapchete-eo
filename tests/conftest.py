@@ -1,5 +1,6 @@
 import os
 
+from httpx import Client
 import numpy as np
 import numpy.ma as ma
 from pystac import Item
@@ -18,6 +19,14 @@ from mapchete_eo.platforms.sentinel2.preconfigured_sources import (
 )
 from mapchete_eo.search import STACSearchCollection, STACStaticCollection
 from mapchete_eo.types import TimeRange
+
+
+def check_cdse_endpoint():
+    response = Client().get(
+        "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a"
+    )
+    if response.is_error:
+        pytest.skip(f"CDSE endpoint is experiencing issues: {response.text}")
 
 
 @pytest.fixture
@@ -131,6 +140,7 @@ def s2_stac_item_jp2():
 
 @pytest.fixture
 def s2_stac_item_cdse_jp2():
+    check_cdse_endpoint()
     item = Item.from_file(
         "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a/items/S2B_MSIL2A_20230810T094549_N0509_R079_T33TWM_20230810T130104"
     )
@@ -173,6 +183,7 @@ def stac_mapchete(tmp_path, testdata_dir):
 
 @pytest.fixture
 def stac_cdse_copernicus_dem_mapchete(tmp_path, testdata_dir):
+    check_cdse_endpoint()
     with ProcessFixture(
         testdata_dir / "stac_cdse_copernicus_dem.mapchete",
         output_tempdir=tmp_path,
@@ -218,6 +229,7 @@ def sentinel2_mapchete(tmp_path, testdata_dir):
 
 @pytest.fixture
 def sentinel2_aws_cdse_mapchete(tmp_path, testdata_dir):
+    check_cdse_endpoint()
     with ProcessFixture(
         testdata_dir / "sentinel2_aws_cdse.mapchete",
         output_tempdir=tmp_path,
@@ -227,6 +239,7 @@ def sentinel2_aws_cdse_mapchete(tmp_path, testdata_dir):
 
 @pytest.fixture
 def sentinel2_cdse_mapchete(tmp_path, testdata_dir):
+    check_cdse_endpoint()
     with ProcessFixture(
         testdata_dir / "sentinel2_cdse.mapchete",
         output_tempdir=tmp_path,

@@ -90,6 +90,7 @@ def test_remote_s2_read_xarray(mapchete_config):
     "mapchete_config",
     [lazy_fixture("sentinel2_cdse_mapchete")],
 )
+@pytest.mark.xfail(reason="CDSE endpoint is flaky")
 def test_remote_s2_read_xarray_cdse(mapchete_config):
     with mapchete_config.process_mp().open("inp") as cube:
         assert isinstance(cube.read(assets=["coastal"]), xr.Dataset)
@@ -487,6 +488,7 @@ def test_footprint_buffer(sentinel2_stac_mapchete, test_edge_tile):
 
 
 @pytest.mark.remote
+@pytest.mark.xfail(reason="CDSE endpoint is flaky")
 def test_multiple_sources(sentinel2_multiple_sources_mapchete):
     mp = sentinel2_multiple_sources_mapchete.mp()
     input_data = list(mp.config.inputs.values())[0]

@@ -500,12 +500,6 @@ class InputData(base.InputData):
         self.area = self._init_area(input_params)
         self.time = self.params.time
 
-        self.eo_bands = [
-            eo_band
-            for source in self.params.source
-            for eo_band in source.eo_bands(base_dir=self.conf_dir)
-        ]
-
         if self.readonly:  # pragma: no cover
             return
         # don't use preprocessing tasks for Sentinel-2 products:
@@ -533,6 +527,17 @@ class InputData(base.InputData):
                 ]
             )
 
+    @cached_property
+    def eo_bands(self) -> List[str]:
+        if self.area.is_empty:
+            logger.debug("Input area is empty, nothing to be found here.")
+            return []
+        return [
+            eo_band
+            for source in self.params.source
+            for eo_band in source.eo_bands(base_dir=self.conf_dir)
+        ]
+
     def _init_area(self, input_params: dict) -> BaseGeometry:
         """Returns valid driver area for this process."""
         process_area = input_params["delimiters"]["effective_area"]
@@ -556,6 +561,9 @@ class InputData(base.InputData):
         return process_area
 
     def source_items(self) -> Generator[Item, None, None]:
+        if self.area.is_empty:
+            logger.debug("Input area is empty, nothing to be found here.")
+            return
         already_returned = set()
         for source in self.params.source:
             area = reproject_geometry(

@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2026.3.0 - 2026-03-06
+---------------------
+
+* core
+
+  * `base.InputData`: avoid any calls to sources if area is empty (#61)
+
+* testing
+
+  * skip tests if CDSE endpoint is down & mark CDSE dependent tests as `xfail`
+
+
 2026.2.0 - 2026-02-04
 ---------------------
 

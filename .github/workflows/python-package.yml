@@ -168,44 +168,58 @@ jobs:
         run: |
           echo "### 🧪 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
           
+          # 1. CHECK OVERALL TEST STATUS
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage check skipped because tests failed." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+          echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
 
+          # 2. COMBINE COVERAGE (Only 3.13 files exist here)
           uv tool install coverage
-          if ls all-results/.coverage* 1> /dev/null 2>&1; then
-            mv all-results/.coverage* .
+          
+          # Move the specific files to root
+          mv all-results/.coverage* .
+          
+          # 🧹 Delete any empty (0-byte) coverage files that cause exit code 2
+          echo "Cleaning up empty or invalid coverage artifacts..."
+          find . -maxdepth 1 -name ".coverage*" -size 0 -print -delete
+          
+          echo "Merging coverage files..."
+          
+          # Disable automatic exit on error temporarily so we can catch the crash
+          set +e
+          uv tool run coverage combine
+          COMBINE_EXIT=$?
+          set -e
+          
+          # 🐞 If it still fails, run it again in debug mode so the logs show the exact corrupted file or path issue
+          if [ $COMBINE_EXIT -ne 0 ]; then
+              echo "❌ 'coverage combine' crashed! Running with debug trace..."
+              uv tool run coverage combine --debug=data,sys,pathmap
+              exit $COMBINE_EXIT
           fi
           
-          cat <<EOF > .coveragerc
-          [run]
-          relative_files = True
-
-          [paths]
-          source =
-              .
-              /__w/mapchete-eo/mapchete-eo/
-          EOF
+          # 3. ENFORCE 85%
+          echo "Generating coverage report..."
           
-          echo "Merging coverage files with path remapping..."
-          # 2️⃣ COMBINE & REPORT
-          # We use the rcfile to ensure the mapping is applied during the merge
-          uv tool run coverage combine --append --rcfile=.coveragerc || echo "No extra coverage files to combine."
-          
-          # ENFORCE 85% (or your chosen threshold)
-          REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1)
+          # Temporarily disable exit-on-error so a failed report doesn't kill the script!
+          set +e
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=85 2>&1)
           EXIT_CODE=$?
+          set -e
           
-          echo "$REPORT_OUTPUT"
+          echo "$OUTPUT"
           
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 85%." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Coverage Failed:** Python 3.13 coverage check failed." >> $GITHUB_STEP_SUMMARY
             exit $EXIT_CODE
           else
             echo "✅ **Coverage Passed:** 85% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            exit 0
           fi

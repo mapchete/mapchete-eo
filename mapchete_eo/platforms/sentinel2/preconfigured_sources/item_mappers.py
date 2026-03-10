@@ -155,7 +155,7 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
 
 @creates_s2metadata(from_collections=["CDSE"], to_metadata_archives=["CDSE"])
 def cdse_s2metadata(item: Item) -> S2Metadata:
-    return S2Metadata.from_stac_item( # pragma: no cover
+    return S2Metadata.from_stac_item(  # pragma: no cover
         item,
         path_mapper=CDSEPathMapper(MPath(item.assets["granule_metadata"].href)),
         processing_baseline_field="processing:version",

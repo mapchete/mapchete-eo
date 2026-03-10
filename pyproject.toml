@@ -82,6 +82,7 @@ ignore_missing_imports = true
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["mapchete_eo"]
 
 [tool.pytest.ini_options]

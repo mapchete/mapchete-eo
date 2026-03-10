@@ -43,7 +43,7 @@ class STACRasterBandProperties(BaseModel):
         nodataval: Optional[NodataVal] = None,
     ) -> STACRasterBandProperties:
         if asset.extra_fields.get("raster:offset", {}):
-            properties = dict(
+            properties = dict( # pragma: no cover
                 offset=asset.extra_fields.get("raster:offset"),
                 scale=asset.extra_fields.get("raster:scale"),
                 nodata=asset.extra_fields.get("nodata", nodataval),

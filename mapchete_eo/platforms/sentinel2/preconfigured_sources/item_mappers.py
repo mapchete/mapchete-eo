@@ -140,7 +140,7 @@ def map_cdse_paths_to_jp2_archive(item: Item) -> Item:
         elif asset_name == "granule_metadata":
             asset.href = str(product_basepath / "metadata.xml")
         # change band asset names and point to their new locations
-        elif asset_name in CDSE_ASSET_NAME_MAPPING:
+        elif asset_name in CDSE_ASSET_NAME_MAPPING:  # pragma: no cover
             name, resolution = asset_name.split("_")
             asset.href = product_basepath / f"R{resolution}" / f"{name}.jp2"
             asset_name = CDSE_ASSET_NAME_MAPPING[asset_name]

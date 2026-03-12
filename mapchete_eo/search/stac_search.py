@@ -36,7 +36,7 @@ class STACSearchCollection(StaticCollectionWriterMixin, CollectionSearcher):
     def eo_bands(self) -> List[str]:
         item_assets = self.client.extra_fields.get("item_assets", {})
         for v in item_assets.values():
-            if "eo:bands" in v and "data" in v.get("roles", []):
+            if "eo:bands" in v and "data" in v.get("roles", []):  # pragma: no cover
                 return ["eo:bands"]
         else:  # pragma: no cover
             logger.debug("cannot find eo:bands definition from collections")

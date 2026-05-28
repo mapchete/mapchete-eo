@@ -25,12 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: ⚡ Setup uv
+      - name: ⚡ Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: 🏃 Run Pre-commit
         run: |
           uv tool install pre-commit
@@ -57,19 +56,20 @@ jobs:
           # Fix "Dubious Ownership" error (Required for containerized Git)
           git config --global --add safe.directory '*'
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 📥 Apply Dependency Overrides
         if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.override-deps-artifact }}
       
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ matrix.split }}
 
       - name: 🏗️ Sync Environment
         run: |
@@ -103,7 +103,7 @@ jobs:
 
       - name: 📤 Upload Coverage Chunk (Latest Only)
         if: matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-chunk-${{ matrix.split }}
           path: .coverage.python.${{ matrix.python-version }}.test.split.${{ matrix.split }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: 📤 Archive JUnit Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: results-${{ matrix.python-version }}-${{ matrix.split }}
           path: pytest-${{ matrix.python-version }}-${{ matrix.split }}.xml

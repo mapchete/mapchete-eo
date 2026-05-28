@@ -104,5 +104,6 @@ markers = [
 
 [tool.pyproject2conda]
 channels = ["conda-forge"]
-# Maps PyPI names to Conda-Forge names if they differ
-map_deps = { "opencv-python-headless" = "opencv", "pystac-client" = "python-pystac-client" }
+
+[tool.pyproject2conda.dependencies]
+opencv-python-headless = { skip = true, packages = "opencv" }

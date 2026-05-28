@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install System Dependencies (GDAL)
         run: |
@@ -29,9 +29,10 @@ jobs:
           sudo apt-get install -y libgdal-dev g++
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         run: uv python install
@@ -48,7 +49,7 @@ jobs:
           uv run sphinx-build -b html docs/source docs/build/html
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./docs/build/html
 
@@ -62,4 +63,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

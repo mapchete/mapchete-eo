@@ -25,11 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: ⚡ Install uv
+      - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ github.job }}
       - name: 🏃 Run Pre-commit
         run: |
           uv tool install pre-commit
@@ -69,7 +70,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache-suffix: ${{ matrix.split }}
+          cache-suffix: ${{ matrix.python-version }}-${{ matrix.split }}
 
       - name: 🏗️ Sync Environment
         run: |
@@ -134,6 +135,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ github.job }}
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8

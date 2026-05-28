@@ -24,12 +24,13 @@ jobs:
     name: "📝 Pre-commit / Code Quality"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: ⚡ Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 🏃 Run Pre-commit
         run: |
           uv tool install pre-commit
@@ -126,16 +127,16 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4 # Needed for coverage to see source files
+      - uses: actions/checkout@v6 # Needed for coverage to see source files
 
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📥 Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: all-results
           pattern: "*-*" 

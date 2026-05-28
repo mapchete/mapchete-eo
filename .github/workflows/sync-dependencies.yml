@@ -37,6 +37,7 @@ jobs:
           
           # Sync the conda recipe
           uvx pyproject2conda yaml -f pyproject.toml --output conda/meta.yaml --python-include infer
+          uvx pyproject2conda yaml --pyproject pyproject.toml --output conda/meta.yaml --python-include infer
 
       - name: 📋 Check for Changes
         id: check

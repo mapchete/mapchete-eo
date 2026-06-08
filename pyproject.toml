@@ -48,8 +48,9 @@ docs = [
     "myst-parser",
 ]
 test = [
+    "httpx",
     "pytest",
-    "pytest-coverage",
+    "pytest-cov",
     "pytest-lazy-fixtures",
     "pytest-split"
 ]

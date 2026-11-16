@@ -201,7 +201,8 @@ class S2Product(EOProduct, EOProductProtocol):
 
     @property
     def item(self) -> Item:
-        if not self._item:
+        if self._item is None:
+            logger.debug("%s no cached STAC Item found, recreating ...", self.id)
             if self._item_dict:
                 self._item = Item.from_dict(self._item_dict)
             else:
@@ -213,7 +214,8 @@ class S2Product(EOProduct, EOProductProtocol):
 
     @property
     def metadata(self) -> S2Metadata:
-        if not self._metadata:
+        if self._metadata is None:
+            logger.debug("%s no cached metadata found, recreating ...", self.id)
             if self._metadata_mapper:
                 self._metadata = self._metadata_mapper(self.item)
             else:

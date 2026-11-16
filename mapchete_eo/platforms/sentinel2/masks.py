@@ -60,6 +60,7 @@ def masks_to_xarray(
     sort: Optional[SortMethodConfig] = None,
     raise_empty: bool = True,
     product_read_kwargs: dict = {},
+    clear_caches: bool = True,
 ) -> xr.Dataset:
     """
     Read masks of products and merge into an xarray.Dataset.
@@ -74,6 +75,7 @@ def masks_to_xarray(
             sort=sort,
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
+            clear_caches=clear_caches,
         )
     ]
     if merge_products_by and merge_products_by not in ["date", "datetime"]:
@@ -256,6 +258,7 @@ def generate_slice_masks_dataarrays(
     mask_name: List = ["EOxCloudless_masks"],
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
+    clear_caches: bool = True,
 ) -> Iterator[xr.DataArray]:
     """
     Yield products or merged products into slices as DataArrays.
@@ -279,7 +282,7 @@ def generate_slice_masks_dataarrays(
         try:
             # if merge_products_by is none, each slice contains just one product
             # so nothing will have to be merged anyways
-            with slice.cached():
+            with slice.cached(active=clear_caches):
                 yield to_dataarray(
                     merge_products_masks(
                         products=slice.products,
@@ -297,8 +300,8 @@ def generate_slice_masks_dataarrays(
                 )
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
-        except (EmptySliceException, CorruptedSlice):
-            pass
+        except (EmptySliceException, CorruptedSlice) as exc:
+            logger.warning("skipped slice %s: %s", slice, str(exc))
 
     if stack_empty:
         raise EmptyStackException("all slices are empty")

@@ -51,6 +51,7 @@ def products_to_np_array(
     raise_empty: bool = True,
     out_dtype: Optional[DTypeLike] = None,
     read_mask: Optional[np.ndarray] = None,
+    clear_caches: bool = True,
 ) -> ma.MaskedArray:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     return ma.stack(
@@ -69,6 +70,7 @@ def products_to_np_array(
                 product_read_kwargs=product_read_kwargs,
                 raise_empty=raise_empty,
                 read_mask=read_mask,
+                clear_caches=clear_caches,
             )
         ]
     )
@@ -91,6 +93,7 @@ def products_to_xarray(
     raise_empty: bool = True,
     product_read_kwargs: dict = {},
     read_mask: Optional[np.ndarray] = None,
+    clear_caches: bool = True,
 ) -> xr.Dataset:
     """Read grid window of EOProducts and merge into a 4D xarray."""
     data_vars = [
@@ -108,6 +111,7 @@ def products_to_xarray(
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
             read_mask=read_mask,
+            clear_caches=clear_caches,
         )
     ]
     if merge_products_by and merge_products_by not in ["date", "datetime"]:
@@ -181,13 +185,20 @@ class Slice:
         return properties
 
     @contextmanager
-    def cached(self) -> Generator[Slice, None, None]:
+    def cached(self, active: bool = True) -> Generator[Slice, None, None]:
         """Clear caches and run garbage collector when context manager is closed."""
         yield self
-        with Timer() as tt:
-            self.clear_cached_data()
-            gc.collect()
-        logger.debug("Slice cache cleared and garbage collected in %s", tt)
+        if active:
+            with Timer() as duration:
+                self.clear_cached_data()
+                # triggering the garbage collector helps fixing a memory leak on longer running
+                # process workers
+                cleared_objects = gc.collect()
+            logger.debug(
+                "Slice cache cleared and garbage collector cleared %s objects in %s",
+                cleared_objects,
+                duration,
+            )
 
     def clear_cached_data(self):
         logger.debug("clear caches of all products in slice")
@@ -360,6 +371,7 @@ def generate_slice_dataarrays(
     product_read_kwargs: dict = {},
     raise_empty: bool = True,
     read_mask: Optional[np.ndarray] = None,
+    clear_caches: bool = True,
 ) -> Iterator[xr.DataArray]:
     """
     Yield products or merged products into slices as DataArrays.
@@ -392,7 +404,7 @@ def generate_slice_dataarrays(
         try:
             # if merge_products_by is none, each slice contains just one product
             # so nothing will have to be merged anyways
-            with slice.cached():
+            with slice.cached(active=clear_caches):
                 yield to_dataarray(
                     merge_products(
                         products=slice.products,
@@ -416,8 +428,8 @@ def generate_slice_dataarrays(
                 )
             # if at least one slice can be yielded, the stack is not empty
             stack_empty = False
-        except (EmptySliceException, CorruptedSlice) as exception:
-            logger.warning(exception)
+        except (EmptySliceException, CorruptedSlice) as exc:
+            logger.warning("skipped slice %s: %s", slice, str(exc))
 
     if stack_empty:
         raise EmptyStackException("all slices are empty")

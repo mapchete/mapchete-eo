@@ -162,6 +162,7 @@ class EODataCube(base.InputTile):
         sort: Optional[SortMethodConfig] = None,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
+        clear_caches: bool = True,
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -180,6 +181,7 @@ class EODataCube(base.InputTile):
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
             sort=sort,
+            clear_caches=clear_caches,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -202,6 +204,7 @@ class EODataCube(base.InputTile):
         sort: Optional[SortMethodConfig] = None,
         nodatavals: NodataVals = None,
         raise_empty: bool = True,
+        clear_caches: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
         """
@@ -220,6 +223,7 @@ class EODataCube(base.InputTile):
             product_read_kwargs=kwargs,
             raise_empty=raise_empty,
             sort=sort,
+            clear_caches=clear_caches,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -247,6 +251,7 @@ class EODataCube(base.InputTile):
         band_axis_name: str = "bands",
         x_axis_name: str = "x",
         y_axis_name: str = "y",
+        clear_caches: bool = True,
         **kwargs,
     ) -> xr.Dataset:
         return read_levelled_cube_to_xarray(
@@ -267,6 +272,7 @@ class EODataCube(base.InputTile):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             sort=sort,
+            clear_caches=clear_caches,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,
@@ -290,6 +296,7 @@ class EODataCube(base.InputTile):
         merge_method: Optional[MergeMethod] = None,
         sort: SortMethodConfig = TargetDateSort(),
         raise_empty: bool = True,
+        clear_caches: bool = True,
         **kwargs,
     ) -> ma.MaskedArray:
         """
@@ -327,6 +334,7 @@ class EODataCube(base.InputTile):
             raise_empty=raise_empty,
             product_read_kwargs=kwargs,
             sort=sort,
+            clear_caches=clear_caches,
             **self.default_read_values(
                 merge_products_by=merge_products_by,
                 merge_method=merge_method,

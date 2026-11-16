@@ -189,10 +189,16 @@ class Slice:
         """Clear caches and run garbage collector when context manager is closed."""
         yield self
         if active:
-            with Timer() as tt:
+            with Timer() as duration:
                 self.clear_cached_data()
-                gc.collect()
-            logger.debug("Slice cache cleared and garbage collected in %s", tt)
+                # triggering the garbage collector helps fixing a memory leak on longer running
+                # process workers
+                cleared_objects = gc.collect()
+            logger.debug(
+                "Slice cache cleared and garbage collector cleared %s objects in %s",
+                cleared_objects,
+                duration,
+            )
 
     def clear_cached_data(self):
         logger.debug("clear caches of all products in slice")

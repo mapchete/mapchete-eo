@@ -41,6 +41,7 @@ def read_levelled_cube_to_np_array(
     out_dtype: DTypeLike = np.uint16,
     out_fill_value: NodataVal = 0,
     read_mask: Optional[np.ndarray] = None,
+    clear_caches: bool = True,
 ) -> ma.MaskedArray:
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
@@ -99,7 +100,7 @@ def read_levelled_cube_to_np_array(
     slices_read_count, slices_skip_count = 0, 0
 
     # pick slices one by one
-    for slice_count, slice_ in enumerate(slices, 1):
+    for slice_count, slice in enumerate(slices, 1):
         # all filled up? let's get outta here!
         if not out.mask.any():
             logger.debug("cube has no pixels to be filled, quitting!")
@@ -113,11 +114,11 @@ def read_levelled_cube_to_np_array(
             logger.debug(
                 "see if slice %s %s has some of the %s unmasked pixels for cube",
                 slice_count,
-                slice_,
+                slice,
                 cube_nodata_mask.sum(),
             )
-            with slice_.cached():
-                slice_array = slice_.read(
+            with slice.cached(active=clear_caches):
+                slice_array = slice.read(
                     merge_method=merge_method,
                     product_read_kwargs=dict(
                         product_read_kwargs,
@@ -133,12 +134,12 @@ def read_levelled_cube_to_np_array(
                 )
             slices_read_count += 1
         except (EmptySliceException, CorruptedSlice) as exc:
-            logger.debug("skipped slice %s: %s", slice_, str(exc))
+            logger.warning("skipped slice %s: %s", slice, str(exc))
             slices_skip_count += 1
             continue
 
         # if slice was not empty, fill pixels into cube
-        logger.debug("add slice %s array to cube", slice_)
+        logger.debug("add slice %s array to cube", slice)
 
         # iterate through layers of cube
         for layer_index in range(target_height):
@@ -223,6 +224,7 @@ def read_levelled_cube_to_xarray(
     x_axis_name: str = "x",
     y_axis_name: str = "y",
     read_mask: Optional[np.ndarray] = None,
+    clear_caches: bool = True,
 ) -> xr.Dataset:
     """
     Read products as slices into a cube by filling up nodata gaps with next slice.
@@ -245,6 +247,7 @@ def read_levelled_cube_to_xarray(
             product_read_kwargs=product_read_kwargs,
             raise_empty=raise_empty,
             read_mask=read_mask,
+            clear_caches=clear_caches,
         ),
         slice_names=[f"layer-{ii}" for ii in range(target_height)],
         band_names=variables,

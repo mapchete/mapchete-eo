@@ -3,8 +3,21 @@ Changelog
 #########
 
 
-Unreleased
-----------
+2026.11.0 - 2026-11-20
+----------------------
+
+* core
+
+  * `base.EODataCube`: add `clear_caches` flag to all read functions (#121)
+  * `io.levelled_cubes.read_levelled_cube_to_np_array()`: add `clear_caches` flag (#121)
+  * `io.levelled_cubes.read_levelled_cube_to_xarray()`: add `clear_caches` flag (#121)
+  * `io.products.products_to_np_array()`: add `clear_caches` flag (#121)
+  * `io.products.products_to_xarray()`: add `clear_caches` flag (#121)
+  * `platforms.sentinel2.masks.masks_to_xarray()`: add `clear_caches` flag (#121)
+  * `platforms.sentinel2.masks.generate_slice_masks_dataarrays()`: add `clear_caches` flag (#121)
+  * `io.assets._read_vector_mask()`: use `MPath.local_copy()` to cache files (#125)
+  * `io.assets.read_mask_as_raster()`: use `MPath.local_copy()` to cache files (#125)
+  * `io.path`: remove `cached_path()` function (#125)
 
 * CI/CD
 

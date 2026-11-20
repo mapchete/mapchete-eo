@@ -1,14 +1,11 @@
 import hashlib
 import logging
-from contextlib import contextmanager
 from enum import Enum
-from tempfile import TemporaryDirectory
-from typing import Generator, Tuple, Union
+from typing import Tuple, Union
 from xml.etree.ElementTree import Element, fromstring
 
 import fsspec
 import pystac
-from mapchete.io import copy
 from mapchete.path import MPath
 from mapchete.settings import IORetrySettings
 from retry import retry
@@ -105,23 +102,6 @@ def path_in_paths(path, existing_paths) -> bool:
                 return True
         else:
             return False
-
-
-@contextmanager
-@retry(logger=logger, **dict(IORetrySettings()))
-def cached_path(path: MPath, active: bool = True) -> Generator[MPath, None, None]:
-    """If path is remote, download to temporary directory and return path."""
-    if active and path.is_remote():
-        with TemporaryDirectory() as tempdir:
-            tempfile = MPath(tempdir) / path.name
-            logger.debug("%s is remote, download to %s", path, tempfile)
-            copy(
-                path,
-                tempfile,
-            )
-            yield tempfile
-    else:
-        yield path
 
 
 def asset_mpath(

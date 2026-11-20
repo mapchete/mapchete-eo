@@ -25,7 +25,7 @@ from rasterio.profiles import Profile
 from rasterio.vrt import WarpedVRT
 from retry import retry
 
-from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath, cached_path
+from mapchete_eo.io.path import COMMON_RASTER_EXTENSIONS, asset_mpath
 from mapchete_eo.io.profiles import COGDeflateProfile
 
 logger = logging.getLogger(__name__)
@@ -394,9 +394,9 @@ def should_be_converted(
     return False
 
 
-def _read_vector_mask(mask_path):
+def _read_vector_mask(mask_path: MPath):
     logger.debug("open %s with Fiona", mask_path)
-    with cached_path(mask_path) as cached:
+    with mask_path.local_copy() as cached:
         try:
             with fiona_open(cached) as src:
                 return list([dict(f) for f in src])
@@ -427,7 +427,7 @@ def read_mask_as_raster(
     if dst_grid:
         dst_grid = Grid.from_obj(dst_grid)
     try:
-        with cached_path(path, active=cached_read) as path:
+        with path.local_copy(active=cached_read) as path:
             if path.suffix in COMMON_RASTER_EXTENSIONS:
                 if dst_grid:
                     array = read_raster_window(
